@@ -6,7 +6,13 @@ export default defineConfig({
   resolve: {
     dedupe: ['yjs'],
   },
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler', { target: '19' }]],
+      },
+    }),
+  ],
   test: {
     environment: 'node',
   },
