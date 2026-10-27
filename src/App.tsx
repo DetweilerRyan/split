@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { EditReceiptDrawer } from './components/EditReceiptDrawer';
 import { Header } from './components/Header';
 import { IdentityModal } from './components/IdentityModal';
@@ -40,7 +40,6 @@ export default function App() {
       seed: parsed.seed,
     };
   });
-  const initialSeed = useMemo(() => decodeSeed(room.seed), [room.seed]);
   const [provider, setProvider] = useState<RoomProvider | null>(null);
   const [loadingError, setLoadingError] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -54,7 +53,7 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    getRoomProvider(room.id, initialSeed)
+    getRoomProvider(room.id, decodeSeed(room.seed))
       .then((roomProvider) => {
         if (active) setProvider(roomProvider);
       })
@@ -65,7 +64,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [room.id, room.seed, initialSeed]);
+  }, [room.id, room.seed]);
 
   useEffect(() => {
     if (!provider || snapshot.participants.length === 0) return;
