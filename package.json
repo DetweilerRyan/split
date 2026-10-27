@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@liveblocks/client": "^3.24.5",
+    "@liveblocks/yjs": "^3.24.5",
     "lucide-react": "^1.62.0",
     "lz-string": "^1.5.0",
     "react": "^19.3.1",
