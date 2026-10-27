@@ -1,0 +1,79 @@
+import { IndexeddbPersistence } from 'y-indexeddb';
+import { WebrtcProvider } from 'y-webrtc';
+import * as Y from 'yjs';
+import { PICASSO_SEED } from '../data/presets';
+import type { ReceiptSeed, RoomSnapshot } from '../types/receipt';
+import { hydrateFromSeed } from './seedCodec';
+import { ReceiptStore } from './useReceiptStore';
+
+export interface RoomProvider {
+  doc: Y.Doc;
+  store: ReceiptStore;
+  setIdentity: (identity: { id: string; name: string; colorIdx: number } | null) => void;
+}
+
+type ProviderRegistry = typeof globalThis & {
+  __splitRoomProviders?: Map<string, Promise<RoomProvider>>;
+};
+
+const providerRegistry = globalThis as ProviderRegistry;
+const providers =
+  providerRegistry.__splitRoomProviders ??
+  (providerRegistry.__splitRoomProviders = new Map<string, Promise<RoomProvider>>());
+const participantColors = ['#4f46e5', '#059669', '#d97706', '#e11d48', '#7c3aed', '#0891b2', '#c026d3'];
+
+async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
+  const doc = new Y.Doc();
+  const persistence = new IndexeddbPersistence(`splitsmart-p2p-${roomId}`, doc);
+  await persistence.whenSynced;
+
+  const items = doc.getMap('items');
+  if (seed) {
+    hydrateFromSeed(doc, seed);
+  } else if (items.size === 0) {
+    hydrateFromSeed(doc, PICASSO_SEED);
+  }
+
+  const store = new ReceiptStore(doc);
+  const webrtc = new WebrtcProvider(`splitsmart-p2p-room-${roomId}`, doc, {
+    signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'],
+  });
+
+  const updatePeers = () => {
+    const peers: RoomSnapshot['peers'] = Array.from(webrtc.awareness.getStates().values())
+      .map((state) => state.user)
+      .filter((user): user is { id: string; name: string; color?: string } => Boolean(user?.id))
+      .filter((user, index, users) => users.findIndex((other) => other.id === user.id) === index);
+    store.setPeers(peers);
+  };
+
+  webrtc.awareness.on('change', updatePeers);
+
+  return {
+    doc,
+    store,
+    setIdentity: (identity) => {
+      webrtc.awareness.setLocalStateField(
+        'user',
+        identity
+          ? {
+              ...identity,
+              color: participantColors[identity.colorIdx % participantColors.length],
+            }
+          : null,
+      );
+    },
+  };
+}
+
+export function getRoomProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
+  let provider = providers.get(roomId);
+  if (!provider) {
+    provider = createProvider(roomId, seed).catch((error: unknown) => {
+      providers.delete(roomId);
+      throw error;
+    });
+    providers.set(roomId, provider);
+  }
+  return provider;
+}
