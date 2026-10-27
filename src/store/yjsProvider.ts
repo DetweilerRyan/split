@@ -1,6 +1,8 @@
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
+import { createClient } from '@liveblocks/client';
+import { getYjsProviderForRoom } from '@liveblocks/yjs';
 import { PICASSO_SEED } from '../data/presets';
 import type { ReceiptSeed, RoomSnapshot } from '../types/receipt';
 import { hydrateFromSeed } from './seedCodec';
@@ -14,16 +16,26 @@ export interface RoomProvider {
 
 type ProviderRegistry = typeof globalThis & {
   __splitRoomProviders?: Map<string, Promise<RoomProvider>>;
+  __splitLiveblocksClient?: ReturnType<typeof createClient>;
 };
 
 const providerRegistry = globalThis as ProviderRegistry;
 const providers =
   providerRegistry.__splitRoomProviders ??
   (providerRegistry.__splitRoomProviders = new Map<string, Promise<RoomProvider>>());
+const liveblocksApiKey = import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY?.trim();
 const participantColors = ['#4f46e5', '#059669', '#d97706', '#e11d48', '#7c3aed', '#0891b2', '#c026d3'];
 
 async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
-  const doc = new Y.Doc();
+  const liveblocks = liveblocksApiKey
+    ? getYjsProviderForRoom(
+        (providerRegistry.__splitLiveblocksClient ??=
+          createClient({ publicApiKey: liveblocksApiKey })).enterRoom(roomId, {
+          initialPresence: { user: null },
+        }).room,
+      )
+    : null;
+  const doc = liveblocks?.getYDoc() ?? new Y.Doc();
   const persistence = new IndexeddbPersistence(`splitsmart-p2p-${roomId}`, doc);
   await persistence.whenSynced;
 
@@ -35,25 +47,28 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   }
 
   const store = new ReceiptStore(doc);
-  const webrtc = new WebrtcProvider(`splitsmart-p2p-room-${roomId}`, doc, {
-    signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'],
-  });
+  const webrtc = liveblocks
+    ? null
+    : new WebrtcProvider(`splitsmart-p2p-room-${roomId}`, doc, {
+        signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'],
+      });
+  const awareness = liveblocks?.awareness ?? webrtc!.awareness;
 
   const updatePeers = () => {
-    const peers: RoomSnapshot['peers'] = Array.from(webrtc.awareness.getStates().values())
-      .map((state) => state.user)
+    const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().values())
+      .map((state) => (state as { user?: { id: string; name: string; color?: string } }).user)
       .filter((user): user is { id: string; name: string; color?: string } => Boolean(user?.id))
       .filter((user, index, users) => users.findIndex((other) => other.id === user.id) === index);
     store.setPeers(peers);
   };
 
-  webrtc.awareness.on('change', updatePeers);
+  awareness.on('change', updatePeers);
 
   return {
     doc,
     store,
     setIdentity: (identity) => {
-      webrtc.awareness.setLocalStateField(
+      awareness.setLocalStateField(
         'user',
         identity
           ? {
