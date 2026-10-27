@@ -27,14 +27,14 @@ const liveblocksApiKey = import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY?.trim();
 const participantColors = ['#4f46e5', '#059669', '#d97706', '#e11d48', '#7c3aed', '#0891b2', '#c026d3'];
 
 async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
-  const liveblocks = liveblocksApiKey
-    ? getYjsProviderForRoom(
-        (providerRegistry.__splitLiveblocksClient ??=
-          createClient({ publicApiKey: liveblocksApiKey })).enterRoom(roomId, {
-          initialPresence: { user: null },
-        }).room,
-      )
+  const liveblocksRoom = liveblocksApiKey
+    ? (providerRegistry.__splitLiveblocksClient ??=
+        createClient({ publicApiKey: liveblocksApiKey })).enterRoom(roomId, {
+        autoConnect: false,
+        initialPresence: { user: null },
+      }).room
     : null;
+  const liveblocks = liveblocksRoom ? getYjsProviderForRoom(liveblocksRoom) : null;
   const doc = liveblocks?.getYDoc() ?? new Y.Doc();
   const persistence = new IndexeddbPersistence(`splitsmart-p2p-${roomId}`, doc);
   await persistence.whenSynced;
@@ -63,6 +63,8 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   };
 
   awareness.on('change', updatePeers);
+  updatePeers();
+  liveblocksRoom?.connect();
 
   return {
     doc,
