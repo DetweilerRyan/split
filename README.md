@@ -1,6 +1,12 @@
 # SplitSmart P2P
 
-A collaborative receipt splitter built with React, TypeScript, Vite, and Yjs. Room data is persisted locally with IndexedDB and synchronized between peers with WebRTC.
+A collaborative receipt splitter built with React, TypeScript, Vite, and Yjs. Room data is persisted locally with IndexedDB and synchronized between peers with WebRTC by default, with optional Liveblocks-hosted synchronization.
+
+## Optional Liveblocks sync
+
+To use Liveblocks-hosted Yjs synchronization and persistence instead of WebRTC, set `VITE_LIVEBLOCKS_PUBLIC_KEY` to a Liveblocks public API key before building or running the app. No application backend is needed; without this setting, the app keeps using its existing P2P sync.
+
+Public-key mode is client-only and does not authenticate users or restrict access to individual rooms. Anyone with the deployed app can read and modify room data, so use it only for non-sensitive, intentionally public receipts. For private rooms, configure Liveblocks token authentication through a trusted backend.
 
 ## Development
 
