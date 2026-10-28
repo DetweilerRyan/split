@@ -9,14 +9,21 @@ import { UnclaimedBanner } from './components/UnclaimedBanner';
 import type { ReceiptSeed } from './types/receipt';
 import { computeReceiptMath } from './utils/math';
 import { buildExportText } from './utils/exportText';
-import { decodeSeed, encodeSeed, hydrateFromSeed, parseRoomHash } from './store/seedCodec';
+import {
+  createRoomId,
+  decodeSeed,
+  encodeRoomId,
+  encodeSeed,
+  hydrateFromSeed,
+  parseRoomHash,
+} from './store/seedCodec';
 import { getRoomProvider, type RoomProvider } from './store/yjsProvider';
 import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
 function updateHash(roomId: string, seed?: string) {
-  const params = new URLSearchParams({ room: roomId });
+  const params = new URLSearchParams({ room: encodeRoomId(roomId) });
   if (seed) params.set('seed', seed);
   window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${params}`);
 }
@@ -36,7 +43,7 @@ export default function App() {
   const [room] = useState(() => {
     const parsed = parseRoomHash(window.location.hash);
     return {
-      id: parsed.roomId || `split-${Math.random().toString(36).slice(2, 6)}`,
+      id: parsed.roomId || createRoomId(),
       seed: parsed.seed,
     };
   });
@@ -140,7 +147,7 @@ export default function App() {
       roster: [],
       items: [],
     };
-    const nextRoom = `split-${Math.random().toString(36).slice(2, 6)}`;
+    const nextRoom = createRoomId();
     updateHash(nextRoom, encodeSeed(blank));
     window.location.reload();
   }
