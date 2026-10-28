@@ -6,6 +6,30 @@ export interface HydrationOptions {
   forceReset?: boolean;
 }
 
+const ROOM_ID_PREFIX = 'urn:split:room:';
+const ROOM_ID_PATTERN = /^urn:split:room:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function createRoomId(): string {
+  return `${ROOM_ID_PREFIX}${crypto.randomUUID()}`;
+}
+
+export function encodeRoomId(roomId: string): string {
+  if (!ROOM_ID_PATTERN.test(roomId)) return roomId;
+  return btoa(roomId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function decodeRoomId(value: string | null): string | null {
+  if (!value || ROOM_ID_PATTERN.test(value)) return value;
+  try {
+    const encoded = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=');
+    const decoded = atob(padded);
+    return ROOM_ID_PATTERN.test(decoded) ? decoded : value;
+  } catch {
+    return value;
+  }
+}
+
 export function encodeSeed(seed: ReceiptSeed): string {
   return LZString.compressToEncodedURIComponent(JSON.stringify(seed));
 }
@@ -27,7 +51,7 @@ export function decodeSeed(value: string | null): ReceiptSeed | null {
 
 export function parseRoomHash(hash: string): { roomId: string | null; seed: string | null } {
   const params = new URLSearchParams(hash.replace(/^#/, ''));
-  return { roomId: params.get('room'), seed: params.get('seed') };
+  return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }
 
 export function hydrateFromSeed(

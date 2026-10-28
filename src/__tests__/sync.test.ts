@@ -2,10 +2,40 @@ import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { PICASSO_SEED } from '../data/presets';
 import { computeReceiptMath } from '../utils/math';
-import { decodeSeed, encodeSeed, hydrateFromSeed } from '../store/seedCodec';
+import {
+  createRoomId,
+  decodeRoomId,
+  decodeSeed,
+  encodeRoomId,
+  encodeSeed,
+  hydrateFromSeed,
+  parseRoomHash,
+} from '../store/seedCodec';
 import { ReceiptStore } from '../store/useReceiptStore';
 
 describe('Yjs synchronization and seed hydration', () => {
+  it('creates opaque URL-safe URN room IDs and decodes them from hashes', () => {
+    const roomId = createRoomId();
+    const encoded = encodeRoomId(roomId);
+
+    expect(roomId).toMatch(/^urn:split:room:[0-9a-f-]{36}$/i);
+    expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(encoded).not.toContain('=');
+    expect(decodeRoomId(encoded)).toBe(roomId);
+    expect(parseRoomHash(`#room=${encoded}&seed=seed-value`)).toEqual({
+      roomId,
+      seed: 'seed-value',
+    });
+  });
+
+  it('continues to accept room IDs from existing links', () => {
+    expect(decodeRoomId('split-legacy')).toBe('split-legacy');
+    expect(parseRoomHash('#room=split-legacy')).toEqual({
+      roomId: 'split-legacy',
+      seed: null,
+    });
+  });
+
   it('publishes nested item changes through the deep-observed store', () => {
     const doc = new Y.Doc();
     hydrateFromSeed(doc, PICASSO_SEED);
