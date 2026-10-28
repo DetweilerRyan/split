@@ -1,5 +1,6 @@
 import LZString from 'lz-string';
 import * as Y from 'yjs';
+import { v4 as uuidv4 } from 'uuid';
 import type { ReceiptSeed } from '../types/receipt';
 
 export interface HydrationOptions {
@@ -10,7 +11,7 @@ const ROOM_ID_PREFIX = 'urn:split:room:';
 const ROOM_ID_PATTERN = /^urn:split:room:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function createRoomId(): string {
-  return `${ROOM_ID_PREFIX}${crypto.randomUUID()}`;
+  return `${ROOM_ID_PREFIX}${uuidv4()}`;
 }
 
 export function encodeRoomId(roomId: string): string {
