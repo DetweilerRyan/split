@@ -24,6 +24,7 @@ describe('receipt currency math', () => {
     expect(result.itemsSubtotalEur).toBe(137);
     expect(result.cardTotalEur).toBe(140);
     expect(result.effectiveRate).toBe(1.1);
+    expect(result.isEstimatedRate).toBe(false);
     expect(result.perPerson['p-ryan'].cardTipShareEur).toBeCloseTo(3 * (100 / 137));
     expect(result.perPerson['p-ryan'].cashTipShareEur).toBeCloseTo(10 * (100 / 137));
     expect(result.perPerson['p-ryan'].totalUsd).toBeCloseTo(
@@ -32,5 +33,24 @@ describe('receipt currency math', () => {
     expect(result.perPerson['p-jameson'].totalUsd).toBeCloseTo(
       (37 + 13 * (37 / 137)) * 1.1,
     );
+  });
+
+  it('uses the estimated rate when no bank charge is entered', () => {
+    const snapshot: RoomSnapshot = {
+      title: 'Test receipt',
+      cardTipEur: 0,
+      cashTipEur: 5,
+      bankUsd: 0,
+      peers: [],
+      participants: [{ id: 'p-ryan', name: 'Ryan', colorIdx: 0 }],
+      items: [
+        { id: 'item-0', name: 'Meal', en: '', eur: 10, order: 0, claims: { 'p-ryan': true } },
+      ],
+    };
+
+    const result = computeReceiptMath(snapshot);
+    expect(result.effectiveRate).toBe(1.085);
+    expect(result.isEstimatedRate).toBe(true);
+    expect(result.perPerson['p-ryan'].totalUsd).toBeCloseTo(15 * 1.085);
   });
 });
