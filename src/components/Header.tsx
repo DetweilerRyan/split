@@ -59,8 +59,12 @@ export function Header({
           <button className="button-secondary" onClick={onIdentity}>
             {identity?.name ?? 'Who are you?'}
           </button>
-          <button className="button-secondary hidden sm:inline-flex" onClick={onEdit}>
-            <Pencil size={14} /> {editing ? 'Done' : 'Edit'}
+          <button
+            aria-label={editing ? 'Done editing receipt' : 'Edit receipt'}
+            className="button-secondary px-2 sm:px-3"
+            onClick={onEdit}
+          >
+            <Pencil size={14} /> <span className="hidden sm:inline">{editing ? 'Done' : 'Edit'}</span>
           </button>
           <button className="button-primary" onClick={onShare}>
             <Share2 size={14} /> Share
