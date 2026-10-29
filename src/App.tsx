@@ -167,6 +167,7 @@ export default function App() {
       <Header
         roomId={room.id}
         activeId={activeId}
+        connection={snapshot.connection}
         peers={snapshot.peers}
         participants={snapshot.participants}
         editing={editing}
