@@ -1,3 +1,3 @@
 # Agent guidance
 
-Prioritize the mobile experience. This app is used almost exclusively on mobile, so keep layouts, interactions, and important status information clear and usable on small screens first.
+Use a mobile-first design language consistent with the existing interface: prioritize clear hierarchy, compact layouts, touch-friendly controls, and important status information that remains easy to find on small screens.

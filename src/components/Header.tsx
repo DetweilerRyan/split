@@ -1,5 +1,6 @@
 import { Pencil, Share2, Users } from 'lucide-react';
 import type { Participant, RoomSnapshot } from '../types/receipt';
+import { getConnectionStatusDisplay } from '../utils/connectionStatus';
 
 interface HeaderProps {
   roomId: string;
@@ -25,21 +26,8 @@ export function Header({
   onShare,
 }: HeaderProps) {
   const identity = participants.find((person) => person.id === activeId);
-  const isConnected = connection.status === 'connected';
-  const statusLabel =
-    connection.status === 'connected'
-      ? 'Connected'
-      : connection.status === 'disconnected'
-        ? 'Offline'
-        : connection.status === 'reconnecting'
-          ? 'Reconnecting'
-          : 'Connecting';
-  const indicatorColor =
-    connection.status === 'connected'
-      ? 'bg-emerald-500'
-      : connection.status === 'disconnected'
-        ? 'bg-rose-500'
-        : 'bg-amber-400';
+  const { label: statusLabel, indicatorColor, textColor } =
+    getConnectionStatusDisplay(connection.status);
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
@@ -75,7 +63,7 @@ export function Header({
             <span className={`h-2 w-2 shrink-0 rounded-full ${indicatorColor}`} />
             <span className="font-bold text-slate-700">{connection.provider}</span>
             <span className="text-slate-400" aria-hidden="true">·</span>
-            <span className={`truncate ${isConnected ? 'text-emerald-700' : 'text-slate-500'}`}>
+            <span className={`truncate ${textColor}`}>
               {statusLabel}
             </span>
           </span>
