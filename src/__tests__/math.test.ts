@@ -9,6 +9,7 @@ describe('receipt currency math', () => {
       cardTipEur: 3,
       cashTipEur: 10,
       bankUsd: 154,
+      connection: { provider: 'WebRTC', status: 'connected' },
       peers: [],
       participants: [
         { id: 'p-ryan', name: 'Ryan', colorIdx: 0 },
@@ -41,6 +42,7 @@ describe('receipt currency math', () => {
       cardTipEur: 0,
       cashTipEur: 5,
       bankUsd: 0,
+      connection: { provider: 'WebRTC', status: 'connected' },
       peers: [],
       participants: [{ id: 'p-ryan', name: 'Ryan', colorIdx: 0 }],
       items: [

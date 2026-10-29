@@ -53,10 +53,26 @@ describe('room sync provider selection', () => {
       }),
       setLocalStateField: vi.fn(),
     };
+    let onRoomStatus:
+      | ((status: 'initial' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected') => void)
+      | undefined;
     const room = {
+      getStatus: () => 'connecting' as const,
+      subscribe: vi.fn(
+        (
+          _event: string,
+          listener: (
+            status: 'initial' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected',
+          ) => void,
+        ) => {
+          onRoomStatus = listener;
+          return vi.fn();
+        },
+      ),
       connect: vi.fn(() => {
         expect(doc.getMap('meta').get('title')).toBe('Restored locally');
         expect(doc.getMap('items').has('seed-item')).toBe(true);
+        onRoomStatus?.('connected');
       }),
     };
     const client = { enterRoom: vi.fn(() => ({ room, leave: vi.fn() })) };
@@ -100,23 +116,37 @@ describe('room sync provider selection', () => {
 
     expect(provider.doc).toBe(doc);
     expect(room.connect).toHaveBeenCalledOnce();
+    expect(room.subscribe).toHaveBeenCalledWith('status', expect.any(Function));
+    expect(provider.store.getSnapshot().connection).toEqual({
+      provider: 'Liveblocks',
+      status: 'connected',
+    });
     expect(provider.store.getSnapshot().title).toBe('Restored locally');
     expect(provider.store.getSnapshot().items.map((item) => item.id)).toEqual(['seed-item']);
-    expect(provider.store.getSnapshot().peers).toEqual([{ id: 'peer-1', name: 'Peer' }]);
+    expect(provider.store.getSnapshot().peers).toEqual([
+      { id: '1', name: 'Peer' },
+      { id: '2', name: 'Duplicate identity' },
+      { id: '3', name: 'Missing id' },
+    ]);
     expect(mocks.WebrtcProvider).not.toHaveBeenCalled();
 
     states.set(4, { user: { id: 'peer-2', name: 'Another peer' } });
     onAwarenessChange?.();
     expect(provider.store.getSnapshot().peers).toEqual([
-      { id: 'peer-1', name: 'Peer' },
-      { id: 'peer-2', name: 'Another peer' },
+      { id: '1', name: 'Peer' },
+      { id: '2', name: 'Duplicate identity' },
+      { id: '3', name: 'Missing id' },
+      { id: '4', name: 'Another peer' },
     ]);
     states.delete(1);
     states.delete(2);
+    states.delete(3);
     states.delete(4);
     onAwarenessChange?.();
     expect(provider.store.getSnapshot().peers).toEqual([]);
 
+    onRoomStatus?.('disconnected');
+    expect(provider.store.getSnapshot().connection.status).toBe('disconnected');
     provider.setIdentity({ id: 'person-1', name: 'Person', colorIdx: 0 });
     expect(awareness.setLocalStateField).toHaveBeenCalledWith(
       'user',
@@ -135,15 +165,22 @@ describe('room sync provider selection', () => {
       completePersistence = resolve;
     });
     const awareness = {
-      getStates: () => new Map(),
+      getStates: () => new Map([[1, { user: { name: 'Same person' } }]]),
       on: vi.fn(),
       setLocalStateField: vi.fn(),
+    };
+    let onWebrtcStatus: ((status: { connected: boolean }) => void) | undefined;
+    const webrtcProvider = {
+      awareness,
+      on: vi.fn((_event: string, listener: (status: { connected: boolean }) => void) => {
+        onWebrtcStatus = listener;
+      }),
     };
     mocks.IndexeddbPersistence.mockImplementation(function () {
       return { whenSynced };
     });
     mocks.WebrtcProvider.mockImplementation(function () {
-      return { awareness };
+      return webrtcProvider;
     });
 
     const { getRoomProvider } = await import('../store/yjsProvider');
@@ -162,8 +199,19 @@ describe('room sync provider selection', () => {
       expect.objectContaining({ signaling: expect.any(Array) }),
     );
     expect(provider.store.getSnapshot().items.length).toBeGreaterThan(0);
+    expect(provider.store.getSnapshot().connection).toEqual({
+      provider: 'WebRTC',
+      status: 'connecting',
+    });
+    expect(provider.store.getSnapshot().peers).toEqual([
+      { id: '1', name: 'Same person' },
+    ]);
     expect(provider.doc).toBe(mocks.IndexeddbPersistence.mock.calls[0][1]);
     expect(provider.doc).toBe(mocks.WebrtcProvider.mock.calls[0][1]);
+    onWebrtcStatus?.({ connected: true });
+    expect(provider.store.getSnapshot().connection.status).toBe('connected');
+    onWebrtcStatus?.({ connected: false });
+    expect(provider.store.getSnapshot().connection.status).toBe('disconnected');
     doc.destroy();
   });
 });

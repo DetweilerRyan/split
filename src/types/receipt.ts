@@ -34,5 +34,9 @@ export interface RoomSnapshot {
   bankUsd: number;
   participants: readonly Participant[];
   items: readonly ReceiptItem[];
+  connection: {
+    provider: 'Liveblocks' | 'WebRTC';
+    status: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+  };
   peers: readonly { id: string; name: string; color?: string }[];
 }

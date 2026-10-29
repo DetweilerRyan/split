@@ -2,6 +2,9 @@ import { useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
 import type { Participant, ReceiptItem, RoomSnapshot } from '../types/receipt';
 
+const configuredProvider: RoomSnapshot['connection']['provider'] =
+  import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';
+
 export const EMPTY_SNAPSHOT: RoomSnapshot = {
   title: 'Loading receipt…',
   cardTipEur: 0,
@@ -9,6 +12,7 @@ export const EMPTY_SNAPSHOT: RoomSnapshot = {
   bankUsd: 0,
   participants: [],
   items: [],
+  connection: { provider: configuredProvider, status: 'connecting' },
   peers: [],
 };
 
@@ -18,6 +22,10 @@ export class ReceiptStore {
   private readonly items: Y.Map<Y.Map<unknown>>;
   private readonly claims: Y.Map<boolean>;
   private listeners = new Set<() => void>();
+  private connection: RoomSnapshot['connection'] = {
+    provider: configuredProvider,
+    status: 'connecting',
+  };
   private peers: RoomSnapshot['peers'] = [];
   private snapshot: RoomSnapshot;
 
@@ -41,6 +49,11 @@ export class ReceiptStore {
 
   setPeers(peers: RoomSnapshot['peers']): void {
     this.peers = peers;
+    this.publish();
+  }
+
+  setConnection(connection: RoomSnapshot['connection']): void {
+    this.connection = connection;
     this.publish();
   }
 
@@ -154,6 +167,7 @@ export class ReceiptStore {
       bankUsd: Number(this.meta.get('bankUsd')) || 0,
       participants,
       items,
+      connection: this.connection,
       peers: this.peers,
     };
   }

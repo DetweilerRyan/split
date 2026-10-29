@@ -47,6 +47,26 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   }
 
   const store = new ReceiptStore(doc);
+  const connectionProvider = liveblocksRoom ? 'Liveblocks' : 'WebRTC';
+  const updateLiveblocksStatus = (status: string) => {
+    store.setConnection({
+      provider: 'Liveblocks',
+      status:
+        status === 'connected'
+          ? 'connected'
+          : status === 'reconnecting'
+            ? 'reconnecting'
+            : status === 'disconnected'
+              ? 'disconnected'
+              : 'connecting',
+    });
+  };
+  if (liveblocksRoom) {
+    updateLiveblocksStatus(liveblocksRoom.getStatus());
+    liveblocksRoom.subscribe('status', updateLiveblocksStatus);
+  } else {
+    store.setConnection({ provider: connectionProvider, status: 'connecting' });
+  }
   const webrtc = liveblocks
     ? null
     : new WebrtcProvider(`splitsmart-p2p-room-${roomId}`, doc, {
@@ -55,15 +75,29 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   const awareness = liveblocks?.awareness ?? webrtc!.awareness;
 
   const updatePeers = () => {
-    const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().values())
-      .map((state) => (state as { user?: { id: string; name: string; color?: string } }).user)
-      .filter((user): user is { id: string; name: string; color?: string } => Boolean(user?.id))
-      .filter((user, index, users) => users.findIndex((other) => other.id === user.id) === index);
+    const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().entries()).map(
+      ([clientId, state]) => {
+        const user = (state as { user?: { name?: string; color?: string } }).user;
+        return {
+          id: String(clientId),
+          name: user?.name || 'Guest',
+          ...(user?.color ? { color: user.color } : {}),
+        };
+      },
+    );
     store.setPeers(peers);
   };
 
   awareness.on('change', updatePeers);
   updatePeers();
+  if (webrtc) {
+    webrtc.on('status', ({ connected }) => {
+      store.setConnection({
+        provider: 'WebRTC',
+        status: connected ? 'connected' : 'disconnected',
+      });
+    });
+  }
   liveblocksRoom?.connect();
 
   return {
