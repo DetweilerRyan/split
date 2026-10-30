@@ -114,13 +114,13 @@ describe('Yjs synchronization and seed hydration', () => {
     hydrateFromSeed(docB, seed);
 
     const originalItem = docA.getMap('items').get('item-0');
-    docA.getMap<boolean>('claims').set('item-0::p-ryan', true);
-    docB.getMap<boolean>('claims').set('item-0::p-jameson', true);
-    docB.getMap<boolean>('claims').set('item-1::p-jameson', true);
+    docA.getMap<boolean>('claims').set('item-0::p-alex', true);
+    docB.getMap<boolean>('claims').set('item-0::p-sam', true);
+    docB.getMap<boolean>('claims').set('item-1::p-sam', true);
 
     hydrateFromSeed(docA, seed);
     expect(docA.getMap('items').get('item-0')).toBe(originalItem);
-    expect(docA.getMap<boolean>('claims').get('item-0::p-ryan')).toBe(true);
+    expect(docA.getMap<boolean>('claims').get('item-0::p-alex')).toBe(true);
 
     Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
     Y.applyUpdate(docA, Y.encodeStateAsUpdate(docB));
@@ -129,14 +129,14 @@ describe('Yjs synchronization and seed hydration', () => {
     const snapshotB = new ReceiptStore(docB).getSnapshot();
     expect(snapshotA).toEqual(snapshotB);
     expect(snapshotA.items.find((item) => item.id === 'item-0')?.claims).toEqual({
-      'p-ryan': true,
-      'p-jameson': true,
+      'p-alex': true,
+      'p-sam': true,
     });
-    expect(snapshotA.items.find((item) => item.id === 'item-1')?.claims['p-jameson']).toBe(true);
+    expect(snapshotA.items.find((item) => item.id === 'item-1')?.claims['p-sam']).toBe(true);
 
     const math = computeReceiptMath(snapshotA);
-    expect(math.perPerson['p-ryan'].itemsSubtotalEur).toBe(3);
-    expect(math.perPerson['p-jameson'].itemsSubtotalEur).toBe(9);
+    expect(math.perPerson['p-alex'].itemsSubtotalEur).toBe(3);
+    expect(math.perPerson['p-sam'].itemsSubtotalEur).toBe(9);
     docA.destroy();
     docB.destroy();
   });
