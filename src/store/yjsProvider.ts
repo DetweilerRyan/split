@@ -3,7 +3,6 @@ import { WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
 import { createClient } from '@liveblocks/client';
 import { getYjsProviderForRoom } from '@liveblocks/yjs';
-import { PICASSO_SEED } from '../data/presets';
 import type { ReceiptSeed, RoomSnapshot } from '../types/receipt';
 import { hydrateFromSeed } from './seedCodec';
 import { ReceiptStore } from './useReceiptStore';
@@ -42,8 +41,6 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   const items = doc.getMap('items');
   if (seed && items.size === 0) {
     hydrateFromSeed(doc, seed);
-  } else if (items.size === 0) {
-    hydrateFromSeed(doc, PICASSO_SEED);
   }
 
   const store = new ReceiptStore(doc);

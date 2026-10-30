@@ -157,7 +157,7 @@ describe('room sync provider selection', () => {
     doc.destroy();
   });
 
-  it('keeps WebRTC as the default when no Liveblocks key is configured', async () => {
+  it('keeps new rooms empty and uses WebRTC when no Liveblocks key is configured', async () => {
     vi.stubEnv('VITE_LIVEBLOCKS_PUBLIC_KEY', '');
     const doc = new Y.Doc();
     let completePersistence!: () => void;
@@ -198,7 +198,8 @@ describe('room sync provider selection', () => {
       expect.any(Y.Doc),
       expect.objectContaining({ signaling: expect.any(Array) }),
     );
-    expect(provider.store.getSnapshot().items.length).toBeGreaterThan(0);
+    expect(provider.store.getSnapshot().items).toEqual([]);
+    expect(provider.store.getSnapshot().participants).toEqual([]);
     expect(provider.store.getSnapshot().connection).toEqual({
       provider: 'WebRTC',
       status: 'connecting',
