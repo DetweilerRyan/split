@@ -13,42 +13,60 @@ import {
   createRoomId,
   decodeSeed,
   encodeRoomId,
-  encodeSeed,
   hydrateFromSeed,
+  parseIngestUrl,
   parseRoomHash,
+  validateSeed,
 } from './store/seedCodec';
 import { getRoomProvider, type RoomProvider } from './store/yjsProvider';
 import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-function updateHash(roomId: string, seed?: string) {
-  const params = new URLSearchParams({ room: encodeRoomId(roomId) });
-  if (seed) params.set('seed', seed);
-  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${params}`);
+interface AppRoom {
+  id: string;
+  seed: ReceiptSeed | null;
+  ingestRedirectUrl?: string;
+  ingestError?: string;
 }
 
-function snapshotToSeed(snapshot: ReturnType<typeof useReceiptStore>): ReceiptSeed {
-  return {
-    title: snapshot.title,
-    cardTipEur: snapshot.cardTipEur,
-    cashTipEur: snapshot.cashTipEur,
-    bankUsd: snapshot.bankUsd,
-    roster: snapshot.participants.map((participant) => participant.name),
-    items: snapshot.items.map(({ id, name, en, eur }) => ({ id, name, en, eur })),
-  };
+function updateHash(roomId: string) {
+  const params = new URLSearchParams({ room: encodeRoomId(roomId) });
+  window.history.replaceState(null, '', `${window.location.pathname}#${params}`);
+}
+
+function readPendingIngestSeed(roomId: string): ReceiptSeed | null {
+  try {
+    const raw = window.sessionStorage.getItem(`splitsmart-ingest-${roomId}`);
+    return raw ? validateSeed(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function App() {
-  const [room] = useState(() => {
+  const [room, setRoom] = useState<AppRoom>(() => {
+    const ingest = parseIngestUrl(window.location.href);
+    if (ingest && 'error' in ingest) {
+      return { id: createRoomId(), seed: null, ingestError: ingest.error };
+    }
+    if (ingest) {
+      return {
+        id: ingest.roomId,
+        seed: ingest.seed,
+        ingestRedirectUrl: ingest.redirectUrl,
+      };
+    }
+
     const parsed = parseRoomHash(window.location.hash);
+    const id = parsed.roomId || createRoomId();
     return {
-      id: parsed.roomId || createRoomId(),
-      seed: parsed.seed,
+      id,
+      seed: readPendingIngestSeed(id) ?? decodeSeed(parsed.seed),
     };
   });
   const [provider, setProvider] = useState<RoomProvider | null>(null);
-  const [loadingError, setLoadingError] = useState('');
+  const [loadingError, setLoadingError] = useState(room.ingestError ?? '');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<ItemFilter>('all');
@@ -59,19 +77,37 @@ export default function App() {
   const math = computeReceiptMath(snapshot);
 
   useEffect(() => {
+    if (room.ingestError) return;
     let active = true;
-    getRoomProvider(room.id, decodeSeed(room.seed))
+    getRoomProvider(room.id, room.seed)
       .then((roomProvider) => {
-        if (active) setProvider(roomProvider);
+        if (!active) return;
+        setProvider(roomProvider);
+        if (room.ingestRedirectUrl) {
+          try {
+            window.sessionStorage.setItem(
+              `splitsmart-ingest-${room.id}`,
+              JSON.stringify(room.seed),
+            );
+            window.location.replace(room.ingestRedirectUrl);
+          } catch {
+            window.history.replaceState(null, '', room.ingestRedirectUrl);
+          }
+        } else {
+          try {
+            window.sessionStorage.removeItem(`splitsmart-ingest-${room.id}`);
+          } catch {}
+          const parsed = parseRoomHash(window.location.hash);
+          if (!parsed.roomId || parsed.seed !== null) updateHash(room.id);
+        }
       })
       .catch(() => {
         if (active) setLoadingError('Could not open this receipt room.');
       });
-    if (!parseRoomHash(window.location.hash).roomId) updateHash(room.id, room.seed ?? undefined);
     return () => {
       active = false;
     };
-  }, [room.id, room.seed]);
+  }, [room.id, room.seed, room.ingestError, room.ingestRedirectUrl]);
 
   useEffect(() => {
     if (!provider || snapshot.participants.length === 0) return;
@@ -121,15 +157,14 @@ export default function App() {
   }
 
   function shareRoom() {
-    const seed = encodeSeed(snapshotToSeed(snapshot));
-    updateHash(room.id, seed);
+    updateHash(room.id);
     void navigator.clipboard?.writeText(window.location.href).then(() => showToast('Room link copied.'));
   }
 
   function importSeed(seed: ReceiptSeed, forceReset: boolean) {
     if (!provider) return;
     hydrateFromSeed(provider.doc, seed, { forceReset });
-    updateHash(room.id, encodeSeed(seed));
+    updateHash(room.id);
     setSeedOpen(false);
     showToast(`Imported ${seed.items.length} receipt items.`);
   }
@@ -148,8 +183,16 @@ export default function App() {
       items: [],
     };
     const nextRoom = createRoomId();
-    updateHash(nextRoom, encodeSeed(blank));
-    window.location.reload();
+    try {
+      window.sessionStorage.setItem(`splitsmart-ingest-${nextRoom}`, JSON.stringify(blank));
+      window.location.replace(
+        `${window.location.origin}${window.location.pathname}#room=${encodeRoomId(nextRoom)}`,
+      );
+    } catch {
+      setProvider(null);
+      setRoom({ id: nextRoom, seed: blank });
+      updateHash(nextRoom);
+    }
   }
 
   function copySummary() {
@@ -158,6 +201,9 @@ export default function App() {
 
   if (loadingError) {
     return <main className="mx-auto max-w-xl p-8 text-center text-rose-700">{loadingError}</main>;
+  }
+  if (room.ingestRedirectUrl && !provider) {
+    return <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Preparing your receipt…</main>;
   }
 
   const totals = math.perPerson;

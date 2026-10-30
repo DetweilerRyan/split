@@ -1,17 +1,23 @@
 import LZString from 'lz-string';
 import * as Y from 'yjs';
-import { v4 as uuidv4 } from 'uuid';
 import type { ReceiptSeed } from '../types/receipt';
 
 export interface HydrationOptions {
   forceReset?: boolean;
 }
 
+export interface ParsedIngestUrl {
+  seed: ReceiptSeed;
+  roomId: string;
+  encodedRoom: string;
+  redirectUrl: string;
+}
+
 const ROOM_ID_PREFIX = 'urn:split:room:';
 const ROOM_ID_PATTERN = /^urn:split:room:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function createRoomId(): string {
-  return `${ROOM_ID_PREFIX}${uuidv4()}`;
+  return `${ROOM_ID_PREFIX}${globalThis.crypto.randomUUID()}`;
 }
 
 export function encodeRoomId(roomId: string): string {
@@ -35,6 +41,44 @@ export function encodeSeed(seed: ReceiptSeed): string {
   return LZString.compressToEncodedURIComponent(JSON.stringify(seed));
 }
 
+export function validateSeed(seed: unknown): ReceiptSeed {
+  const errors: string[] = [];
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+  const isFiniteNumber = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value);
+
+  if (!isRecord(seed)) throw new Error('Seed must be a JSON object.');
+  if (typeof seed.title !== 'string') errors.push('title must be a string');
+  for (const key of ['cardTipEur', 'cashTipEur', 'bankUsd']) {
+    if (!isFiniteNumber(seed[key])) errors.push(`${key} must be a finite number`);
+  }
+  if (!Array.isArray(seed.roster) || !seed.roster.every((name) => typeof name === 'string')) {
+    errors.push('roster must be an array of strings');
+  }
+  if (!Array.isArray(seed.items)) {
+    errors.push('items must be an array');
+  } else {
+    const ids = new Set<string>();
+    seed.items.forEach((item, index) => {
+      if (!isRecord(item)) {
+        errors.push(`items[${index}] must be an object`);
+        return;
+      }
+      for (const key of ['id', 'name', 'en']) {
+        if (typeof item[key] !== 'string') errors.push(`items[${index}].${key} must be a string`);
+      }
+      if (typeof item.id === 'string') {
+        if (ids.has(item.id)) errors.push(`items[${index}].id "${item.id}" is duplicated`);
+        ids.add(item.id);
+      }
+      if (!isFiniteNumber(item.eur)) errors.push(`items[${index}].eur must be a finite number`);
+    });
+  }
+  if (errors.length) throw new Error(`Invalid seed: ${errors.join('; ')}.`);
+  return seed as unknown as ReceiptSeed;
+}
+
 export function decodeSeed(value: string | null): ReceiptSeed | null {
   if (!value) return null;
   const content = value.trim();
@@ -48,6 +92,45 @@ export function decodeSeed(value: string | null): ReceiptSeed | null {
   } catch {
     return null;
   }
+}
+
+export function parseIngestUrl(href: string): ParsedIngestUrl | { error: string } | null {
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return { error: 'The ingest link is not a valid URL.' };
+  }
+
+  const hashParams = new URLSearchParams(url.hash.slice(1));
+  const rawIngest = hashParams.has('ingest')
+    ? hashParams.get('ingest')
+    : url.searchParams.get('ingest');
+  if (rawIngest === null) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawIngest);
+  } catch {
+    return { error: 'The ingest link does not contain valid JSON.' };
+  }
+
+  let seed: ReceiptSeed;
+  try {
+    seed = validateSeed(parsed);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown validation error.';
+    return { error: `Receipt data failed validation: ${message}` };
+  }
+
+  const roomId = createRoomId();
+  const encodedRoom = encodeRoomId(roomId);
+  return {
+    seed,
+    roomId,
+    encodedRoom,
+    redirectUrl: `${url.origin}${url.pathname}#room=${encodedRoom}`,
+  };
 }
 
 export function parseRoomHash(hash: string): { roomId: string | null; seed: string | null } {

@@ -9,7 +9,9 @@ import {
   encodeRoomId,
   encodeSeed,
   hydrateFromSeed,
+  parseIngestUrl,
   parseRoomHash,
+  validateSeed,
 } from '../store/seedCodec';
 import { ReceiptStore } from '../store/useReceiptStore';
 
@@ -34,6 +36,45 @@ describe('Yjs synchronization and seed hydration', () => {
       roomId: 'split-legacy',
       seed: null,
     });
+  });
+
+  it('parses valid uncompressed ingest links from the hash and query string', () => {
+    const seed = {
+      title: 'Café Ünï – 日本',
+      cardTipEur: 0,
+      cashTipEur: 1.5,
+      bankUsd: 0,
+      roster: [],
+      items: [{ id: 'item-0', name: 'Crème brûlée', en: 'Crème brûlée', eur: 6 }],
+    };
+    const encodedSeed = encodeURIComponent(JSON.stringify(seed));
+
+    for (const href of [
+      `https://detweilerryan.github.io/split/#ingest=${encodedSeed}`,
+      `https://detweilerryan.github.io/split/?ingest=${encodedSeed}`,
+    ]) {
+      const parsed = parseIngestUrl(href);
+      expect(parsed).not.toBeNull();
+      if (!parsed || 'error' in parsed) continue;
+      expect(parsed.seed).toEqual(seed);
+      expect(parsed.roomId).toMatch(/^urn:split:room:[0-9a-f-]{36}$/i);
+      expect(parsed.encodedRoom).not.toContain('=');
+      expect(parsed.redirectUrl).toBe(
+        `https://detweilerryan.github.io/split/#room=${parsed.encodedRoom}`,
+      );
+    }
+  });
+
+  it('reports malformed JSON and seed validation errors in ingest links', () => {
+    expect(parseIngestUrl('https://example.test/#ingest=%7B'))
+      .toEqual({ error: 'The ingest link does not contain valid JSON.' });
+
+    const invalidSeed = encodeURIComponent(JSON.stringify({ title: 'Missing items' }));
+    const result = parseIngestUrl(`https://example.test/#ingest=${invalidSeed}`);
+    expect(result).toEqual({
+      error: 'Receipt data failed validation: Invalid seed: cardTipEur must be a finite number; cashTipEur must be a finite number; bankUsd must be a finite number; roster must be an array of strings; items must be an array.',
+    });
+    expect(() => validateSeed(null)).toThrow('Seed must be a JSON object.');
   });
 
   it('publishes nested item changes through the deep-observed store', () => {
