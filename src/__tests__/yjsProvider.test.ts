@@ -214,4 +214,46 @@ describe('room sync provider selection', () => {
     expect(provider.store.getSnapshot().connection.status).toBe('disconnected');
     doc.destroy();
   });
+
+  it('does not apply a legacy seed to a room that already has items', async () => {
+    vi.stubEnv('VITE_LIVEBLOCKS_PUBLIC_KEY', '');
+    let persistedDoc: Y.Doc | undefined;
+    mocks.IndexeddbPersistence.mockImplementation(function (_name: string, doc: Y.Doc) {
+      const item = new Y.Map<unknown>();
+      item.set('id', 'existing-item');
+      item.set('name', 'Existing item');
+      item.set('en', 'Existing item');
+      item.set('eur', 2);
+      item.set('order', 0);
+      doc.getMap('items').set('existing-item', item);
+      doc.getMap('meta').set('title', 'Existing room');
+      persistedDoc = doc;
+      return { whenSynced: Promise.resolve() };
+    });
+    mocks.WebrtcProvider.mockImplementation(function () {
+      return {
+        awareness: {
+          getStates: () => new Map(),
+          on: vi.fn(),
+          setLocalStateField: vi.fn(),
+        },
+        on: vi.fn(),
+      };
+    });
+
+    const { getRoomProvider } = await import('../store/yjsProvider');
+    const provider = await getRoomProvider('room-with-data', {
+      title: 'Link title',
+      cardTipEur: 0,
+      cashTipEur: 0,
+      bankUsd: 0,
+      roster: ['Link participant'],
+      items: [{ id: 'seed-item', name: 'Seed item', en: 'Seed item', eur: 1 }],
+    });
+
+    expect(provider.store.getSnapshot().title).toBe('Existing room');
+    expect(provider.store.getSnapshot().items.map(({ id }) => id)).toEqual(['existing-item']);
+    expect(provider.store.getSnapshot().participants).toEqual([]);
+    persistedDoc?.destroy();
+  });
 });

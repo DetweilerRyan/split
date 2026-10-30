@@ -3,11 +3,11 @@ name: receipt-generation
 description: Extract a user-provided restaurant receipt or bill photo into SplitSmart seed data and generate a shareable receipt-room link. Use whenever the user uploads a receipt image, asks to parse or itemize a bill, or asks to generate a SplitSmart link.
 ---
 
-# Receipt generation
+# Receipt Generation
 
 Use this skill when a user provides a receipt and wants to split it with SplitSmart.
 
-## Extract the receipt
+## 1. Extract the receipt
 
 Read the receipt and produce a seed object with this shape:
 
@@ -37,31 +37,22 @@ Read the receipt and produce a seed object with this shape:
   - Pause and ask if item text, quantities, or prices are illegible, if the sum of `items[].eur` does not match the printed total, or if the receipt is not in euros (ask for euro amounts or an exchange rate and permission to convert; never silently treat another currency as euros or invent a conversion).
   - Do not pause for missing optional metadata (`cardTipEur`, `cashTipEur`, `bankUsd`, `roster`, `title`). Immediately apply defaults (`0` for tips and `bankUsd`, `[]` for `roster`, the merchant name or `"Receipt"` for `title`), generate the link on the first turn, and list the applied defaults in the response.
 
-## Generate the room link
+## 2. Generate the ingest link
 
-Use the GitHub Pages app URL `https://detweilerryan.github.io/split/`. Generate both a fresh UUID v4 room ID and a link containing the seed; do not direct the user to an import workflow.
+Use the GitHub Pages app URL `https://detweilerryan.github.io/split/`. Do not direct the user to a manual JSON import workflow.
 
-The app expects the room ID `urn:split:room:<uuid>` encoded as unpadded base64url, and the seed JSON compressed with `LZString.compressToEncodedURIComponent`. Use the same `lz-string` implementation and URI-safe encoding as the app. Preferred: run the bundled zero-dependency helper, which validates the seed, generates the link, and self-verifies it (no `npm install` needed):
+Serialize the seed object as minified JSON (`JSON.stringify(seed)`) and percent-encode it with `encodeURIComponent` inside the `#ingest=` hash parameter:
 
-```sh
-node skills/receipt-generation/scripts/generate-link.mjs '<seed json>'   # or pipe the JSON on stdin
+```text
+https://detweilerryan.github.io/split/#ingest=<percent-encoded JSON>
 ```
 
-Equivalent Node.js with `lz-string` available:
+Equivalent JavaScript:
 
 ```js
-import { randomUUID } from 'node:crypto';
-import { Buffer } from 'node:buffer';
-import LZString from 'lz-string';
-
-const roomId = `urn:split:room:${randomUUID()}`;
-const room = Buffer.from(roomId, 'utf8').toString('base64url');
-const seedParam = LZString.compressToEncodedURIComponent(JSON.stringify(seed));
-const url = new URL('https://detweilerryan.github.io/split/');
-url.hash = new URLSearchParams({ room, seed: seedParam }).toString();
-console.log(url.href);
+const link = `https://detweilerryan.github.io/split/#ingest=${encodeURIComponent(JSON.stringify(seed))}`;
 ```
 
-Verify that the generated room ID is a UUID v4 and that decompressing `seedParam` returns the exact JSON seed before sharing the URL. If you cannot perform the required encoding and compression reliably, ask for a suitable tool rather than returning a guessed or malformed link.
+The app validates the seed, creates a fresh room, saves it, and replaces the ingest URL with the clean room link. Do not generate a room ID, compress the seed, or use an external script.
 
 Tell the user the link can be opened by anyone who has it; it is not private or encrypted. Share the link, a concise summary of the extracted receipt, and any default values applied.

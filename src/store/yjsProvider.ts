@@ -40,7 +40,7 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   await persistence.whenSynced;
 
   const items = doc.getMap('items');
-  if (seed) {
+  if (seed && items.size === 0) {
     hydrateFromSeed(doc, seed);
   } else if (items.size === 0) {
     hydrateFromSeed(doc, PICASSO_SEED);
