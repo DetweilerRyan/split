@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
-import { PICASSO_SEED } from '../data/presets';
 import { computeReceiptMath } from '../utils/math';
 import {
   createRoomId,
@@ -16,6 +15,18 @@ import {
 import { ReceiptStore } from '../store/useReceiptStore';
 
 describe('Yjs synchronization and seed hydration', () => {
+  const sampleSeed = {
+    title: 'Sample receipt',
+    cardTipEur: 0,
+    cashTipEur: 0,
+    bankUsd: 0,
+    roster: ['Alex', 'Sam'],
+    items: [
+      { id: 'item-0', name: 'Coffee', en: 'Coffee', eur: 6 },
+      { id: 'item-1', name: 'Tea', en: 'Tea', eur: 6 },
+    ],
+  };
+
   it('creates opaque URL-safe URN room IDs and decodes them from hashes', () => {
     const roomId = createRoomId();
     const encoded = encodeRoomId(roomId);
@@ -79,7 +90,7 @@ describe('Yjs synchronization and seed hydration', () => {
 
   it('publishes nested item changes through the deep-observed store', () => {
     const doc = new Y.Doc();
-    hydrateFromSeed(doc, PICASSO_SEED);
+    hydrateFromSeed(doc, sampleSeed);
     const store = new ReceiptStore(doc);
     const listener = vi.fn();
     store.subscribe(listener);
@@ -92,7 +103,7 @@ describe('Yjs synchronization and seed hydration', () => {
   });
 
   it('merges claims from peers that independently hydrate the same seed', () => {
-    const seedString = encodeSeed(PICASSO_SEED);
+    const seedString = encodeSeed(sampleSeed);
     const seed = decodeSeed(seedString);
     expect(seed).not.toBeNull();
     if (!seed) return;
