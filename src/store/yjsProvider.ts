@@ -22,7 +22,7 @@ const providerRegistry = globalThis as ProviderRegistry;
 const providers =
   providerRegistry.__splitRoomProviders ??
   (providerRegistry.__splitRoomProviders = new Map<string, Promise<RoomProvider>>());
-const liveblocksApiKey = import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY?.trim();
+const liveblocksApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim();
 const participantColors = ['#4f46e5', '#059669', '#d97706', '#e11d48', '#7c3aed', '#0891b2', '#c026d3'];
 
 async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
