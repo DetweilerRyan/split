@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import type { Participant, ReceiptItem, RoomSnapshot } from '../types/receipt';
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
-  import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';
+  process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';
 
 export const EMPTY_SNAPSHOT: RoomSnapshot = {
   title: 'Loading receipt…',

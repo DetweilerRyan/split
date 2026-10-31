@@ -38,7 +38,7 @@ describe('room sync provider selection', () => {
   });
 
   it('uses Liveblocks Yjs when a public key is configured', async () => {
-    vi.stubEnv('VITE_LIVEBLOCKS_PUBLIC_KEY', 'pk_test');
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', 'pk_test');
     const doc = new Y.Doc();
     const states = new Map([
       [1, { user: { id: 'peer-1', name: 'Peer' } }],
@@ -158,7 +158,7 @@ describe('room sync provider selection', () => {
   });
 
   it('keeps new rooms empty and uses WebRTC when no Liveblocks key is configured', async () => {
-    vi.stubEnv('VITE_LIVEBLOCKS_PUBLIC_KEY', '');
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', '');
     const doc = new Y.Doc();
     let completePersistence!: () => void;
     const whenSynced = new Promise<void>((resolve) => {
@@ -217,7 +217,7 @@ describe('room sync provider selection', () => {
   });
 
   it('does not apply a legacy seed to a room that already has items', async () => {
-    vi.stubEnv('VITE_LIVEBLOCKS_PUBLIC_KEY', '');
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', '');
     let persistedDoc: Y.Doc | undefined;
     mocks.IndexeddbPersistence.mockImplementation(function (_name: string, doc: Y.Doc) {
       const item = new Y.Map<unknown>();

@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from 'react';
 import { EditReceiptDrawer } from './components/EditReceiptDrawer';
 import { Header } from './components/Header';
