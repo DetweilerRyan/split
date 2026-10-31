@@ -39,18 +39,18 @@ Read the receipt and produce a seed object with this shape:
 
 ## 2. Generate the ingest link
 
-Use the GitHub Pages app URL `https://detweilerryan.github.io/split/`. Do not direct the user to a manual JSON import workflow.
+Use the Vercel app URL `https://split.detweiler.me/`. Do not direct the user to a manual JSON import workflow.
 
 Serialize the seed object as minified JSON (`JSON.stringify(seed)`) and percent-encode it with `encodeURIComponent` inside the `#ingest=` hash parameter:
 
 ```text
-https://detweilerryan.github.io/split/#ingest=<percent-encoded JSON>
+https://split.detweiler.me/#ingest=<percent-encoded JSON>
 ```
 
 Equivalent JavaScript:
 
 ```js
-const link = `https://detweilerryan.github.io/split/#ingest=${encodeURIComponent(JSON.stringify(seed))}`;
+const link = `https://split.detweiler.me/#ingest=${encodeURIComponent(JSON.stringify(seed))}`;
 ```
 
 The app validates the seed, creates a fresh room, saves it, and replaces the ingest URL with the clean room link. Do not generate a room ID, compress the seed, or use an external script.
