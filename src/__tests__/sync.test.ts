@@ -61,8 +61,8 @@ describe('Yjs synchronization and seed hydration', () => {
     const encodedSeed = encodeURIComponent(JSON.stringify(seed));
 
     for (const href of [
-      `https://detweilerryan.github.io/split/#ingest=${encodedSeed}`,
-      `https://detweilerryan.github.io/split/?ingest=${encodedSeed}`,
+      `https://split-eight-rust.vercel.app/#ingest=${encodedSeed}`,
+      `https://split-eight-rust.vercel.app/?ingest=${encodedSeed}`,
     ]) {
       const parsed = parseIngestUrl(href);
       expect(parsed).not.toBeNull();
@@ -71,7 +71,7 @@ describe('Yjs synchronization and seed hydration', () => {
       expect(parsed.roomId).toMatch(/^urn:split:room:[0-9a-f-]{36}$/i);
       expect(parsed.encodedRoom).not.toContain('=');
       expect(parsed.redirectUrl).toBe(
-        `https://detweilerryan.github.io/split/#room=${parsed.encodedRoom}`,
+        `https://split-eight-rust.vercel.app/#room=${parsed.encodedRoom}`,
       );
     }
   });

@@ -17,6 +17,6 @@ npm test
 npm run build
 ```
 
-The production build is written to `dist/`. GitHub Pages deployment is handled by `.github/workflows/deploy.yml`; the Vite base path is `/split/`.
+The production build is written to `dist/`. Deployment is handled by Vercel (Git integration, production branch `main`); set `VITE_LIVEBLOCKS_PUBLIC_KEY` in the Vercel project env vars. The Vite base path is `/`.
 
 Room IDs use the `urn:split:room:<uuid>` format and are base64url-encoded in the URL; existing links with legacy room IDs remain supported. Receipt seeds can be shared as compressed URL hash parameters. Claims are stored as flat `itemId::participantId` values in Yjs so independently hydrated rooms can merge claims without replacing nested item data.
