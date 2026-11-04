@@ -10,6 +10,8 @@ import { SeedModal } from './components/SeedModal';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
 import type { ReceiptSeed } from './types/receipt';
 import { computeReceiptMath } from './utils/math';
+import { formatMoney, localeCurrency } from './utils/currency';
+import { getExchangeRate } from './utils/exchangeRates';
 import { buildExportText } from './utils/exportText';
 import {
   createRoomId,
@@ -177,10 +179,11 @@ export default function App() {
 
   function newBlankRoom() {
     const blank: ReceiptSeed = {
-      title: 'European Receipt',
+      title: 'New Receipt',
       cardTipEur: 0,
       cashTipEur: 0,
       bankUsd: 0,
+      currency: localeCurrency(),
       roster: [],
       items: [],
     };
@@ -195,6 +198,18 @@ export default function App() {
       setRoom({ id: nextRoom, seed: blank });
       updateHash(nextRoom);
     }
+  }
+
+  async function changeDisplayCurrency(code: string, force = false, base = snapshot.currency) {
+    if (!provider) return;
+    if (!code || code === base) {
+      provider.store.setExchangeRate('', 0, '');
+      return;
+    }
+    provider.store.setExchangeRate(code, 0, '');
+    const result = await getExchangeRate(base, code, { force });
+    if (result) provider.store.setExchangeRate(code, result.rate, result.date);
+    else showToast('Exchange rate unavailable offline; showing receipt currency only.');
   }
 
   function copySummary() {
@@ -225,7 +240,8 @@ export default function App() {
       />
       <UnclaimedBanner
         items={snapshot.items}
-        total={math.itemsSubtotalEur}
+        total={math.itemsSubtotal}
+        currency={math.currency}
         filter={filter}
         onFilter={setFilter}
       />
@@ -235,6 +251,12 @@ export default function App() {
             <EditReceiptDrawer
               snapshot={snapshot}
               onMeta={(key, value) => provider.store.setMeta(key, value)}
+              onCurrency={(code) => {
+                provider.store.setMeta('currency', code);
+                if (snapshot.displayCurrency) void changeDisplayCurrency(snapshot.displayCurrency, false, code);
+              }}
+              onDisplayCurrency={changeDisplayCurrency}
+              onRate={(rate) => provider.store.setExchangeRate(snapshot.displayCurrency, rate, new Date().toISOString().slice(0, 10))}
               onAddItem={(name, en, eur) => provider.store.addItem(name, en, eur)}
             />
           )}
@@ -243,6 +265,7 @@ export default function App() {
             participants={snapshot.participants}
             activeId={activeId}
             editing={editing}
+            currency={math.currency}
             filter={filter}
             onClaim={(itemId, participantId) => provider?.store.toggleClaim(itemId, participantId)}
             onClaimAll={(itemId, participants, claimed) =>
@@ -262,10 +285,15 @@ export default function App() {
               <button className="button-secondary" onClick={copySummary}>Copy summary</button>
             </div>
             <dl className="space-y-1 border-t border-slate-100 pt-3 text-sm">
-              <div className="flex justify-between"><dt>Items subtotal</dt><dd className="font-mono font-bold">€{math.itemsSubtotalEur.toFixed(2)}</dd></div>
-              <div className="flex justify-between"><dt>Card total</dt><dd className="font-mono">€{math.cardTotalEur.toFixed(2)}</dd></div>
-              <div className="flex justify-between"><dt>Bank charge</dt><dd className="font-mono">${snapshot.bankUsd.toFixed(2)}</dd></div>
-              <div className="flex justify-between border-t border-slate-100 pt-1 font-bold"><dt>Exchange rate</dt><dd className="font-mono">${math.effectiveRate.toFixed(4)} / €</dd></div>
+              <div className="flex justify-between"><dt>Currency</dt><dd className="font-mono">{math.currency}</dd></div>
+              <div className="flex justify-between"><dt>Items subtotal</dt><dd className="font-mono font-bold">{formatMoney(math.itemsSubtotal, math.currency)}</dd></div>
+              <div className="flex justify-between"><dt>Card total</dt><dd className="font-mono">{formatMoney(math.cardTotal, math.currency)}</dd></div>
+              {math.displayCurrency && math.effectiveRate !== null && (
+                <>
+                  {snapshot.bankUsd > 0 && <div className="flex justify-between"><dt>Bank charge</dt><dd className="font-mono">{formatMoney(snapshot.bankUsd, math.displayCurrency)}</dd></div>}
+                  <div className="flex justify-between border-t border-slate-100 pt-1 font-bold"><dt>Exchange rate{math.isEstimatedRate && snapshot.rateDate ? ` (${snapshot.rateDate})` : ''}</dt><dd className="font-mono">{math.effectiveRate.toFixed(4)} {math.displayCurrency} / {math.currency}</dd></div>
+                </>
+              )}
             </dl>
           </section>
           <ParticipantCards snapshot={snapshot} />

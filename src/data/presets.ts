@@ -6,6 +6,8 @@ export const PRESETS: Record<string, ReceiptSeed> = {
     cardTipEur: 0,
     cashTipEur: 12,
     bankUsd: 147.56,
+    currency: 'EUR',
+    displayCurrency: 'USD',
     roster: ['Jameson', 'Ryan', 'Sarah', 'Elena'],
     items: [
       { id: 'item-0', name: 'Domaća šljivovica', en: 'Homemade Plum Brandy', eur: 7 },
@@ -19,6 +21,8 @@ export const PRESETS: Record<string, ReceiptSeed> = {
     cardTipEur: 5,
     cashTipEur: 8,
     bankUsd: 121.52,
+    currency: 'EUR',
+    displayCurrency: 'USD',
     roster: ['Jameson', 'Ryan', 'Sarah'],
     items: [
       { id: 'item-0', name: 'Coperto Pane e Servizio', en: 'Table Bread & Cover Charge', eur: 7.5 },

@@ -35,7 +35,7 @@ export function Header({
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-indigo-600 font-extrabold text-white">
-              €⇄$
+              ¤
             </span>
             <div className="min-w-0">
               <h1 className="truncate font-extrabold text-slate-900">SplitSmart P2P</h1>

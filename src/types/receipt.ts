@@ -18,6 +18,13 @@ export interface ReceiptSeed {
   cardTipEur: number;
   cashTipEur: number;
   bankUsd: number;
+  /** ISO 4217 code of the receipt amounts; missing means USD (legacy links). */
+  currency?: string;
+  /** Optional ISO 4217 code that participant shares are converted to. */
+  displayCurrency?: string;
+  /** Receipt currency -> display currency rate, with the date it was published. */
+  rate?: number;
+  rateDate?: string;
   roster: string[];
   items: Array<{
     id: string;
@@ -32,6 +39,10 @@ export interface RoomSnapshot {
   cardTipEur: number;
   cashTipEur: number;
   bankUsd: number;
+  currency: string;
+  displayCurrency: string;
+  rate: number;
+  rateDate: string;
   participants: readonly Participant[];
   items: readonly ReceiptItem[];
   connection: {

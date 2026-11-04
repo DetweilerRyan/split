@@ -1,6 +1,7 @@
 import LZString from 'lz-string';
 import * as Y from 'yjs';
 import type { ReceiptSeed } from '../types/receipt';
+import { isValidCurrency, normalizeCurrency } from '../utils/currency';
 
 export interface HydrationOptions {
   forceReset?: boolean;
@@ -52,6 +53,17 @@ export function validateSeed(seed: unknown): ReceiptSeed {
   if (typeof seed.title !== 'string') errors.push('title must be a string');
   for (const key of ['cardTipEur', 'cashTipEur', 'bankUsd']) {
     if (!isFiniteNumber(seed[key])) errors.push(`${key} must be a finite number`);
+  }
+  for (const key of ['currency', 'displayCurrency']) {
+    if (seed[key] !== undefined && !isValidCurrency(seed[key])) {
+      errors.push(`${key} must be an ISO 4217 currency code`);
+    }
+  }
+  if (seed.rate !== undefined && !(isFiniteNumber(seed.rate) && seed.rate > 0)) {
+    errors.push('rate must be a positive number');
+  }
+  if (seed.rateDate !== undefined && typeof seed.rateDate !== 'string') {
+    errors.push('rateDate must be a string');
   }
   if (!Array.isArray(seed.roster) || !seed.roster.every((name) => typeof name === 'string')) {
     errors.push('roster must be an array of strings');
@@ -161,6 +173,14 @@ export function hydrateFromSeed(
       cardTipEur: Number(seed.cardTipEur) || 0,
       cashTipEur: Number(seed.cashTipEur) || 0,
       bankUsd: Number(seed.bankUsd) || 0,
+      currency: normalizeCurrency(seed.currency),
+      ...(isValidCurrency(seed.displayCurrency)
+        ? {
+            displayCurrency: seed.displayCurrency.toUpperCase(),
+            rate: Number(seed.rate) > 0 ? Number(seed.rate) : 0,
+            rateDate: typeof seed.rateDate === 'string' ? seed.rateDate : '',
+          }
+        : {}),
     })) {
       if (forceReset || !meta.has(key)) meta.set(key, value);
     }

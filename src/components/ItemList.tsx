@@ -1,4 +1,5 @@
 import type { Participant, ReceiptItem } from '../types/receipt';
+import { formatMoney } from '../utils/currency';
 import { ItemRow } from './ItemRow';
 
 interface ItemListProps {
@@ -6,6 +7,7 @@ interface ItemListProps {
   participants: readonly Participant[];
   activeId: string | null;
   editing: boolean;
+  currency: string;
   filter: 'all' | 'unclaimed' | 'mine';
   onClaim: (itemId: string, participantId: string) => void;
   onClaimAll: (itemId: string, participants: readonly Participant[], claimed: boolean) => void;
@@ -28,7 +30,7 @@ export function ItemList(props: ItemListProps) {
           <p className="text-xs text-slate-500">{props.items.length} line items · tap to claim</p>
         </div>
         <span className="rounded-lg bg-indigo-50 px-2.5 py-1 font-mono text-sm font-bold text-indigo-800">
-          €{props.items.reduce((sum, item) => sum + item.eur, 0).toFixed(2)}
+          {formatMoney(props.items.reduce((sum, item) => sum + item.eur, 0), props.currency)}
         </span>
       </div>
       {visible.length ? visible.map((item) => (
@@ -38,6 +40,7 @@ export function ItemList(props: ItemListProps) {
           participants={props.participants}
           activeId={props.activeId}
           editing={props.editing}
+          currency={props.currency}
           onClaim={props.onClaim}
           onClaimAll={props.onClaimAll}
           onUpdate={props.onUpdate}

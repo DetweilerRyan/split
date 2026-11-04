@@ -1,28 +1,35 @@
 import type { RoomSnapshot } from '../types/receipt';
+import { formatMoney } from './currency';
 import { computeReceiptMath } from './math';
 
 export function buildExportText(snapshot: RoomSnapshot): string {
   const math = computeReceiptMath(snapshot);
-  const lines = [
-    `🧾 ${snapshot.title}`,
-    `💱 Rate: 1 € = $${math.effectiveRate.toFixed(4)}${math.isEstimatedRate ? ' (Est.)' : ''}`,
-  ];
-  if (snapshot.bankUsd > 0) lines.push(`💳 Bank charged: $${snapshot.bankUsd.toFixed(2)}`);
-  if (snapshot.cashTipEur > 0) lines.push(`💶 Cash tip: €${snapshot.cashTipEur.toFixed(2)}`);
+  const fmt = (amount: number) => formatMoney(amount, math.currency);
+  const lines = [`🧾 ${snapshot.title}`, `💱 Currency: ${math.currency}`];
+  if (math.displayCurrency && math.effectiveRate !== null) {
+    lines.push(
+      `💱 Rate: 1 ${math.currency} = ${math.effectiveRate.toFixed(4)} ${math.displayCurrency}${math.isEstimatedRate ? ` (${snapshot.rateDate || 'est.'})` : ''}`,
+    );
+    if (snapshot.bankUsd > 0) {
+      lines.push(`💳 Bank charged: ${formatMoney(snapshot.bankUsd, math.displayCurrency)}`);
+    }
+  }
+  if (snapshot.cashTipEur > 0) lines.push(`💶 Cash tip: ${fmt(snapshot.cashTipEur)}`);
 
   snapshot.participants.forEach((participant) => {
     const total = math.perPerson[participant.id];
     lines.push(
-      `${participant.name}: $${total.totalUsd.toFixed(2)} (€${total.totalEur.toFixed(2)})`,
+      total.converted !== null && math.displayCurrency
+        ? `${participant.name}: ${formatMoney(total.converted, math.displayCurrency)} (${fmt(total.total)})`
+        : `${participant.name}: ${fmt(total.total)}`,
     );
     snapshot.items.forEach((item) => {
       if (!item.claims[participant.id]) return;
       const claimCount = snapshot.participants.filter((person) => item.claims[person.id]).length;
-      lines.push(`  • ${item.name}: €${(item.eur / claimCount).toFixed(2)}${claimCount > 1 ? ` (1/${claimCount})` : ''}`);
+      lines.push(`  • ${item.name}: ${fmt(item.eur / claimCount)}${claimCount > 1 ? ` (1/${claimCount})` : ''}`);
     });
   });
 
-  const grandTotalEur = math.cardTotalEur + snapshot.cashTipEur;
-  lines.push(`Total: €${grandTotalEur.toFixed(2)} ($${(grandTotalEur * math.effectiveRate).toFixed(2)})`);
+  lines.push(`Total: ${fmt(math.grandTotal)}`);
   return lines.join('\n');
 }

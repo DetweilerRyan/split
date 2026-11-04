@@ -14,6 +14,10 @@ Read the receipt and produce a seed object with this shape:
 ```json
 {
   "title": "Restaurant or receipt title",
+  "currency": "EUR",
+  "displayCurrency": "USD",
+  "rate": 1.085,
+  "rateDate": "2026-01-02",
   "cardTipEur": 0,
   "cashTipEur": 0,
   "bankUsd": 0,
@@ -32,10 +36,12 @@ Read the receipt and produce a seed object with this shape:
 - **Order and IDs:** Keep the receipt's printed item order. Assign sequential IDs (`item-0`, `item-1`, and so on).
 - **Unroll multi-quantity items:** If a printed line has a quantity greater than 1 (for example, `2.00 x 6.00 = 12.00`), unroll it into `N` separate `1x` entries named `"ITEM NAME (1/2)"`, `"ITEM NAME (2/2)"`, each with the single-unit price (`6.0`), so participants can claim individual units.
 - **Bilingual text:** Preserve the printed item name in `name`. Put an English translation or concise explanation in `en`; for an English receipt, repeat the item name.
-- **Numeric amounts and VAT:** Use numeric amounts, not formatted strings. Record item prices and both tip amounts in euros; `bankUsd` is the bank or card charge in US dollars when known. European receipts include VAT and consumption taxes (PDV, IVA, TVA, MwSt) in the item prices; never add VAT, tax breakdown, or subtotal lines as items. Verify that the sum of `items[].eur` equals the printed receipt total (`UKUPNO` / `TOTAL`).
+- **Currency:** Set `currency` to the ISO 4217 code printed on the receipt (`EUR`, `JPY`, `KWD`, ...). Omitting it means `USD`, which keeps old links working. The `eur` and `*TipEur` field names are historical: they hold amounts in the receipt `currency`. Use the currency's own precision (`JPY` 0 decimals, `USD`/`EUR` 2, `KWD` 3).
+- **Optional conversion:** `displayCurrency` (ISO 4217), `rate` (1 receipt-currency unit in display currency) and `rateDate` (`YYYY-MM-DD`) make every participant see the same converted shares. `bankUsd` is the bank/card charge in the display currency (USD when `displayCurrency` is omitted); when set it overrides `rate`. Do not invent a rate: leave these out unless the user supplies one.
+- **Numeric amounts and VAT:** Use numeric amounts, not formatted strings. Record item prices and both tip amounts in the receipt currency. European receipts include VAT and consumption taxes (PDV, IVA, TVA, MwSt) in the item prices; never add VAT, tax breakdown, or subtotal lines as items. Verify that the sum of `items[].eur` equals the printed receipt total (`UKUPNO` / `TOTAL`).
 - **Missing metadata vs. uncertain receipt text:**
-  - Pause and ask if item text, quantities, or prices are illegible, if the sum of `items[].eur` does not match the printed total, or if the receipt is not in euros (ask for euro amounts or an exchange rate and permission to convert; never silently treat another currency as euros or invent a conversion).
-  - Do not pause for missing optional metadata (`cardTipEur`, `cashTipEur`, `bankUsd`, `roster`, `title`). Immediately apply defaults (`0` for tips and `bankUsd`, `[]` for `roster`, the merchant name or `"Receipt"` for `title`), generate the link on the first turn, and list the applied defaults in the response.
+  - Pause and ask if item text, quantities, or prices are illegible, if the sum of `items[].eur` does not match the printed total, or if the currency cannot be determined (ask which currency it is; never silently assume one or invent a conversion).
+  - Do not pause for missing optional metadata (`cardTipEur`, `cashTipEur`, `bankUsd`, `displayCurrency`, `roster`, `title`). Immediately apply defaults (`0` for tips and `bankUsd`, `[]` for `roster`, the merchant name or `"Receipt"` for `title`), generate the link on the first turn, and list the applied defaults in the response.
 
 ## 2. Generate the ingest link
 

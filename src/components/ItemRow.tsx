@@ -1,11 +1,13 @@
 import { Check, Trash2 } from 'lucide-react';
 import type { Participant, ReceiptItem } from '../types/receipt';
+import { currencyExponent, formatMoney } from '../utils/currency';
 
 interface ItemRowProps {
   item: ReceiptItem;
   participants: readonly Participant[];
   activeId: string | null;
   editing: boolean;
+  currency: string;
   onClaim: (itemId: string, participantId: string) => void;
   onClaimAll: (itemId: string, participants: readonly Participant[], claimed: boolean) => void;
   onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
@@ -17,20 +19,21 @@ export function ItemRow({
   participants,
   activeId,
   editing,
+  currency,
   onClaim,
   onClaimAll,
   onUpdate,
   onDelete,
 }: ItemRowProps) {
   const claimedBy = participants.filter((person) => item.claims[person.id]);
-  const formatEur = (value: number) => `€${value.toFixed(2)}`;
+  const formatAmount = (value: number) => formatMoney(value, currency);
 
   if (editing) {
     return (
       <div className="grid gap-2 p-4 sm:grid-cols-[1fr_1fr_7rem_auto]">
         <input aria-label="Item name" className="input" defaultValue={item.name} onBlur={(event) => onUpdate(item.id, 'name', event.target.value)} />
         <input aria-label="English name" className="input" defaultValue={item.en} onBlur={(event) => onUpdate(item.id, 'en', event.target.value)} />
-        <input aria-label="Price in euros" className="input" type="number" step="0.01" defaultValue={item.eur} onBlur={(event) => onUpdate(item.id, 'eur', Number(event.target.value) || 0)} />
+        <input aria-label={`Price in ${currency}`} className="input" type="number" step={10 ** -currencyExponent(currency)} defaultValue={item.eur} onBlur={(event) => onUpdate(item.id, 'eur', Number(event.target.value) || 0)} />
         <button aria-label={`Delete ${item.name}`} className="button-secondary justify-center text-rose-700" onClick={() => onDelete(item.id)}>
           <Trash2 size={15} />
         </button>
@@ -51,7 +54,7 @@ export function ItemRow({
             {item.en && <span className="block text-xs italic text-slate-500">{item.en}</span>}
           </span>
         </button>
-        <span className="shrink-0 font-mono text-sm font-bold">{formatEur(item.eur)}</span>
+        <span className="shrink-0 font-mono text-sm font-bold">{formatAmount(item.eur)}</span>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pl-8">
         <div className="flex flex-wrap gap-1.5">
@@ -72,7 +75,7 @@ export function ItemRow({
           </button>
         </div>
         <span className="text-xs text-slate-500">
-          {claimedBy.length === 0 ? 'Unclaimed' : claimedBy.length > 1 ? `${formatEur(item.eur / claimedBy.length)} each` : 'Solo'}
+          {claimedBy.length === 0 ? 'Unclaimed' : claimedBy.length > 1 ? `${formatAmount(item.eur / claimedBy.length)} each` : 'Solo'}
         </span>
       </div>
     </article>
