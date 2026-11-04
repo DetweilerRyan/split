@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
+import { DEFAULT_CURRENCY, normalizeCurrency } from '../utils/currency';
 import type { Participant, ReceiptItem, RoomSnapshot } from '../types/receipt';
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
@@ -10,6 +11,10 @@ export const EMPTY_SNAPSHOT: RoomSnapshot = {
   cardTipEur: 0,
   cashTipEur: 0,
   bankUsd: 0,
+  currency: DEFAULT_CURRENCY,
+  displayCurrency: '',
+  rate: 0,
+  rateDate: '',
   participants: [],
   items: [],
   connection: { provider: configuredProvider, status: 'connecting' },
@@ -57,8 +62,19 @@ export class ReceiptStore {
     this.publish();
   }
 
-  setMeta(key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd', value: string | number): void {
+  setMeta(
+    key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd' | 'currency' | 'displayCurrency' | 'rate' | 'rateDate',
+    value: string | number,
+  ): void {
     this.meta.set(key, value);
+  }
+
+  setExchangeRate(displayCurrency: string, rate: number, rateDate: string): void {
+    this.ydoc.transact(() => {
+      this.meta.set('displayCurrency', displayCurrency);
+      this.meta.set('rate', rate);
+      this.meta.set('rateDate', rateDate);
+    });
   }
 
   addParticipant(name: string): Participant | null {
@@ -165,6 +181,10 @@ export class ReceiptStore {
       cardTipEur: Number(this.meta.get('cardTipEur')) || 0,
       cashTipEur: Number(this.meta.get('cashTipEur')) || 0,
       bankUsd: Number(this.meta.get('bankUsd')) || 0,
+      currency: normalizeCurrency(this.meta.get('currency')),
+      displayCurrency: String(this.meta.get('displayCurrency') || ''),
+      rate: Number(this.meta.get('rate')) || 0,
+      rateDate: String(this.meta.get('rateDate') || ''),
       participants,
       items,
       connection: this.connection,

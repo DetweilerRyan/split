@@ -22,3 +22,9 @@ Run locally with `npm run dev`, build with `npm run build`, and serve the produc
 Vercel auto-detects Next.js; use its default build command and output with no `vercel.json` or SPA rewrites. The app uses Next.js's default server/hybrid deployment, and its single route is statically prerendered. Configure `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` in the Vercel Preview and Production environments only if using Liveblocks; it is client-exposed. WebRTC signaling uses the existing public signaling servers and needs no environment variable. Room and ingest URL fragments and query parameters are handled client-side.
 
 Room IDs use the `urn:split:room:<uuid>` format and are base64url-encoded in the URL; existing links with legacy room IDs remain supported. Receipt seeds can be shared as compressed URL hash parameters. Claims are stored as flat `itemId::participantId` values in Yjs so independently hydrated rooms can merge claims without replacing nested item data.
+
+## Currencies
+
+Each receipt room stores an ISO 4217 `currency` (default `USD`, so legacy rooms and links without one open as USD). It is synced through Yjs and included in receipt seeds. Amounts are formatted with `Intl.NumberFormat`, and splitting is done in integer minor units using the currency's exponent (`JPY` 0, `USD` 2, `KWD` 3), with remainders distributed deterministically so shares add up exactly. New blank rooms default to the locale's currency.
+
+Optionally choose a display currency in the edit drawer to see each share converted. Rates come from [Frankfurter](https://frankfurter.dev) (ECB data, no API key) fetched client-side and cached in IndexedDB; the rate and its date are stored on the receipt so all peers see identical values. Offline, with no cached or stored rate, amounts show in the receipt currency only. The rate can also be edited manually.

@@ -135,9 +135,29 @@ describe('Yjs synchronization and seed hydration', () => {
     expect(snapshotA.items.find((item) => item.id === 'item-1')?.claims['p-sam']).toBe(true);
 
     const math = computeReceiptMath(snapshotA);
-    expect(math.perPerson['p-alex'].itemsSubtotalEur).toBe(3);
-    expect(math.perPerson['p-sam'].itemsSubtotalEur).toBe(9);
+    expect(math.perPerson['p-alex'].itemsSubtotal).toBe(3);
+    expect(math.perPerson['p-sam'].itemsSubtotal).toBe(9);
     docA.destroy();
     docB.destroy();
+  });
+});
+
+describe('receipt currency in seeds', () => {
+  it('defaults to USD for legacy seeds and keeps an explicit currency', async () => {
+    const { hydrateFromSeed, validateSeed } = await import('../store/seedCodec');
+    const { ReceiptStore } = await import('../store/useReceiptStore');
+    const Y = await import('yjs');
+    const base = { title: 't', cardTipEur: 0, cashTipEur: 0, bankUsd: 0, roster: [], items: [] };
+
+    const legacy = new Y.Doc();
+    hydrateFromSeed(legacy, base);
+    expect(new ReceiptStore(legacy).getSnapshot().currency).toBe('USD');
+
+    const jpy = new Y.Doc();
+    hydrateFromSeed(jpy, { ...base, currency: 'jpy' });
+    expect(new ReceiptStore(jpy).getSnapshot().currency).toBe('JPY');
+
+    expect(() => validateSeed({ ...base, currency: 'XXXX' })).toThrow(/currency/);
+    expect(validateSeed({ ...base, currency: 'KWD' }).currency).toBe('KWD');
   });
 });
