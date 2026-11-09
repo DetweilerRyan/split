@@ -1,6 +1,6 @@
 'use client';
 
-import { resetRoomLoads } from '../../../src/hooks/useRoomProvider';
+import { clearFailedRoomLoads } from '../../../src/hooks/useRoomProvider';
 
 export default function RoomError({ error, reset }: { error: Error; reset: () => void }) {
   return (
@@ -9,7 +9,7 @@ export default function RoomError({ error, reset }: { error: Error; reset: () =>
       <button
         className="button-secondary"
         onClick={() => {
-          resetRoomLoads();
+          clearFailedRoomLoads();
           reset();
         }}
       >
