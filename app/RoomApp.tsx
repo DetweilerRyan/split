@@ -2,13 +2,9 @@
 
 import dynamic from 'next/dynamic';
 
-const App = dynamic(() => import('../src/App'), {
-  ssr: false,
-  loading: () => (
-    <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Restoring this room…</main>
-  ),
-});
+const loading = () => (
+  <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Restoring this room…</main>
+);
 
-export default function RoomApp({ room }: { room?: string }) {
-  return <App roomParam={room} />;
-}
+export const RoomEntry = dynamic(() => import('../src/RoomEntry'), { ssr: false, loading });
+export const RoomView = dynamic(() => import('../src/RoomView'), { ssr: false, loading });

@@ -1,5 +1,5 @@
-import RoomApp from './RoomApp';
+import { RoomEntry } from './RoomApp';
 
 export default function Page() {
-  return <RoomApp />;
+  return <RoomEntry />;
 }
