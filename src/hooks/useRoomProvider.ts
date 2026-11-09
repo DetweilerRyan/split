@@ -1,29 +1,44 @@
-import { useEffect, useState } from 'react';
+import { use } from 'react';
 import type { ReceiptSeed } from '../types/receipt';
 import { getRoomProvider, type RoomProvider } from '../store/yjsProvider';
-import { pendingSeedKey } from '../store/seedCodec';
+import { pendingSeedKey, validateSeed } from '../store/seedCodec';
 
-export function useRoomProvider(roomId: string, seed: ReceiptSeed | null) {
-  const [provider, setProvider] = useState<RoomProvider | null>(null);
-  const [error, setError] = useState('');
+const loads = new Map<string, Promise<RoomProvider>>();
 
-  useEffect(() => {
-    let active = true;
-    getRoomProvider(roomId, seed)
-      .then((roomProvider) => {
-        if (!active) return;
-        setProvider(roomProvider);
-        try {
-          window.sessionStorage.removeItem(pendingSeedKey(roomId));
-        } catch {}
-      })
-      .catch(() => {
-        if (active) setError('Could not open this receipt room.');
-      });
-    return () => {
-      active = false;
-    };
-  }, [roomId, seed]);
+function readPendingSeed(roomId: string): ReceiptSeed | null {
+  try {
+    const raw = window.sessionStorage.getItem(pendingSeedKey(roomId));
+    return raw ? validateSeed(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
 
-  return { provider, error };
+function loadRoom(roomId: string): Promise<RoomProvider> {
+  return getRoomProvider(roomId, readPendingSeed(roomId)).then(
+    (provider) => {
+      try {
+        window.sessionStorage.removeItem(pendingSeedKey(roomId));
+      } catch {}
+      return provider;
+    },
+    () => {
+      throw new Error('Could not open this receipt room.');
+    },
+  );
+}
+
+/** Suspends while the room loads; throws to the nearest error boundary on failure. */
+export function useRoomProvider(roomId: string): RoomProvider {
+  let load = loads.get(roomId);
+  if (!load) {
+    load = loadRoom(roomId);
+    loads.set(roomId, load);
+  }
+  return use(load);
+}
+
+/** Forget settled loads so an error boundary reset can retry. */
+export function resetRoomLoads() {
+  loads.clear();
 }
