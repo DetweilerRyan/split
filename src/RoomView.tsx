@@ -19,31 +19,20 @@ import {
   hydrateFromSeed,
   pendingSeedKey,
   roomPath,
-  validateSeed,
 } from './store/seedCodec';
 import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-function readPendingSeed(roomId: string): ReceiptSeed | null {
-  try {
-    const raw = window.sessionStorage.getItem(pendingSeedKey(roomId));
-    return raw ? validateSeed(JSON.parse(raw)) : null;
-  } catch {
-    return null;
-  }
-}
-
 export default function RoomView({ roomId }: { roomId: string }) {
   const router = useRouter();
-  const [seed] = useState(() => readPendingSeed(roomId));
-  const { provider, error: loadingError } = useRoomProvider(roomId, seed);
+  const provider = useRoomProvider(roomId);
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<ItemFilter>('all');
   const [identityOpen, setIdentityOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
   const [toast, setToast] = useState('');
-  const snapshot = useReceiptStore(provider?.store ?? null);
+  const snapshot = useReceiptStore(provider.store);
   const math = computeReceiptMath(snapshot);
   const [activeId, setActiveId] = useActiveIdentity(provider, roomId, snapshot.participants);
 
@@ -58,7 +47,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
   }
 
   function addParticipant(name: string) {
-    const participant = provider?.store.addParticipant(name);
+    const participant = provider.store.addParticipant(name);
     if (participant) chooseIdentity(participant.id);
     else {
       const id = `p-${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
@@ -68,7 +57,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
   }
 
   function removeParticipant(id: string) {
-    provider?.store.removeParticipant(id);
+    provider.store.removeParticipant(id);
     if (id === activeId) setActiveId(null);
   }
 
@@ -77,7 +66,6 @@ export default function RoomView({ roomId }: { roomId: string }) {
   }
 
   function importSeed(seed: ReceiptSeed, forceReset: boolean) {
-    if (!provider) return;
     hydrateFromSeed(provider.doc, seed, { forceReset });
     setSeedOpen(false);
     showToast(`Imported ${seed.items.length} receipt items.`);
@@ -105,7 +93,6 @@ export default function RoomView({ roomId }: { roomId: string }) {
   }
 
   async function changeDisplayCurrency(code: string, force = false, base = snapshot.currency) {
-    if (!provider) return;
     if (!code || code === base) {
       provider.store.setExchangeRate('', 0, '');
       return;
@@ -118,10 +105,6 @@ export default function RoomView({ roomId }: { roomId: string }) {
 
   function copySummary() {
     void navigator.clipboard?.writeText(buildExportText(snapshot)).then(() => showToast('Summary copied.'));
-  }
-
-  if (loadingError) {
-    return <main className="mx-auto max-w-xl p-8 text-center text-rose-700">{loadingError}</main>;
   }
 
   const totals = math.perPerson;
@@ -148,7 +131,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
       />
       <main className="mx-auto grid max-w-6xl gap-4 px-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
         <div className="space-y-4">
-          {editing && provider && (
+          {editing && (
             <EditReceiptDrawer
               snapshot={snapshot}
               onMeta={(key, value) => provider.store.setMeta(key, value)}
@@ -168,12 +151,12 @@ export default function RoomView({ roomId }: { roomId: string }) {
             editing={editing}
             currency={math.currency}
             filter={filter}
-            onClaim={(itemId, participantId) => provider?.store.toggleClaim(itemId, participantId)}
+            onClaim={(itemId, participantId) => provider.store.toggleClaim(itemId, participantId)}
             onClaimAll={(itemId, participants, claimed) =>
-              provider?.store.setClaims(itemId, participants.map((person) => person.id), claimed)
+              provider.store.setClaims(itemId, participants.map((person) => person.id), claimed)
             }
-            onUpdate={(itemId, field, value) => provider?.store.updateItem(itemId, field, value)}
-            onDelete={(itemId) => provider?.store.deleteItem(itemId)}
+            onUpdate={(itemId, field, value) => provider.store.updateItem(itemId, field, value)}
+            onDelete={(itemId) => provider.store.deleteItem(itemId)}
           />
         </div>
         <aside className="space-y-4">
@@ -225,8 +208,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
         onBlankRoom={newBlankRoom}
       />
       {toast && <div role="status" className="fixed bottom-4 right-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-lg">{toast}</div>}
-      {!provider && <div className="fixed bottom-4 left-4 text-xs text-slate-500">Restoring this room…</div>}
-      {Object.keys(totals).length === 0 && provider && <div className="sr-only">No participants yet.</div>}
+      {Object.keys(totals).length === 0 && <div className="sr-only">No participants yet.</div>}
     </div>
   );
 }
