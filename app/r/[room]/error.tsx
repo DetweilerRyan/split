@@ -1,20 +1,10 @@
 'use client';
 
-import { clearFailedRoomLoads } from '../../../src/hooks/useRoomProvider';
-
-export default function RoomError({ error, reset }: { error: Error; reset: () => void }) {
+export default function RoomError({ error }: { error: Error }) {
   return (
-    <main className="mx-auto max-w-xl space-y-3 p-8 text-center text-rose-700">
+    <main className="mx-auto max-w-xl p-8 text-center text-rose-700">
       <p>{error.message}</p>
-      <button
-        className="button-secondary"
-        onClick={() => {
-          clearFailedRoomLoads();
-          reset();
-        }}
-      >
-        Try again
-      </button>
+      <p className="mt-2 text-sm text-slate-600">Refresh the page to try again.</p>
     </main>
   );
 }
