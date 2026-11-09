@@ -11,6 +11,7 @@ import {
   parseIngestUrl,
   parseRoomHash,
   parseRoomPath,
+  resolveRoomLocation,
   roomPath,
   validateSeed,
 } from '../store/seedCodec';
@@ -86,6 +87,19 @@ describe('Yjs synchronization and seed hydration', () => {
     expect(parseRoomPath('/r')).toBeNull();
     expect(parseRoomPath('/r/a/b')).toBeNull();
     expect(parseRoomPath('/r/%E0%A4%A')).toBeNull();
+  });
+
+  it('resolves rooms from path/prop before hash and ignores seed with a path room', () => {
+    const roomId = createRoomId();
+    const other = createRoomId();
+    const hash = `#room=${encodeRoomId(other)}&seed=abc`;
+    expect(resolveRoomLocation(roomPath(roomId), hash)).toEqual({ roomId, seed: null });
+    expect(resolveRoomLocation('/', hash, encodeRoomId(roomId))).toEqual({
+      roomId,
+      seed: null,
+    });
+    expect(resolveRoomLocation('/', hash)).toEqual({ roomId: other, seed: 'abc' });
+    expect(resolveRoomLocation('/', '')).toEqual({ roomId: null, seed: null });
   });
 
   it('reports malformed JSON and seed validation errors in ingest links', () => {

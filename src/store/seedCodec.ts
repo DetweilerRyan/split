@@ -149,14 +149,27 @@ export function roomPath(roomId: string): string {
   return `/r/${encodeRoomId(roomId)}`;
 }
 
-export function parseRoomPath(pathname: string): string | null {
-  const match = /^\/r\/([^/]+)\/?$/.exec(pathname);
-  if (!match) return null;
+export function decodeRoomSegment(segment: string): string | null {
   try {
-    return decodeRoomId(decodeURIComponent(match[1]));
+    return decodeRoomId(decodeURIComponent(segment));
   } catch {
     return null;
   }
+}
+
+export function parseRoomPath(pathname: string): string | null {
+  const match = /^\/r\/([^/]+)\/?$/.exec(pathname);
+  return match ? decodeRoomSegment(match[1]) : null;
+}
+
+export function resolveRoomLocation(
+  pathname: string,
+  hash: string,
+  roomParam?: string,
+): { roomId: string | null; seed: string | null } {
+  const pathRoom = roomParam ? decodeRoomSegment(roomParam) : parseRoomPath(pathname);
+  if (pathRoom) return { roomId: pathRoom, seed: null };
+  return parseRoomHash(hash);
 }
 
 export function parseRoomHash(hash: string): { roomId: string | null; seed: string | null } {
