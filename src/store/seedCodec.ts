@@ -141,8 +141,22 @@ export function parseIngestUrl(href: string): ParsedIngestUrl | { error: string 
     seed,
     roomId,
     encodedRoom,
-    redirectUrl: `${url.origin}${url.pathname}#room=${encodedRoom}`,
+    redirectUrl: `${url.origin}${roomPath(roomId)}`,
   };
+}
+
+export function roomPath(roomId: string): string {
+  return `/r/${encodeRoomId(roomId)}`;
+}
+
+export function parseRoomPath(pathname: string): string | null {
+  const match = /^\/r\/([^/]+)\/?$/.exec(pathname);
+  if (!match) return null;
+  try {
+    return decodeRoomId(decodeURIComponent(match[1]));
+  } catch {
+    return null;
+  }
 }
 
 export function parseRoomHash(hash: string): { roomId: string | null; seed: string | null } {

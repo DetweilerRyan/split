@@ -10,6 +10,8 @@ import {
   hydrateFromSeed,
   parseIngestUrl,
   parseRoomHash,
+  parseRoomPath,
+  roomPath,
   validateSeed,
 } from '../store/seedCodec';
 import { ReceiptStore } from '../store/useReceiptStore';
@@ -71,9 +73,19 @@ describe('Yjs synchronization and seed hydration', () => {
       expect(parsed.roomId).toMatch(/^urn:split:room:[0-9a-f-]{36}$/i);
       expect(parsed.encodedRoom).not.toContain('=');
       expect(parsed.redirectUrl).toBe(
-        `https://split.detweiler.me/#room=${parsed.encodedRoom}`,
+        `https://split.detweiler.me/r/${parsed.encodedRoom}`,
       );
     }
+  });
+
+  it('parses and builds /r/<room> paths', () => {
+    const roomId = createRoomId();
+    expect(parseRoomPath(roomPath(roomId))).toBe(roomId);
+    expect(parseRoomPath(`${roomPath(roomId)}/`)).toBe(roomId);
+    expect(parseRoomPath('/r/split-legacy')).toBe('split-legacy');
+    expect(parseRoomPath('/r')).toBeNull();
+    expect(parseRoomPath('/r/a/b')).toBeNull();
+    expect(parseRoomPath('/r/%E0%A4%A')).toBeNull();
   });
 
   it('reports malformed JSON and seed validation errors in ingest links', () => {
