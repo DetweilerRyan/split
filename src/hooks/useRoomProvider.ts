@@ -3,7 +3,10 @@ import type { ReceiptSeed } from '../types/receipt';
 import { getRoomProvider, type RoomProvider } from '../store/yjsProvider';
 import { pendingSeedKey, validateSeed } from '../store/seedCodec';
 
-const loads = new Map<string, Promise<RoomProvider>>();
+// `use()` needs the same promise instance on every render, so loads are cached per room
+// outside of React. Failed entries stay cached so the error boundary sees a stable
+// rejection instead of re-triggering the load on every retry render.
+const loads = new Map<string, { promise: Promise<RoomProvider>; failed: boolean }>();
 
 function readPendingSeed(roomId: string): ReceiptSeed | null {
   try {
@@ -14,31 +17,34 @@ function readPendingSeed(roomId: string): ReceiptSeed | null {
   }
 }
 
-function loadRoom(roomId: string): Promise<RoomProvider> {
-  return getRoomProvider(roomId, readPendingSeed(roomId)).then(
-    (provider) => {
-      try {
-        window.sessionStorage.removeItem(pendingSeedKey(roomId));
-      } catch {}
-      return provider;
-    },
-    () => {
-      throw new Error('Could not open this receipt room.');
-    },
-  );
+function startLoad(roomId: string) {
+  const entry = {
+    failed: false,
+    promise: getRoomProvider(roomId, readPendingSeed(roomId)).then(
+      (provider) => {
+        try {
+          window.sessionStorage.removeItem(pendingSeedKey(roomId));
+        } catch {}
+        return provider;
+      },
+      (cause: unknown) => {
+        entry.failed = true;
+        throw new Error('Could not open this receipt room.', { cause });
+      },
+    ),
+  };
+  loads.set(roomId, entry);
+  return entry;
 }
 
-/** Suspends while the room loads; throws to the nearest error boundary on failure. */
+/** Suspends while the room loads; a failed load is thrown to the nearest error boundary. */
 export function useRoomProvider(roomId: string): RoomProvider {
-  let load = loads.get(roomId);
-  if (!load) {
-    load = loadRoom(roomId);
-    loads.set(roomId, load);
-  }
-  return use(load);
+  return use((loads.get(roomId) ?? startLoad(roomId)).promise);
 }
 
-/** Forget settled loads so an error boundary reset can retry. */
-export function resetRoomLoads() {
-  loads.clear();
+/** Drop failed loads so the next render retries them (call from an error boundary reset). */
+export function clearFailedRoomLoads() {
+  for (const [roomId, entry] of loads) {
+    if (entry.failed) loads.delete(roomId);
+  }
 }
