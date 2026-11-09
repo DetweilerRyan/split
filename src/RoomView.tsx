@@ -1,6 +1,5 @@
-"use client";
-
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { EditReceiptDrawer } from './components/EditReceiptDrawer';
 import { Header } from './components/Header';
 import { IdentityModal } from './components/IdentityModal';
@@ -8,6 +7,8 @@ import { ItemList } from './components/ItemList';
 import { ParticipantCards } from './components/ParticipantCards';
 import { SeedModal } from './components/SeedModal';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
+import { useActiveIdentity } from './hooks/useActiveIdentity';
+import { useRoomProvider } from './hooks/useRoomProvider';
 import type { ReceiptSeed } from './types/receipt';
 import { computeReceiptMath } from './utils/math';
 import { formatMoney, localeCurrency } from './utils/currency';
@@ -15,67 +16,28 @@ import { getExchangeRate } from './utils/exchangeRates';
 import { buildExportText } from './utils/exportText';
 import {
   createRoomId,
-  decodeSeed,
   hydrateFromSeed,
-  parseIngestUrl,
-  parseRoomPath,
-  resolveRoomLocation,
+  pendingSeedKey,
   roomPath,
   validateSeed,
 } from './store/seedCodec';
-import { getRoomProvider, type RoomProvider } from './store/yjsProvider';
 import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-interface AppRoom {
-  id: string;
-  seed: ReceiptSeed | null;
-  ingestRedirectUrl?: string;
-  ingestError?: string;
-}
-
-function updateUrl(roomId: string) {
-  window.history.replaceState(null, '', roomPath(roomId));
-}
-
-function readPendingIngestSeed(roomId: string): ReceiptSeed | null {
+function readPendingSeed(roomId: string): ReceiptSeed | null {
   try {
-    const raw = window.sessionStorage.getItem(`splitsmart-ingest-${roomId}`);
+    const raw = window.sessionStorage.getItem(pendingSeedKey(roomId));
     return raw ? validateSeed(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 }
 
-export default function App({ roomParam }: { roomParam?: string }) {
-  const [room, setRoom] = useState<AppRoom>(() => {
-    const ingest = parseIngestUrl(window.location.href);
-    if (ingest && 'error' in ingest) {
-      return { id: createRoomId(), seed: null, ingestError: ingest.error };
-    }
-    if (ingest) {
-      return {
-        id: ingest.roomId,
-        seed: ingest.seed,
-        ingestRedirectUrl: ingest.redirectUrl,
-      };
-    }
-
-    const parsed = resolveRoomLocation(
-      window.location.pathname,
-      window.location.hash,
-      roomParam,
-    );
-    const id = parsed.roomId || createRoomId();
-    return {
-      id,
-      seed: readPendingIngestSeed(id) ?? decodeSeed(parsed.seed),
-    };
-  });
-  const [provider, setProvider] = useState<RoomProvider | null>(null);
-  const [loadingError, setLoadingError] = useState(room.ingestError ?? '');
-  const [activeId, setActiveId] = useState<string | null>(null);
+export default function RoomView({ roomId }: { roomId: string }) {
+  const router = useRouter();
+  const [seed] = useState(() => readPendingSeed(roomId));
+  const { provider, error: loadingError } = useRoomProvider(roomId, seed);
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<ItemFilter>('all');
   const [identityOpen, setIdentityOpen] = useState(false);
@@ -83,60 +45,7 @@ export default function App({ roomParam }: { roomParam?: string }) {
   const [toast, setToast] = useState('');
   const snapshot = useReceiptStore(provider?.store ?? null);
   const math = computeReceiptMath(snapshot);
-
-  useEffect(() => {
-    if (room.ingestError) return;
-    let active = true;
-    getRoomProvider(room.id, room.seed)
-      .then((roomProvider) => {
-        if (!active) return;
-        setProvider(roomProvider);
-        if (room.ingestRedirectUrl) {
-          try {
-            window.sessionStorage.setItem(
-              `splitsmart-ingest-${room.id}`,
-              JSON.stringify(room.seed),
-            );
-          } catch {}
-          window.history.replaceState(null, '', room.ingestRedirectUrl);
-        } else {
-          try {
-            window.sessionStorage.removeItem(`splitsmart-ingest-${room.id}`);
-          } catch {}
-          if (parseRoomPath(window.location.pathname) !== room.id || window.location.hash) {
-            updateUrl(room.id);
-          }
-        }
-      })
-      .catch(() => {
-        if (active) setLoadingError('Could not open this receipt room.');
-      });
-    return () => {
-      active = false;
-    };
-  }, [room.id, room.seed, room.ingestError, room.ingestRedirectUrl]);
-
-  useEffect(() => {
-    if (!provider || snapshot.participants.length === 0) return;
-    if (!activeId || !snapshot.participants.some((person) => person.id === activeId)) {
-      const saved = window.localStorage.getItem(`splitsmart-user-${room.id}`);
-      setActiveId(
-        snapshot.participants.find((person) => person.id === saved)?.id ??
-          snapshot.participants[0].id,
-      );
-    }
-  }, [activeId, provider, room.id, snapshot.participants]);
-
-  useEffect(() => {
-    if (!provider) return;
-    const identity = snapshot.participants.find((person) => person.id === activeId);
-    provider.setIdentity(
-      identity
-        ? { id: identity.id, name: identity.name, colorIdx: identity.colorIdx }
-        : null,
-    );
-    if (identity) window.localStorage.setItem(`splitsmart-user-${room.id}`, identity.id);
-  }, [activeId, provider, room.id, snapshot.participants]);
+  const [activeId, setActiveId] = useActiveIdentity(provider, roomId, snapshot.participants);
 
   function showToast(message: string) {
     setToast(message);
@@ -164,14 +73,12 @@ export default function App({ roomParam }: { roomParam?: string }) {
   }
 
   function shareRoom() {
-    updateUrl(room.id);
-    void navigator.clipboard?.writeText(window.location.href).then(() => showToast('Room link copied.'));
+    void navigator.clipboard?.writeText(`${window.location.origin}${roomPath(roomId)}`).then(() => showToast('Room link copied.'));
   }
 
   function importSeed(seed: ReceiptSeed, forceReset: boolean) {
     if (!provider) return;
     hydrateFromSeed(provider.doc, seed, { forceReset });
-    updateUrl(room.id);
     setSeedOpen(false);
     showToast(`Imported ${seed.items.length} receipt items.`);
   }
@@ -192,13 +99,9 @@ export default function App({ roomParam }: { roomParam?: string }) {
     };
     const nextRoom = createRoomId();
     try {
-      window.sessionStorage.setItem(`splitsmart-ingest-${nextRoom}`, JSON.stringify(blank));
-      window.location.replace(`${window.location.origin}${roomPath(nextRoom)}`);
-    } catch {
-      setProvider(null);
-      setRoom({ id: nextRoom, seed: blank });
-      updateUrl(nextRoom);
-    }
+      window.sessionStorage.setItem(pendingSeedKey(nextRoom), JSON.stringify(blank));
+    } catch {}
+    router.push(roomPath(nextRoom));
   }
 
   async function changeDisplayCurrency(code: string, force = false, base = snapshot.currency) {
@@ -220,16 +123,13 @@ export default function App({ roomParam }: { roomParam?: string }) {
   if (loadingError) {
     return <main className="mx-auto max-w-xl p-8 text-center text-rose-700">{loadingError}</main>;
   }
-  if (room.ingestRedirectUrl && !provider) {
-    return <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Preparing your receipt…</main>;
-  }
 
   const totals = math.perPerson;
 
   return (
     <div className="min-h-screen pb-12">
       <Header
-        roomId={room.id}
+        roomId={roomId}
         activeId={activeId}
         connection={snapshot.connection}
         peers={snapshot.peers}

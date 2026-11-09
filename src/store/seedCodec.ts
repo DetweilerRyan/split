@@ -162,14 +162,8 @@ export function parseRoomPath(pathname: string): string | null {
   return match ? decodeRoomSegment(match[1]) : null;
 }
 
-export function resolveRoomLocation(
-  pathname: string,
-  hash: string,
-  roomParam?: string,
-): { roomId: string | null; seed: string | null } {
-  const pathRoom = roomParam ? decodeRoomSegment(roomParam) : parseRoomPath(pathname);
-  if (pathRoom) return { roomId: pathRoom, seed: null };
-  return parseRoomHash(hash);
+export function pendingSeedKey(roomId: string): string {
+  return `splitsmart-ingest-${roomId}`;
 }
 
 export function parseRoomHash(hash: string): { roomId: string | null; seed: string | null } {
