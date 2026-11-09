@@ -15,11 +15,13 @@ import { getExchangeRate } from './utils/exchangeRates';
 import { buildExportText } from './utils/exportText';
 import {
   createRoomId,
+  decodeRoomId,
   decodeSeed,
-  encodeRoomId,
   hydrateFromSeed,
   parseIngestUrl,
   parseRoomHash,
+  parseRoomPath,
+  roomPath,
   validateSeed,
 } from './store/seedCodec';
 import { getRoomProvider, type RoomProvider } from './store/yjsProvider';
@@ -34,9 +36,8 @@ interface AppRoom {
   ingestError?: string;
 }
 
-function updateHash(roomId: string) {
-  const params = new URLSearchParams({ room: encodeRoomId(roomId) });
-  window.history.replaceState(null, '', `${window.location.pathname}#${params}`);
+function updateUrl(roomId: string) {
+  window.history.replaceState(null, '', roomPath(roomId));
 }
 
 function readPendingIngestSeed(roomId: string): ReceiptSeed | null {
@@ -48,7 +49,7 @@ function readPendingIngestSeed(roomId: string): ReceiptSeed | null {
   }
 }
 
-export default function App() {
+export default function App({ roomParam }: { roomParam?: string }) {
   const [room, setRoom] = useState<AppRoom>(() => {
     const ingest = parseIngestUrl(window.location.href);
     if (ingest && 'error' in ingest) {
@@ -63,10 +64,13 @@ export default function App() {
     }
 
     const parsed = parseRoomHash(window.location.hash);
-    const id = parsed.roomId || createRoomId();
+    const pathRoom = roomParam
+      ? decodeRoomId(roomParam)
+      : parseRoomPath(window.location.pathname);
+    const id = pathRoom || parsed.roomId || createRoomId();
     return {
       id,
-      seed: readPendingIngestSeed(id) ?? decodeSeed(parsed.seed),
+      seed: readPendingIngestSeed(id) ?? (pathRoom ? null : decodeSeed(parsed.seed)),
     };
   });
   const [provider, setProvider] = useState<RoomProvider | null>(null);
@@ -93,7 +97,7 @@ export default function App() {
               `splitsmart-ingest-${room.id}`,
               JSON.stringify(room.seed),
             );
-            window.location.replace(room.ingestRedirectUrl);
+            window.history.replaceState(null, '', room.ingestRedirectUrl);
           } catch {
             window.history.replaceState(null, '', room.ingestRedirectUrl);
           }
@@ -101,8 +105,9 @@ export default function App() {
           try {
             window.sessionStorage.removeItem(`splitsmart-ingest-${room.id}`);
           } catch {}
-          const parsed = parseRoomHash(window.location.hash);
-          if (!parsed.roomId || parsed.seed !== null) updateHash(room.id);
+          if (parseRoomPath(window.location.pathname) !== room.id || window.location.hash) {
+            updateUrl(room.id);
+          }
         }
       })
       .catch(() => {
@@ -161,14 +166,14 @@ export default function App() {
   }
 
   function shareRoom() {
-    updateHash(room.id);
+    updateUrl(room.id);
     void navigator.clipboard?.writeText(window.location.href).then(() => showToast('Room link copied.'));
   }
 
   function importSeed(seed: ReceiptSeed, forceReset: boolean) {
     if (!provider) return;
     hydrateFromSeed(provider.doc, seed, { forceReset });
-    updateHash(room.id);
+    updateUrl(room.id);
     setSeedOpen(false);
     showToast(`Imported ${seed.items.length} receipt items.`);
   }
@@ -190,13 +195,11 @@ export default function App() {
     const nextRoom = createRoomId();
     try {
       window.sessionStorage.setItem(`splitsmart-ingest-${nextRoom}`, JSON.stringify(blank));
-      window.location.replace(
-        `${window.location.origin}${window.location.pathname}#room=${encodeRoomId(nextRoom)}`,
-      );
+      window.location.replace(`${window.location.origin}${roomPath(nextRoom)}`);
     } catch {
       setProvider(null);
       setRoom({ id: nextRoom, seed: blank });
-      updateHash(nextRoom);
+      updateUrl(nextRoom);
     }
   }
 
