@@ -19,6 +19,12 @@ const currencyCode = z
  */
 export const receiptSeedSchema = z.object({
   title: text().describe('Restaurant or receipt title. Use the merchant name, or "Receipt" if unknown.'),
+  address: text().optional().describe('Restaurant street address as printed on the receipt. Omit when not printed.'),
+  phone: text(64).optional().describe('Restaurant phone number as printed. Omit when not printed.'),
+  website: text().optional().describe('Restaurant website or email as printed. Omit when not printed.'),
+  purchasedAt: text(32)
+    .optional()
+    .describe('When the meal was paid, local time printed on the receipt: YYYY-MM-DDTHH:mm (or YYYY-MM-DD if no time). Omit when not printed.'),
   cardTipEur: amount.describe('Tip paid by card, in the receipt currency. Use 0 when unknown.'),
   cashTipEur: amount.describe('Tip paid in cash, in the receipt currency. Use 0 when unknown.'),
   bankUsd: amount.describe(

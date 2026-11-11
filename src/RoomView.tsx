@@ -6,6 +6,7 @@ import { IdentityModal } from './components/IdentityModal';
 import { ItemList } from './components/ItemList';
 import { ParticipantCards } from './components/ParticipantCards';
 import { SeedModal } from './components/SeedModal';
+import { RestaurantModal } from './components/RestaurantModal';
 import { ShareModal } from './components/ShareModal';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
 import { useActiveIdentity } from './hooks/useActiveIdentity';
@@ -33,6 +34,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
   const [identityOpen, setIdentityOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [toast, setToast] = useState('');
   const snapshot = useReceiptStore(provider.store);
   const math = computeReceiptMath(snapshot);
@@ -121,6 +123,10 @@ export default function RoomView({ roomId }: { roomId: string }) {
     <div className="min-h-screen pb-12">
       <Header
         roomId={roomId}
+        title={snapshot.title}
+        purchasedAt={snapshot.purchasedAt}
+        itemCount={snapshot.items.length}
+        onDetails={() => setDetailsOpen(true)}
         activeId={activeId}
         connection={snapshot.connection}
         peers={snapshot.peers}
@@ -208,6 +214,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
         onAdd={addParticipant}
         onRemove={removeParticipant}
       />
+      <RestaurantModal open={detailsOpen} snapshot={snapshot} roomId={roomId} onClose={() => setDetailsOpen(false)} />
       <ShareModal open={shareOpen} url={roomUrl} onClose={() => setShareOpen(false)} onCopy={copyRoomLink} />
       <SeedModal
         open={seedOpen}

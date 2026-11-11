@@ -8,6 +8,10 @@ const configuredProvider: RoomSnapshot['connection']['provider'] =
 
 export const EMPTY_SNAPSHOT: RoomSnapshot = {
   title: 'Loading receipt…',
+  address: '',
+  phone: '',
+  website: '',
+  purchasedAt: '',
   cardTipEur: 0,
   cashTipEur: 0,
   bankUsd: 0,
@@ -178,6 +182,10 @@ export class ReceiptStore {
 
     return {
       title: String(this.meta.get('title') || 'European Receipt'),
+      address: String(this.meta.get('address') || ''),
+      phone: String(this.meta.get('phone') || ''),
+      website: String(this.meta.get('website') || ''),
+      purchasedAt: String(this.meta.get('purchasedAt') || ''),
       cardTipEur: Number(this.meta.get('cardTipEur')) || 0,
       cashTipEur: Number(this.meta.get('cashTipEur')) || 0,
       bankUsd: Number(this.meta.get('bankUsd')) || 0,
