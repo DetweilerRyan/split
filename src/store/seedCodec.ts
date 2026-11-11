@@ -1,6 +1,7 @@
 import LZString from 'lz-string';
 import * as Y from 'yjs';
 import type { ReceiptSeed } from '../types/receipt';
+import { formatSeedIssues, receiptSeedSchema } from '../types/seedSchema';
 import { isValidCurrency, normalizeCurrency } from '../utils/currency';
 
 export interface HydrationOptions {
@@ -14,6 +15,7 @@ export interface ParsedIngestUrl {
   redirectUrl: string;
 }
 
+export const INGEST_PATH = '/ingest';
 const ROOM_ID_PREFIX = 'urn:split:room:';
 const ROOM_ID_PATTERN = /^urn:split:room:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -43,52 +45,18 @@ export function encodeSeed(seed: ReceiptSeed): string {
 }
 
 export function validateSeed(seed: unknown): ReceiptSeed {
-  const errors: string[] = [];
-  const isRecord = (value: unknown): value is Record<string, unknown> =>
-    value !== null && typeof value === 'object' && !Array.isArray(value);
-  const isFiniteNumber = (value: unknown): value is number =>
-    typeof value === 'number' && Number.isFinite(value);
+  if (seed === null || typeof seed !== 'object' || Array.isArray(seed)) {
+    throw new Error('Seed must be a JSON object.');
+  }
+  const result = receiptSeedSchema.safeParse(seed);
+  if (!result.success) {
+    throw new Error(`Invalid seed: ${formatSeedIssues(result.error.issues).join('; ')}.`);
+  }
+  return result.data;
+}
 
-  if (!isRecord(seed)) throw new Error('Seed must be a JSON object.');
-  if (typeof seed.title !== 'string') errors.push('title must be a string');
-  for (const key of ['cardTipEur', 'cashTipEur', 'bankUsd']) {
-    if (!isFiniteNumber(seed[key])) errors.push(`${key} must be a finite number`);
-  }
-  for (const key of ['currency', 'displayCurrency']) {
-    if (seed[key] !== undefined && !isValidCurrency(seed[key])) {
-      errors.push(`${key} must be an ISO 4217 currency code`);
-    }
-  }
-  if (seed.rate !== undefined && !(isFiniteNumber(seed.rate) && seed.rate > 0)) {
-    errors.push('rate must be a positive number');
-  }
-  if (seed.rateDate !== undefined && typeof seed.rateDate !== 'string') {
-    errors.push('rateDate must be a string');
-  }
-  if (!Array.isArray(seed.roster) || !seed.roster.every((name) => typeof name === 'string')) {
-    errors.push('roster must be an array of strings');
-  }
-  if (!Array.isArray(seed.items)) {
-    errors.push('items must be an array');
-  } else {
-    const ids = new Set<string>();
-    seed.items.forEach((item, index) => {
-      if (!isRecord(item)) {
-        errors.push(`items[${index}] must be an object`);
-        return;
-      }
-      for (const key of ['id', 'name', 'en']) {
-        if (typeof item[key] !== 'string') errors.push(`items[${index}].${key} must be a string`);
-      }
-      if (typeof item.id === 'string') {
-        if (ids.has(item.id)) errors.push(`items[${index}].id "${item.id}" is duplicated`);
-        ids.add(item.id);
-      }
-      if (!isFiniteNumber(item.eur)) errors.push(`items[${index}].eur must be a finite number`);
-    });
-  }
-  if (errors.length) throw new Error(`Invalid seed: ${errors.join('; ')}.`);
-  return seed as unknown as ReceiptSeed;
+export function buildIngestUrl(origin: string, seed: ReceiptSeed): string {
+  return `${origin.replace(/\/+$/, '')}${INGEST_PATH}#ingest=${encodeURIComponent(JSON.stringify(seed))}`;
 }
 
 export function decodeSeed(value: string | null): ReceiptSeed | null {

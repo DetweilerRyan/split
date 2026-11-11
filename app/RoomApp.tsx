@@ -7,4 +7,5 @@ const loading = () => (
 );
 
 export const RoomEntry = dynamic(() => import('../src/RoomEntry'), { ssr: false, loading });
+export const IngestEntry = dynamic(() => import('../src/IngestEntry'), { ssr: false, loading });
 export const RoomView = dynamic(() => import('../src/RoomView'), { ssr: false, loading });

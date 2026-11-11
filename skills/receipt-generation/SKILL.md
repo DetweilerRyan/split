@@ -45,18 +45,20 @@ Read the receipt and produce a seed object with this shape:
 
 ## 2. Generate the ingest link
 
-Use the Vercel app URL `https://split.detweiler.me/`. Do not direct the user to a manual JSON import workflow.
+If the SplitSmart MCP server (`https://split.detweiler.me/api/mcp`) is connected, call its `create_receipt_room` tool with the seed object and share the link it returns; skip the manual steps below.
+
+Otherwise use the Vercel app URL `https://split.detweiler.me/`. Do not direct the user to a manual JSON import workflow.
 
 Serialize the seed object as minified JSON (`JSON.stringify(seed)`) and percent-encode it with `encodeURIComponent` inside the `#ingest=` hash parameter:
 
 ```text
-https://split.detweiler.me/#ingest=<percent-encoded JSON>
+https://split.detweiler.me/ingest#ingest=<percent-encoded JSON>
 ```
 
 Equivalent JavaScript:
 
 ```js
-const link = `https://split.detweiler.me/#ingest=${encodeURIComponent(JSON.stringify(seed))}`;
+const link = `https://split.detweiler.me/ingest#ingest=${encodeURIComponent(JSON.stringify(seed))}`;
 ```
 
 The app validates the seed, creates a fresh room, saves it, and replaces the ingest URL with the clean room link. Do not generate a room ID, compress the seed, or use an external script.
