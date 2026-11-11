@@ -41,7 +41,7 @@ const handler = createMcpHandler(
       }),
     );
   },
-  { serverInfo: { name: 'splitsmart', version: '1.0.0' } },
+  { serverInfo: { name: 'splitsmart', version: '0.1.0' } },
 );
 
 const guarded = guardMcp(handler);
