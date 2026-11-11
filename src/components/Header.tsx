@@ -1,5 +1,5 @@
 import { CalendarDays, ChevronRight, Pencil, Share2, Users } from 'lucide-react';
-import { formatPurchaseTime, guessMeal, parsePurchasedAt } from '../utils/mealInfo';
+import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
 import type { Participant, RoomSnapshot } from '../types/receipt';
 import { getConnectionStatusDisplay } from '../utils/connectionStatus';
 
@@ -7,7 +7,7 @@ interface HeaderProps {
   roomId: string;
   title: string;
   purchasedAt: string;
-  itemCount: number;
+  mealType: string;
   onDetails: () => void;
   activeId: string | null;
   connection: RoomSnapshot['connection'];
@@ -23,7 +23,7 @@ export function Header({
   roomId,
   title,
   purchasedAt,
-  itemCount,
+  mealType,
   onDetails,
   activeId,
   connection,
@@ -36,7 +36,6 @@ export function Header({
 }: HeaderProps) {
   const purchase = parsePurchasedAt(purchasedAt);
   const when = purchase ? formatPurchaseTime(purchase) : null;
-  const meal = guessMeal(purchase, itemCount);
   const identity = participants.find((person) => person.id === activeId);
   const { label: statusLabel, indicatorColor, textColor } =
     getConnectionStatusDisplay(connection.status);
@@ -66,7 +65,7 @@ export function Header({
                     {when ? `${when.day}${when.time ? ` · ${when.time}` : ''}` : 'Date not on receipt'}
                   </span>
                 </span>
-                {meal && <span className="block truncate text-xs font-semibold text-indigo-600">{meal}</span>}
+                {mealType && <span className="block truncate text-xs font-semibold text-indigo-600">{mealType}</span>}
               </span>
             </button>
           </div>

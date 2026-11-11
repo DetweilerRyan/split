@@ -1,6 +1,6 @@
 import { CalendarDays, Globe, MapPin, Phone, Utensils, X } from 'lucide-react';
 import type { RoomSnapshot } from '../types/receipt';
-import { formatPurchaseTime, guessMeal, parsePurchasedAt } from '../utils/mealInfo';
+import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
 
 interface RestaurantModalProps {
   open: boolean;
@@ -13,7 +13,6 @@ export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantM
   if (!open) return null;
   const purchase = parsePurchasedAt(snapshot.purchasedAt);
   const when = purchase ? formatPurchaseTime(purchase) : null;
-  const meal = guessMeal(purchase, snapshot.items.length);
   const website = snapshot.website.trim();
   const websiteHref = /^https?:\/\//i.test(website) ? website : /^[^\s@]+\.[^\s@]+$/.test(website) && !website.includes('@') ? `https://${website}` : null;
   const mapsHref = snapshot.address
@@ -22,7 +21,7 @@ export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantM
 
   const rows = [
     when && { icon: CalendarDays, label: 'When', value: `${when.day}${when.time ? ` · ${when.time}` : ''}` },
-    meal && { icon: Utensils, label: 'Looks like', value: meal },
+    snapshot.mealType && { icon: Utensils, label: 'Meal', value: snapshot.mealType },
     snapshot.address && { icon: MapPin, label: 'Address', value: snapshot.address, href: mapsHref },
     snapshot.phone && { icon: Phone, label: 'Phone', value: snapshot.phone, href: `tel:${snapshot.phone.replace(/[^\d+]/g, '')}` },
     website && { icon: Globe, label: 'Website', value: website, href: websiteHref },

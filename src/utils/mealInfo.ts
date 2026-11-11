@@ -16,19 +16,3 @@ export function formatPurchaseTime({ date, hasTime }: PurchaseTime) {
   const time = hasTime ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '';
   return { day, time };
 }
-
-/** Best-guess meal from time of day and how many items were ordered. */
-export function guessMeal(purchase: PurchaseTime | null, itemCount: number): string | null {
-  if (!purchase?.hasTime) return null;
-  const hour = purchase.date.getHours() + purchase.date.getMinutes() / 60;
-  let meal: string;
-  if (hour >= 5 && hour < 10.5) meal = itemCount <= 3 ? 'Coffee & breakfast' : 'Breakfast';
-  else if (hour < 11.5) meal = 'Brunch';
-  else if (hour < 15) meal = 'Lunch';
-  else if (hour < 17.5) meal = itemCount <= 3 ? 'Coffee & snack' : 'Late lunch';
-  else if (hour < 22) meal = 'Dinner';
-  else meal = 'Late-night bite';
-  if (itemCount >= 12) return `${meal} · big group`;
-  if (itemCount >= 7 && /Lunch|Dinner/.test(meal)) return `${meal} · shared meal`;
-  return meal;
-}

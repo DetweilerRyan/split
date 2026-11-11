@@ -160,7 +160,7 @@ export function hydrateFromSeed(
     for (const [key, value] of Object.entries({
       title: seed.title,
       ...Object.fromEntries(
-        (['address', 'phone', 'website', 'purchasedAt'] as const)
+        (['address', 'phone', 'website', 'purchasedAt', 'mealType'] as const)
           .filter((key) => typeof seed[key] === 'string' && seed[key]!.trim())
           .map((key) => [key, seed[key]!.trim()]),
       ),
