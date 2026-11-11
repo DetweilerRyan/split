@@ -1,9 +1,14 @@
-import { Pencil, Share2, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, Pencil, Share2, Users } from 'lucide-react';
+import { formatPurchaseTime, guessMeal, parsePurchasedAt } from '../utils/mealInfo';
 import type { Participant, RoomSnapshot } from '../types/receipt';
 import { getConnectionStatusDisplay } from '../utils/connectionStatus';
 
 interface HeaderProps {
   roomId: string;
+  title: string;
+  purchasedAt: string;
+  itemCount: number;
+  onDetails: () => void;
   activeId: string | null;
   connection: RoomSnapshot['connection'];
   peers: RoomSnapshot['peers'];
@@ -16,6 +21,10 @@ interface HeaderProps {
 
 export function Header({
   roomId,
+  title,
+  purchasedAt,
+  itemCount,
+  onDetails,
   activeId,
   connection,
   peers,
@@ -25,6 +34,9 @@ export function Header({
   onEdit,
   onShare,
 }: HeaderProps) {
+  const purchase = parsePurchasedAt(purchasedAt);
+  const when = purchase ? formatPurchaseTime(purchase) : null;
+  const meal = guessMeal(purchase, itemCount);
   const identity = participants.find((person) => person.id === activeId);
   const { label: statusLabel, indicatorColor, textColor } =
     getConnectionStatusDisplay(connection.status);
@@ -34,13 +46,29 @@ export function Header({
       <div className="mx-auto max-w-6xl px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-indigo-600 font-extrabold text-white">
-              ¤
-            </span>
-            <div className="min-w-0">
-              <h1 className="truncate font-extrabold text-slate-900">SplitSmart P2P</h1>
-              <p className="truncate font-mono text-xs text-slate-500">room: {roomId}</p>
-            </div>
+            <button
+              type="button"
+              aria-label={`Restaurant details for ${title}`}
+              className="flex min-w-0 items-center gap-2 rounded-xl py-0.5 pr-1 text-left active:bg-slate-100"
+              onClick={onDetails}
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-indigo-600 font-extrabold text-white">
+                {title.trim().charAt(0).toUpperCase() || '¤'}
+              </span>
+              <span className="min-w-0">
+                <span className="flex items-center gap-0.5">
+                  <span className="truncate font-extrabold leading-tight text-slate-900">{title}</span>
+                  <ChevronRight size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
+                </span>
+                <span className="flex items-center gap-1 truncate text-xs text-slate-600">
+                  <CalendarDays size={12} className="shrink-0" aria-hidden="true" />
+                  <span className="truncate">
+                    {when ? `${when.day}${when.time ? ` · ${when.time}` : ''}` : 'Date not on receipt'}
+                  </span>
+                </span>
+                {meal && <span className="block truncate text-xs font-semibold text-indigo-600">{meal}</span>}
+              </span>
+            </button>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <button className="button-secondary" onClick={onIdentity}>

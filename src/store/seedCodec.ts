@@ -159,6 +159,11 @@ export function hydrateFromSeed(
 
     for (const [key, value] of Object.entries({
       title: seed.title,
+      ...Object.fromEntries(
+        (['address', 'phone', 'website', 'purchasedAt'] as const)
+          .filter((key) => typeof seed[key] === 'string' && seed[key]!.trim())
+          .map((key) => [key, seed[key]!.trim()]),
+      ),
       cardTipEur: Number(seed.cardTipEur) || 0,
       cashTipEur: Number(seed.cashTipEur) || 0,
       bankUsd: Number(seed.bankUsd) || 0,

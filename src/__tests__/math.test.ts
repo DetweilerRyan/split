@@ -6,6 +6,7 @@ describe('receipt currency math', () => {
   it('uses the bank reconciliation rate and allocates tips proportionally', () => {
     const snapshot: RoomSnapshot = {
       title: 'Test receipt',
+      address: '', phone: '', website: '', purchasedAt: '',
       cardTipEur: 3,
       cashTipEur: 10,
       bankUsd: 154,
@@ -43,6 +44,7 @@ describe('receipt currency math', () => {
   it('uses the estimated rate when no bank charge is entered', () => {
     const snapshot: RoomSnapshot = {
       title: 'Test receipt',
+      address: '', phone: '', website: '', purchasedAt: '',
       cardTipEur: 0,
       cashTipEur: 5,
       bankUsd: 0,
@@ -74,6 +76,7 @@ function makeSnapshot(
   const ids = ['a', 'b', 'c'];
   return {
     title: 't',
+    address: '', phone: '', website: '', purchasedAt: '',
     cardTipEur: tips.card,
     cashTipEur: tips.cash,
     bankUsd: 0,

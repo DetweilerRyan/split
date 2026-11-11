@@ -14,6 +14,10 @@ Read the receipt and produce a seed object with this shape:
 ```json
 {
   "title": "Restaurant or receipt title",
+  "address": "Street, City (optional)",
+  "phone": "Optional",
+  "website": "Optional",
+  "purchasedAt": "2026-01-02T20:15",
   "currency": "EUR",
   "displayCurrency": "USD",
   "rate": 1.085,
@@ -33,6 +37,7 @@ Read the receipt and produce a seed object with this shape:
 }
 ```
 
+- **Restaurant details:** Copy `address`, `phone`, `website` and the local `purchasedAt` (`YYYY-MM-DDTHH:mm`, or `YYYY-MM-DD` without a time) exactly as printed; omit any that are absent. Never invent them. The room header shows the restaurant and time and guesses the meal from them.
 - **Order and IDs:** Keep the receipt's printed item order. Assign sequential IDs (`item-0`, `item-1`, and so on).
 - **Unroll multi-quantity items:** If a printed line has a quantity greater than 1 (for example, `2.00 x 6.00 = 12.00`), unroll it into `N` separate `1x` entries named `"ITEM NAME (1/2)"`, `"ITEM NAME (2/2)"`, each with the single-unit price (`6.0`), so participants can claim individual units.
 - **Bilingual text:** Preserve the printed item name in `name`. Put an English translation or concise explanation in `en`; for an English receipt, repeat the item name.

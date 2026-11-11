@@ -17,6 +17,10 @@ export type { ReceiptSeed } from './seedSchema';
 
 export interface RoomSnapshot {
   title: string;
+  address: string;
+  phone: string;
+  website: string;
+  purchasedAt: string;
   cardTipEur: number;
   cashTipEur: number;
   bankUsd: number;
