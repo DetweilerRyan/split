@@ -23,7 +23,7 @@ Vercel auto-detects Next.js; use its default build command and output with no `v
 
 ## MCP server
 
-`/api/mcp` is an unauthenticated remote MCP server (Streamable HTTP). The `create_receipt_room` tool validates a receipt seed with the shared zod schema in `src/types/seedSchema.ts` (its field descriptions are the extraction rules agents see) and returns an `/ingest` link; the room is created when the link is opened. `skill://receipt-generation/SKILL.md` serves the skill file. Requests are rate limited per IP (best effort) and payloads are size limited. Try it with `npx @modelcontextprotocol/inspector` against `http://localhost:3000/api/mcp`.
+`/api/mcp` is an unauthenticated remote MCP server (Streamable HTTP). The `create_receipt_room` tool validates a receipt seed with the shared zod schema in `src/types/seedSchema.ts` (its field descriptions are the extraction rules agents see) and returns an `/ingest` link; the room is created when the link is opened. `skill://receipt-generation/SKILL.md` serves the skill file. POST bodies are capped at 64 KB (413), and `tools/call` is limited to 30/min per client IP (IPv6 by /64) with a JSON-RPC 429 and `Retry-After`. The in-app limiter is per-instance and best effort; use a Vercel Firewall rate-limit rule on `/api/mcp` as the global per-IP limit. Try it with `npx @modelcontextprotocol/inspector` against `http://localhost:3000/api/mcp`.
 
 Room IDs use the `urn:split:room:<uuid>` format and are base64url-encoded in the URL path (`/r/<room>`); existing links with legacy room IDs remain supported. Receipt seeds can be shared as compressed URL hash parameters. Claims are stored as flat `itemId::participantId` values in Yjs so independently hydrated rooms can merge claims without replacing nested item data.
 

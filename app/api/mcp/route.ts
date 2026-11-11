@@ -2,7 +2,7 @@ import { createMcpHandler } from 'mcp-handler';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buildIngestUrl } from '../../../src/store/seedCodec';
-import { clientKey, isRateLimited } from '../../../src/server/rateLimit';
+import { guardMcp } from '../../../src/server/mcpGuard';
 import { receiptSeedSchema } from '../../../src/types/seedSchema';
 
 const SKILL_URI = 'skill://receipt-generation/SKILL.md';
@@ -44,12 +44,7 @@ const handler = createMcpHandler(
   { serverInfo: { name: 'splitsmart', version: '1.0.0' } },
 );
 
-function limited(request: Request): Promise<Response> | Response {
-  if (isRateLimited(clientKey(request))) {
-    return new Response('Too many requests', { status: 429, headers: { 'Retry-After': '60' } });
-  }
-  return handler(request);
-}
+const guarded = guardMcp(handler);
 
 export const maxDuration = 30;
-export { limited as GET, limited as POST, limited as DELETE };
+export { guarded as GET, guarded as POST, guarded as DELETE };
