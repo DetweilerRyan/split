@@ -6,6 +6,7 @@ import { IdentityModal } from './components/IdentityModal';
 import { ItemList } from './components/ItemList';
 import { ParticipantCards } from './components/ParticipantCards';
 import { SeedModal } from './components/SeedModal';
+import { ShareModal } from './components/ShareModal';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
 import { useActiveIdentity } from './hooks/useActiveIdentity';
 import { useRoomProvider } from './hooks/useRoomProvider';
@@ -31,10 +32,13 @@ export default function RoomView({ roomId }: { roomId: string }) {
   const [filter, setFilter] = useState<ItemFilter>('all');
   const [identityOpen, setIdentityOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [toast, setToast] = useState('');
   const snapshot = useReceiptStore(provider.store);
   const math = computeReceiptMath(snapshot);
   const [activeId, setActiveId] = useActiveIdentity(provider, roomId, snapshot.participants);
+
+  const roomUrl = typeof window === 'undefined' ? '' : `${window.location.origin}${roomPath(roomId)}`;
 
   function showToast(message: string) {
     setToast(message);
@@ -62,7 +66,11 @@ export default function RoomView({ roomId }: { roomId: string }) {
   }
 
   function shareRoom() {
-    void navigator.clipboard?.writeText(`${window.location.origin}${roomPath(roomId)}`).then(() => showToast('Room link copied.'));
+    setShareOpen(true);
+  }
+
+  function copyRoomLink() {
+    void navigator.clipboard?.writeText(roomUrl).then(() => showToast('Room link copied.'));
   }
 
   function importSeed(seed: ReceiptSeed, forceReset: boolean) {
@@ -200,6 +208,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
         onAdd={addParticipant}
         onRemove={removeParticipant}
       />
+      <ShareModal open={shareOpen} url={roomUrl} onClose={() => setShareOpen(false)} onCopy={copyRoomLink} />
       <SeedModal
         open={seedOpen}
         onClose={() => setSeedOpen(false)}
