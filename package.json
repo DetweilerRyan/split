@@ -12,15 +12,18 @@
   "dependencies": {
     "@liveblocks/client": "^3.24.5",
     "@liveblocks/yjs": "^3.24.5",
+    "@modelcontextprotocol/server": "^2.4.0",
     "lucide-react": "^1.62.0",
     "lz-string": "^1.5.0",
+    "mcp-handler": "^2.3.1",
     "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "uuid": "^14.0.3",
     "y-indexeddb": "^9.0.12",
     "y-webrtc": "^10.3.0",
-    "yjs": "^13.6.33"
+    "yjs": "^13.6.33",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

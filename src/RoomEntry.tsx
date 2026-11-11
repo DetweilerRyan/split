@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   createRoomId,
+  INGEST_PATH,
   decodeSeed,
   parseIngestUrl,
   parseRoomHash,
@@ -19,12 +20,22 @@ function stashSeed(roomId: string, seed: ReceiptSeed | null) {
   } catch {}
 }
 
-export default function RoomEntry() {
+export default function RoomEntry({ mode = 'root' }: { mode?: 'root' | 'ingest' }) {
   const router = useRouter();
   const [error, setError] = useState('');
 
   useEffect(() => {
     const ingest = parseIngestUrl(window.location.href);
+    if (mode === 'root') {
+      // Old ingest links pointed at the root; forward them to the explicit path.
+      if (ingest) {
+        router.replace(`${INGEST_PATH}${window.location.search}${window.location.hash}`);
+        return;
+      }
+    } else if (!ingest) {
+      setError('This page needs an ingest link containing receipt data.');
+      return;
+    }
     if (ingest && 'error' in ingest) {
       setError(ingest.error);
       return;
@@ -38,7 +49,7 @@ export default function RoomEntry() {
     const roomId = legacy.roomId || createRoomId();
     stashSeed(roomId, decodeSeed(legacy.seed));
     router.replace(roomPath(roomId));
-  }, [router]);
+  }, [router, mode]);
 
   if (error) {
     return <main className="mx-auto max-w-xl p-8 text-center text-rose-700">{error}</main>;

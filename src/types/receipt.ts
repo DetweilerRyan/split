@@ -13,26 +13,7 @@ export interface Participant {
   colorIdx: number;
 }
 
-export interface ReceiptSeed {
-  title: string;
-  cardTipEur: number;
-  cashTipEur: number;
-  bankUsd: number;
-  /** ISO 4217 code of the receipt amounts; missing means USD (legacy links). */
-  currency?: string;
-  /** Optional ISO 4217 code that participant shares are converted to. */
-  displayCurrency?: string;
-  /** Receipt currency -> display currency rate, with the date it was published. */
-  rate?: number;
-  rateDate?: string;
-  roster: string[];
-  items: Array<{
-    id: string;
-    name: string;
-    en: string;
-    eur: number;
-  }>;
-}
+export type { ReceiptSeed } from './seedSchema';
 
 export interface RoomSnapshot {
   title: string;
