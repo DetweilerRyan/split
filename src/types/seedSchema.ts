@@ -25,6 +25,9 @@ export const receiptSeedSchema = z.object({
   purchasedAt: text(32)
     .optional()
     .describe('When the meal was paid, local time printed on the receipt: YYYY-MM-DDTHH:mm (or YYYY-MM-DD if no time). Omit when not printed.'),
+  mealType: text(64)
+    .optional()
+    .describe('Short agent-inferred label for the occasion, e.g. "Dinner", "Birthday dinner", "Thanksgiving lunch". Omit when there is no basis for a guess.'),
   cardTipEur: amount.describe('Tip paid by card, in the receipt currency. Use 0 when unknown.'),
   cashTipEur: amount.describe('Tip paid in cash, in the receipt currency. Use 0 when unknown.'),
   bankUsd: amount.describe(

@@ -125,7 +125,7 @@ export default function RoomView({ roomId }: { roomId: string }) {
         roomId={roomId}
         title={snapshot.title}
         purchasedAt={snapshot.purchasedAt}
-        itemCount={snapshot.items.length}
+        mealType={snapshot.mealType}
         onDetails={() => setDetailsOpen(true)}
         activeId={activeId}
         connection={snapshot.connection}

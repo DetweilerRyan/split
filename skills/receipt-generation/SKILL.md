@@ -18,6 +18,7 @@ Read the receipt and produce a seed object with this shape:
   "phone": "Optional",
   "website": "Optional",
   "purchasedAt": "2026-01-02T20:15",
+  "mealType": "Dinner",
   "currency": "EUR",
   "displayCurrency": "USD",
   "rate": 1.085,
@@ -37,7 +38,8 @@ Read the receipt and produce a seed object with this shape:
 }
 ```
 
-- **Restaurant details:** Copy `address`, `phone`, `website` and the local `purchasedAt` (`YYYY-MM-DDTHH:mm`, or `YYYY-MM-DD` without a time) exactly as printed; omit any that are absent. Never invent them. The room header shows the restaurant and time and guesses the meal from them.
+- **Restaurant details:** Copy `address`, `phone`, `website` and the local `purchasedAt` (`YYYY-MM-DDTHH:mm`, or `YYYY-MM-DD` without a time) exactly as printed; omit any that are absent. Never invent them. The room header shows the restaurant and time.
+- **Meal type:** Set `mealType` to a short label (for example `Breakfast`, `Lunch`, `Dinner`, `Coffee & snack`, `Birthday dinner`, `Thanksgiving lunch`) to jog participants' memories. Judge it yourself from the time of day, the number of items and what was ordered (drinks vs. entrees, kids' menu, cake or celebratory items, shared platters, large-group sizes), and use the date plus the restaurant's local holidays and customs (for example Christmas Eve, Thanksgiving, Easter, local feast days, or a late lunch being the main meal in some countries) when they fit. Without a printed time, rely on the items and date. Omit `mealType` if there is no reasonable basis; never present a guess as printed on the receipt.
 - **Order and IDs:** Keep the receipt's printed item order. Assign sequential IDs (`item-0`, `item-1`, and so on).
 - **Unroll multi-quantity items:** If a printed line has a quantity greater than 1 (for example, `2.00 x 6.00 = 12.00`), unroll it into `N` separate `1x` entries named `"ITEM NAME (1/2)"`, `"ITEM NAME (2/2)"`, each with the single-unit price (`6.0`), so participants can claim individual units.
 - **Bilingual text:** Preserve the printed item name in `name`. Put an English translation or concise explanation in `en`; for an English receipt, repeat the item name.

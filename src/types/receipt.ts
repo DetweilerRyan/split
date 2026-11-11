@@ -21,6 +21,7 @@ export interface RoomSnapshot {
   phone: string;
   website: string;
   purchasedAt: string;
+  mealType: string;
   cardTipEur: number;
   cashTipEur: number;
   bankUsd: number;
