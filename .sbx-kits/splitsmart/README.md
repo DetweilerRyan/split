@@ -4,12 +4,14 @@ This local [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) mixin provi
 
 ## Start and verify
 
-Install Docker Sandboxes with v3 kit support (`sbx` 0.45 or newer), Docker Buildx, and an agent supported by `sbx`. Sign in with `sbx login` if required. From the host's main repository checkout:
+Install Docker Sandboxes `sbx` 0.51 or newer, Docker with Buildx, and an agent supported by `sbx`. Version 0.51 switched the built-in agents to v3 kits; earlier releases can support v3 artifacts without supporting this launch command. Sign in with `sbx login` if required. From the host's main repository checkout:
 
 ```sh
-sbx kit validate ./.sbx-kits/splitsmart
+docker buildx build --output type=cacheonly -f .sbx-kits/splitsmart/splitsmart.yaml .sbx-kits/splitsmart
 sbx run --clone --name splitsmart claude --kit ./.sbx-kits/splitsmart .
 ```
+
+Buildx validates and builds the v3 source kit without publishing an image; it does not verify sandbox startup or agent compatibility. On `sbx` 0.46, `sbx kit validate` cannot build this v3 source kit and reports that its load path has no kit builder configured. Upgrade `sbx` rather than treating that error as a defect in the kit.
 
 Replace `claude` with another supported v3 agent. Kit selection and `--clone` apply when the sandbox is created; use a different name to try a changed kit or a separate sandbox. The local kit is built at creation; it does not need to be published.
 
