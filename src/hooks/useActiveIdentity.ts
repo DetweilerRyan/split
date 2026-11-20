@@ -8,29 +8,33 @@ interface Participant {
 }
 
 export function useActiveIdentity(
-  provider: RoomProvider,
+  provider: Pick<RoomProvider, 'setIdentity'>,
   roomId: string,
   participants: readonly Participant[],
 ) {
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [chosenId, setActiveId] = useState<string | null>(null);
+  const storageKey = `splitsmart-user-${roomId}`;
+  const isParticipant = (id: string | null) =>
+    id !== null && participants.some((person) => person.id === id);
 
-  useEffect(() => {
-    if (participants.length === 0) return;
-    if (!activeId || !participants.some((person) => person.id === activeId)) {
-      const saved = window.localStorage.getItem(`splitsmart-user-${roomId}`);
-      // localStorage exists only in the browser, so the saved choice can't be read during render.
-      // oxlint-disable-next-line react/set-state-in-effect
-      setActiveId(participants.find((person) => person.id === saved)?.id ?? participants[0].id);
-    }
-  }, [activeId, roomId, participants]);
+  // The active identity is the one chosen, else the one saved for this room, else the first
+  // participant. It is worked out during render, so no render goes by without one. RoomView is
+  // loaded with ssr: false, so localStorage is always available here.
+  let activeId: string | null = null;
+  if (isParticipant(chosenId)) {
+    activeId = chosenId;
+  } else if (participants.length > 0) {
+    const saved = window.localStorage.getItem(storageKey);
+    activeId = isParticipant(saved) ? saved : participants[0].id;
+  }
 
   useEffect(() => {
     const identity = participants.find((person) => person.id === activeId);
     provider.setIdentity(
       identity ? { id: identity.id, name: identity.name, colorIdx: identity.colorIdx } : null,
     );
-    if (identity) window.localStorage.setItem(`splitsmart-user-${roomId}`, identity.id);
-  }, [activeId, provider, roomId, participants]);
+    if (identity) window.localStorage.setItem(storageKey, identity.id);
+  }, [activeId, provider, storageKey, participants]);
 
   return [activeId, setActiveId] as const;
 }
