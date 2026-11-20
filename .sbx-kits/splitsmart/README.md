@@ -4,14 +4,13 @@ This local [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) mixin provi
 
 ## Start and verify
 
-Install Docker Sandboxes `sbx` 0.51 or newer, Docker with Buildx, and an agent supported by `sbx`. Version 0.51 switched the built-in agents to v3 kits; earlier releases can support v3 artifacts without supporting this launch command. Sign in with `sbx login` if required. From the host's main repository checkout:
+Install a current version of Docker Sandboxes (`sbx` 0.53 or newer recommended) and an agent supported by `sbx`. You do not need Docker or Buildx installed on the host: `sbx` builds the local source kit in its builder sandbox. Sign in with `sbx login` if required. From the host's main repository checkout:
 
 ```sh
-docker buildx build --output type=cacheonly -f .sbx-kits/splitsmart/splitsmart.yaml .sbx-kits/splitsmart
 sbx run --clone --name splitsmart claude --kit ./.sbx-kits/splitsmart .
 ```
 
-Buildx validates and builds the v3 source kit without publishing an image; it does not verify sandbox startup or agent compatibility. On `sbx` 0.46, `sbx kit validate` cannot build this v3 source kit and reports that its load path has no kit builder configured. Upgrade `sbx` rather than treating that error as a defect in the kit.
+Creating the sandbox builds the kit and checks its compatibility with the agent; the startup checks below verify provisioning separately. `sbx kit validate` on 0.46, and `sbx kit validate --offline` on 0.54, report that this v3 source kit has no kit builder configured. That error alone does not establish that the kit is invalid. If the builder sandbox fails to start, inspect `sbx kit builder status` and update `sbx`; version 0.53 includes a fix for the builder's privileged access.
 
 Replace `claude` with another supported v3 agent. Kit selection and `--clone` apply when the sandbox is created; use a different name to try a changed kit or a separate sandbox. The local kit is built at creation; it does not need to be published.
 
@@ -19,6 +18,8 @@ Startup runs alongside the agent. Inside the sandbox, wait until `~/.cache/split
 
 ```sh
 cat ~/.cache/splitsmart-kit.log
+node --version
+npm --version
 npm test
 npm run build
 npm run dev -- --hostname 0.0.0.0
