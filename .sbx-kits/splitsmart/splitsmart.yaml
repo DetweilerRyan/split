@@ -1,0 +1,46 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+kind: mixin
+displayName: SplitSmart development
+description: Node.js and workspace dependencies for SplitSmart
+
+capabilities:
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          # package-lock.json resolves packages from the npm registry.
+          - registry.npmjs.org:443
+          # Git operations and the GitHub CLI.
+          - github.com:443
+          - api.github.com:443
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - description: Install SplitSmart dependencies from the workspace lockfile
+          user: "1000"
+          env: [WORKSPACE_DIR]
+          command: |
+            set -eu
+            mkdir -p /home/agent/.cache
+            exec > /home/agent/.cache/splitsmart-kit.log 2>&1
+            echo "Starting SplitSmart setup at $(date -u)"
+            : "${WORKSPACE_DIR:?No workspace was supplied to the sandbox}"
+            tries=0
+            until [ -f "$WORKSPACE_DIR/scripts/prepare-sandbox.sh" ]; do
+              tries=$((tries + 1))
+              if [ "$tries" -ge 90 ]; then
+                echo "ERROR: SplitSmart workspace was not available at $WORKSPACE_DIR"
+                exit 1
+              fi
+              sleep 2
+            done
+            cd "$WORKSPACE_DIR"
+            sh scripts/prepare-sandbox.sh
+            echo "SplitSmart setup complete"
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      content: |
+        SplitSmart setup runs alongside the agent. Before running Node commands,
+        check /home/agent/.cache/splitsmart-kit.log for "SplitSmart setup complete".
+        If setup failed, read the log and run sh scripts/prepare-sandbox.sh.
