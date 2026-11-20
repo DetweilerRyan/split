@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RoomSnapshot } from '../types/receipt';
-import { computeReceiptMath } from '../utils/math';
+import { computeReceiptMath } from './math';
 
 describe('receipt currency math', () => {
   it('uses the bank reconciliation rate and allocates tips proportionally', () => {
