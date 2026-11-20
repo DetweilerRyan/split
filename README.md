@@ -21,7 +21,7 @@ Run locally with `npm run dev`, build with `npm run build`, and serve the produc
 
 ### Docker Sandbox
 
-For isolated agent development, see the [SplitSmart sandbox kit](.sbx-kits/splitsmart/README.md). It provisions Node.js and the lockfile dependencies in a clone-mode sandbox, and describes the optional VS Code dev container. The ordinary local workflow above remains supported.
+For isolated agent development, see the [SplitSmart sandbox kit](.sbx-kits/splitsmart/README.md). It provisions Node.js and installs the dependencies pinned in `package-lock.json` (via `npm ci`) in a clone-mode sandbox, and describes the optional VS Code dev container. The ordinary local workflow above remains supported.
 
 Vercel auto-detects Next.js; use its default build command and output with no `vercel.json` or SPA rewrites. The app uses Next.js's default server/hybrid deployment, and its pages are statically prerendered and `/api/mcp` is served on demand. Configure `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` in the Vercel Preview and Production environments only if using Liveblocks; it is client-exposed. WebRTC signaling uses the existing public signaling servers and needs no environment variable. Room and ingest URL fragments and query parameters are handled client-side; ingest links live at `/ingest` (old root-level ingest links are forwarded there).
 
