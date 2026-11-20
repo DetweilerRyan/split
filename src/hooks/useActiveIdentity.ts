@@ -18,6 +18,8 @@ export function useActiveIdentity(
     if (participants.length === 0) return;
     if (!activeId || !participants.some((person) => person.id === activeId)) {
       const saved = window.localStorage.getItem(`splitsmart-user-${roomId}`);
+      // localStorage exists only in the browser, so the saved choice can't be read during render.
+      // oxlint-disable-next-line react/set-state-in-effect
       setActiveId(participants.find((person) => person.id === saved)?.id ?? participants[0].id);
     }
   }, [activeId, roomId, participants]);

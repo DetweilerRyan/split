@@ -33,6 +33,8 @@ export default function RoomEntry({ mode = 'root' }: { mode?: 'root' | 'ingest' 
         return;
       }
     } else if (!ingest) {
+      // The link is read from window.location, which exists only in the browser, not during render.
+      // oxlint-disable-next-line react/set-state-in-effect
       setError('This page needs an ingest link containing receipt data.');
       return;
     }

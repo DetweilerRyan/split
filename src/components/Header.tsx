@@ -4,7 +4,6 @@ import type { Participant, RoomSnapshot } from '../types/receipt';
 import { getConnectionStatusDisplay } from '../utils/connectionStatus';
 
 interface HeaderProps {
-  roomId: string;
   title: string;
   purchasedAt: string;
   mealType: string;
@@ -20,7 +19,6 @@ interface HeaderProps {
 }
 
 export function Header({
-  roomId,
   title,
   purchasedAt,
   mealType,

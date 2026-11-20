@@ -122,7 +122,6 @@ export default function RoomView({ roomId }: { roomId: string }) {
   return (
     <div className="min-h-screen pb-12">
       <Header
-        roomId={roomId}
         title={snapshot.title}
         purchasedAt={snapshot.purchasedAt}
         mealType={snapshot.mealType}
