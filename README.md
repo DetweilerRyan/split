@@ -17,7 +17,7 @@ npm test
 npm run build
 ```
 
-Run locally with `npm run dev`, build with `npm run build`, and serve the production build with `npm start`. The tests run with `npm test`.
+Run locally with `npm run dev`, build with `npm run build`, and serve the production build with `npm start`. The tests run with `npm test`, and `npm run typecheck` checks types. Agents working on the repository follow [`AGENTS.md`](AGENTS.md).
 
 ### Docker Sandbox
 

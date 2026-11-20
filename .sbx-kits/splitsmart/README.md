@@ -39,4 +39,4 @@ The dev container uses the sandbox's Docker daemon and mounts the workspace at i
 
 The kit requests runtime access to `registry.npmjs.org` for the lockfile and `github.com` and `api.github.com` for Git and the GitHub CLI. Agent kits and host policies may add or restrict access. Check redirect destinations and request narrowly scoped host approvals when needed; do not broaden the policy just to suppress an error. Application features may require additional network access, for example WebRTC signaling or the optional exchange-rate service.
 
-Keep tokens on the host. Use Docker Sandboxes' [credential and secret proxy](https://docs.docker.com/ai/sandboxes/configuration/credentials/) and approve the appropriate binding rather than putting secrets in the repository, container environment, or command history. The optional `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` is client-exposed and is not a secret.
+Keep tokens on the host: [Sandbox secrets](../../docs/sandbox/secrets.md) says how to give the sandbox a credential through the `sbx` proxy, and which secrets this repository uses.
