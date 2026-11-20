@@ -12,7 +12,14 @@ export function parsePurchasedAt(value: string): PurchaseTime | null {
 }
 
 export function formatPurchaseTime({ date, hasTime }: PurchaseTime) {
-  const day = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  const time = hasTime ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '';
+  const day = date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const time = hasTime
+    ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    : '';
   return { day, time };
 }

@@ -17,13 +17,17 @@ function fixture() {
   mkdirSync(join(cwd, 'bin'));
   writeFileSync(join(cwd, 'package.json'), '{}');
   writeFileSync(join(cwd, 'package-lock.json'), '{}');
-  writeFileSync(join(cwd, 'bin/npm'), `#!/bin/sh
+  writeFileSync(
+    join(cwd, 'bin/npm'),
+    `#!/bin/sh
 if [ "$1" = "--version" ]; then echo 1.0; exit 0; fi
 echo install >> installs
 if [ -f fail-install ]; then exit 1; fi
 sleep 0.1
 mkdir -p node_modules
-`, { mode: 0o755 });
+`,
+    { mode: 0o755 },
+  );
   execFileSync('git', ['init', '--quiet'], { cwd });
   const env = { ...process.env, PATH: `${join(cwd, 'bin')}:${process.env.PATH}` };
   const run = () => spawnSync('sh', [script], { cwd, env, encoding: 'utf8' });
@@ -32,7 +36,8 @@ mkdir -p node_modules
 }
 
 afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
+  for (const directory of directories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
 });
 
 describe.skipIf(process.platform !== 'linux')('sandbox dependency setup', () => {

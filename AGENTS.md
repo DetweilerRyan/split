@@ -10,12 +10,12 @@ For extracting receipt data and generating SplitSmart room links, follow the [re
 
 ## Where to read more
 
-| Document | Read when |
-| :--- | :--- |
-| [`docs/engineering/`](docs/engineering/README.md) | Before writing or changing code or tests, adding a dependency, or any branch, pull request, or post-merge task. Read the index, then each procedure whose "Read when" matches. |
-| [`docs/prose/single-source-of-truth.md`](docs/prose/single-source-of-truth.md) | Before writing, moving, or reviewing documentation, skill files, config comments, or issue and pull request text. |
-| [`docs/sandbox/secrets.md`](docs/sandbox/secrets.md) | When a task needs a credential for a service, or an authenticated request is refused in a sandbox. |
-| [Sandbox kit README](.sbx-kits/splitsmart/README.md) | Before starting, changing, or troubleshooting the Docker Sandbox or the VS Code dev container. |
+| Document                                                                       | Read when                                                                                                                                                                      |
+| :----------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`docs/engineering/`](docs/engineering/README.md)                              | Before writing or changing code or tests, adding a dependency, or any branch, pull request, or post-merge task. Read the index, then each procedure whose "Read when" matches. |
+| [`docs/prose/single-source-of-truth.md`](docs/prose/single-source-of-truth.md) | Before writing, moving, or reviewing documentation, skill files, config comments, or issue and pull request text.                                                              |
+| [`docs/sandbox/secrets.md`](docs/sandbox/secrets.md)                           | When a task needs a credential for a service, or an authenticated request is refused in a sandbox.                                                                             |
+| [Sandbox kit README](.sbx-kits/splitsmart/README.md)                           | Before starting, changing, or troubleshooting the Docker Sandbox or the VS Code dev container.                                                                                 |
 
 ## Boundaries
 
@@ -29,10 +29,10 @@ For extracting receipt data and generating SplitSmart room links, follow the [re
 
 A change is not done until each of these exits with code 0, run from the repository root. The repository has no CI, so nothing runs them for you; Vercel's preview build runs only the build.
 
-| Check | Command |
-| :--- | :--- |
-| Types | `npm run typecheck` |
-| Tests | `npm test` |
-| Production build | `npm run build` |
+| Check            | Command             |
+| :--------------- | :------------------ |
+| Types            | `npm run typecheck` |
+| Tests            | `npm test`          |
+| Production build | `npm run build`     |
 
 In a Docker Sandbox, wait until `~/.cache/splitsmart-kit.log` says `SplitSmart setup complete` before running them; the [kit README](.sbx-kits/splitsmart/README.md) says what to do if setup failed. Say in the pull request which checks you ran and which you did not.

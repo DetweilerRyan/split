@@ -16,12 +16,7 @@ import { computeReceiptMath } from './utils/math';
 import { formatMoney, localeCurrency } from './utils/currency';
 import { getExchangeRate } from './utils/exchangeRates';
 import { buildExportText } from './utils/exportText';
-import {
-  createRoomId,
-  hydrateFromSeed,
-  pendingSeedKey,
-  roomPath,
-} from './store/seedCodec';
+import { createRoomId, hydrateFromSeed, pendingSeedKey, roomPath } from './store/seedCodec';
 import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
@@ -40,7 +35,8 @@ export default function RoomView({ roomId }: { roomId: string }) {
   const math = computeReceiptMath(snapshot);
   const [activeId, setActiveId] = useActiveIdentity(provider, roomId, snapshot.participants);
 
-  const roomUrl = typeof window === 'undefined' ? '' : `${window.location.origin}${roomPath(roomId)}`;
+  const roomUrl =
+    typeof window === 'undefined' ? '' : `${window.location.origin}${roomPath(roomId)}`;
 
   function showToast(message: string) {
     setToast(message);
@@ -56,7 +52,11 @@ export default function RoomView({ roomId }: { roomId: string }) {
     const participant = provider.store.addParticipant(name);
     if (participant) chooseIdentity(participant.id);
     else {
-      const id = `p-${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+      const id = `p-${name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')}`;
       if (snapshot.participants.some((person) => person.id === id)) chooseIdentity(id);
       else showToast('Enter a participant name.');
     }
@@ -114,7 +114,9 @@ export default function RoomView({ roomId }: { roomId: string }) {
   }
 
   function copySummary() {
-    void navigator.clipboard?.writeText(buildExportText(snapshot)).then(() => showToast('Summary copied.'));
+    void navigator.clipboard
+      ?.writeText(buildExportText(snapshot))
+      .then(() => showToast('Summary copied.'));
   }
 
   const totals = math.perPerson;
@@ -150,10 +152,17 @@ export default function RoomView({ roomId }: { roomId: string }) {
               onMeta={(key, value) => provider.store.setMeta(key, value)}
               onCurrency={(code) => {
                 provider.store.setMeta('currency', code);
-                if (snapshot.displayCurrency) void changeDisplayCurrency(snapshot.displayCurrency, false, code);
+                if (snapshot.displayCurrency)
+                  void changeDisplayCurrency(snapshot.displayCurrency, false, code);
               }}
               onDisplayCurrency={changeDisplayCurrency}
-              onRate={(rate) => provider.store.setExchangeRate(snapshot.displayCurrency, rate, new Date().toISOString().slice(0, 10))}
+              onRate={(rate) =>
+                provider.store.setExchangeRate(
+                  snapshot.displayCurrency,
+                  rate,
+                  new Date().toISOString().slice(0, 10),
+                )
+              }
               onAddItem={(name, en, eur) => provider.store.addItem(name, en, eur)}
             />
           )}
@@ -166,7 +175,11 @@ export default function RoomView({ roomId }: { roomId: string }) {
             filter={filter}
             onClaim={(itemId, participantId) => provider.store.toggleClaim(itemId, participantId)}
             onClaimAll={(itemId, participants, claimed) =>
-              provider.store.setClaims(itemId, participants.map((person) => person.id), claimed)
+              provider.store.setClaims(
+                itemId,
+                participants.map((person) => person.id),
+                claimed,
+              )
             }
             onUpdate={(itemId, field, value) => provider.store.updateItem(itemId, field, value)}
             onDelete={(itemId) => provider.store.deleteItem(itemId)}
@@ -179,16 +192,44 @@ export default function RoomView({ roomId }: { roomId: string }) {
                 <h2 className="font-extrabold text-slate-900">{snapshot.title}</h2>
                 <p className="text-xs text-slate-500">Live receipt split</p>
               </div>
-              <button className="button-secondary" onClick={copySummary}>Copy summary</button>
+              <button className="button-secondary" onClick={copySummary}>
+                Copy summary
+              </button>
             </div>
             <dl className="space-y-1 border-t border-slate-100 pt-3 text-sm">
-              <div className="flex justify-between"><dt>Currency</dt><dd className="font-mono">{math.currency}</dd></div>
-              <div className="flex justify-between"><dt>Items subtotal</dt><dd className="font-mono font-bold">{formatMoney(math.itemsSubtotal, math.currency)}</dd></div>
-              <div className="flex justify-between"><dt>Card total</dt><dd className="font-mono">{formatMoney(math.cardTotal, math.currency)}</dd></div>
+              <div className="flex justify-between">
+                <dt>Currency</dt>
+                <dd className="font-mono">{math.currency}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>Items subtotal</dt>
+                <dd className="font-mono font-bold">
+                  {formatMoney(math.itemsSubtotal, math.currency)}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>Card total</dt>
+                <dd className="font-mono">{formatMoney(math.cardTotal, math.currency)}</dd>
+              </div>
               {math.displayCurrency && math.effectiveRate !== null && (
                 <>
-                  {snapshot.bankUsd > 0 && <div className="flex justify-between"><dt>Bank charge</dt><dd className="font-mono">{formatMoney(snapshot.bankUsd, math.displayCurrency)}</dd></div>}
-                  <div className="flex justify-between border-t border-slate-100 pt-1 font-bold"><dt>Exchange rate{math.isEstimatedRate && snapshot.rateDate ? ` (${snapshot.rateDate})` : ''}</dt><dd className="font-mono">{math.effectiveRate.toFixed(4)} {math.displayCurrency} / {math.currency}</dd></div>
+                  {snapshot.bankUsd > 0 && (
+                    <div className="flex justify-between">
+                      <dt>Bank charge</dt>
+                      <dd className="font-mono">
+                        {formatMoney(snapshot.bankUsd, math.displayCurrency)}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-slate-100 pt-1 font-bold">
+                    <dt>
+                      Exchange rate
+                      {math.isEstimatedRate && snapshot.rateDate ? ` (${snapshot.rateDate})` : ''}
+                    </dt>
+                    <dd className="font-mono">
+                      {math.effectiveRate.toFixed(4)} {math.displayCurrency} / {math.currency}
+                    </dd>
+                  </div>
                 </>
               )}
             </dl>
@@ -197,10 +238,16 @@ export default function RoomView({ roomId }: { roomId: string }) {
           <section className="card p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-extrabold">Receipt seed</h2>
-              <button className="button-secondary" onClick={() => setSeedOpen(true)}>Seed / presets</button>
+              <button className="button-secondary" onClick={() => setSeedOpen(true)}>
+                Seed / presets
+              </button>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Data persists on this device and syncs with room peers.</p>
-            <p className="mt-2 text-xs text-slate-500">{snapshot.participants.length} people · {snapshot.items.length} items</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Data persists on this device and syncs with room peers.
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              {snapshot.participants.length} people · {snapshot.items.length} items
+            </p>
           </section>
         </aside>
       </main>
@@ -213,8 +260,18 @@ export default function RoomView({ roomId }: { roomId: string }) {
         onAdd={addParticipant}
         onRemove={removeParticipant}
       />
-      <RestaurantModal open={detailsOpen} snapshot={snapshot} roomId={roomId} onClose={() => setDetailsOpen(false)} />
-      <ShareModal open={shareOpen} url={roomUrl} onClose={() => setShareOpen(false)} onCopy={copyRoomLink} />
+      <RestaurantModal
+        open={detailsOpen}
+        snapshot={snapshot}
+        roomId={roomId}
+        onClose={() => setDetailsOpen(false)}
+      />
+      <ShareModal
+        open={shareOpen}
+        url={roomUrl}
+        onClose={() => setShareOpen(false)}
+        onCopy={copyRoomLink}
+      />
       <SeedModal
         open={seedOpen}
         onClose={() => setSeedOpen(false)}
@@ -222,7 +279,14 @@ export default function RoomView({ roomId }: { roomId: string }) {
         onPreset={loadPreset}
         onBlankRoom={newBlankRoom}
       />
-      {toast && <div role="status" className="fixed bottom-4 right-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-lg">{toast}</div>}
+      {toast && (
+        <div
+          role="status"
+          className="fixed bottom-4 right-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-lg"
+        >
+          {toast}
+        </div>
+      )}
       {Object.keys(totals).length === 0 && <div className="sr-only">No participants yet.</div>}
     </div>
   );

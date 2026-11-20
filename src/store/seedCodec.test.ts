@@ -55,9 +55,7 @@ describe('room IDs, paths and ingest links', () => {
       expect(parsed.seed).toEqual(seed);
       expect(parsed.roomId).toMatch(/^urn:split:room:[0-9a-f-]{36}$/i);
       expect(parsed.encodedRoom).not.toContain('=');
-      expect(parsed.redirectUrl).toBe(
-        `https://split.detweiler.me/r/${parsed.encodedRoom}`,
-      );
+      expect(parsed.redirectUrl).toBe(`https://split.detweiler.me/r/${parsed.encodedRoom}`);
     }
   });
 
@@ -72,13 +70,15 @@ describe('room IDs, paths and ingest links', () => {
   });
 
   it('reports malformed JSON and seed validation errors in ingest links', () => {
-    expect(parseIngestUrl('https://example.test/#ingest=%7B'))
-      .toEqual({ error: 'The ingest link does not contain valid JSON.' });
+    expect(parseIngestUrl('https://example.test/#ingest=%7B')).toEqual({
+      error: 'The ingest link does not contain valid JSON.',
+    });
 
     const invalidSeed = encodeURIComponent(JSON.stringify({ title: 'Missing items' }));
     const result = parseIngestUrl(`https://example.test/#ingest=${invalidSeed}`);
     expect(result).toEqual({
-      error: 'Receipt data failed validation: Invalid seed: cardTipEur must be a finite number; cashTipEur must be a finite number; bankUsd must be a finite number; roster must be an array of strings; items must be an array.',
+      error:
+        'Receipt data failed validation: Invalid seed: cardTipEur must be a finite number; cashTipEur must be a finite number; bankUsd must be a finite number; roster must be an array of strings; items must be an array.',
     });
     expect(() => validateSeed(null)).toThrow('Seed must be a JSON object.');
   });
@@ -111,7 +111,9 @@ describe('seed schema and ingest links', () => {
   it('rejects oversized payloads and non-finite amounts', () => {
     const many = Array.from({ length: 201 }, (_, i) => ({ ...seed.items[0], id: `item-${i}` }));
     expect(() => validateSeed({ ...seed, items: many })).toThrow(/items must have at most 200/);
-    expect(() => validateSeed({ ...seed, bankUsd: Infinity })).toThrow(/bankUsd must be a finite number/);
+    expect(() => validateSeed({ ...seed, bankUsd: Infinity })).toThrow(
+      /bankUsd must be a finite number/,
+    );
   });
 });
 

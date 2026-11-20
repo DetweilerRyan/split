@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   color: #1e293b;
   background: #f1f5f9;
   font-synthesis: none;

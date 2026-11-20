@@ -105,10 +105,7 @@ describe('room sync provider selection', () => {
       initialPresence: { user: null },
     });
     expect(mocks.getYjsProviderForRoom).toHaveBeenCalledWith(room);
-    expect(mocks.IndexeddbPersistence).toHaveBeenCalledWith(
-      'splitsmart-p2p-room-liveblocks',
-      doc,
-    );
+    expect(mocks.IndexeddbPersistence).toHaveBeenCalledWith('splitsmart-p2p-room-liveblocks', doc);
     expect(room.connect).not.toHaveBeenCalled();
 
     completePersistence();
@@ -204,9 +201,7 @@ describe('room sync provider selection', () => {
       provider: 'WebRTC',
       status: 'connecting',
     });
-    expect(provider.store.getSnapshot().peers).toEqual([
-      { id: '1', name: 'Same person' },
-    ]);
+    expect(provider.store.getSnapshot().peers).toEqual([{ id: '1', name: 'Same person' }]);
     expect(provider.doc).toBe(mocks.IndexeddbPersistence.mock.calls[0][1]);
     expect(provider.doc).toBe(mocks.WebrtcProvider.mock.calls[0][1]);
     onWebrtcStatus?.({ connected: true });

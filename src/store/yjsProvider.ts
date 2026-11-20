@@ -23,12 +23,21 @@ const providers =
   providerRegistry.__splitRoomProviders ??
   (providerRegistry.__splitRoomProviders = new Map<string, Promise<RoomProvider>>());
 const liveblocksApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim();
-const participantColors = ['#4f46e5', '#059669', '#d97706', '#e11d48', '#7c3aed', '#0891b2', '#c026d3'];
+const participantColors = [
+  '#4f46e5',
+  '#059669',
+  '#d97706',
+  '#e11d48',
+  '#7c3aed',
+  '#0891b2',
+  '#c026d3',
+];
 
 async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
   const liveblocksRoom = liveblocksApiKey
-    ? (providerRegistry.__splitLiveblocksClient ??=
-        createClient({ publicApiKey: liveblocksApiKey })).enterRoom(roomId, {
+    ? (providerRegistry.__splitLiveblocksClient ??= createClient({
+        publicApiKey: liveblocksApiKey,
+      })).enterRoom(roomId, {
         autoConnect: false,
         initialPresence: { user: null },
       }).room

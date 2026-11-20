@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -56,5 +56,7 @@ export default function RoomEntry({ mode = 'root' }: { mode?: 'root' | 'ingest' 
   if (error) {
     return <main className="mx-auto max-w-xl p-8 text-center text-rose-700">{error}</main>;
   }
-  return <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Preparing your receipt…</main>;
+  return (
+    <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Preparing your receipt…</main>
+  );
 }

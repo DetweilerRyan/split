@@ -1,20 +1,98 @@
 export const DEFAULT_CURRENCY = 'USD';
 
 const COMMON_CURRENCIES = [
-  'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY', 'HKD', 'SGD', 'KRW', 'INR',
-  'MXN', 'BRL', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'TRY', 'ZAR', 'AED', 'ILS',
-  'THB', 'IDR', 'MYR', 'PHP', 'KWD', 'BHD', 'JOD', 'OMR', 'TND',
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'CHF',
+  'CAD',
+  'AUD',
+  'NZD',
+  'CNY',
+  'HKD',
+  'SGD',
+  'KRW',
+  'INR',
+  'MXN',
+  'BRL',
+  'SEK',
+  'NOK',
+  'DKK',
+  'PLN',
+  'CZK',
+  'HUF',
+  'RON',
+  'TRY',
+  'ZAR',
+  'AED',
+  'ILS',
+  'THB',
+  'IDR',
+  'MYR',
+  'PHP',
+  'KWD',
+  'BHD',
+  'JOD',
+  'OMR',
+  'TND',
 ];
 
 const REGION_CURRENCIES: Record<string, string> = {
-  US: 'USD', GB: 'GBP', JP: 'JPY', CH: 'CHF', CA: 'CAD', AU: 'AUD', NZ: 'NZD', CN: 'CNY',
-  HK: 'HKD', SG: 'SGD', KR: 'KRW', IN: 'INR', MX: 'MXN', BR: 'BRL', SE: 'SEK', NO: 'NOK',
-  DK: 'DKK', PL: 'PLN', CZ: 'CZK', HU: 'HUF', RO: 'RON', TR: 'TRY', ZA: 'ZAR', AE: 'AED',
-  IL: 'ILS', TH: 'THB', ID: 'IDR', MY: 'MYR', PH: 'PHP', KW: 'KWD', BH: 'BHD', JO: 'JOD',
-  OM: 'OMR', TN: 'TND',
-  AT: 'EUR', BE: 'EUR', CY: 'EUR', DE: 'EUR', EE: 'EUR', ES: 'EUR', FI: 'EUR', FR: 'EUR',
-  GR: 'EUR', HR: 'EUR', IE: 'EUR', IT: 'EUR', LT: 'EUR', LU: 'EUR', LV: 'EUR', MT: 'EUR',
-  NL: 'EUR', PT: 'EUR', SI: 'EUR', SK: 'EUR',
+  US: 'USD',
+  GB: 'GBP',
+  JP: 'JPY',
+  CH: 'CHF',
+  CA: 'CAD',
+  AU: 'AUD',
+  NZ: 'NZD',
+  CN: 'CNY',
+  HK: 'HKD',
+  SG: 'SGD',
+  KR: 'KRW',
+  IN: 'INR',
+  MX: 'MXN',
+  BR: 'BRL',
+  SE: 'SEK',
+  NO: 'NOK',
+  DK: 'DKK',
+  PL: 'PLN',
+  CZ: 'CZK',
+  HU: 'HUF',
+  RO: 'RON',
+  TR: 'TRY',
+  ZA: 'ZAR',
+  AE: 'AED',
+  IL: 'ILS',
+  TH: 'THB',
+  ID: 'IDR',
+  MY: 'MYR',
+  PH: 'PHP',
+  KW: 'KWD',
+  BH: 'BHD',
+  JO: 'JOD',
+  OM: 'OMR',
+  TN: 'TND',
+  AT: 'EUR',
+  BE: 'EUR',
+  CY: 'EUR',
+  DE: 'EUR',
+  EE: 'EUR',
+  ES: 'EUR',
+  FI: 'EUR',
+  FR: 'EUR',
+  GR: 'EUR',
+  HR: 'EUR',
+  IE: 'EUR',
+  IT: 'EUR',
+  LT: 'EUR',
+  LU: 'EUR',
+  LV: 'EUR',
+  MT: 'EUR',
+  NL: 'EUR',
+  PT: 'EUR',
+  SI: 'EUR',
+  SK: 'EUR',
 };
 
 export function isValidCurrency(code: unknown): code is string {
@@ -34,8 +112,12 @@ export function normalizeCurrency(code: unknown): string {
 
 /** Number of minor-unit decimals for a currency (JPY 0, USD 2, KWD 3). */
 export function currencyExponent(code: string): number {
-  return new Intl.NumberFormat('en', { style: 'currency', currency: normalizeCurrency(code) })
-    .resolvedOptions().maximumFractionDigits ?? 2;
+  return (
+    new Intl.NumberFormat('en', {
+      style: 'currency',
+      currency: normalizeCurrency(code),
+    }).resolvedOptions().maximumFractionDigits ?? 2
+  );
 }
 
 export function toMinor(amount: number, code: string): number {
@@ -47,7 +129,10 @@ export function fromMinor(minor: number, code: string): number {
 }
 
 export function formatMoney(amount: number, code: string, locale?: string): string {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: normalizeCurrency(code) }).format(amount);
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: normalizeCurrency(code),
+  }).format(amount);
 }
 
 export function localeCurrency(language?: string): string {
@@ -62,8 +147,9 @@ export function localeCurrency(language?: string): string {
 
 export function listCurrencies(): string[] {
   try {
-    const supported = (Intl as unknown as { supportedValuesOf?: (key: string) => string[] })
-      .supportedValuesOf?.('currency');
+    const supported = (
+      Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+    ).supportedValuesOf?.('currency');
     if (supported?.length) return supported;
   } catch {}
   return COMMON_CURRENCIES;

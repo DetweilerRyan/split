@@ -1,5 +1,5 @@
 # syntax=docker/sandbox-kit:3
-schemaVersion: "3"
+schemaVersion: '3'
 kind: mixin
 displayName: SplitSmart development
 description: Node.js and workspace dependencies for SplitSmart
@@ -18,7 +18,7 @@ capabilities:
     config:
       startup:
         - description: Install SplitSmart dependencies from the workspace lockfile
-          user: "1000"
+          user: '1000'
           env: [WORKSPACE_DIR]
           command: |
             set -eu

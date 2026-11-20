@@ -9,7 +9,13 @@ interface UnclaimedBannerProps {
   onFilter: (filter: 'all' | 'unclaimed' | 'mine') => void;
 }
 
-export function UnclaimedBanner({ items, total, currency, filter, onFilter }: UnclaimedBannerProps) {
+export function UnclaimedBanner({
+  items,
+  total,
+  currency,
+  filter,
+  onFilter,
+}: UnclaimedBannerProps) {
   const claimed = items.reduce((sum, item) => {
     return sum + (Object.values(item.claims).some(Boolean) ? item.eur : 0);
   }, 0);
@@ -24,7 +30,9 @@ export function UnclaimedBanner({ items, total, currency, filter, onFilter }: Un
           <div className="h-full bg-emerald-500 transition-all" style={{ width: `${percent}%` }} />
         </div>
         <span className="rounded-lg bg-amber-100 px-2.5 py-1 font-mono text-xs font-bold text-amber-900">
-          {unclaimed.length ? `${formatAmount(unclaimed.reduce((sum, item) => sum + item.eur, 0))} unclaimed` : 'All claimed'}
+          {unclaimed.length
+            ? `${formatAmount(unclaimed.reduce((sum, item) => sum + item.eur, 0))} unclaimed`
+            : 'All claimed'}
         </span>
       </div>
       <div className="flex gap-1 rounded-xl bg-slate-200 p-1">

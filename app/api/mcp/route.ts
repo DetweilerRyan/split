@@ -21,7 +21,9 @@ const handler = createMcpHandler(
         const origin = new URL(ctx.http?.req?.url ?? 'https://split.detweiler.me').origin;
         const url = buildIngestUrl(origin, seed);
         return {
-          content: [{ type: 'text', text: `Receipt room link (anyone with it can open it): ${url}` }],
+          content: [
+            { type: 'text', text: `Receipt room link (anyone with it can open it): ${url}` },
+          ],
         };
       },
     );
@@ -35,7 +37,10 @@ const handler = createMcpHandler(
           {
             uri: uri.href,
             mimeType: 'text/markdown',
-            text: await readFile(path.join(process.cwd(), 'skills/receipt-generation/SKILL.md'), 'utf8'),
+            text: await readFile(
+              path.join(process.cwd(), 'skills/receipt-generation/SKILL.md'),
+              'utf8',
+            ),
           },
         ],
       }),

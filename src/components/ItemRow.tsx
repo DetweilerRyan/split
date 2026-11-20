@@ -31,10 +31,31 @@ export function ItemRow({
   if (editing) {
     return (
       <div className="grid gap-2 p-4 sm:grid-cols-[1fr_1fr_7rem_auto]">
-        <input aria-label="Item name" className="input" defaultValue={item.name} onBlur={(event) => onUpdate(item.id, 'name', event.target.value)} />
-        <input aria-label="English name" className="input" defaultValue={item.en} onBlur={(event) => onUpdate(item.id, 'en', event.target.value)} />
-        <input aria-label={`Price in ${currency}`} className="input" type="number" step={10 ** -currencyExponent(currency)} defaultValue={item.eur} onBlur={(event) => onUpdate(item.id, 'eur', Number(event.target.value) || 0)} />
-        <button aria-label={`Delete ${item.name}`} className="button-secondary justify-center text-rose-700" onClick={() => onDelete(item.id)}>
+        <input
+          aria-label="Item name"
+          className="input"
+          defaultValue={item.name}
+          onBlur={(event) => onUpdate(item.id, 'name', event.target.value)}
+        />
+        <input
+          aria-label="English name"
+          className="input"
+          defaultValue={item.en}
+          onBlur={(event) => onUpdate(item.id, 'en', event.target.value)}
+        />
+        <input
+          aria-label={`Price in ${currency}`}
+          className="input"
+          type="number"
+          step={10 ** -currencyExponent(currency)}
+          defaultValue={item.eur}
+          onBlur={(event) => onUpdate(item.id, 'eur', Number(event.target.value) || 0)}
+        />
+        <button
+          aria-label={`Delete ${item.name}`}
+          className="button-secondary justify-center text-rose-700"
+          onClick={() => onDelete(item.id)}
+        >
           <Trash2 size={15} />
         </button>
       </div>
@@ -45,12 +66,19 @@ export function ItemRow({
   return (
     <article className="border-b border-slate-100 p-4 last:border-b-0">
       <div className="flex items-start justify-between gap-3">
-        <button className="flex min-w-0 flex-1 items-start gap-3 text-left" onClick={() => activeId && onClaim(item.id, activeId)}>
-          <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${activeId && item.claims[activeId] ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
+        <button
+          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+          onClick={() => activeId && onClaim(item.id, activeId)}
+        >
+          <span
+            className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${activeId && item.claims[activeId] ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}
+          >
             {activeId && item.claims[activeId] && <Check size={14} />}
           </span>
           <span className="min-w-0">
-            <span className="block break-words text-sm font-extrabold text-slate-900">{item.name}</span>
+            <span className="block break-words text-sm font-extrabold text-slate-900">
+              {item.name}
+            </span>
             {item.en && <span className="block text-xs italic text-slate-500">{item.en}</span>}
           </span>
         </button>
@@ -75,7 +103,11 @@ export function ItemRow({
           </button>
         </div>
         <span className="text-xs text-slate-500">
-          {claimedBy.length === 0 ? 'Unclaimed' : claimedBy.length > 1 ? `${formatAmount(item.eur / claimedBy.length)} each` : 'Solo'}
+          {claimedBy.length === 0
+            ? 'Unclaimed'
+            : claimedBy.length > 1
+              ? `${formatAmount(item.eur / claimedBy.length)} each`
+              : 'Solo'}
         </span>
       </div>
     </article>

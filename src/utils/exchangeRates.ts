@@ -82,7 +82,13 @@ export async function getExchangeRate(
     const data = (await response.json()) as { date?: string; rates?: Record<string, number> };
     const rate = data.rates?.[quote];
     if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error('No rate');
-    const fresh: ExchangeRate = { base, quote, rate, date: String(data.date ?? ''), fetchedAt: now };
+    const fresh: ExchangeRate = {
+      base,
+      quote,
+      rate,
+      date: String(data.date ?? ''),
+      fetchedAt: now,
+    };
     await writeCache(key, fresh);
     return fresh;
   } catch {

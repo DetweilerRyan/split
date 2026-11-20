@@ -35,8 +35,8 @@ sbx secret set-custom --sandbox <sandbox-name> --host <api.example.com> --env <V
 
 ## Secrets this repository uses
 
-| Service | Kind | Details |
-| :--- | :--- | :--- |
-| GitHub | built-in | git push and `gh` through the proxy |
+| Service | Kind     | Details                             |
+| :------ | :------- | :---------------------------------- |
+| GitHub  | built-in | git push and `gh` through the proxy |
 
 `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` is not a secret: it is exposed to every browser that loads the app ([README](../../README.md#optional-liveblocks-sync)). A Liveblocks secret key, needed for token authentication, would belong on a trusted backend, never in client code; add its row here when it arrives.
