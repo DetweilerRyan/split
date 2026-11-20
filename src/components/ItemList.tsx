@@ -30,23 +30,30 @@ export function ItemList(props: ItemListProps) {
           <p className="text-xs text-slate-500">{props.items.length} line items · tap to claim</p>
         </div>
         <span className="rounded-lg bg-indigo-50 px-2.5 py-1 font-mono text-sm font-bold text-indigo-800">
-          {formatMoney(props.items.reduce((sum, item) => sum + item.eur, 0), props.currency)}
+          {formatMoney(
+            props.items.reduce((sum, item) => sum + item.eur, 0),
+            props.currency,
+          )}
         </span>
       </div>
-      {visible.length ? visible.map((item) => (
-        <ItemRow
-          key={item.id}
-          item={item}
-          participants={props.participants}
-          activeId={props.activeId}
-          editing={props.editing}
-          currency={props.currency}
-          onClaim={props.onClaim}
-          onClaimAll={props.onClaimAll}
-          onUpdate={props.onUpdate}
-          onDelete={props.onDelete}
-        />
-      )) : <p className="p-8 text-center text-sm text-slate-500">No items match this filter.</p>}
+      {visible.length ? (
+        visible.map((item) => (
+          <ItemRow
+            key={item.id}
+            item={item}
+            participants={props.participants}
+            activeId={props.activeId}
+            editing={props.editing}
+            currency={props.currency}
+            onClaim={props.onClaim}
+            onClaimAll={props.onClaimAll}
+            onUpdate={props.onUpdate}
+            onDelete={props.onDelete}
+          />
+        ))
+      ) : (
+        <p className="p-8 text-center text-sm text-slate-500">No items match this filter.</p>
+      )}
     </section>
   );
 }

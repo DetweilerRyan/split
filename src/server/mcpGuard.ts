@@ -6,10 +6,13 @@ const LIMIT = 30;
 const WINDOW_MS = 60_000;
 
 function jsonRpcError(status: number, message: string, headers: Record<string, string> = {}) {
-  return new Response(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...headers },
-  });
+  return new Response(
+    JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }),
+    {
+      status,
+      headers: { 'Content-Type': 'application/json', ...headers },
+    },
+  );
 }
 
 async function readCapped(request: Request): Promise<string | null> {
@@ -63,6 +66,8 @@ export function guardMcp(handler: (request: Request) => Promise<Response> | Resp
         'RateLimit-Reset': String(WINDOW_MS / 1000),
       });
     }
-    return handler(new Request(request.url, { method: request.method, headers: request.headers, body }));
+    return handler(
+      new Request(request.url, { method: request.method, headers: request.headers, body }),
+    );
   };
 }

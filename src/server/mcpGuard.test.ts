@@ -4,7 +4,11 @@ import { guardMcp, MAX_BODY_BYTES } from './mcpGuard';
 describe('guardMcp', () => {
   const ok = async (req: Request) => new Response(await req.text());
   const post = (body: string) =>
-    new Request('https://x.test/api/mcp', { method: 'POST', body, headers: { 'x-real-ip': '9.9.9.9' } });
+    new Request('https://x.test/api/mcp', {
+      method: 'POST',
+      body,
+      headers: { 'x-real-ip': '9.9.9.9' },
+    });
 
   it('rejects oversized bodies with a JSON-RPC 413', async () => {
     const res = await guardMcp(ok)(post('x'.repeat(MAX_BODY_BYTES + 1)));

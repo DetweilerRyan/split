@@ -3,7 +3,12 @@
 const MAX_KEYS = 1000;
 const hits = new Map<string, number[]>();
 
-export function isRateLimited(key: string, limit = 30, windowMs = 60_000, now = Date.now()): boolean {
+export function isRateLimited(
+  key: string,
+  limit = 30,
+  windowMs = 60_000,
+  now = Date.now(),
+): boolean {
   if (hits.size >= MAX_KEYS) {
     for (const [k, times] of hits) {
       if (times.every((time) => now - time >= windowMs)) hits.delete(k);
@@ -24,6 +29,15 @@ export function normalizeIp(ip: string): string {
   const [head, tail = ''] = ip.split('::');
   const groups = head ? head.split(':') : [];
   const rest = tail ? tail.split(':') : [];
-  const full = [...groups, ...Array(Math.max(0, 8 - groups.length - rest.length)).fill('0'), ...rest];
-  return full.slice(0, 4).map((g) => g.toLowerCase().replace(/^0+(?=.)/, '')).join(':') + '::/64';
+  const full = [
+    ...groups,
+    ...Array(Math.max(0, 8 - groups.length - rest.length)).fill('0'),
+    ...rest,
+  ];
+  return (
+    full
+      .slice(0, 4)
+      .map((g) => g.toLowerCase().replace(/^0+(?=.)/, ''))
+      .join(':') + '::/64'
+  );
 }

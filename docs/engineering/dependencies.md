@@ -14,15 +14,15 @@ Don't look when a few lines of the platform or standard library do the job, when
 
 Name two or three candidates, and always include the two baselines: writing it ourselves, and using something already installed. Answer each question for each candidate, from the npm page, the source repository, and [deps.dev](https://deps.dev/). Date the answers, since they change.
 
-| Question | What to check |
-| :--- | :--- |
-| **Is it needed?** | What it replaces, in code and tests we'd otherwise own, and how much of the package we'd use. |
-| **Is it the real one?** | The name matches the one the project's own site links to. A similar, more popular name suggests typosquatting. |
-| **Is it maintained?** | A release and commits in the last 12 months, and more than one maintainer or wide enough use that it would be forked. |
-| **Is it safe?** | No known unfixed vulnerability in the version you'd add (`npm audit` after a trial install), and how fast past ones were fixed. |
-| **Does the license allow it?** | A common open-source license, for the package and what it pulls in. |
-| **What comes with it?** | Its own dependencies (`npm view <package> dependencies`), install scripts, and what it adds to the client bundle if it runs in the browser. |
-| **Does it fit here?** | It works with Next.js on Vercel, in the browser where the app uses it, and in the sandbox kit: any host it contacts at install or run time must be allowed in the kit's [network policy](../../.sbx-kits/splitsmart/splitsmart.yaml). It can be replaced by a fake in tests ([testing conventions](testing-conventions.md)). |
+| Question                       | What to check                                                                                                                                                                                                                                                                                                                |
+| :----------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Is it needed?**              | What it replaces, in code and tests we'd otherwise own, and how much of the package we'd use.                                                                                                                                                                                                                                |
+| **Is it the real one?**        | The name matches the one the project's own site links to. A similar, more popular name suggests typosquatting.                                                                                                                                                                                                               |
+| **Is it maintained?**          | A release and commits in the last 12 months, and more than one maintainer or wide enough use that it would be forked.                                                                                                                                                                                                        |
+| **Is it safe?**                | No known unfixed vulnerability in the version you'd add (`npm audit` after a trial install), and how fast past ones were fixed.                                                                                                                                                                                              |
+| **Does the license allow it?** | A common open-source license, for the package and what it pulls in.                                                                                                                                                                                                                                                          |
+| **What comes with it?**        | Its own dependencies (`npm view <package> dependencies`), install scripts, and what it adds to the client bundle if it runs in the browser.                                                                                                                                                                                  |
+| **Does it fit here?**          | It works with Next.js on Vercel, in the browser where the app uses it, and in the sandbox kit: any host it contacts at install or run time must be allowed in the kit's [network policy](../../.sbx-kits/splitsmart/splitsmart.yaml). It can be replaced by a fake in tests ([testing conventions](testing-conventions.md)). |
 
 **Then try it** in a sandbox or a throwaway branch, after the checks above, since installing a package runs its code. Don't commit the trial.
 

@@ -10,17 +10,17 @@ Every fact in this repository is written in one place, its **owner**, and everyt
 4. **Prefer owners that code reads.** When code depends on a fact, the code or its schema is the owner, and documents link to it. The receipt seed's extraction rules, for example, are the field descriptions in `src/types/seedSchema.ts`.
 5. **Moving a fact is one change.** Delete the old copy in the same commit, and check that the fact still exists at its owner.
 
-| Kind of fact | Owner |
-| :--- | :--- |
-| What the app is, how to run and deploy it, the MCP server, currencies | [`README.md`](../../README.md) |
-| Boundaries for every agent session, and the definition of done | [`AGENTS.md`](../../AGENTS.md) |
-| How engineering work is done | [`docs/engineering/`](../engineering/README.md) |
-| Receipt seed fields and their extraction rules | `src/types/seedSchema.ts` |
-| How an agent extracts a receipt and makes a room link | [`skills/receipt-generation/SKILL.md`](../../skills/receipt-generation/SKILL.md) |
-| The Docker Sandbox kit and dev container | [`.sbx-kits/splitsmart/README.md`](../../.sbx-kits/splitsmart/README.md) |
-| Sandbox credentials | [`docs/sandbox/secrets.md`](../sandbox/secrets.md) |
-| Tool settings | The config file itself, with a comment saying why where the format allows one |
-| Writing conventions like this one | `docs/prose/` |
+| Kind of fact                                                          | Owner                                                                            |
+| :-------------------------------------------------------------------- | :------------------------------------------------------------------------------- |
+| What the app is, how to run and deploy it, the MCP server, currencies | [`README.md`](../../README.md)                                                   |
+| Boundaries for every agent session, and the definition of done        | [`AGENTS.md`](../../AGENTS.md)                                                   |
+| How engineering work is done                                          | [`docs/engineering/`](../engineering/README.md)                                  |
+| Receipt seed fields and their extraction rules                        | `src/types/seedSchema.ts`                                                        |
+| How an agent extracts a receipt and makes a room link                 | [`skills/receipt-generation/SKILL.md`](../../skills/receipt-generation/SKILL.md) |
+| The Docker Sandbox kit and dev container                              | [`.sbx-kits/splitsmart/README.md`](../../.sbx-kits/splitsmart/README.md)         |
+| Sandbox credentials                                                   | [`docs/sandbox/secrets.md`](../sandbox/secrets.md)                               |
+| Tool settings                                                         | The config file itself, with a comment saying why where the format allows one    |
+| Writing conventions like this one                                     | `docs/prose/`                                                                    |
 
 ## Facts, not text
 

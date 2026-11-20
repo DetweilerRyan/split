@@ -4,7 +4,7 @@ After a pull request you worked on is merged, delete its branches and bring `mai
 
 ## Why the checks matter
 
-- **Merging can give commits new IDs.** Squash and rebase merges rewrite them, so git reports the branch as "not fully merged". That's expected. Whether anything is lost is decided by comparing *files* (step 2), not commit history.
+- **Merging can give commits new IDs.** Squash and rebase merges rewrite them, so git reports the branch as "not fully merged". That's expected. Whether anything is lost is decided by comparing _files_ (step 2), not commit history.
 - **Other pull requests merge in between.** `main` may also hold another pull request's changes to the same files, so compare only this pull request's files, and account for every difference.
 
 ## Steps

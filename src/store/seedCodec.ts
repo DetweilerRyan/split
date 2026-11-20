@@ -17,7 +17,8 @@ export interface ParsedIngestUrl {
 
 export const INGEST_PATH = '/ingest';
 const ROOM_ID_PREFIX = 'urn:split:room:';
-const ROOM_ID_PATTERN = /^urn:split:room:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ROOM_ID_PATTERN =
+  /^urn:split:room:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function createRoomId(): string {
   return `${ROOM_ID_PREFIX}${globalThis.crypto.randomUUID()}`;
@@ -180,7 +181,11 @@ export function hydrateFromSeed(
     }
 
     seed.roster.forEach((name, index) => {
-      const id = `p-${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+      const id = `p-${name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')}`;
       if (participants.has(id)) return;
       const participant = new Y.Map<unknown>();
       participant.set('id', id);

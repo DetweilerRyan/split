@@ -26,7 +26,9 @@ export function buildExportText(snapshot: RoomSnapshot): string {
     snapshot.items.forEach((item) => {
       if (!item.claims[participant.id]) return;
       const claimCount = snapshot.participants.filter((person) => item.claims[person.id]).length;
-      lines.push(`  • ${item.name}: ${fmt(item.eur / claimCount)}${claimCount > 1 ? ` (1/${claimCount})` : ''}`);
+      lines.push(
+        `  • ${item.name}: ${fmt(item.eur / claimCount)}${claimCount > 1 ? ` (1/${claimCount})` : ''}`,
+      );
     });
   });
 

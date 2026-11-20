@@ -4,7 +4,6 @@ import type { Participant, RoomSnapshot } from '../types/receipt';
 import { getConnectionStatusDisplay } from '../utils/connectionStatus';
 
 interface HeaderProps {
-  roomId: string;
   title: string;
   purchasedAt: string;
   mealType: string;
@@ -20,7 +19,6 @@ interface HeaderProps {
 }
 
 export function Header({
-  roomId,
   title,
   purchasedAt,
   mealType,
@@ -37,8 +35,11 @@ export function Header({
   const purchase = parsePurchasedAt(purchasedAt);
   const when = purchase ? formatPurchaseTime(purchase) : null;
   const identity = participants.find((person) => person.id === activeId);
-  const { label: statusLabel, indicatorColor, textColor } =
-    getConnectionStatusDisplay(connection.status);
+  const {
+    label: statusLabel,
+    indicatorColor,
+    textColor,
+  } = getConnectionStatusDisplay(connection.status);
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
@@ -56,16 +57,24 @@ export function Header({
               </span>
               <span className="min-w-0">
                 <span className="flex items-center gap-0.5">
-                  <span className="truncate font-extrabold leading-tight text-slate-900">{title}</span>
+                  <span className="truncate font-extrabold leading-tight text-slate-900">
+                    {title}
+                  </span>
                   <ChevronRight size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
                 </span>
                 <span className="flex items-center gap-1 truncate text-xs text-slate-600">
                   <CalendarDays size={12} className="shrink-0" aria-hidden="true" />
                   <span className="truncate">
-                    {when ? `${when.day}${when.time ? ` · ${when.time}` : ''}` : 'Date not on receipt'}
+                    {when
+                      ? `${when.day}${when.time ? ` · ${when.time}` : ''}`
+                      : 'Date not on receipt'}
                   </span>
                 </span>
-                {mealType && <span className="block truncate text-xs font-semibold text-indigo-600">{mealType}</span>}
+                {mealType && (
+                  <span className="block truncate text-xs font-semibold text-indigo-600">
+                    {mealType}
+                  </span>
+                )}
               </span>
             </button>
           </div>
@@ -78,7 +87,8 @@ export function Header({
               className="button-secondary px-2 sm:px-3"
               onClick={onEdit}
             >
-              <Pencil size={14} /> <span className="hidden sm:inline">{editing ? 'Done' : 'Edit'}</span>
+              <Pencil size={14} />{' '}
+              <span className="hidden sm:inline">{editing ? 'Done' : 'Edit'}</span>
             </button>
             <button className="button-primary" onClick={onShare}>
               <Share2 size={14} /> Share
@@ -93,10 +103,10 @@ export function Header({
           <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">
             <span className={`h-2 w-2 shrink-0 rounded-full ${indicatorColor}`} />
             <span className="font-bold text-slate-700">{connection.provider}</span>
-            <span className="text-slate-400" aria-hidden="true">·</span>
-            <span className={`truncate ${textColor}`}>
-              {statusLabel}
+            <span className="text-slate-400" aria-hidden="true">
+              ·
             </span>
+            <span className={`truncate ${textColor}`}>{statusLabel}</span>
           </span>
           <span className="inline-flex shrink-0 items-center gap-1 text-xs text-slate-600">
             <Users size={14} />

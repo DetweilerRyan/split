@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -33,6 +33,8 @@ export default function RoomEntry({ mode = 'root' }: { mode?: 'root' | 'ingest' 
         return;
       }
     } else if (!ingest) {
+      // The link is read from window.location, which exists only in the browser, not during render.
+      // oxlint-disable-next-line react/set-state-in-effect
       setError('This page needs an ingest link containing receipt data.');
       return;
     }
@@ -54,5 +56,7 @@ export default function RoomEntry({ mode = 'root' }: { mode?: 'root' | 'ingest' 
   if (error) {
     return <main className="mx-auto max-w-xl p-8 text-center text-rose-700">{error}</main>;
   }
-  return <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Preparing your receipt…</main>;
+  return (
+    <main className="mx-auto max-w-xl p-8 text-center text-slate-600">Preparing your receipt…</main>
+  );
 }

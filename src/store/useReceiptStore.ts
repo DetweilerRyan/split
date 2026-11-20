@@ -68,7 +68,15 @@ export class ReceiptStore {
   }
 
   setMeta(
-    key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd' | 'currency' | 'displayCurrency' | 'rate' | 'rateDate',
+    key:
+      | 'title'
+      | 'cardTipEur'
+      | 'cashTipEur'
+      | 'bankUsd'
+      | 'currency'
+      | 'displayCurrency'
+      | 'rate'
+      | 'rateDate',
     value: string | number,
   ): void {
     this.meta.set(key, value);
@@ -85,7 +93,10 @@ export class ReceiptStore {
   addParticipant(name: string): Participant | null {
     const trimmed = name.trim();
     if (!trimmed) return null;
-    const id = `p-${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+    const id = `p-${trimmed
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')}`;
     if (this.participants.has(id)) return null;
     const participant = new Y.Map<unknown>();
     participant.set('id', id);

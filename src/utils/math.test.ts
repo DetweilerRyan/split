@@ -6,7 +6,11 @@ describe('receipt currency math', () => {
   it('uses the bank reconciliation rate and allocates tips proportionally', () => {
     const snapshot: RoomSnapshot = {
       title: 'Test receipt',
-      address: '', phone: '', website: '', purchasedAt: '', mealType: '',
+      address: '',
+      phone: '',
+      website: '',
+      purchasedAt: '',
+      mealType: '',
       cardTipEur: 3,
       cashTipEur: 10,
       bankUsd: 154,
@@ -33,18 +37,18 @@ describe('receipt currency math', () => {
     expect(result.isEstimatedRate).toBe(false);
     expect(result.perPerson['p-ryan'].cardTipShare).toBeCloseTo(3 * (100 / 137));
     expect(result.perPerson['p-ryan'].cashTipShare).toBeCloseTo(10 * (100 / 137));
-    expect(result.perPerson['p-ryan'].converted).toBeCloseTo(
-      (100 + 13 * (100 / 137)) * 1.1,
-    );
-    expect(result.perPerson['p-jameson'].converted).toBeCloseTo(
-      (37 + 13 * (37 / 137)) * 1.1,
-    );
+    expect(result.perPerson['p-ryan'].converted).toBeCloseTo((100 + 13 * (100 / 137)) * 1.1);
+    expect(result.perPerson['p-jameson'].converted).toBeCloseTo((37 + 13 * (37 / 137)) * 1.1);
   });
 
   it('uses the estimated rate when no bank charge is entered', () => {
     const snapshot: RoomSnapshot = {
       title: 'Test receipt',
-      address: '', phone: '', website: '', purchasedAt: '', mealType: '',
+      address: '',
+      phone: '',
+      website: '',
+      purchasedAt: '',
+      mealType: '',
       cardTipEur: 0,
       cashTipEur: 5,
       bankUsd: 0,
@@ -76,7 +80,11 @@ function makeSnapshot(
   const ids = ['a', 'b', 'c'];
   return {
     title: 't',
-    address: '', phone: '', website: '', purchasedAt: '', mealType: '',
+    address: '',
+    phone: '',
+    website: '',
+    purchasedAt: '',
+    mealType: '',
     cardTipEur: tips.card,
     cashTipEur: tips.cash,
     bankUsd: 0,
@@ -118,11 +126,16 @@ describe('integer minor-unit splitting', () => {
     const snap = makeSnapshot('USD', [1], [['a', 'b', 'c']]);
     const first = computeReceiptMath(snap);
     const second = computeReceiptMath(snap);
-    expect(Object.values(first.perPerson).map((p) => p.totalMinor)).toEqual([1, 0, 0].map((n, i) => second.perPerson[['a', 'b', 'c'][i]].totalMinor));
+    expect(Object.values(first.perPerson).map((p) => p.totalMinor)).toEqual(
+      [1, 0, 0].map((n, i) => second.perPerson[['a', 'b', 'c'][i]].totalMinor),
+    );
   });
 
   it('allocates tips so totals add up exactly in 3-decimal currencies', () => {
-    const snap = makeSnapshot('KWD', [1.001, 2.002, 3.003], [['a'], ['b'], ['c']], { card: 0.5, cash: 0.001 });
+    const snap = makeSnapshot('KWD', [1.001, 2.002, 3.003], [['a'], ['b'], ['c']], {
+      card: 0.5,
+      cash: 0.001,
+    });
     const result = computeReceiptMath(snap);
     const people = Object.values(result.perPerson);
     expect(people.reduce((s, p) => s + p.cardTipShareMinor, 0)).toBe(500);
@@ -137,7 +150,12 @@ describe('integer minor-unit splitting', () => {
   });
 
   it('converts shares using the stored rate and keeps converted totals exact', () => {
-    const snap = { ...makeSnapshot('EUR', [10], [['a', 'b', 'c']]), displayCurrency: 'JPY', rate: 160.5, rateDate: '2026-01-02' };
+    const snap = {
+      ...makeSnapshot('EUR', [10], [['a', 'b', 'c']]),
+      displayCurrency: 'JPY',
+      rate: 160.5,
+      rateDate: '2026-01-02',
+    };
     const result = computeReceiptMath(snap);
     expect(result.displayCurrency).toBe('JPY');
     const sum = Object.values(result.perPerson).reduce((s, p) => s + (p.converted ?? 0), 0);

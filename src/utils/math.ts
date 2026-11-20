@@ -1,5 +1,11 @@
 import type { RoomSnapshot } from '../types/receipt';
-import { DEFAULT_CURRENCY, currencyExponent, fromMinor, normalizeCurrency, toMinor } from './currency';
+import {
+  DEFAULT_CURRENCY,
+  currencyExponent,
+  fromMinor,
+  normalizeCurrency,
+  toMinor,
+} from './currency';
 
 export interface PersonTotal {
   participant: RoomSnapshot['participants'][number];
@@ -66,7 +72,8 @@ export function computeReceiptMath(snapshot: RoomSnapshot) {
     const base = Math.floor(itemMinor / claimants.length);
     const extra = itemMinor - base * claimants.length;
     claimants.forEach(({ id }, index) => {
-      const position = (index - (itemIndex % claimants.length) + claimants.length) % claimants.length;
+      const position =
+        (index - (itemIndex % claimants.length) + claimants.length) % claimants.length;
       perPerson[id].itemsSubtotalMinor += base + (position < extra ? 1 : 0);
     });
   });
@@ -106,8 +113,14 @@ export function computeReceiptMath(snapshot: RoomSnapshot) {
 
   if (converting && effectiveRate !== null && displayCurrency) {
     const grandMinor = people.reduce((sum, person) => sum + person.totalMinor, 0);
-    const convertedMinor = toMinor(fromMinor(grandMinor, currency) * effectiveRate, displayCurrency);
-    const convertedShares = allocateMinor(convertedMinor, people.map((person) => person.totalMinor));
+    const convertedMinor = toMinor(
+      fromMinor(grandMinor, currency) * effectiveRate,
+      displayCurrency,
+    );
+    const convertedShares = allocateMinor(
+      convertedMinor,
+      people.map((person) => person.totalMinor),
+    );
     people.forEach((person, index) => {
       person.converted = fromMinor(convertedShares[index], displayCurrency);
     });
