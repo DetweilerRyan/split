@@ -29,10 +29,14 @@ For extracting receipt data and generating SplitSmart room links, follow the [re
 
 A change is not done until each of these exits with code 0, run from the repository root. The repository has no CI, so nothing runs them for you; Vercel's preview build runs only the build.
 
-| Check            | Command             |
-| :--------------- | :------------------ |
-| Types            | `npm run typecheck` |
-| Tests            | `npm test`          |
-| Production build | `npm run build`     |
+| Check            | Command                |
+| :--------------- | :--------------------- |
+| Lint             | `npm run lint`         |
+| Formatting       | `npm run format:check` |
+| Types            | `npm run typecheck`    |
+| Tests            | `npm test`             |
+| Production build | `npm run build`        |
+
+`npm run format` fixes formatting in place. Lint rules are in [`.oxlintrc.json`](.oxlintrc.json) and formatter settings in [`.oxfmtrc.json`](.oxfmtrc.json); a warning fails the lint check. Disable a rule only on the line it flags, with a comment saying why the rule doesn't fit there.
 
 In a Docker Sandbox, wait until `~/.cache/splitsmart-kit.log` says `SplitSmart setup complete` before running them; the [kit README](.sbx-kits/splitsmart/README.md) says what to do if setup failed. Say in the pull request which checks you ran and which you did not.
