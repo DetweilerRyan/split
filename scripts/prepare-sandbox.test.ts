@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const script = fileURLToPath(new URL('../../scripts/prepare-sandbox.sh', import.meta.url));
+const script = fileURLToPath(new URL('./prepare-sandbox.sh', import.meta.url));
 const directories: string[] = [];
 const runCommand = promisify(execFile);
 

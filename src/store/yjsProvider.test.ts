@@ -87,7 +87,7 @@ describe('room sync provider selection', () => {
     mocks.createClient.mockReturnValue(client);
     mocks.getYjsProviderForRoom.mockReturnValue({ getYDoc: () => doc, awareness });
 
-    const { getRoomProvider } = await import('../store/yjsProvider');
+    const { getRoomProvider } = await import('./yjsProvider');
     const seed = {
       title: 'Link title',
       cardTipEur: 0,
@@ -183,7 +183,7 @@ describe('room sync provider selection', () => {
       return webrtcProvider;
     });
 
-    const { getRoomProvider } = await import('../store/yjsProvider');
+    const { getRoomProvider } = await import('./yjsProvider');
     const providerPromise = getRoomProvider('room-p2p');
 
     expect(mocks.createClient).not.toHaveBeenCalled();
@@ -242,7 +242,7 @@ describe('room sync provider selection', () => {
       };
     });
 
-    const { getRoomProvider } = await import('../store/yjsProvider');
+    const { getRoomProvider } = await import('./yjsProvider');
     const provider = await getRoomProvider('room-with-data', {
       title: 'Link title',
       cardTipEur: 0,

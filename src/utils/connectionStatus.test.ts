@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getConnectionStatusDisplay } from '../utils/connectionStatus';
+import { getConnectionStatusDisplay } from './connectionStatus';
 
 describe('connection status display', () => {
   it.each([

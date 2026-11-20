@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { qrSvgPath } from '../utils/qr';
+import { qrSvgPath } from './qr';
 
 describe('qrSvgPath', () => {
   it('is deterministic and non-empty', () => {

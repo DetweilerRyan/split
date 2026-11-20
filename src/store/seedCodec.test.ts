@@ -1,34 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
-import * as Y from 'yjs';
-import { computeReceiptMath } from '../utils/math';
+import { describe, expect, it } from 'vitest';
 import {
+  buildIngestUrl,
   createRoomId,
   decodeRoomId,
-  decodeSeed,
   encodeRoomId,
-  encodeSeed,
-  hydrateFromSeed,
   parseIngestUrl,
   parseRoomHash,
   parseRoomPath,
   roomPath,
   validateSeed,
-} from '../store/seedCodec';
-import { ReceiptStore } from '../store/useReceiptStore';
+} from './seedCodec';
 
-describe('Yjs synchronization and seed hydration', () => {
-  const sampleSeed = {
-    title: 'Sample receipt',
-    cardTipEur: 0,
-    cashTipEur: 0,
-    bankUsd: 0,
-    roster: ['Alex', 'Sam'],
-    items: [
-      { id: 'item-0', name: 'Coffee', en: 'Coffee', eur: 6 },
-      { id: 'item-1', name: 'Tea', en: 'Tea', eur: 6 },
-    ],
-  };
-
+describe('room IDs, paths and ingest links', () => {
   it('creates opaque URL-safe URN room IDs and decodes them from hashes', () => {
     const roomId = createRoomId();
     const encoded = encodeRoomId(roomId);
@@ -99,65 +82,43 @@ describe('Yjs synchronization and seed hydration', () => {
     });
     expect(() => validateSeed(null)).toThrow('Seed must be a JSON object.');
   });
+});
 
-  it('publishes nested item changes through the deep-observed store', () => {
-    const doc = new Y.Doc();
-    hydrateFromSeed(doc, sampleSeed);
-    const store = new ReceiptStore(doc);
-    const listener = vi.fn();
-    store.subscribe(listener);
+const seed = {
+  title: 'Taverna',
+  cardTipEur: 0,
+  cashTipEur: 0,
+  bankUsd: 0,
+  roster: [],
+  items: [{ id: 'item-0', name: 'Taco (1/2)', en: 'Taco', eur: 5 }],
+};
 
-    doc.getMap<Y.Map<unknown>>('items').get('item-0')?.set('name', 'Updated item');
-
-    expect(listener).toHaveBeenCalled();
-    expect(store.getSnapshot().items[0].name).toBe('Updated item');
-    doc.destroy();
+describe('seed schema and ingest links', () => {
+  it('round-trips a built ingest link through parseIngestUrl', () => {
+    const url = buildIngestUrl('https://split.detweiler.me/', seed);
+    expect(url.startsWith('https://split.detweiler.me/ingest#ingest=')).toBe(true);
+    const parsed = parseIngestUrl(url);
+    expect(parsed && 'seed' in parsed && parsed.seed).toEqual(seed);
   });
 
-  it('merges claims from peers that independently hydrate the same seed', () => {
-    const seedString = encodeSeed(sampleSeed);
-    const seed = decodeSeed(seedString);
-    expect(seed).not.toBeNull();
-    if (!seed) return;
+  it('reports indexed paths and duplicate ids', () => {
+    const bad = { ...seed, items: [seed.items[0], { ...seed.items[0] }, { id: 'x', name: 1 }] };
+    expect(() => validateSeed(bad)).toThrow(
+      /items\[2\]\.name must be a string; items\[2\]\.en must be a string; items\[2\]\.eur must be a finite number; items\[1\]\.id "item-0" is duplicated/,
+    );
+  });
 
-    const docA = new Y.Doc();
-    const docB = new Y.Doc();
-    hydrateFromSeed(docA, seed);
-    hydrateFromSeed(docB, seed);
-
-    const originalItem = docA.getMap('items').get('item-0');
-    docA.getMap<boolean>('claims').set('item-0::p-alex', true);
-    docB.getMap<boolean>('claims').set('item-0::p-sam', true);
-    docB.getMap<boolean>('claims').set('item-1::p-sam', true);
-
-    hydrateFromSeed(docA, seed);
-    expect(docA.getMap('items').get('item-0')).toBe(originalItem);
-    expect(docA.getMap<boolean>('claims').get('item-0::p-alex')).toBe(true);
-
-    Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
-    Y.applyUpdate(docA, Y.encodeStateAsUpdate(docB));
-
-    const snapshotA = new ReceiptStore(docA).getSnapshot();
-    const snapshotB = new ReceiptStore(docB).getSnapshot();
-    expect(snapshotA).toEqual(snapshotB);
-    expect(snapshotA.items.find((item) => item.id === 'item-0')?.claims).toEqual({
-      'p-alex': true,
-      'p-sam': true,
-    });
-    expect(snapshotA.items.find((item) => item.id === 'item-1')?.claims['p-sam']).toBe(true);
-
-    const math = computeReceiptMath(snapshotA);
-    expect(math.perPerson['p-alex'].itemsSubtotal).toBe(3);
-    expect(math.perPerson['p-sam'].itemsSubtotal).toBe(9);
-    docA.destroy();
-    docB.destroy();
+  it('rejects oversized payloads and non-finite amounts', () => {
+    const many = Array.from({ length: 201 }, (_, i) => ({ ...seed.items[0], id: `item-${i}` }));
+    expect(() => validateSeed({ ...seed, items: many })).toThrow(/items must have at most 200/);
+    expect(() => validateSeed({ ...seed, bankUsd: Infinity })).toThrow(/bankUsd must be a finite number/);
   });
 });
 
 describe('receipt currency in seeds', () => {
   it('defaults to USD for legacy seeds and keeps an explicit currency', async () => {
-    const { hydrateFromSeed, validateSeed } = await import('../store/seedCodec');
-    const { ReceiptStore } = await import('../store/useReceiptStore');
+    const { hydrateFromSeed, validateSeed } = await import('./seedCodec');
+    const { ReceiptStore } = await import('./useReceiptStore');
     const Y = await import('yjs');
     const base = { title: 't', cardTipEur: 0, cashTipEur: 0, bankUsd: 0, roster: [], items: [] };
 
