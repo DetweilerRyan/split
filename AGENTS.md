@@ -29,7 +29,7 @@ A document's `<name>.meta.md` sidecar holds its reasons and sources. Read a side
 
 ## Definition of done
 
-A change is not done until each of these exits with code 0, run from the repository root. The repository has no CI, so nothing runs them for you; Vercel's preview build runs only the build.
+A change is not done until each of these exits with code 0, run from the repository root. [CI](docs/engineering/ci.md) runs the same checks on every pull request, but run them yourself before pushing: a change is done when they pass locally and in CI.
 
 | Check            | Command                |
 | :--------------- | :--------------------- |

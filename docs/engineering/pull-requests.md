@@ -10,7 +10,11 @@ A pull request's state is a message to the owner: **draft means "not yet"; ready
    gh pr create --draft --title "<title>" --body-file <file>
    ```
 
-2. **Mark it ready only when** every check in [`AGENTS.md`'s definition of done](../../AGENTS.md#definition-of-done) passes on the pushed branch, and every question for the owner has been answered.
+2. **Mark it ready only when** every check in [`AGENTS.md`'s definition of done](../../AGENTS.md#definition-of-done) passes on the pushed branch, its [CI](ci.md) run has passed, and every question for the owner has been answered.
+
+   ```bash
+   gh pr checks <n>
+   ```
 
    ```bash
    gh pr ready <n>

@@ -13,6 +13,7 @@ How work on this repository gets done: writing and testing code, choosing depend
 | [Testing conventions](testing-conventions.md)       | Before writing, changing, or moving a test, including a component or hook test, or replacing an external dependency in a test                                                                           |
 | [Choosing and adding dependencies](dependencies.md) | Before adding or changing an entry in `package.json`, before importing a package the repository doesn't import yet, or before writing code for a general problem a library may already solve            |
 | [Types and schemas](types-and-schemas.md)           | Before adding, moving or changing a type, interface or zod schema                                                                                                                                       |
+| [CI](ci.md)                                         | Before changing `.github/workflows/`, updating `playwright` or a GitHub Action, or when a pull request's CI run fails                                                                                   |
 
 ## Adding a procedure
 
