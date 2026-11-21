@@ -2,7 +2,7 @@
 // localStorage changes without React knowing, so components read it through
 // useSyncExternalStore with these functions rather than during render.
 
-import type { RoomId } from '../types/roomId';
+import type { RoomId } from './seedCodec';
 
 /** The `localStorage` key for the identity last used in a room. */
 export type SavedIdentityKey = `splitsmart-user-${RoomId}`;
