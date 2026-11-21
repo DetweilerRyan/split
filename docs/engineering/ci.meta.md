@@ -32,6 +32,7 @@ The owner asked for a fast run ("3 to 5 minutes is way too long for a small repo
   | Production build                                     |  8 s |
   | Post steps (saving the npm cache) and cleanup        |  4 s |
 
+- **The second run** ([run 44863276153](https://github.com/DetweilerRyan/split/actions/runs/44863276153)), with the npm cache restored, also took 62 s: the cache made Node setup slower (6 s) and didn't shorten `npm ci` (9 s), and the container still took 23 s. Run-to-run variation of a few seconds is normal.
 - **The container image** saves downloading Chromium on each run, and its system libraries. Pulling it is now the largest step.
 - **Not taken: caching the browsers.** Playwright's [CI docs](https://playwright.dev/docs/ci) say "Caching browser binaries is not recommended, since the amount of time it takes to restore the cache is comparable" to downloading them, and that the Linux system dependencies "are not cacheable".
 - **Not taken: parallel jobs.** Each job would pull the image and run `npm ci` again, about 30 s, to save at most the 15 s the checks take after setup. Reopen if a check grows slow enough to dominate.
