@@ -1,6 +1,6 @@
 # CI
 
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) runs the [definition-of-done checks](../../AGENTS.md#definition-of-done) on every pull request and every push to `main`, in one GitHub Actions job. A failing run blocks merging.
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) runs the [definition-of-done checks](../../AGENTS.md#definition-of-done) on every pull request and every push to `main`, in one GitHub Actions job. A failing run blocks merging: the `guard on main branch` ruleset requires the `Definition of done` check, a branch up to date with `main`, a pull request, and a rebase merge. When `main` moves, rebase as [Pull requests](pull-requests.md#when-main-moves) says, and CI runs again.
 
 ## When a run fails
 
