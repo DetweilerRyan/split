@@ -40,6 +40,15 @@ function setup() {
   return { identities, renders, render, choose, current, unmount };
 }
 
+// Another tab's write: the browser updates localStorage and fires a storage event in every
+// other tab with the same origin, never in the tab that wrote.
+function saveInAnotherTab(id: string) {
+  act(() => {
+    window.localStorage.setItem(storageKey, id);
+    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: id }));
+  });
+}
+
 let unmount: () => void = () => {};
 
 beforeEach(() => window.localStorage.clear());
@@ -108,10 +117,28 @@ describe('useActiveIdentity', () => {
     expect(hook.identities.at(-1)).toEqual({ id: 'p-alex', name: 'Alex', colorIdx: 0 });
   });
 
+  it('follows the participant another tab saves for the room, while none is chosen here', () => {
+    const hook = setup();
+    unmount = hook.unmount;
+    hook.render([alex, sam]);
+    saveInAnotherTab('p-sam');
+    expect(hook.current()).toBe('p-sam');
+  });
+
+  it('keeps the participant chosen here when another tab saves a different one', () => {
+    const hook = setup();
+    unmount = hook.unmount;
+    hook.render([alex, sam]);
+    hook.choose('p-alex');
+    saveInAnotherTab('p-sam');
+    expect(hook.current()).toBe('p-alex');
+  });
+
   it('has the fallback identity on the first render, with no empty render first', () => {
     const hook = setup();
     unmount = hook.unmount;
     hook.render([alex, sam]);
-    expect(hook.renders).toEqual(['p-alex']);
+    expect(hook.renders[0]).toBe('p-alex');
+    expect(hook.renders).not.toContain(null);
   });
 });

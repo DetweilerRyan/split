@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { readSavedIdentity, saveIdentity, subscribeToSavedIdentity } from '../store/savedIdentity';
 import type { RoomProvider } from '../store/yjsProvider';
 
 interface Participant {
@@ -13,19 +14,30 @@ export function useActiveIdentity(
   participants: readonly Participant[],
 ) {
   const [chosenId, setActiveId] = useState<string | null>(null);
-  const storageKey = `splitsmart-user-${roomId}`;
-  const isParticipant = (id: string | null) =>
-    id !== null && participants.some((person) => person.id === id);
+
+  // The identity saved for this room lives in localStorage, which changes without React
+  // knowing (another tab can save one), so it is read as an external store rather than during
+  // render. There is no saved identity on the server.
+  const subscribe = useCallback(
+    (onChange: () => void) => subscribeToSavedIdentity(roomId, onChange),
+    [roomId],
+  );
+  const savedId = useSyncExternalStore(
+    subscribe,
+    () => readSavedIdentity(roomId),
+    () => null,
+  );
 
   // The active identity is the one chosen, else the one saved for this room, else the first
-  // participant. It is worked out during render, so no render goes by without one. RoomView is
-  // loaded with ssr: false, so localStorage is always available here.
+  // participant. It is worked out during render from React's own values, so no render goes by
+  // without one.
+  const isParticipant = (id: string | null) =>
+    id !== null && participants.some((person) => person.id === id);
   let activeId: string | null = null;
   if (isParticipant(chosenId)) {
     activeId = chosenId;
   } else if (participants.length > 0) {
-    const saved = window.localStorage.getItem(storageKey);
-    activeId = isParticipant(saved) ? saved : participants[0].id;
+    activeId = isParticipant(savedId) ? savedId : participants[0].id;
   }
 
   useEffect(() => {
@@ -33,8 +45,8 @@ export function useActiveIdentity(
     provider.setIdentity(
       identity ? { id: identity.id, name: identity.name, colorIdx: identity.colorIdx } : null,
     );
-    if (identity) window.localStorage.setItem(storageKey, identity.id);
-  }, [activeId, provider, storageKey, participants]);
+    if (identity) saveIdentity(roomId, identity.id);
+  }, [activeId, provider, roomId, participants]);
 
   return [activeId, setActiveId] as const;
 }
