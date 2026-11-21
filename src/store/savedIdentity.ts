@@ -2,25 +2,32 @@
 // localStorage changes without React knowing, so components read it through
 // useSyncExternalStore with these functions rather than during render.
 
-const keyFor = (roomId: string) => `splitsmart-user-${roomId}`;
+import type { RoomId } from '../types/roomId';
+
+/** The `localStorage` key for the identity last used in a room. */
+export type SavedIdentityKey = `splitsmart-user-${RoomId}`;
+
+export function savedIdentityKey(roomId: RoomId): SavedIdentityKey {
+  return `splitsmart-user-${roomId}` as const;
+}
 
 // Same-tab listeners. The browser's storage event fires only in other tabs, never in the tab
 // that wrote, so a write here has to notify this tab's subscribers itself.
 const listeners = new Set<() => void>();
 
-export function readSavedIdentity(roomId: string): string | null {
-  return window.localStorage.getItem(keyFor(roomId));
+export function readSavedIdentity(roomId: RoomId): string | null {
+  return window.localStorage.getItem(savedIdentityKey(roomId));
 }
 
-export function saveIdentity(roomId: string, id: string) {
-  const key = keyFor(roomId);
+export function saveIdentity(roomId: RoomId, id: string) {
+  const key = savedIdentityKey(roomId);
   if (window.localStorage.getItem(key) === id) return;
   window.localStorage.setItem(key, id);
   for (const listener of listeners) listener();
 }
 
-export function subscribeToSavedIdentity(roomId: string, onChange: () => void) {
-  const key = keyFor(roomId);
+export function subscribeToSavedIdentity(roomId: RoomId, onChange: () => void) {
+  const key = savedIdentityKey(roomId);
   // event.key is null when another tab clears all of localStorage.
   const onStorage = (event: StorageEvent) => {
     if (event.key === key || event.key === null) onChange();

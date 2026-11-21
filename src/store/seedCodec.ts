@@ -1,6 +1,13 @@
 import LZString from 'lz-string';
 import * as Y from 'yjs';
 import type { ReceiptSeed } from '../types/receipt';
+import {
+  isUuidRoomId,
+  parseRoomId,
+  ROOM_ID_PREFIX,
+  roomIdSchema,
+  type RoomId,
+} from '../types/roomId';
 import { formatSeedIssues, receiptSeedSchema } from '../types/seedSchema';
 import { isValidCurrency, normalizeCurrency } from '../utils/currency';
 
@@ -10,34 +17,34 @@ export interface HydrationOptions {
 
 export interface ParsedIngestUrl {
   seed: ReceiptSeed;
-  roomId: string;
+  roomId: RoomId;
   encodedRoom: string;
   redirectUrl: string;
 }
 
 export const INGEST_PATH = '/ingest';
-const ROOM_ID_PREFIX = 'urn:split:room:';
-const ROOM_ID_PATTERN =
-  /^urn:split:room:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export function createRoomId(): string {
-  return `${ROOM_ID_PREFIX}${globalThis.crypto.randomUUID()}`;
+export function createRoomId(): RoomId {
+  return roomIdSchema.parse(`${ROOM_ID_PREFIX}${globalThis.crypto.randomUUID()}`);
 }
 
-export function encodeRoomId(roomId: string): string {
-  if (!ROOM_ID_PATTERN.test(roomId)) return roomId;
+/** The room's URL segment: a UUID id base64url-encoded, a legacy id as it is. */
+export function encodeRoomId(roomId: RoomId): string {
+  if (!isUuidRoomId(roomId)) return roomId;
   return btoa(roomId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function decodeRoomId(value: string | null): string | null {
-  if (!value || ROOM_ID_PATTERN.test(value)) return value;
+/** The room id in a URL segment or hash value, encoded or not; `null` when it holds none. */
+export function decodeRoomId(value: string | null): RoomId | null {
+  if (!value) return null;
+  const direct = parseRoomId(value);
+  if (direct) return direct;
   try {
     const encoded = value.replace(/-/g, '+').replace(/_/g, '/');
     const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=');
-    const decoded = atob(padded);
-    return ROOM_ID_PATTERN.test(decoded) ? decoded : value;
+    const decoded = parseRoomId(atob(padded));
+    return decoded && isUuidRoomId(decoded) ? decoded : null;
   } catch {
-    return value;
+    return null;
   }
 }
 
@@ -114,11 +121,11 @@ export function parseIngestUrl(href: string): ParsedIngestUrl | { error: string 
   };
 }
 
-export function roomPath(roomId: string): string {
+export function roomPath(roomId: RoomId): string {
   return `/r/${encodeRoomId(roomId)}`;
 }
 
-export function decodeRoomSegment(segment: string): string | null {
+export function decodeRoomSegment(segment: string): RoomId | null {
   try {
     return decodeRoomId(decodeURIComponent(segment));
   } catch {
@@ -126,16 +133,19 @@ export function decodeRoomSegment(segment: string): string | null {
   }
 }
 
-export function parseRoomPath(pathname: string): string | null {
+export function parseRoomPath(pathname: string): RoomId | null {
   const match = /^\/r\/([^/]+)\/?$/.exec(pathname);
   return match ? decodeRoomSegment(match[1]) : null;
 }
 
-export function pendingSeedKey(roomId: string): string {
-  return `splitsmart-ingest-${roomId}`;
+/** The `sessionStorage` key for a seed waiting to be applied to a room. */
+export type PendingSeedKey = `splitsmart-ingest-${RoomId}`;
+
+export function pendingSeedKey(roomId: RoomId): PendingSeedKey {
+  return `splitsmart-ingest-${roomId}` as const;
 }
 
-export function parseRoomHash(hash: string): { roomId: string | null; seed: string | null } {
+export function parseRoomHash(hash: string): { roomId: RoomId | null; seed: string | null } {
   const params = new URLSearchParams(hash.replace(/^#/, ''));
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }

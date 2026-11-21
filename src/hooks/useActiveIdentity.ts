@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { readSavedIdentity, saveIdentity, subscribeToSavedIdentity } from '../store/savedIdentity';
 import type { RoomProvider } from '../store/yjsProvider';
+import type { RoomId } from '../types/roomId';
 
 interface Participant {
   id: string;
@@ -10,7 +11,7 @@ interface Participant {
 
 export function useActiveIdentity(
   provider: Pick<RoomProvider, 'setIdentity'>,
-  roomId: string,
+  roomId: RoomId,
   participants: readonly Participant[],
 ) {
   const [chosenId, setActiveId] = useState<string | null>(null);

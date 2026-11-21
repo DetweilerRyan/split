@@ -7,6 +7,7 @@ import {
   parseIngestUrl,
   parseRoomHash,
   parseRoomPath,
+  pendingSeedKey,
   roomPath,
   validateSeed,
 } from './seedCodec';
@@ -27,11 +28,26 @@ describe('room IDs, paths and ingest links', () => {
   });
 
   it('continues to accept room IDs from existing links', () => {
-    expect(decodeRoomId('split-legacy')).toBe('split-legacy');
-    expect(parseRoomHash('#room=split-legacy')).toEqual({
-      roomId: 'split-legacy',
+    expect(decodeRoomId('split-k3x9')).toBe('split-k3x9');
+    expect(parseRoomHash('#room=split-k3x9')).toEqual({
+      roomId: 'split-k3x9',
       seed: null,
     });
+  });
+
+  it('rejects room IDs that the app never generated, such as one typed into an old link', () => {
+    expect(decodeRoomId('split-legacy')).toBeNull();
+    expect(parseRoomHash('#room=split-legacy')).toEqual({ roomId: null, seed: null });
+    expect(parseRoomPath('/r/split-legacy')).toBeNull();
+    expect(decodeRoomId('not-a-room')).toBeNull();
+  });
+
+  it('keeps the pending-seed key the app has always used', () => {
+    const roomId = decodeRoomId('urn:split:room:3f2b1c4d-1111-4222-8333-444455556666')!;
+    expect(pendingSeedKey(roomId)).toBe(
+      'splitsmart-ingest-urn:split:room:3f2b1c4d-1111-4222-8333-444455556666',
+    );
+    expect(pendingSeedKey(decodeRoomId('split-k3x9')!)).toBe('splitsmart-ingest-split-k3x9');
   });
 
   it('parses valid uncompressed ingest links from the hash and query string', () => {
@@ -63,7 +79,7 @@ describe('room IDs, paths and ingest links', () => {
     const roomId = createRoomId();
     expect(parseRoomPath(roomPath(roomId))).toBe(roomId);
     expect(parseRoomPath(`${roomPath(roomId)}/`)).toBe(roomId);
-    expect(parseRoomPath('/r/split-legacy')).toBe('split-legacy');
+    expect(parseRoomPath('/r/split-k3x9')).toBe('split-k3x9');
     expect(parseRoomPath('/r')).toBeNull();
     expect(parseRoomPath('/r/a/b')).toBeNull();
     expect(parseRoomPath('/r/%E0%A4%A')).toBeNull();

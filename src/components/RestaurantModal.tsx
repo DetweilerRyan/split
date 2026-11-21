@@ -1,11 +1,12 @@
 import { CalendarDays, Globe, MapPin, Phone, Utensils, X } from 'lucide-react';
 import type { RoomSnapshot } from '../types/receipt';
 import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
+import type { RoomId } from '../types/roomId';
 
 interface RestaurantModalProps {
   open: boolean;
   snapshot: RoomSnapshot;
-  roomId: string;
+  roomId: RoomId;
   onClose: () => void;
 }
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import type { RoomProvider } from '../store/yjsProvider';
+import { roomIdSchema } from '../types/roomId';
 import { useActiveIdentity } from './useActiveIdentity';
 
 type Identity = Parameters<RoomProvider['setIdentity']>[0];
@@ -8,8 +9,8 @@ type Person = { id: string; name: string; colorIdx: number };
 
 const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 };
 const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 };
-const roomId = 'room-1';
-const storageKey = `splitsmart-user-${roomId}`;
+const roomId = roomIdSchema.parse('split-r1');
+const storageKey = 'splitsmart-user-split-r1';
 
 async function setup(participants: readonly Person[]) {
   const identities: Identity[] = [];

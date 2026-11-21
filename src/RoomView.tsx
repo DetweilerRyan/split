@@ -16,12 +16,13 @@ import { computeReceiptMath } from './utils/math';
 import { formatMoney, localeCurrency } from './utils/currency';
 import { getExchangeRate } from './utils/exchangeRates';
 import { buildExportText } from './utils/exportText';
+import type { RoomId } from './types/roomId';
 import { createRoomId, hydrateFromSeed, pendingSeedKey, roomPath } from './store/seedCodec';
 import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-export default function RoomView({ roomId }: { roomId: string }) {
+export default function RoomView({ roomId }: { roomId: RoomId }) {
   const router = useRouter();
   const provider = useRoomProvider(roomId);
   const [editing, setEditing] = useState(false);

@@ -12,8 +12,9 @@ import {
   roomPath,
 } from './store/seedCodec';
 import type { ReceiptSeed } from './types/receipt';
+import type { RoomId } from './types/roomId';
 
-function stashSeed(roomId: string, seed: ReceiptSeed | null) {
+function stashSeed(roomId: RoomId, seed: ReceiptSeed | null) {
   if (!seed) return;
   try {
     window.sessionStorage.setItem(pendingSeedKey(roomId), JSON.stringify(seed));
