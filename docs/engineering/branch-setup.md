@@ -4,6 +4,8 @@ Do every branch's work in its own git worktree under `.claude/worktrees/`. Keep 
 
 ## Starting a branch
 
+For a branch that already exists, follow [Resuming a branch](branch-resume.md) instead.
+
 1. **Create the worktree from `origin/main`.** In Claude Code, use the `EnterWorktree` tool, which creates it under `.claude/worktrees/` and switches the session into it. Otherwise:
 
    ```bash
