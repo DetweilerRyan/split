@@ -1,7 +1,44 @@
 import { useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
 import { DEFAULT_CURRENCY, normalizeCurrency } from '../utils/currency';
-import type { Participant, ReceiptItem, RoomSnapshot } from '../types/receipt';
+
+export interface ReceiptItem {
+  id: string;
+  name: string;
+  en: string;
+  eur: number;
+  order: number;
+  claims: Readonly<Record<string, boolean>>;
+}
+
+export interface Participant {
+  id: string;
+  name: string;
+  colorIdx: number;
+}
+
+export interface RoomSnapshot {
+  title: string;
+  address: string;
+  phone: string;
+  website: string;
+  purchasedAt: string;
+  mealType: string;
+  cardTipEur: number;
+  cashTipEur: number;
+  bankUsd: number;
+  currency: string;
+  displayCurrency: string;
+  rate: number;
+  rateDate: string;
+  participants: readonly Participant[];
+  items: readonly ReceiptItem[];
+  connection: {
+    provider: 'Liveblocks' | 'WebRTC';
+    status: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+  };
+  peers: readonly { id: string; name: string; color?: string }[];
+}
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
   process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';

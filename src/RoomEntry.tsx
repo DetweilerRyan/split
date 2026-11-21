@@ -10,9 +10,9 @@ import {
   parseRoomHash,
   pendingSeedKey,
   roomPath,
+  type ReceiptSeed,
+  type RoomId,
 } from './store/seedCodec';
-import type { ReceiptSeed } from './types/receipt';
-import type { RoomId } from './store/seedCodec';
 
 function stashSeed(roomId: RoomId, seed: ReceiptSeed | null) {
   if (!seed) return;

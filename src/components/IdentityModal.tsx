@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
-import type { Participant } from '../types/receipt';
+import type { Participant } from '../store/useReceiptStore';
 
 interface IdentityModalProps {
   open: boolean;

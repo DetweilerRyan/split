@@ -1,4 +1,4 @@
-import type { RoomSnapshot } from '../types/receipt';
+import type { RoomSnapshot } from '../store/useReceiptStore';
 import { formatMoney } from '../utils/currency';
 import { computeReceiptMath } from '../utils/math';
 

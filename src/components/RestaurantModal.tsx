@@ -1,5 +1,5 @@
 import { CalendarDays, Globe, MapPin, Phone, Utensils, X } from 'lucide-react';
-import type { RoomSnapshot } from '../types/receipt';
+import type { RoomSnapshot } from '../store/useReceiptStore';
 import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
 import type { RoomId } from '../store/seedCodec';
 

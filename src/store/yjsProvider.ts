@@ -3,10 +3,8 @@ import { WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
 import { createClient } from '@liveblocks/client';
 import { getYjsProviderForRoom } from '@liveblocks/yjs';
-import type { ReceiptSeed, RoomSnapshot } from '../types/receipt';
-import type { RoomId } from './seedCodec';
-import { hydrateFromSeed } from './seedCodec';
-import { ReceiptStore } from './useReceiptStore';
+import { type ReceiptSeed, type RoomId, hydrateFromSeed } from './seedCodec';
+import { type RoomSnapshot, ReceiptStore } from './useReceiptStore';
 
 export interface RoomProvider {
   doc: Y.Doc;
