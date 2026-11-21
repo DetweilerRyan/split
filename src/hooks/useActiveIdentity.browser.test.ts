@@ -1,6 +1,5 @@
-import { act, createElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { renderHook } from 'vitest-browser-react';
 import type { RoomProvider } from '../store/yjsProvider';
 import { useActiveIdentity } from './useActiveIdentity';
 
@@ -12,9 +11,7 @@ const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 };
 const roomId = 'room-1';
 const storageKey = `splitsmart-user-${roomId}`;
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-function setup() {
+async function setup(participants: readonly Person[]) {
   const identities: Identity[] = [];
   const provider = {
     setIdentity: (identity: Identity) => {
@@ -22,122 +19,92 @@ function setup() {
     },
   };
   const renders: (string | null)[] = [];
-  let setActiveId!: (id: string | null) => void;
-
-  function Probe({ participants }: { participants: readonly Person[] }) {
-    const [activeId, set] = useActiveIdentity(provider, roomId, participants);
-    renders.push(activeId);
-    setActiveId = set;
-    return null;
-  }
-
-  const root: Root = createRoot(document.createElement('div'));
-  const render = (participants: readonly Person[]) =>
-    act(() => root.render(createElement(Probe, { participants })));
-  const choose = (id: string | null) => act(() => setActiveId(id));
-  const current = () => renders[renders.length - 1];
-  const unmount = () => act(() => root.unmount());
-  return { identities, renders, render, choose, current, unmount };
+  const hook = await renderHook(
+    (people: readonly Person[] = participants) => {
+      const value = useActiveIdentity(provider, roomId, people);
+      renders.push(value[0]);
+      return value;
+    },
+    { initialProps: participants },
+  );
+  const choose = (id: string | null) => hook.act(() => hook.result.current[1](id));
+  // Another tab's write: the browser updates localStorage and fires a storage event in every
+  // other tab with the same origin, never in the tab that wrote.
+  const saveInAnotherTab = (id: string) =>
+    hook.act(() => {
+      window.localStorage.setItem(storageKey, id);
+      window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: id }));
+    });
+  const current = () => hook.result.current[0];
+  return { identities, renders, choose, saveInAnotherTab, current, rerender: hook.rerender };
 }
-
-// Another tab's write: the browser updates localStorage and fires a storage event in every
-// other tab with the same origin, never in the tab that wrote.
-function saveInAnotherTab(id: string) {
-  act(() => {
-    window.localStorage.setItem(storageKey, id);
-    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: id }));
-  });
-}
-
-let unmount: () => void = () => {};
 
 beforeEach(() => window.localStorage.clear());
-afterEach(() => unmount());
 
 describe('useActiveIdentity', () => {
-  it('has no identity while the room has no participants', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([]);
+  it('has no identity while the room has no participants', async () => {
+    const hook = await setup([]);
     expect(hook.current()).toBeNull();
     expect(hook.identities.at(-1)).toBeNull();
   });
 
-  it('falls back to the first participant when nothing is saved', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
+  it('falls back to the first participant when nothing is saved', async () => {
+    const hook = await setup([alex, sam]);
     expect(hook.current()).toBe('p-alex');
     expect(hook.identities.at(-1)).toEqual({ id: 'p-alex', name: 'Alex', colorIdx: 0 });
     expect(window.localStorage.getItem(storageKey)).toBe('p-alex');
   });
 
-  it('restores the participant saved for the room', () => {
+  it('restores the participant saved for the room', async () => {
     window.localStorage.setItem(storageKey, 'p-sam');
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
+    const hook = await setup([alex, sam]);
     expect(hook.current()).toBe('p-sam');
   });
 
-  it('ignores a saved id that is not a participant', () => {
+  it('ignores a saved id that is not a participant', async () => {
     window.localStorage.setItem(storageKey, 'p-gone');
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
+    const hook = await setup([alex, sam]);
     expect(hook.current()).toBe('p-alex');
   });
 
-  it('uses and saves the participant chosen', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
-    hook.choose('p-sam');
+  it('uses and saves the participant chosen', async () => {
+    const hook = await setup([alex, sam]);
+    await hook.choose('p-sam');
     expect(hook.current()).toBe('p-sam');
     expect(hook.identities.at(-1)).toEqual({ id: 'p-sam', name: 'Sam', colorIdx: 1 });
     expect(window.localStorage.getItem(storageKey)).toBe('p-sam');
   });
 
-  it('falls back to the saved participant when the choice is cleared', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
-    hook.choose('p-sam');
-    hook.choose(null);
+  it('falls back to the saved participant when the choice is cleared', async () => {
+    const hook = await setup([alex, sam]);
+    await hook.choose('p-sam');
+    await hook.choose(null);
     expect(hook.current()).toBe('p-sam');
   });
 
-  it('falls back to the first participant when the chosen one leaves', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
-    hook.choose('p-sam');
-    hook.render([alex]);
+  it('falls back to the first participant when the chosen one leaves', async () => {
+    const hook = await setup([alex, sam]);
+    await hook.choose('p-sam');
+    await hook.rerender([alex]);
     expect(hook.current()).toBe('p-alex');
     expect(hook.identities.at(-1)).toEqual({ id: 'p-alex', name: 'Alex', colorIdx: 0 });
   });
 
-  it('follows the participant another tab saves for the room, while none is chosen here', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
-    saveInAnotherTab('p-sam');
+  it('follows the participant another tab saves for the room, while none is chosen here', async () => {
+    const hook = await setup([alex, sam]);
+    await hook.saveInAnotherTab('p-sam');
     expect(hook.current()).toBe('p-sam');
   });
 
-  it('keeps the participant chosen here when another tab saves a different one', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
-    hook.choose('p-alex');
-    saveInAnotherTab('p-sam');
+  it('keeps the participant chosen here when another tab saves a different one', async () => {
+    const hook = await setup([alex, sam]);
+    await hook.choose('p-alex');
+    await hook.saveInAnotherTab('p-sam');
     expect(hook.current()).toBe('p-alex');
   });
 
-  it('has the fallback identity on the first render, with no empty render first', () => {
-    const hook = setup();
-    unmount = hook.unmount;
-    hook.render([alex, sam]);
+  it('has the fallback identity on the first render, with no empty render first', async () => {
+    const hook = await setup([alex, sam]);
     expect(hook.renders[0]).toBe('p-alex');
     expect(hook.renders).not.toContain(null);
   });
