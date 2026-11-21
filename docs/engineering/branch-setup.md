@@ -1,4 +1,4 @@
-# Worktrees
+# Branch setup
 
 Do every branch's work in its own git worktree under `.claude/worktrees/`. Keep the main checkout on `main`, so its working tree only ever changes when `main` is updated.
 
@@ -33,4 +33,4 @@ After the pull request merges, [post-merge cleanup](post-merge-cleanup.md) remov
 
 ## Changing this document
 
-The reasons for these rules and the decisions behind them are in [worktrees.meta.md](worktrees.meta.md). Read it only when changing or questioning a rule here.
+The reasons for these rules and the decisions behind them are in [branch-setup.meta.md](branch-setup.meta.md). Read it only when changing or questioning a rule here.

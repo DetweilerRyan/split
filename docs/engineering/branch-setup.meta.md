@@ -1,6 +1,6 @@
-# Worktrees: reasons
+# Branch setup: reasons
 
-Why [worktrees](worktrees.md) says what it does. Read this only when changing or questioning a rule there. Following the procedure needs nothing from this file.
+Why [branch setup](branch-setup.md) says what it does. Read this only when changing or questioning a rule there. Following the procedure needs nothing from this file.
 
 - **Worktrees are the owner's choice.** On 2026-11-21 the owner asked agents to use a worktree per branch rather than switching branches in one checkout. Before that, the repository's procedures assumed a single checkout, and [post-merge cleanup](post-merge-cleanup.md) was adapted from the owner's market-research repository without its worktree steps. That earlier omission is not a reason to drop worktrees again.
 - **Inside the checkout, not beside it.** The owner chose `.claude/worktrees/` over a sibling folder such as `../split-worktrees/<branch>` on 2026-11-21. It is where Claude Code's `EnterWorktree` tool puts worktrees, and it keeps them inside the folder the dev container mounts, so git and the checks work there. A sibling folder would need no config changes, but the dev container could not see it. Reopen this if the dev container comes to mount the repository's parent folder.
