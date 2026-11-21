@@ -1,6 +1,6 @@
 # CI
 
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) runs the [definition-of-done checks](../../AGENTS.md#definition-of-done) on every pull request and every push to `main`, in one GitHub Actions job. A failing run blocks merging: the `guard on main branch` ruleset requires the `Definition of done` check, a branch up to date with `main`, a pull request, and a rebase merge. When `main` moves, rebase as [Pull requests](pull-requests.md#when-main-moves) says, and CI runs again.
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) runs the [definition-of-done checks](../../AGENTS.md#definition-of-done) on every pull request and every push to `main`, in one GitHub Actions job. A failing run blocks merging: the `guard on main branch` ruleset requires the `Definition of done` check, a branch up to date with `main`, a pull request, and a rebase merge. When `main` moves, rebase as [Submitting work](workflow/submitting-work.md#when-main-moves) says, and CI runs again.
 
 ## When a run fails
 
@@ -12,7 +12,7 @@
    ```
 
 2. **Reproduce it locally** with the same `npm run` command, fix it, and push. Don't re-run a failed job hoping it passes; if a check fails in CI and passes locally, find out why.
-3. **Put a ready pull request back to draft** while CI fails, as [Pull requests](pull-requests.md#draft-until-done) says.
+3. **Put a ready pull request back to draft** while CI fails, as [Submitting work](workflow/submitting-work.md#draft-until-done) says.
 
 ## Updating what CI runs
 

@@ -1,4 +1,4 @@
-# Pull requests
+# Submitting work
 
 A pull request's state is a message to the owner: **draft means "not yet"; ready means "you may merge this".** Keep both true, so the owner can tell from the pull request list alone what can be merged.
 
@@ -10,7 +10,7 @@ A pull request's state is a message to the owner: **draft means "not yet"; ready
    gh pr create --draft --title "<title>" --body-file <file>
    ```
 
-2. **Mark it ready only when** every check in [`AGENTS.md`'s definition of done](../../AGENTS.md#definition-of-done) passes on the pushed branch, its [CI](ci.md) run has passed, and every question for the owner has been answered.
+2. **Mark it ready only when** every check in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done) passes on the pushed branch, its [CI](../ci.md) run has passed, and every question for the owner has been answered.
 
    ```bash
    gh pr checks <n>
@@ -50,7 +50,7 @@ The owner merges. A session never merges a pull request and never pushes to `mai
 
 ## When `main` moves
 
-Rebase onto `origin/main`, never merge `main` in ([`AGENTS.md`](../../AGENTS.md#boundaries)), then run the definition-of-done checks again, even when the rebase is clean: a change on `main` can break a pull request's tests without touching its lines. Put a ready pull request back to draft if anything fails.
+Rebase onto `origin/main`, never merge `main` in ([`AGENTS.md`](../../../AGENTS.md#boundaries)), then run the definition-of-done checks again, even when the rebase is clean: a change on `main` can break a pull request's tests without touching its lines. Put a ready pull request back to draft if anything fails.
 
 ```bash
 git fetch origin main
@@ -73,8 +73,8 @@ The owner reads the description, not the diff, to decide what to look at.
 
 Check every changed test expectation against what the pull request says it is for. Each one needs a reason in the description that the pull request's intent explains. A changed expectation with no reason, or with a reason the intent doesn't cover, is a finding: report it, and don't approve until it's explained or reverted.
 
-After a merge, follow [Post-merge cleanup](post-merge-cleanup.md).
+After a merge, follow [Cleaning up merged work](cleaning-up-merged-work.md).
 
 ## Changing this document
 
-The reasons for these rules, their sources, and the cases behind them are in [pull-requests.meta.md](pull-requests.meta.md). Read it only when changing or questioning a rule here.
+The reasons for these rules, their sources, and the cases behind them are in [submitting-work.meta.md](submitting-work.meta.md). Read it only when changing or questioning a rule here.

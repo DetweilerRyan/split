@@ -1,0 +1,9 @@
+# Resuming work: reasons
+
+Why [resuming work](resuming-work.md) says what it does. Read this only when changing or questioning a rule there. Following the procedure needs nothing from this file.
+
+- **A document of its own.** On 2026-11-21 the owner asked for guidance on a session continuing a branch that an earlier session started, after [starting work](starting-work.md) made each branch a worktree. It is read at a different moment from starting a branch, and the [index](../README.md) is arranged by when a procedure is read, so it is a separate document rather than a section of starting work.
+- **Re-orient before changing anything.** A new or cleared session knows nothing of the earlier one; Claude Code's auto memory is off for this repository ([`AGENTS.md`](../../../AGENTS.md#boundaries)). The branch, its uncommitted files, and its pull request description are the only record, so step 3 reads them first. The description's decisions are settled because the owner may already have read and accepted them.
+- **Uncommitted work is kept unless known abandoned.** An earlier session may have stopped mid-change. Deleting it can't be undone, and the session resuming can't tell an abandoned edit from an unfinished one without asking.
+- **Entering with `EnterWorktree` and `path`.** The tool's description says it can switch the session into an existing worktree under `.claude/worktrees/`, and that `ExitWorktree` then won't remove that worktree. That suits [cleaning up merged work](cleaning-up-merged-work.md), which leaves with `keep` either way. This was taken from the tool's description on 2026-11-21, not tried.
+- **Links, not copies, for the remote checks.** Checking the pull request is still open, fetching first, and rebasing when `main` moves are owned by [submitting work](submitting-work.md); step 5 links there, following [single source of truth](../../prose/single-source-of-truth.md).

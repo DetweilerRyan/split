@@ -1,8 +1,8 @@
-# Post-merge cleanup: reasons
+# Cleaning up merged work: reasons
 
-Why the steps in [post-merge cleanup](post-merge-cleanup.md) are in the order they are. Read this only when changing or questioning a step. Following the procedure needs nothing from this file.
+Why the steps in [cleaning up merged work](cleaning-up-merged-work.md) are in the order they are. Read this only when changing or questioning a step. Following the procedure needs nothing from this file.
 
-The procedure is adapted from the owner's market-research repository (`docs/engineering/post-merge-cleanup.md`). It first left out that procedure's worktree steps; they came back when the owner chose a worktree per branch, as [branch-setup.meta.md](branch-setup.meta.md) records.
+The procedure is adapted from the owner's market-research repository (`docs/engineering/post-merge-cleanup.md`). It first left out that procedure's worktree steps; they came back when the owner chose a worktree per branch, as [starting-work.meta.md](starting-work.meta.md) records.
 
 - **Remove the worktree before deleting its branch.** `git branch -D` refuses to delete a branch that a worktree has checked out, and `git worktree remove` refuses while the worktree has uncommitted or untracked changes, which backs up step 3.
 - **Leave the worktree with `ExitWorktree` and `keep`.** On 2026-11-21, a Claude Code session working in a worktree it had entered with `EnterWorktree` refused git commands aimed at the main checkout, both `cd` into it and `git -C`. So removing a worktree from inside it needs the session switched back first. `ExitWorktree` does that, but only for a worktree the same session entered with `EnterWorktree`. Its `remove` action would delete the branch before step 4 checks for stacked pull requests and checks the remote tip, so the procedure uses `keep` and lets step 4 remove the worktree.

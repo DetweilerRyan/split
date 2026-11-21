@@ -63,7 +63,7 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
 
 Start with a test that reproduces the bug, run it against the unfixed code, and confirm it fails for the reason you expect. Then fix the code and watch the same test pass. If the test passes before the fix, it doesn't reproduce the bug yet.
 
-Changing what an existing test expects needs a reason in the pull request. [Pull requests](pull-requests.md#what-the-description-carries) says how to list it.
+Changing what an existing test expects needs a reason in the pull request. [Submitting work](workflow/submitting-work.md#what-the-description-carries) says how to list it.
 
 ## Changing this document
 

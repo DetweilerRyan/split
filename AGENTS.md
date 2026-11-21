@@ -23,7 +23,7 @@ A document's `<name>.meta.md` sidecar holds its reasons and sources. Read a side
 
 - **Don't add a dependency without the owner's approval.** Follow [Choosing and adding dependencies](docs/engineering/dependencies.md) before proposing or adding one.
 - **Don't merge `main` into a feature branch.** Rebase onto `origin/main` and update the branch with `git push --force-with-lease`. Never force-push `main`.
-- **Don't open a pull request as ready, merge one, or push to `main`.** Open pull requests as drafts and follow [Pull requests](docs/engineering/pull-requests.md). The owner merges.
+- **Don't open a pull request as ready, merge one, or push to `main`.** Open pull requests as drafts and follow [Submitting work](docs/engineering/workflow/submitting-work.md). The owner merges.
 - **Don't keep project knowledge in agent memory.** Claude Code auto memory is off for this repository (`autoMemoryEnabled: false` in [`.claude/settings.json`](.claude/settings.json)). Anything worth keeping (conventions, environment quirks, deferred work) belongs in the repository or in a GitHub issue.
 - **Don't put a credential in the repository or the sandbox.** Follow [Sandbox secrets](docs/sandbox/secrets.md).
 
