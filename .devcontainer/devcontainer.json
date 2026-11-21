@@ -9,5 +9,19 @@
   "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": ["source=/run/sandbox/source,target=/run/sandbox/source,type=bind,readonly"],
   "forwardPorts": [3000],
-  "postCreateCommand": "sh scripts/prepare-sandbox.sh"
+  "postCreateCommand": "sh scripts/prepare-sandbox.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Browse and switch between the agents' worktrees under .claude/worktrees/.
+        "jackiotyu.git-worktree-manager",
+        // oxlint diagnostics and oxfmt formatting, using .oxlintrc.json and .oxfmtrc.json.
+        "oxc.oxc-vscode",
+        // Run and debug single Vitest tests from the editor.
+        "vitest.explorer",
+        // Review and comment on draft pull requests in the editor.
+        "github.vscode-pull-request-github"
+      ]
+    }
+  }
 }
