@@ -4,13 +4,15 @@ A pull request's state is a message to the owner: **draft means "not yet"; ready
 
 ## Draft until done
 
-1. **Open every pull request as a draft,** with the description [below](#what-the-description-carries).
+1. **Review your own work first,** as [Reviewing work](reviewing-work.md) says.
+
+2. **Open every pull request as a draft,** with the description [below](#what-the-description-carries).
 
    ```bash
    gh pr create --draft --title "<title>" --body-file <file>
    ```
 
-2. **Mark it ready only when** every check in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done) passes on the pushed branch, its [CI](../ci.md) run has passed, and every question for the owner has been answered.
+3. **Mark it ready only when** every check in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done) passes on the pushed branch, its [CI](../ci.md) run has passed, and every question for the owner has been answered.
 
    ```bash
    gh pr checks <n>
@@ -20,13 +22,13 @@ A pull request's state is a message to the owner: **draft means "not yet"; ready
    gh pr ready <n>
    ```
 
-3. **Put it back to draft when the work reopens:** a review finds something to fix, a new decision changes it, or a rebase conflicts. For the owner's feedback, follow [Revising work](revising-work.md).
+4. **Put it back to draft when the work reopens:** a review finds something to fix, a new decision changes it, or a rebase conflicts. For the owner's feedback, follow [Revising work](revising-work.md).
 
    ```bash
    gh pr ready <n> --undo
    ```
 
-4. **Never use a message in place of the state.** If the owner should wait, the pull request is a draft.
+5. **Never use a message in place of the state.** If the owner should wait, the pull request is a draft.
 
 The owner merges. A session never merges a pull request and never pushes to `main`. After the merge, follow [Cleaning up merged work](cleaning-up-merged-work.md).
 
