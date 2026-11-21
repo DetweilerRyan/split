@@ -5,6 +5,7 @@ Why the rules in [CI](ci.md) are as they are, what was measured, and what was re
 ## Decisions
 
 - **CI exists, and a failing run blocks merging.** Proposed in [#45](https://github.com/DetweilerRyan/split/issues/45). The owner approved the three dependencies and chose to block merging in the session on 2026-11-21, [recorded on #45](https://github.com/DetweilerRyan/split/issues/45#issuecomment-7056855615). Before this, `AGENTS.md` said "The repository has no CI, so nothing runs them for you".
+- **The ruleset targets only `main`** (the default branch). The owner asked whether to target all branches; the check gates merges into `main`, where all work lands, and a ruleset on feature branches could get in the way of pushing and rebasing them. Set up by the owner on 2026-11-21 as `guard on main branch`, which also requires a pull request, linear history and rebase merges, and blocks force-pushes and deletion.
 - **Approved dependencies:** `actions/checkout`, `actions/setup-node` and the `mcr.microsoft.com/playwright` image, each in the role #45 lists.
 
 ## Cost
