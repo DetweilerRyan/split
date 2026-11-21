@@ -3,10 +3,12 @@ import { playwright } from '@vitest/browser-playwright';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
-// Tests named `<module>.browser.test.ts(x)` run in headless Chromium through Playwright; every
-// other test runs in jsdom, or Node where a file opts in. docs/engineering/testing-conventions.md
-// says which project a test belongs in.
+// Three projects, chosen by file name; docs/engineering/testing-conventions.md says which a
+// test belongs in. `<module>.browser.test.ts(x)` runs in headless Chromium through Playwright,
+// `<module>.real.test.ts` runs in Node with real programs and files, and every other
+// `<module>.test.ts(x)` runs in jsdom.
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'];
+const realTests = ['**/*.real.test.ts'];
 
 export default defineConfig({
   // Compile components and hooks with the React Compiler, as next.config.ts does for the app
@@ -27,7 +29,15 @@ export default defineConfig({
           name: 'unit',
           environment: 'jsdom',
           include: ['**/*.test.ts', '**/*.test.tsx'],
-          exclude: ['**/node_modules/**', '**/.next/**', ...browserTests],
+          exclude: ['**/node_modules/**', '**/.next/**', ...browserTests, ...realTests],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'real',
+          environment: 'node',
+          include: realTests,
         },
       },
       {
