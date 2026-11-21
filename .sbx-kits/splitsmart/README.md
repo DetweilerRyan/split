@@ -1,6 +1,6 @@
 # SplitSmart Docker Sandbox kit
 
-This local [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) mixin provisions Node.js 26 and installs the dependencies in `package-lock.json`. It follows [market-research's sandbox setup](https://github.com/DetweilerRyan/market-research/tree/main/.sbx-kits/market-research), but uses a v3 kit: current built-in `sbx` agents use v3 and cannot load v2 mixins.
+This local [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) mixin provisions Node.js 26, installs the dependencies in `package-lock.json`, and installs the headless Chromium that the browser tests run in. It follows [market-research's sandbox setup](https://github.com/DetweilerRyan/market-research/tree/main/.sbx-kits/market-research), but uses a v3 kit: current built-in `sbx` agents use v3 and cannot load v2 mixins.
 
 ## Start and verify
 
@@ -15,6 +15,14 @@ Creating the sandbox builds the kit and checks its compatibility with the agent;
 Replace `claude` with another supported v3 agent. Kit selection and `--clone` apply when the sandbox is created; use a different name to try a changed kit or a separate sandbox. The local kit is built at creation; it does not need to be published.
 
 Startup runs alongside the agent. Inside the sandbox, wait until `~/.cache/splitsmart-kit.log` says `SplitSmart setup complete` before using the dependencies. Inspect the log for errors; retry from the repository root with `sh scripts/prepare-sandbox.sh`. The script serializes its own installs and skips `npm ci` when the manifests, Node and npm versions have not changed. If `node_modules` needs repair, remove its `.splitsmart-install` marker and rerun the script. Do not run other package installations concurrently.
+
+On every start the script also provisions headless Chromium for the [browser test project](../../docs/engineering/testing-conventions.md#where-tests-live):
+
+- It installs the Chromium build that the `playwright` version pinned in the lockfile names, about 273 MB on a first start.
+- It installs the system libraries Chromium needs, through `sudo` and Playwright's `install-deps`, only while `ldd` reports one missing. The sandbox image lacks about a hundred packages on a first start.
+- It checks that the browser launches and renders a page (`scripts/check-browser.mjs`).
+
+Later starts skip the download and apt, and the log says so (`Headless Chromium is already installed.`). `SplitSmart setup complete` appears only once the launch check passes. If it fails, the log names any library still missing.
 
 ```sh
 cat ~/.cache/splitsmart-kit.log
@@ -31,12 +39,12 @@ To reach the development server from the host, run `sbx port publish splitsmart 
 
 The sandbox works in a separate clone; the host checkout is read-only at `/run/sandbox/source`. Host edits do not appear in the clone until committed and fetched. Push a branch from the sandbox, or while it is running fetch it on the host with `git fetch sandbox-splitsmart`. **Removing the sandbox deletes the clone, including unpushed commits and untracked files**; push or fetch the work first. Start from the main checkout, not a linked host worktree. See [Docker's Git workflow](https://docs.docker.com/ai/sandboxes/workflows/git/#clone-mode).
 
-For VS Code, install the Remote - SSH and Dev Containers extensions. On the host run `sbx setup ssh`, connect to `splitsmart.sbx` with Remote - SSH, open the repository path inside the sandbox, and choose **Dev Containers: Reopen in Container**. Wait for sandbox setup to finish before opening the container. Its post-create command checks the same lockfile and provisions dependencies if needed.
+For VS Code, install the Remote - SSH and Dev Containers extensions. On the host run `sbx setup ssh`, connect to `splitsmart.sbx` with Remote - SSH, open the repository path inside the sandbox, and choose **Dev Containers: Reopen in Container**. Wait for sandbox setup to finish before opening the container. Its post-create command checks the same lockfile and provisions dependencies and the browser if needed. The container's user has no `sudo`, so its image (`.devcontainer/Dockerfile`) installs Chromium's system libraries at build time, using the `playwright` version in `package.json`.
 
 The dev container uses the sandbox's Docker daemon and mounts the workspace at its existing path. It also mounts `/run/sandbox/source` read-only at the same path so Git can resolve clone-mode object alternates without rewriting them or racing Git operations. This configuration is intended for a clone-mode sandbox, not direct use on the host; the source mount must exist in the sandbox. The container can read the host source through this mount, just as the sandbox can. If Docker cannot pull the Node image, check the sandbox's network policy and approve the required registry access.
 
 ## Network and credentials
 
-The kit requests runtime access to `registry.npmjs.org` for the lockfile and `github.com` and `api.github.com` for Git and the GitHub CLI. Agent kits and host policies may add or restrict access. Check redirect destinations and request narrowly scoped host approvals when needed; do not broaden the policy just to suppress an error. Application features may require additional network access, for example WebRTC signaling or the optional exchange-rate service.
+The kit requests runtime access to `registry.npmjs.org` for the lockfile, `github.com` and `api.github.com` for Git and the GitHub CLI, and `cdn.playwright.dev`, `playwright.download.prss.microsoft.com` and `playwright.azureedge.net` for the browser download. Chromium's system libraries come from the image's own apt sources. Agent kits and host policies may add or restrict access. Check redirect destinations and request narrowly scoped host approvals when needed; do not broaden the policy just to suppress an error. Application features may require additional network access, for example WebRTC signaling or the optional exchange-rate service.
 
 Keep tokens on the host: [Sandbox secrets](../../docs/sandbox/secrets.md) says how to give the sandbox a credential through the `sbx` proxy, and which secrets this repository uses.

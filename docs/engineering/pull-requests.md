@@ -61,7 +61,14 @@ The owner reads the description, not the diff, to decide what to look at.
 - **What to look at:** three points at most, the ones that need the owner's eye.
 - **Decisions made:** each choice the session made that the issue didn't settle, with the alternative and a one-line reason. The owner can overrule one here without it blocking the work.
 - **For the owner to confirm:** only questions the session can't settle from the repository or the issue. Say "nothing" when there is nothing.
+- **Changed test expectations:** each assertion the pull request changes in an existing test, with the reason. "Nothing" when there is nothing. Adding a test is not a change; editing or deleting what one expects is.
 - **Verification:** which checks you ran and their result, and what was not verified. A skipped step is said to be skipped.
 - **Links:** the issue it closes or relates to (`Closes #<n>` closes the issue on merge).
+
+## Reviewing a pull request
+
+Check every changed test expectation against what the pull request says it is for. A test changed alongside the code it tests can hide a regression: the code broke, and the test was edited until it agreed. So each changed expectation needs a reason the pull request's intent explains. One without a reason, or with a reason the intent doesn't cover, is a finding.
+
+Kent C. Dodds's [`autopilot` verification guide](https://github.com/kentcdodds/kcd-skills/blob/main/skills/autopilot/references/verification.md) states the rule this follows: "Reviewers (AI and human) check every changed test expectation against the PR's intent. When a PR changes an assertion alongside the code it tests, the PR body says why."
 
 After a merge, follow [Post-merge cleanup](post-merge-cleanup.md).
