@@ -2,7 +2,7 @@
 
 A review checks work against what it says it is for. It happens in two places:
 
-- **Your own work, before you open its pull request.** Every session reviews its own branch before [submitting it](submitting-work.md). Fix what the review finds, or say in the description why you left it.
+- **Your own work, before you open its pull request, and again before pushing a revision.** Every session reviews its own branch before [submitting it](submitting-work.md), and again after [revising it](revising-work.md). Fix what the review finds, or say in the description why you left it.
 - **Someone else's pull request,** when a session or agent is asked to check one. The owner decides whether it merges; the review says what the owner should know first. Report findings as review comments on the lines they concern.
 
 The checks are the same in both.

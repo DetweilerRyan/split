@@ -16,13 +16,17 @@ Replace `<n>` with the pull request number.
 
    Start the comment with where the feedback came from and its date, for example "Feedback given in a Claude Code session, 2026-11-21:", and quote it. One comment per request, so each response can point to it.
 
-3. **Make the change,** then reply to say what changed and in which commits. Reply to an inline review comment in its thread. A pull request comment has no thread, so post a new comment that links to the one it answers. Where the owner was given options, say which was taken. Where the feedback was declined or changed, say why.
+3. **Make the change.**
 
 4. **Keep the description current.** Update "Decisions made" and the other sections in [What the description carries](submitting-work.md#what-the-description-carries) so they describe the pull request as it is now. The comments hold the history; don't copy it into the description.
 
 5. **Record decisions a later session could undo** in the changed document's sidecar, as [Reasons live in a `.meta.md` sidecar](../../prose/single-source-of-truth.md#reasons-live-in-a-metamd-sidecar) says.
 
-6. **Submit it again.** Run the [definition-of-done checks](../../../AGENTS.md#definition-of-done), push, and mark it ready as [Draft until done](submitting-work.md#draft-until-done) says.
+6. **Review your own work again** before pushing, as [Reviewing work](reviewing-work.md) says. Read the whole branch diff, not only the revision: a change made for one comment can break something elsewhere on the branch.
+
+7. **Push and reply.** Run the [definition-of-done checks](../../../AGENTS.md#definition-of-done) and push, then reply to say what changed and in which commits. Reply to an inline review comment in its thread. A pull request comment has no thread, so post a new comment that links to the one it answers. Where the owner was given options, say which was taken. Where the feedback was declined or changed, say why. Say what the self-review found.
+
+8. **Mark it ready** as [Draft until done](submitting-work.md#draft-until-done) says.
 
 ## Changing this document
 
