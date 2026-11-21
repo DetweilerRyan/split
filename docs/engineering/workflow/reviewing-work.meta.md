@@ -3,6 +3,8 @@
 Why the rules in [reviewing work](reviewing-work.md) are as they are, and the cases behind them. Read this only when changing or questioning one of them. Following the procedure needs nothing from this file.
 
 - **A document of its own.** On 2026-11-21 the owner split reviewing out of [submitting work](submitting-work.md), then named `pull-requests.md`. Reviewing is a different reader's task at a different moment from submitting, and the [workflow index](README.md) is arranged by when a procedure is read.
+- **Every session reviews its own work before opening the pull request.** The owner asked for this on [#47](https://github.com/DetweilerRyan/split/pull/47#discussion_r4653452404) on 2026-11-21, which makes reviewing a regular stage of the workflow as well as the starting point for a separate reviewer. So it comes before submitting in the workflow index, and [submitting work](submitting-work.md) begins with it. Both kinds of review run the same checks, so a finding means the same thing whoever makes it.
+- **The whole branch, not the last change.** A self-review that reads only the latest commit misses what earlier commits on the branch did, and a reviewer reads the whole pull request.
 
 ## Changed test expectations
 

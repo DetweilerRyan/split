@@ -1,10 +1,31 @@
 # Reviewing work
 
-How to review a pull request, whether another session's or one you're asked to check. The owner decides whether it merges; a review says what the owner should know first.
+A review checks work against what it says it is for. It happens in two places:
+
+- **Your own work, before you open its pull request.** Every session reviews its own branch before [submitting it](submitting-work.md). Fix what the review finds, or say in the description why you left it.
+- **Someone else's pull request,** when a session or agent is asked to check one. The owner decides whether it merges; the review says what the owner should know first. Report findings as review comments on the lines they concern.
+
+The checks are the same in both.
+
+## What to read
+
+For your own work, read the whole diff of the branch against `main`, not only your last change:
+
+```bash
+git fetch origin main
+git diff origin/main...HEAD
+```
+
+For a pull request, read its description first, then its diff:
+
+```bash
+gh pr view <n>
+gh pr diff <n>
+```
 
 ## Changed test expectations
 
-Check every changed test expectation against what the pull request says it is for. Each one needs a reason in the description, under "Changed test expectations" (see [What the description carries](submitting-work.md#what-the-description-carries)), and the pull request's intent must explain that reason.
+Check every changed test expectation against what the work is for. Each one needs a reason that the work's intent explains, written in the description under "Changed test expectations" (see [What the description carries](submitting-work.md#what-the-description-carries)). In your own review, write the reason down now, for the description.
 
 A changed expectation with no reason, or with a reason the intent doesn't cover, is a finding: report it, and don't approve until it's explained or reverted.
 
