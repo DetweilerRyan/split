@@ -51,7 +51,7 @@ These rules come from Kent's [Common mistakes with React Testing Library](#commo
 
 ## Changed test expectations
 
-The rule that a changed expectation needs a reason in the pull request is owned by [pull requests](pull-requests.md#reviewing-a-pull-request); its source is in that document's sidecar.
+The rule that a changed expectation needs a reason in the pull request is owned by [submitting work](workflow/submitting-work.md#reviewing-a-pull-request); its source is in that document's sidecar.
 
 ## Sources
 

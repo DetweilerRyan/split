@@ -1,6 +1,6 @@
-# Resuming a branch
+# Resuming work
 
-When a session picks up a branch that an earlier session started, whether a new session or one whose context was cleared, find the branch's [worktree](branch-setup.md), enter it, and work out where the branch stands before changing anything.
+When a session picks up a branch that an earlier session started, whether a new session or one whose context was cleared, find the branch's [worktree](starting-work.md), enter it, and work out where the branch stands before changing anything.
 
 ## Steps
 
@@ -20,7 +20,7 @@ Replace `<branch>` with the branch, `<n>` with its pull request number, and `<na
    git worktree add .claude/worktrees/<name> <branch>
    ```
 
-2. **Enter it.** In Claude Code, use `EnterWorktree` with `path: ".claude/worktrees/<name>"`. Otherwise `cd` into it. Run everything for the branch from there, as [branch setup](branch-setup.md) says.
+2. **Enter it.** In Claude Code, use `EnterWorktree` with `path: ".claude/worktrees/<name>"`. Otherwise `cd` into it. Run everything for the branch from there, as [starting work](starting-work.md) says.
 
 3. **See what the earlier session left.** Read these before changing anything:
 
@@ -34,8 +34,8 @@ Replace `<branch>` with the branch, `<n>` with its pull request number, and `<na
 
 4. **Refresh dependencies.** From the worktree's root, `sh scripts/prepare-sandbox.sh`. It skips the install when nothing has changed.
 
-5. **Catch up with the remote.** Before pushing, follow [Before pushing to a branch that has had a pull request](pull-requests.md#before-pushing-to-a-branch-that-has-had-a-pull-request) in pull requests. If `main` has moved, follow [When `main` moves](pull-requests.md#when-main-moves).
+5. **Catch up with the remote.** Before pushing, follow [Before pushing to a branch that has had a pull request](submitting-work.md#before-pushing-to-a-branch-that-has-had-a-pull-request) in submitting work. If `main` has moved, follow [When `main` moves](submitting-work.md#when-main-moves).
 
 ## Changing this document
 
-The reasons for these rules and the decisions behind them are in [branch-resume.meta.md](branch-resume.meta.md). Read it only when changing or questioning a rule here.
+The reasons for these rules and the decisions behind them are in [resuming-work.meta.md](resuming-work.meta.md). Read it only when changing or questioning a rule here.

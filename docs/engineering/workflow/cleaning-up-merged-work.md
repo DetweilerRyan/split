@@ -1,6 +1,6 @@
-# Post-merge cleanup
+# Cleaning up merged work
 
-After a pull request you worked on is merged, remove its [worktree](branch-setup.md), delete its branches and bring `main` up to date. Do it in this order: every deletion comes after a check that the merged work is really on `main`.
+After a pull request you worked on is merged, remove its [worktree](starting-work.md), delete its branches and bring `main` up to date. Do it in this order: every deletion comes after a check that the merged work is really on `main`.
 
 ## Steps
 
@@ -48,7 +48,7 @@ Replace `<n>` with the pull request number, `<branch>` with its branch, and `<na
    git pull --ff-only origin main
    ```
 
-6. **Verify.** `git branch -a` shows none of the pull request's branches, `git worktree list` doesn't show its worktree, and the [definition-of-done checks](../../AGENTS.md#definition-of-done) pass on `main`.
+6. **Verify.** `git branch -a` shows none of the pull request's branches, `git worktree list` doesn't show its worktree, and the [definition-of-done checks](../../../AGENTS.md#definition-of-done) pass on `main`.
 
 ## Never
 
@@ -58,8 +58,8 @@ Replace `<n>` with the pull request number, `<branch>` with its branch, and `<na
 
 ## Clone-mode sandboxes
 
-In a [clone-mode sandbox](../../.sbx-kits/splitsmart/README.md#clone-mode-and-vs-code) the branches above live in the sandbox's clone, and the same steps apply there. Removing the sandbox deletes the clone, including unpushed commits and untracked files.
+In a [clone-mode sandbox](../../../.sbx-kits/splitsmart/README.md#clone-mode-and-vs-code) the branches above live in the sandbox's clone, and the same steps apply there. Removing the sandbox deletes the clone, including unpushed commits and untracked files.
 
 ## Changing this document
 
-The reasons for these rules, their sources, and the cases behind them are in [post-merge-cleanup.meta.md](post-merge-cleanup.meta.md). Read it only when changing or questioning a rule here.
+The reasons for these rules, their sources, and the cases behind them are in [cleaning-up-merged-work.meta.md](cleaning-up-merged-work.meta.md). Read it only when changing or questioning a rule here.

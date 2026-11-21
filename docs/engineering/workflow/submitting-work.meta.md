@@ -1,6 +1,6 @@
-# Pull requests: reasons and sources
+# Submitting work: reasons and sources
 
-Why the rules in [pull requests](pull-requests.md) are as they are, and the cases behind them. Read this only when changing or questioning one of them. Following the procedure needs nothing from this file.
+Why the rules in [submitting work](submitting-work.md) are as they are, and the cases behind them. Read this only when changing or questioning one of them. Following the procedure needs nothing from this file.
 
 The procedure is adapted from the owner's market-research repository (`docs/engineering/pull-request-discipline.md`), trimmed for this repository. Its independent review on every pull request, statistics review and squash-before-rebase step were left out as heavier than this repository needs. The choice is recorded on [#32](https://github.com/DetweilerRyan/split/pull/32).
 
