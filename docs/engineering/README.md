@@ -19,3 +19,4 @@ How work on this repository gets done: writing and testing code, choosing depend
 2. Add a row to the index above, with a "Read when" trigger specific enough that an agent knows whether it applies.
 3. Don't add it to `AGENTS.md`; this index is the pointer. The exception is a boundary the owner has asked to have loaded in every session, which gets one line in `AGENTS.md`'s boundaries that links to the procedure.
 4. Follow [single source of truth](../prose/single-source-of-truth.md): link to rules that live elsewhere instead of restating them.
+5. Keep the procedure to instructions. Put its reasons, sources and the decisions behind it in a `docs/engineering/<topic>.meta.md` sidecar, linked from a final "Changing this document" section, as [Reasons live in a `.meta.md` sidecar](../prose/single-source-of-truth.md#reasons-live-in-a-metamd-sidecar) says. Don't give the sidecar an index row.

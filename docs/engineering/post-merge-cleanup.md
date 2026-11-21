@@ -2,11 +2,6 @@
 
 After a pull request you worked on is merged, delete its branches and bring `main` up to date. Do it in this order: every deletion comes after a check that the merged work is really on `main`.
 
-## Why the checks matter
-
-- **Merging can give commits new IDs.** Squash and rebase merges rewrite them, so git reports the branch as "not fully merged". That's expected. Whether anything is lost is decided by comparing _files_ (step 2), not commit history.
-- **Other pull requests merge in between.** `main` may also hold another pull request's changes to the same files, so compare only this pull request's files, and account for every difference.
-
 ## Steps
 
 Replace `<n>` with the pull request number and `<branch>` with its branch.
@@ -18,7 +13,7 @@ Replace `<n>` with the pull request number and `<branch>` with its branch.
    git fetch --prune origin
    ```
 
-2. **Confirm the pull request's files are on `main`.**
+2. **Confirm the pull request's files are on `main`.** Compare files, not commits: after a squash or rebase merge, the commits on `main` have new IDs, and git reports the branch as not fully merged even when nothing is lost.
 
    ```bash
    gh pr diff <n> --name-only                       # the files this pull request changed
@@ -26,6 +21,8 @@ Replace `<n>` with the pull request number and `<branch>` with its branch.
    ```
 
    If a file differs, read the differing lines. Each must come from a pull request merged later; anything else means work was lost, so stop.
+
+   If one of the pull request's files names one of its own commits by hash, as `.git-blame-ignore-revs` does, also check that the commit is on `main`. `git merge-base --is-ancestor <hash> origin/main` must succeed.
 
 3. **Check for leftovers.** `git status --short` must show nothing you'd lose. Copy any untracked work somewhere durable before deleting anything.
 
@@ -59,3 +56,7 @@ Replace `<n>` with the pull request number and `<branch>` with its branch.
 ## Clone-mode sandboxes
 
 In a [clone-mode sandbox](../../.sbx-kits/splitsmart/README.md#clone-mode-and-vs-code) the branches above live in the sandbox's clone, and the same steps apply there. Removing the sandbox deletes the clone, including unpushed commits and untracked files.
+
+## Changing this document
+
+The reasons for these rules, their sources, and the cases behind them are in [post-merge-cleanup.meta.md](post-merge-cleanup.meta.md). Read it only when changing or questioning a rule here.

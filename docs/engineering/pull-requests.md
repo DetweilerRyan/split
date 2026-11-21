@@ -1,6 +1,6 @@
 # Pull requests
 
-A pull request's state is a message to the owner: **draft means "not yet"; ready means "you may merge this".** Keep both true, so the owner can tell from the pull request list alone what can be merged. GitHub won't merge a draft, which makes the state a stronger signal than a message saying "please wait".
+A pull request's state is a message to the owner: **draft means "not yet"; ready means "you may merge this".** Keep both true, so the owner can tell from the pull request list alone what can be merged.
 
 ## Draft until done
 
@@ -67,8 +67,10 @@ The owner reads the description, not the diff, to decide what to look at.
 
 ## Reviewing a pull request
 
-Check every changed test expectation against what the pull request says it is for. A test changed alongside the code it tests can hide a regression: the code broke, and the test was edited until it agreed. So each changed expectation needs a reason the pull request's intent explains. One without a reason, or with a reason the intent doesn't cover, is a finding.
-
-Kent C. Dodds's [`autopilot` verification guide](https://github.com/kentcdodds/kcd-skills/blob/main/skills/autopilot/references/verification.md) states the rule this follows: "Reviewers (AI and human) check every changed test expectation against the PR's intent. When a PR changes an assertion alongside the code it tests, the PR body says why."
+Check every changed test expectation against what the pull request says it is for. Each one needs a reason in the description that the pull request's intent explains. A changed expectation with no reason, or with a reason the intent doesn't cover, is a finding: report it, and don't approve until it's explained or reverted.
 
 After a merge, follow [Post-merge cleanup](post-merge-cleanup.md).
+
+## Changing this document
+
+The reasons for these rules, their sources, and the cases behind them are in [pull-requests.meta.md](pull-requests.meta.md). Read it only when changing or questioning a rule here.

@@ -17,6 +17,8 @@ For extracting receipt data and generating SplitSmart room links, follow the [re
 | [`docs/sandbox/secrets.md`](docs/sandbox/secrets.md)                           | When a task needs a credential for a service, or an authenticated request is refused in a sandbox.                                                                             |
 | [Sandbox kit README](.sbx-kits/splitsmart/README.md)                           | Before starting, changing, or troubleshooting the Docker Sandbox or the VS Code dev container.                                                                                 |
 
+A document's `<name>.meta.md` sidecar holds its reasons and sources. Read a sidecar only when changing or questioning that document's rules, never to follow them.
+
 ## Boundaries
 
 - **Don't add a dependency without the owner's approval.** Follow [Choosing and adding dependencies](docs/engineering/dependencies.md) before proposing or adding one.
