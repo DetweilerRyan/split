@@ -20,7 +20,7 @@ A pull request's state is a message to the owner: **draft means "not yet"; ready
    gh pr ready <n>
    ```
 
-3. **Put it back to draft when the work reopens:** a review finds something to fix, a new decision changes it, or a rebase conflicts.
+3. **Put it back to draft when the work reopens:** a review finds something to fix, a new decision changes it, or a rebase conflicts. For the owner's feedback, follow [Revising work](revising-work.md).
 
    ```bash
    gh pr ready <n> --undo
