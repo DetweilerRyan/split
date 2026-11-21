@@ -2,7 +2,9 @@
 
 Why the steps in [post-merge cleanup](post-merge-cleanup.md) are in the order they are. Read this only when changing or questioning a step. Following the procedure needs nothing from this file.
 
-The procedure is adapted from the owner's market-research repository (`docs/engineering/post-merge-cleanup.md`), without its worktree steps.
+The procedure is adapted from the owner's market-research repository (`docs/engineering/post-merge-cleanup.md`). It first left out that procedure's worktree steps; they came back when the owner chose a worktree per branch, as [worktrees.meta.md](worktrees.meta.md) records.
+
+- **Remove the worktree before deleting its branch.** `git branch -D` refuses to delete a branch that a worktree has checked out, and `git worktree remove` refuses while the worktree has uncommitted or untracked changes, which backs up step 3.
 
 - **Files, not commits, show whether work was lost.** This repository's pull requests are often merged by rebase: #31, #32, #34 and #37 landed on `main` under new commit IDs. So git reports the branch as "not fully merged" when nothing is lost, and `git branch -d` refuses to delete it. Comparing the pull request's files with `main` is what tells a rewritten commit from missing work. That's why step 4 uses `git branch -D`, and only after step 2.
 - **Only this pull request's files are compared.** Another pull request may merge in between and change the same files. A difference in them is fine when a later merge explains it, and anything else is lost work.

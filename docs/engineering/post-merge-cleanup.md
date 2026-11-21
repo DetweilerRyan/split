@@ -1,10 +1,10 @@
 # Post-merge cleanup
 
-After a pull request you worked on is merged, delete its branches and bring `main` up to date. Do it in this order: every deletion comes after a check that the merged work is really on `main`.
+After a pull request you worked on is merged, remove its [worktree](worktrees.md), delete its branches and bring `main` up to date. Do it in this order: every deletion comes after a check that the merged work is really on `main`.
 
 ## Steps
 
-Replace `<n>` with the pull request number and `<branch>` with its branch.
+Replace `<n>` with the pull request number, `<branch>` with its branch, and `<name>` with its worktree's folder.
 
 1. **Confirm the merge.** Stop unless `state` is `MERGED`.
 
@@ -24,13 +24,14 @@ Replace `<n>` with the pull request number and `<branch>` with its branch.
 
    If one of the pull request's files names one of its own commits by hash, as `.git-blame-ignore-revs` does, also check that the commit is on `main`. `git merge-base --is-ancestor <hash> origin/main` must succeed.
 
-3. **Check for leftovers.** `git status --short` must show nothing you'd lose. Copy any untracked work somewhere durable before deleting anything.
+3. **Check for leftovers.** In the branch's worktree, `git status --short` must show nothing you'd lose. Copy any untracked work somewhere durable before deleting anything.
 
 4. **Delete the branches.** First check that no open pull request is built on this branch, and retarget any that is (`gh pr edit <m> --base main`) before deleting:
 
    ```bash
    gh pr list --base <branch>
-   git switch main
+   git worktree list                        # find the branch's worktree
+   git worktree remove .claude/worktrees/<name>   # from the main checkout; refuses if step 3 missed changes
    git branch -D <branch>                   # -D, because git sees rewritten commits as unmerged
    git ls-remote --heads origin <branch>    # tip must be the commit verified in step 2
    git push origin --delete <branch>
@@ -41,11 +42,11 @@ Replace `<n>` with the pull request number and `<branch>` with its branch.
 5. **Update `main`.**
 
    ```bash
-   git status -sb
+   git status -sb                           # in the main checkout
    git pull --ff-only origin main
    ```
 
-6. **Verify.** `git branch -a` shows none of the pull request's branches, and the [definition-of-done checks](../../AGENTS.md#definition-of-done) pass on `main`.
+6. **Verify.** `git branch -a` shows none of the pull request's branches, `git worktree list` doesn't show its worktree, and the [definition-of-done checks](../../AGENTS.md#definition-of-done) pass on `main`.
 
 ## Never
 
