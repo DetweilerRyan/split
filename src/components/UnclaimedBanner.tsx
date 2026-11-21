@@ -1,4 +1,4 @@
-import type { ReceiptItem } from '../types/receipt';
+import type { ReceiptItem } from '../store/useReceiptStore';
 import { formatMoney } from '../utils/currency';
 
 interface UnclaimedBannerProps {

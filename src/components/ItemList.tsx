@@ -1,4 +1,4 @@
-import type { Participant, ReceiptItem } from '../types/receipt';
+import type { Participant, ReceiptItem } from '../store/useReceiptStore';
 import { formatMoney } from '../utils/currency';
 import { ItemRow } from './ItemRow';
 
