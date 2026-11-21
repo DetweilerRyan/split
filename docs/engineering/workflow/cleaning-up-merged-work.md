@@ -26,13 +26,13 @@ Replace `<n>` with the pull request number, `<branch>` with its branch, and `<na
 
 3. **Check for leftovers.** In the branch's worktree, `git status --short` must show nothing you'd lose. Copy any untracked work somewhere durable before deleting anything.
 
-4. **Delete the branches.** Run this step and the ones after it from the main checkout, not the branch's worktree. If the Claude Code session entered the worktree with `EnterWorktree`, leave it with `ExitWorktree` and `action: "keep"`, which returns the session to the main checkout. Don't use `action: "remove"`: it deletes the branch along with the worktree, before the checks below.
+4. **Delete the branches.** Run this step and the ones after it from the main checkout, not the branch's worktree. If the Claude Code session entered the worktree with `EnterWorktree`, leave it with `ExitWorktree` and `action: "keep"`, which returns the session to the main checkout. Don't use `action: "remove"`: it deletes the branch along with the worktree, before the checks below. Take the branch's name from `git worktree list` below, not from `ExitWorktree`'s message, which can give a name the branch had before it was renamed.
 
    First check that no open pull request is built on this branch, and retarget any that is (`gh pr edit <m> --base main`) before deleting:
 
    ```bash
+   git worktree list                        # the branch's worktree, and its branch's current name
    gh pr list --base <branch>
-   git worktree list                        # find the branch's worktree
    git worktree remove .claude/worktrees/<name>   # refuses if step 3 missed changes
    git branch -D <branch>                   # -D, because git sees rewritten commits as unmerged
    git ls-remote --heads origin <branch>    # tip must be the commit verified in step 2
