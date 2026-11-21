@@ -35,10 +35,12 @@ Name two or three candidates, and always include the two baselines: writing it o
 
 ## After approval
 
-1. Add it with `npm install <package>` (or `--save-dev` for tooling), keeping the range style `package.json` already uses, and commit the updated `package-lock.json` with it.
+1. Add it with an exact version, `npm install --save-exact <package>@<version>` (with `--save-dev` for tooling), and commit the updated `package-lock.json` with it. Choose a release published at least two weeks before you add it.
 2. Allow any hosts it needs in the kit's network policy.
 3. Where practical, keep it behind one module of ours, so replacing it later changes one file.
 
 Removing a dependency undoes the same steps in one change.
 
-The evaluation questions follow the OpenSSF [Concise Guide for Evaluating Open Source Software](https://best.openssf.org/Concise-Guide-for-Evaluating-Open-Source-Software).
+## Changing this document
+
+The reasons for these rules, their sources, and the cases behind them are in [dependencies.meta.md](dependencies.meta.md). Read it only when changing or questioning a rule here.
