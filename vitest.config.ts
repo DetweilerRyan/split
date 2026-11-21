@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { playwright } from '@vitest/browser-playwright';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 // Tests named `<module>.browser.test.ts(x)` run in headless Chromium through Playwright; every
@@ -8,6 +9,10 @@ import { defineConfig } from 'vitest/config';
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'];
 
 export default defineConfig({
+  // Compile components and hooks with the React Compiler, as next.config.ts does for the app
+  // (`reactCompiler: true`), so tests see the same memoization users get. The compiler has to
+  // run first; plugins listed here run before plugin-react's own transforms.
+  plugins: [react({ babel: { plugins: ['babel-plugin-react-compiler'] } })],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
