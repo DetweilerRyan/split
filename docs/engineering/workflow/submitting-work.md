@@ -28,7 +28,7 @@ A pull request's state is a message to the owner: **draft means "not yet"; ready
 
 4. **Never use a message in place of the state.** If the owner should wait, the pull request is a draft.
 
-The owner merges. A session never merges a pull request and never pushes to `main`.
+The owner merges. A session never merges a pull request and never pushes to `main`. After the merge, follow [Cleaning up merged work](cleaning-up-merged-work.md).
 
 ## Before pushing to a branch that has had a pull request
 
@@ -65,15 +65,9 @@ The owner reads the description, not the diff, to decide what to look at.
 - **What to look at:** three points at most, the ones that need the owner's eye.
 - **Decisions made:** each choice the session made that the issue didn't settle, with the alternative and a one-line reason. The owner can overrule one here without it blocking the work.
 - **For the owner to confirm:** only questions the session can't settle from the repository or the issue. Say "nothing" when there is nothing.
-- **Changed test expectations:** each assertion the pull request changes in an existing test, with the reason. "Nothing" when there is nothing. Adding a test is not a change; editing or deleting what one expects is.
+- **Changed test expectations:** each assertion the pull request changes in an existing test, with the reason, which a [review](reviewing-work.md) checks. "Nothing" when there is nothing. Adding a test is not a change; editing or deleting what one expects is.
 - **Verification:** which checks you ran and their result, and what was not verified. A skipped step is said to be skipped.
 - **Links:** the issue it closes or relates to (`Closes #<n>` closes the issue on merge).
-
-## Reviewing a pull request
-
-Check every changed test expectation against what the pull request says it is for. Each one needs a reason in the description that the pull request's intent explains. A changed expectation with no reason, or with a reason the intent doesn't cover, is a finding: report it, and don't approve until it's explained or reverted.
-
-After a merge, follow [Cleaning up merged work](cleaning-up-merged-work.md).
 
 ## Changing this document
 

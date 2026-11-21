@@ -1,6 +1,6 @@
 # Starting work
 
-A piece of work is one branch, checked out in its own git worktree under `.claude/worktrees/`, and delivered as one pull request. These procedures follow it through: start it here, [resume](resuming-work.md) it in a later session, [submit](submitting-work.md) it for the owner to merge, and [clean up](cleaning-up-merged-work.md) after the merge.
+A piece of work is one branch, checked out in its own git worktree under `.claude/worktrees/`, and delivered as one pull request. The [workflow index](README.md) lists the procedure for each later stage.
 
 Keep the main checkout on `main`, so its working tree only ever changes when `main` is updated.
 
