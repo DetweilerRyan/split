@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
+import { roomIdSchema } from '../types/roomId';
+import { indexedDbName, webrtcRoomName } from './yjsProvider';
 
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
@@ -96,16 +98,16 @@ describe('room sync provider selection', () => {
       roster: [],
       items: [{ id: 'seed-item', name: 'Seed item', en: 'Seed item', eur: 1 }],
     };
-    const providerPromise = getRoomProvider('room-liveblocks', seed);
-    expect(getRoomProvider('room-liveblocks')).toBe(providerPromise);
+    const providerPromise = getRoomProvider(roomIdSchema.parse('split-lb'), seed);
+    expect(getRoomProvider(roomIdSchema.parse('split-lb'))).toBe(providerPromise);
 
     expect(mocks.createClient).toHaveBeenCalledWith({ publicApiKey: 'pk_test' });
-    expect(client.enterRoom).toHaveBeenCalledWith('room-liveblocks', {
+    expect(client.enterRoom).toHaveBeenCalledWith('split-lb', {
       autoConnect: false,
       initialPresence: { user: null },
     });
     expect(mocks.getYjsProviderForRoom).toHaveBeenCalledWith(room);
-    expect(mocks.IndexeddbPersistence).toHaveBeenCalledWith('splitsmart-p2p-room-liveblocks', doc);
+    expect(mocks.IndexeddbPersistence).toHaveBeenCalledWith('splitsmart-p2p-split-lb', doc);
     expect(room.connect).not.toHaveBeenCalled();
 
     completePersistence();
@@ -181,7 +183,7 @@ describe('room sync provider selection', () => {
     });
 
     const { getRoomProvider } = await import('./yjsProvider');
-    const providerPromise = getRoomProvider('room-p2p');
+    const providerPromise = getRoomProvider(roomIdSchema.parse('split-p2p'));
 
     expect(mocks.createClient).not.toHaveBeenCalled();
     expect(mocks.getYjsProviderForRoom).not.toHaveBeenCalled();
@@ -191,7 +193,7 @@ describe('room sync provider selection', () => {
     const provider = await providerPromise;
 
     expect(mocks.WebrtcProvider).toHaveBeenCalledWith(
-      'splitsmart-p2p-room-room-p2p',
+      'splitsmart-p2p-room-split-p2p',
       expect.any(Y.Doc),
       expect.objectContaining({ signaling: expect.any(Array) }),
     );
@@ -238,7 +240,7 @@ describe('room sync provider selection', () => {
     });
 
     const { getRoomProvider } = await import('./yjsProvider');
-    const provider = await getRoomProvider('room-with-data', {
+    const provider = await getRoomProvider(roomIdSchema.parse('split-data'), {
       title: 'Link title',
       cardTipEur: 0,
       cashTipEur: 0,
@@ -251,5 +253,21 @@ describe('room sync provider selection', () => {
     expect(provider.store.getSnapshot().items.map(({ id }) => id)).toEqual(['existing-item']);
     expect(provider.store.getSnapshot().participants).toEqual([]);
     persistedDoc?.destroy();
+  });
+});
+
+describe('room names derived from the room id', () => {
+  // These names hold each room's local data and its peers, so they must never change.
+  it.each([
+    [
+      'urn:split:room:3f2b1c4d-1111-4222-8333-444455556666',
+      'splitsmart-p2p-urn:split:room:3f2b1c4d-1111-4222-8333-444455556666',
+      'splitsmart-p2p-room-urn:split:room:3f2b1c4d-1111-4222-8333-444455556666',
+    ],
+    ['split-k3x9', 'splitsmart-p2p-split-k3x9', 'splitsmart-p2p-room-split-k3x9'],
+  ])('keeps the IndexedDB and WebRTC names for %s', (id, database, webrtcRoom) => {
+    const roomId = roomIdSchema.parse(id);
+    expect(indexedDbName(roomId)).toBe(database);
+    expect(webrtcRoomName(roomId)).toBe(webrtcRoom);
   });
 });

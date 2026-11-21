@@ -4,6 +4,7 @@ import * as Y from 'yjs';
 import { createClient } from '@liveblocks/client';
 import { getYjsProviderForRoom } from '@liveblocks/yjs';
 import type { ReceiptSeed, RoomSnapshot } from '../types/receipt';
+import type { RoomId } from '../types/roomId';
 import { hydrateFromSeed } from './seedCodec';
 import { ReceiptStore } from './useReceiptStore';
 
@@ -13,15 +14,28 @@ export interface RoomProvider {
   setIdentity: (identity: { id: string; name: string; colorIdx: number } | null) => void;
 }
 
+/** The IndexedDB database a room's document is persisted in. */
+export type IndexedDbName = `splitsmart-p2p-${RoomId}`;
+/** The WebRTC room peers join to sync a room's document. */
+export type WebrtcRoomName = `splitsmart-p2p-room-${RoomId}`;
+
+export function indexedDbName(roomId: RoomId): IndexedDbName {
+  return `splitsmart-p2p-${roomId}` as const;
+}
+
+export function webrtcRoomName(roomId: RoomId): WebrtcRoomName {
+  return `splitsmart-p2p-room-${roomId}` as const;
+}
+
 type ProviderRegistry = typeof globalThis & {
-  __splitRoomProviders?: Map<string, Promise<RoomProvider>>;
+  __splitRoomProviders?: Map<RoomId, Promise<RoomProvider>>;
   __splitLiveblocksClient?: ReturnType<typeof createClient>;
 };
 
 const providerRegistry = globalThis as ProviderRegistry;
 const providers =
   providerRegistry.__splitRoomProviders ??
-  (providerRegistry.__splitRoomProviders = new Map<string, Promise<RoomProvider>>());
+  (providerRegistry.__splitRoomProviders = new Map<RoomId, Promise<RoomProvider>>());
 const liveblocksApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim();
 const participantColors = [
   '#4f46e5',
@@ -33,7 +47,7 @@ const participantColors = [
   '#c026d3',
 ];
 
-async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
+async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
   const liveblocksRoom = liveblocksApiKey
     ? (providerRegistry.__splitLiveblocksClient ??= createClient({
         publicApiKey: liveblocksApiKey,
@@ -44,7 +58,7 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
     : null;
   const liveblocks = liveblocksRoom ? getYjsProviderForRoom(liveblocksRoom) : null;
   const doc = liveblocks?.getYDoc() ?? new Y.Doc();
-  const persistence = new IndexeddbPersistence(`splitsmart-p2p-${roomId}`, doc);
+  const persistence = new IndexeddbPersistence(indexedDbName(roomId), doc);
   await persistence.whenSynced;
 
   const items = doc.getMap('items');
@@ -75,7 +89,7 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   }
   const webrtc = liveblocks
     ? null
-    : new WebrtcProvider(`splitsmart-p2p-room-${roomId}`, doc, {
+    : new WebrtcProvider(webrtcRoomName(roomId), doc, {
         signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'],
       });
   const awareness = liveblocks?.awareness ?? webrtc!.awareness;
@@ -123,7 +137,7 @@ async function createProvider(roomId: string, seed?: ReceiptSeed | null): Promis
   };
 }
 
-export function getRoomProvider(roomId: string, seed?: ReceiptSeed | null): Promise<RoomProvider> {
+export function getRoomProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
   let provider = providers.get(roomId);
   if (!provider) {
     provider = createProvider(roomId, seed).catch((error: unknown) => {

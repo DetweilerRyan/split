@@ -2,12 +2,13 @@ import { use } from 'react';
 import type { ReceiptSeed } from '../types/receipt';
 import { getRoomProvider, type RoomProvider } from '../store/yjsProvider';
 import { pendingSeedKey, validateSeed } from '../store/seedCodec';
+import type { RoomId } from '../types/roomId';
 
 // `use()` needs the same promise instance on every render, so loads are cached per room
 // outside of React. A rejected load stays cached; recovering requires reloading the page.
-const loads = new Map<string, Promise<RoomProvider>>();
+const loads = new Map<RoomId, Promise<RoomProvider>>();
 
-function readPendingSeed(roomId: string): ReceiptSeed | null {
+function readPendingSeed(roomId: RoomId): ReceiptSeed | null {
   try {
     const raw = window.sessionStorage.getItem(pendingSeedKey(roomId));
     return raw ? validateSeed(JSON.parse(raw)) : null;
@@ -16,7 +17,7 @@ function readPendingSeed(roomId: string): ReceiptSeed | null {
   }
 }
 
-function loadRoom(roomId: string): Promise<RoomProvider> {
+function loadRoom(roomId: RoomId): Promise<RoomProvider> {
   return getRoomProvider(roomId, readPendingSeed(roomId)).then(
     (provider) => {
       try {
@@ -31,7 +32,7 @@ function loadRoom(roomId: string): Promise<RoomProvider> {
 }
 
 /** Suspends while the room loads; a failed load is thrown to the nearest error boundary. */
-export function useRoomProvider(roomId: string): RoomProvider {
+export function useRoomProvider(roomId: RoomId): RoomProvider {
   let load = loads.get(roomId);
   if (!load) {
     load = loadRoom(roomId);
