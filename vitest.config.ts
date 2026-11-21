@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { playwright } from '@vitest/browser-playwright';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 // Three projects, chosen by file name; docs/engineering/testing-conventions.md says which a
 // test belongs in. `<module>.browser.test.ts(x)` runs in headless Chromium through Playwright,
@@ -9,6 +9,9 @@ import { defineConfig } from 'vitest/config';
 // `<module>.test.ts(x)` runs in jsdom.
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'];
 const realTests = ['**/*.real.test.ts'];
+// Branch worktrees live inside the checkout (docs/engineering/worktrees.md). Without this, a
+// run from one checkout also runs every worktree's copy of the tests.
+const ignored = [...configDefaults.exclude, '**/.next/**', '**/.claude/worktrees/**'];
 
 export default defineConfig({
   // Compile components and hooks with the React Compiler, as next.config.ts does for the app
@@ -29,7 +32,7 @@ export default defineConfig({
           name: 'unit',
           environment: 'jsdom',
           include: ['**/*.test.ts', '**/*.test.tsx'],
-          exclude: ['**/node_modules/**', '**/.next/**', ...browserTests, ...realTests],
+          exclude: [...ignored, ...browserTests, ...realTests],
         },
       },
       {
@@ -38,6 +41,7 @@ export default defineConfig({
           name: 'real',
           environment: 'node',
           include: realTests,
+          exclude: ignored,
         },
       },
       {
@@ -56,6 +60,7 @@ export default defineConfig({
         test: {
           name: 'browser',
           include: browserTests,
+          exclude: ignored,
           browser: {
             enabled: true,
             headless: true,

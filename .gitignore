@@ -6,3 +6,5 @@ next-env.d.ts
 *.tsbuildinfo
 # Screenshots and attachments Vitest browser mode saves for failing tests
 .vitest/
+# Branch worktrees (docs/engineering/worktrees.md)
+.claude/worktrees/
