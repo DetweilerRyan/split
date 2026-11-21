@@ -2,7 +2,7 @@
 schemaVersion: '3'
 kind: mixin
 displayName: SplitSmart development
-description: Node.js and workspace dependencies for SplitSmart
+description: Node.js, workspace dependencies and headless Chromium for SplitSmart
 
 capabilities:
   - type: com.docker.sandbox/network-policy@1
@@ -14,10 +14,17 @@ capabilities:
           # Git operations and the GitHub CLI.
           - github.com:443
           - api.github.com:443
+          # Headless Chromium for the browser test project: `playwright install` downloads from
+          # cdn.playwright.dev and falls back to the other two hosts. Its system libraries come
+          # from the image's own apt sources (deb.debian.org and dhi.io), which the sandbox
+          # proxy already allows.
+          - cdn.playwright.dev:443
+          - playwright.download.prss.microsoft.com:443
+          - playwright.azureedge.net:443
   - type: com.docker.sandbox/lifecycle@1
     config:
       startup:
-        - description: Install SplitSmart dependencies from the workspace lockfile
+        - description: Install SplitSmart dependencies and headless Chromium from the workspace lockfile
           user: '1000'
           env: [WORKSPACE_DIR]
           command: |
