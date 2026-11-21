@@ -12,6 +12,7 @@ The [engineering index](../README.md) points here rather than to each procedure.
 | [Resuming work](resuming-work.md)                     | Before continuing work on a branch that an earlier session started, including after the session's context was cleared                                                               |
 | [Submitting work](submitting-work.md)                 | Before opening a pull request, writing its description, or marking it ready; before pushing to a branch that has had a pull request; when `main` moves while a pull request is open |
 | [Reviewing work](reviewing-work.md)                   | Before reviewing a pull request, or when asked to check one                                                                                                                         |
+| [Revising work](revising-work.md)                     | When the owner gives feedback on submitted work, in a review or in the session                                                                                                      |
 | [Cleaning up merged work](cleaning-up-merged-work.md) | A pull request you worked on has been merged, before deleting any branch                                                                                                            |
 
 ## Adding a procedure

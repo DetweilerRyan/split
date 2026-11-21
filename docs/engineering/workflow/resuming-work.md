@@ -27,10 +27,11 @@ Replace `<branch>` with the branch, `<n>` with its pull request number, and `<na
    ```bash
    git status --short                       # uncommitted work the earlier session left
    git log --oneline origin/main..HEAD      # the branch's commits
-   gh pr view <n>                           # its state, description and decisions
+   gh pr view <n> --comments                # its state, description, decisions and feedback
+   gh api repos/{owner}/{repo}/pulls/<n>/comments --jq '.[] | {path, body}'   # inline review comments
    ```
 
-   The pull request description's "Decisions made" and "For the owner to confirm" say what is settled and what is still open. Don't reopen a settled decision. Keep uncommitted work unless you know it's abandoned, and ask the owner if you don't.
+   The pull request description's "Decisions made" and "For the owner to confirm" say what is settled and what is still open. Feedback in the comments with no reply yet is still to do; [revising work](revising-work.md) says how to handle it. Don't reopen a settled decision. Keep uncommitted work unless you know it's abandoned, and ask the owner if you don't.
 
 4. **Refresh dependencies.** From the worktree's root, `sh scripts/prepare-sandbox.sh`. It skips the install when nothing has changed.
 
