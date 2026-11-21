@@ -17,7 +17,7 @@ npm test
 npm run build
 ```
 
-Run locally with `npm run dev`, build with `npm run build`, and serve the production build with `npm start`. The tests run with `npm test`, and `npm run typecheck` checks types. Agents working on the repository follow [`AGENTS.md`](AGENTS.md).
+Run locally with `npm run dev`, build with `npm run build`, and serve the production build with `npm start`. The tests run with `npm test`, and `npm run typecheck` checks types. Component and hook tests run in headless Chromium, so install it once with `npx playwright install --only-shell chromium`; on Linux, `sudo npx playwright install-deps chromium` adds the system libraries it needs. The Docker Sandbox kit and the dev container do both for you. Agents working on the repository follow [`AGENTS.md`](AGENTS.md).
 
 ### Docker Sandbox
 
