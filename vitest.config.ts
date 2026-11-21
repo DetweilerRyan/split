@@ -9,7 +9,7 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // `<module>.test.ts(x)` runs in jsdom.
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'];
 const realTests = ['**/*.real.test.ts'];
-// Branch worktrees live inside the checkout (docs/engineering/worktrees.md). Without this, a
+// Branch worktrees live inside the checkout (docs/engineering/branch-setup.md). Without this, a
 // run from one checkout also runs every worktree's copy of the tests.
 const ignored = [...configDefaults.exclude, '**/.next/**', '**/.claude/worktrees/**'];
 

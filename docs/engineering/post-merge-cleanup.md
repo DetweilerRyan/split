@@ -1,6 +1,6 @@
 # Post-merge cleanup
 
-After a pull request you worked on is merged, remove its [worktree](worktrees.md), delete its branches and bring `main` up to date. Do it in this order: every deletion comes after a check that the merged work is really on `main`.
+After a pull request you worked on is merged, remove its [worktree](branch-setup.md), delete its branches and bring `main` up to date. Do it in this order: every deletion comes after a check that the merged work is really on `main`.
 
 ## Steps
 
