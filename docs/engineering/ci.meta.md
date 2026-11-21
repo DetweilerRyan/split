@@ -41,7 +41,7 @@ The owner asked for a fast run ("3 to 5 minutes is way too long for a small repo
 
 #52 proposed three changes to cut 10 to 13 s: run the five checks at the same time in one step, drop `cache: npm`, and run `npm ci --no-audit --no-fund`. All three were tried in [PR #53](https://github.com/DetweilerRyan/split/pull/53) and none saved measurable time, so the owner chose on 2026-11-21 to keep `ci.yml` as it was and record the results here, since the app may be too small to gain much from tuning CI yet.
 
-- **Measured in CI.** Commit 200c39c of #53 made all three changes. Three attempts of [run 44955290713](https://github.com/DetweilerRyan/split/actions/runs/44955290713), against the three runs above:
+- **Measured in CI.** Commit 7f9f40e made all three changes; on #53's branch, before the rebase merge, it was 200c39c, the commit the runs below tested. Three attempts of [run 44955290713](https://github.com/DetweilerRyan/split/actions/runs/44955290713), against the three runs above:
 
   | Step                  | Before (3 runs) | All three changes (3 attempts) |
   | :-------------------- | --------------: | -----------------------------: |
