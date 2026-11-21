@@ -21,6 +21,12 @@ capabilities:
           - cdn.playwright.dev:443
           - playwright.download.prss.microsoft.com:443
           - playwright.azureedge.net:443
+          # VS Code Marketplace, for the extensions in .devcontainer/devcontainer.json: the gallery
+          # API on marketplace.visualstudio.com, and each extension's files from its publisher's
+          # subdomain, such as oxc.gallery.vsassets.io and oxc.gallerycdn.vsassets.io.
+          - marketplace.visualstudio.com:443
+          - '*.gallery.vsassets.io:443'
+          - '*.gallerycdn.vsassets.io:443'
   - type: com.docker.sandbox/lifecycle@1
     config:
       startup:
