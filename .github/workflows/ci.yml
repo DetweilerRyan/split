@@ -30,6 +30,15 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
-      - run: npm ci --no-audit --no-fund
-      - name: Lint, formatting, types, tests, build
-        run: bash scripts/ci-checks.sh
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Formatting
+        run: npm run format:check
+      - name: Types
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Production build
+        run: npm run build
