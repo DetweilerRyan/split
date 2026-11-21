@@ -16,7 +16,7 @@ import { computeReceiptMath } from './utils/math';
 import { formatMoney, localeCurrency } from './utils/currency';
 import { getExchangeRate } from './utils/exchangeRates';
 import { buildExportText } from './utils/exportText';
-import type { RoomId } from './types/roomId';
+import type { RoomId } from './store/seedCodec';
 import { createRoomId, hydrateFromSeed, pendingSeedKey, roomPath } from './store/seedCodec';
 import { useReceiptStore } from './store/useReceiptStore';
 

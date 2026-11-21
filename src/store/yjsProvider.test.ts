@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
-import { roomIdSchema } from '../types/roomId';
+import { roomIdSchema } from './seedCodec';
 import { indexedDbName, webrtcRoomName } from './yjsProvider';
 
 const mocks = vi.hoisted(() => ({
