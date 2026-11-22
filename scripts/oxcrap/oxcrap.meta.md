@@ -113,7 +113,18 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 - **The command line overrides the config,** option by option, and paths given on it replace `files`, so one-off runs need no second config.
 - **A config covers its own folder,** as oxlint's does, and oxCrap refuses a `files` glob reaching outside it. One reason found while building it: the default `**/.*/**` pattern, meant for dot-folders, also matches `..`.
 - **Unknown options and wrong types are errors,** not warnings, and so are `files` that match nothing: a typo shouldn't quietly fall back to a default and pass.
-- **JSONC is read with `oxc-parser`,** already a dependency, by parsing the text as one JavaScript expression and accepting only JSON's kinds of value. No JSONC package is needed.
+- **JSONC is read with [`jsonc-parser`](https://www.npmjs.com/package/jsonc-parser), and checked against the schema with [`ajv`](https://ajv.js.org/).**
+  - **The owner's words:** "let's go with jsonc-parser, i don't trust a nieve aprroach to stripping comments out of a jsonc file. make sure that config.ts also validates the config file using the schema file you wrote too", then "go with ajv" ([feedback](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7086491294)).
+  - **`configuration_schema.json` now owns which options there are and what each may hold.** `config.ts` keeps only the defaults and how they combine with the command line, so the schema an editor uses and the rules oxCrap enforces can't drift apart.
+  - **`jsonc-parser` is Microsoft's,** the parser VS Code uses: 3.3.1, MIT, no dependencies of its own.
+  - **`ajv` won a comparison made 2026-11-22.** It's the standard validator (8.20.0, MIT, 4 small dependencies, by far the most used), it supports the schema's draft-07, and its errors name the exact option. The others:
+    - `@cfworker/json-schema` has no dependencies but a single maintainer;
+    - `@exodus/schemasafe` showed little recent activity, and its errors are off by default;
+    - `@hyperjump/json-schema` has 7 dependencies and the least use.
+
+    Bowtie's compliance report couldn't be read without a browser.
+
+  - **A `"__proto__"` key is refused before validation.** `jsonc-parser` assigns it, which sets the object's prototype, so the schema would never see it, and it would be quietly ignored.
 - **Globs are matched by `glob.ts`,** about 50 lines. Node's `fs.glob` and `path.matchesGlob` aren't stable in Node 22, which the README supports.
 - **The limits moved from constants in `check.ts` into the config,** with 30 and 10 as defaults in `config.ts`. This repository's [`.oxcraprc.json`](../../.oxcraprc.json) sets them explicitly, so a change to them shows up as a change to that file.
 
@@ -121,17 +132,17 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."
 
-| Module                           | Does                                                                          | Tested by                                                              |
-| :------------------------------- | :---------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
-| [`oxcrap.ts`](oxcrap.ts)         | Command line: reads the report, refuses a stale one, prints findings          | [`oxcrap.real.test.ts`](oxcrap.real.test.ts): the contract, end to end |
-| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                                 | [`functions.test.ts`](functions.test.ts)                               |
-| [`complexity.ts`](complexity.ts) | The counting rules                                                            | [`complexity.test.ts`](complexity.test.ts)                             |
-| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                    | [`allow.test.ts`](allow.test.ts)                                       |
-| [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions | [`coverage.test.ts`](coverage.test.ts)                                 |
-| [`config.ts`](config.ts)         | Reads and checks a config; holds the defaults                                 | [`config.test.ts`](config.test.ts)                                     |
-| [`glob.ts`](glob.ts)             | Matches paths against globs                                                   | [`glob.test.ts`](glob.test.ts)                                         |
-| [`files.ts`](files.ts)           | Finds the files a config's globs pick out                                     | [`oxcrap.real.test.ts`](oxcrap.real.test.ts)                           |
-| [`check.ts`](check.ts)           | The rules, on plain data                                                      | [`check.test.ts`](check.test.ts)                                       |
+| Module                           | Does                                                                                            | Tested by                                                              |
+| :------------------------------- | :---------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| [`oxcrap.ts`](oxcrap.ts)         | Command line: reads the report, refuses a stale one, prints findings                            | [`oxcrap.real.test.ts`](oxcrap.real.test.ts): the contract, end to end |
+| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                                                   | [`functions.test.ts`](functions.test.ts)                               |
+| [`complexity.ts`](complexity.ts) | The counting rules                                                                              | [`complexity.test.ts`](complexity.test.ts)                             |
+| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                                      | [`allow.test.ts`](allow.test.ts)                                       |
+| [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions                   | [`coverage.test.ts`](coverage.test.ts)                                 |
+| [`config.ts`](config.ts)         | Reads a config with `jsonc-parser`, checks it against the schema with `ajv`; holds the defaults | [`config.test.ts`](config.test.ts)                                     |
+| [`glob.ts`](glob.ts)             | Matches paths against globs                                                                     | [`glob.test.ts`](glob.test.ts)                                         |
+| [`files.ts`](files.ts)           | Finds the files a config's globs pick out                                                       | [`oxcrap.real.test.ts`](oxcrap.real.test.ts)                           |
+| [`check.ts`](check.ts)           | The rules, on plain data                                                                        | [`check.test.ts`](check.test.ts)                                       |
 
 - **Every module but `oxcrap.ts` takes plain values,** such as source text, a config's text or a coverage report's text. Only `oxcrap.ts` and `files.ts` read the file system, and nothing runs a program.
 - **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
@@ -160,6 +171,9 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 
 ## Options not taken
 
+- **Reading the config with `oxc-parser`,** by parsing it as one JavaScript expression. It accepted syntax oxlint refuses, such as single quotes, unquoted keys, hex numbers and numeric separators. It mishandled a `__proto__` key, and its errors pointed at the wrapped text. The owner rejected it: "that doesn't make any sense at all."
+- **Stripping comments and trailing commas by hand, then `JSON.parse`:** the owner didn't trust it ("i don't trust a nieve aprroach").
+- **Hand-written type checks for each option,** as the first config reader had: they duplicated the schema, which `ajv` now applies directly.
 - **Reading complexity from oxlint's `complexity` rule,** as the first version did. The score was only in its message text, and an oxlint update could change the counts under every comment.
 - **A baseline file,** `scripts/crap-baseline.json` and then a commented `crap-baseline.jsonc` with `--baseline` and `--write-baseline`. Its keys break on renames and moves, and rewriting it dropped the reasons. Comparable tools share the problem; see the research above.
 - **`--write-baseline` writing the comments into source files:** the owner didn't want the script to modify code.

@@ -95,7 +95,7 @@ oxCrap's config follows oxlint's and oxfmt's:
 - **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it. Paths on the command line are read from the current directory.
 - **Globs** use `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. A `\` takes the next character literally.
 - **The command line overrides the config,** option by option; paths given on the command line replace `files`.
-- **An option oxCrap doesn't know, or a value of the wrong kind, is an error,** naming the option, so a typo can't quietly fall back to a default. So is a config whose `files` match nothing.
+- **The config is checked against [`configuration_schema.json`](configuration_schema.json),** the schema editors use. An option oxCrap doesn't know, or a value of the wrong kind, is an error naming the option, and every problem is reported at once, so a typo can't quietly fall back to a default. So is a config whose `files` match nothing.
 
 ### Output
 
@@ -139,7 +139,10 @@ A comment that mentions `@crap-allow` without starting with it is ignored, so pr
 ## Requirements
 
 - **Node.js 22.18 or later, or 23.6 or later,** which run TypeScript files directly by stripping their types.
-- **[`oxc-parser`](https://www.npmjs.com/package/oxc-parser),** its only dependency.
+- **Three packages:**
+  - [`oxc-parser`](https://www.npmjs.com/package/oxc-parser) parses the code;
+  - [`jsonc-parser`](https://www.npmjs.com/package/jsonc-parser) reads the config;
+  - [`ajv`](https://ajv.js.org/) checks the config against its schema.
 
 oxCrap imports nothing from outside this folder, and lint fails if it does, so it can be lifted out into a project of its own.
 
