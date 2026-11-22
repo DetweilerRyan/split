@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 // The script's contract, end to end: it runs as a program on a real git repository, given a
 // coverage report. The rules themselves are tested beside each module.
 
-const script = fileURLToPath(new URL('./crap.ts', import.meta.url));
+const script = fileURLToPath(new URL('./oxcrap.ts', import.meta.url));
 const directories: string[] = [];
 
 /** A function with `branches` if statements, so its complexity is branches + 1. */
@@ -86,7 +86,7 @@ afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
 });
 
-describe('crap', () => {
+describe('oxcrap', () => {
   it('fails a changed function over the limits, says what comment would allow it, and points to the guide', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
     write(cwd, { 'src/grade.ts': branchy('grade', 11) });
@@ -201,7 +201,7 @@ describe('crap', () => {
   it('says how to run it when the report or paths are missing', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
     const usage =
-      'Usage: node scripts/crap/crap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...';
+      'Usage: node scripts/oxcrap/oxcrap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...';
 
     expect(crap(cwd, ['src']).output).toContain(usage);
     expect(crap(cwd, ['--coverage', 'coverage.json']).output).toContain(usage);

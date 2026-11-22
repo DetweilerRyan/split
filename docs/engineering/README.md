@@ -12,7 +12,7 @@ How work on this repository gets done: writing and testing code, choosing depend
 | [Testing conventions](testing-conventions.md)       | Before writing, changing, or moving a test, including a component or hook test, or replacing an external dependency in a test                                                                |
 | [Choosing and adding dependencies](dependencies.md) | Before adding or changing an entry in `package.json`, before importing a package the repository doesn't import yet, or before writing code for a general problem a library may already solve |
 | [Types and schemas](types-and-schemas.md)           | Before adding, moving or changing a type, interface or zod schema                                                                                                                            |
-| [CRAP score](crap.md)                               | When a CRAP report from the hook, CI or `npm run crap` lists a function, or before adding or changing a `@crap-allow` comment                                                                |
+| [CRAP score](crap.md)                               | When a CRAP report from the hook, CI or `npm run oxcrap` lists a function, or before adding or changing a `@crap-allow` comment                                                              |
 | [CI](ci.md)                                         | Before changing `.github/workflows/`, updating `playwright`, `@playwright/test` or a GitHub Action, or when a pull request's CI run fails                                                    |
 
 ## Adding a procedure

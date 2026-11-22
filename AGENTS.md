@@ -38,7 +38,7 @@ A change is not done until each of these exits with code 0, run from the reposit
 | Formatting       | `npm run format:check` |
 | Types            | `npm run typecheck`    |
 | Tests            | `npm test`             |
-| CRAP score       | `npm run crap`         |
+| CRAP score       | `npm run oxcrap`       |
 | Production build | `npm run build`        |
 | End-to-end tests | `npm run test:e2e`     |
 

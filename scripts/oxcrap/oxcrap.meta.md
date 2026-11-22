@@ -1,12 +1,14 @@
-# CRAP script: reasons and sources
+# oxCrap: reasons and sources
 
-Why the CRAP script in this folder, its `@crap-allow` comments, the Stop hook in [`../stop-hook.ts`](../stop-hook.ts) and the CI step work the way they do, and why [the CRAP score procedure](../../docs/engineering/crap.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only the procedure.
+Why oxCrap, the CRAP script in this folder, its `@crap-allow` comments, the Stop hook in [`../stop-hook.ts`](../stop-hook.ts) and the CI step work the way they do, and why [the CRAP score procedure](../../docs/engineering/crap.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only the procedure.
 
 Decided by the owner on [#63](https://github.com/DetweilerRyan/split/issues/63), which records the trial, the research and each decision, all approved on 2026-11-22. In feedback on [#64](https://github.com/DetweilerRyan/split/pull/64) the same day, the owner then changed it in three rounds:
 
 - **[`crap-allow` comments](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7083296497)** replaced the baseline file.
 - **[`oxc-parser`, our own complexity count, `@crap-allow`, and this folder of modules](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7083803193).**
 - **[The script reads a coverage report instead of running the tests](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085342018).**
+
+[The name oxCrap](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085518444) came last; see [the name](#the-name).
 
 ## What the research found
 
@@ -47,7 +49,7 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 
 ### The Stop hook
 
-- **The hook is the project's own script, [`scripts/stop-hook.ts`](../stop-hook.ts),** not a mode of the CRAP script. It's where this project's choices live: which folders count as changes, and running `npm run lint`, `npm test` and `npm run crap` in that order. The CRAP script stays independent of them, and of Claude Code.
+- **The hook is the project's own script, [`scripts/stop-hook.ts`](../stop-hook.ts),** not a mode of the CRAP script. It's where this project's choices live: which folders count as changes, and running `npm run lint`, `npm test` and `npm run oxcrap` in that order. The CRAP script stays independent of them, and of Claude Code.
 - **It advises and never blocks.** It sends what fails through `hookSpecificOutput.additionalContext`, which the [hooks reference](https://code.claude.com/docs/en/hooks) describes as "non-error feedback for Claude"; plain output from a Stop hook never reaches Claude.
   - It stays quiet when `stop_hook_active` is true, so it advises once per stop.
   - It runs nothing when `src/` and `app/` haven't changed.
@@ -66,21 +68,37 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
   - **Default parameter values and `?.` are left out,** unlike ESLint. Each one is a path, but counting them inflated the scores of plain data-handling code. That's why `getExchangeRate` scores 11 here against oxlint's 15: it has three default values and one `?.`.
   - **A JSX condition such as `{open && <Modal />}` counts,** as a branch it is.
 
+### The name
+
+- **The owner renamed it from `crap` to oxCrap** "so that it's more in line with the oxc family of tools. maybe we'd open source it some day."
+- **"oxCrap" is the name in prose; files and commands are `oxcrap`:** the folder `scripts/oxcrap/`, its entry point `oxcrap.ts`, and `npm run oxcrap`.
+  - The oxc tools are all lowercase: `oxlint`, `oxfmt`, `oxc-parser`.
+  - npm refuses a package name with capitals, so a published package would have to be `oxcrap` anyway.
+- **The metric keeps its name:**
+  - the `@crap-allow` directive;
+  - the `CRAP score` CI step;
+  - the "CRAP findings" messages;
+  - the [CRAP score procedure](../../docs/engineering/crap.md).
+
+  They name the metric, not the tool, as `@ts-expect-error` names the language rather than `tsc`. Renaming the directive would also have meant rewriting every comment in `src/`.
+
+- **Before publishing it,** weigh that an `ox` prefix can read as part of the official oxc project. Ask its maintainers, or say in the README that it's unofficial.
+
 ### The folder and its modules
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."
 
-| Module                           | Does                                                                          | Tested by                                                          |
-| :------------------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------- |
-| [`crap.ts`](crap.ts)             | Command line: reads the report, refuses a stale one, prints findings          | [`crap.real.test.ts`](crap.real.test.ts): the contract, end to end |
-| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                                 | [`functions.test.ts`](functions.test.ts)                           |
-| [`complexity.ts`](complexity.ts) | The counting rules                                                            | [`complexity.test.ts`](complexity.test.ts)                         |
-| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                    | [`allow.test.ts`](allow.test.ts)                                   |
-| [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions | [`coverage.test.ts`](coverage.test.ts)                             |
-| [`diff.ts`](diff.ts)             | Runs `git diff`; reads changed lines from it                                  | [`diff.test.ts`](diff.test.ts)                                     |
-| [`check.ts`](check.ts)           | The rules, on plain data                                                      | [`check.test.ts`](check.test.ts)                                   |
+| Module                           | Does                                                                          | Tested by                                                              |
+| :------------------------------- | :---------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| [`oxcrap.ts`](oxcrap.ts)         | Command line: reads the report, refuses a stale one, prints findings          | [`oxcrap.real.test.ts`](oxcrap.real.test.ts): the contract, end to end |
+| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                                 | [`functions.test.ts`](functions.test.ts)                               |
+| [`complexity.ts`](complexity.ts) | The counting rules                                                            | [`complexity.test.ts`](complexity.test.ts)                             |
+| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                    | [`allow.test.ts`](allow.test.ts)                                       |
+| [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions | [`coverage.test.ts`](coverage.test.ts)                                 |
+| [`diff.ts`](diff.ts)             | Runs `git diff`; reads changed lines from it                                  | [`diff.test.ts`](diff.test.ts)                                         |
+| [`check.ts`](check.ts)           | The rules, on plain data                                                      | [`check.test.ts`](check.test.ts)                                       |
 
-- **Every module but `crap.ts` takes plain values,** such as source text, diff text or a coverage report's text. Only `crap.ts` reads files, and only it and `changedLines` run git.
+- **Every module but `oxcrap.ts` takes plain values,** such as source text, diff text or a coverage report's text. Only `oxcrap.ts` reads files, and only it and `changedLines` run git.
 - **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
 - **The modules import each other with `.ts` extensions,** which Node needs to run them by stripping types. So `tsconfig.json` sets `allowImportingTsExtensions`, which `noEmit` permits.
 
@@ -111,4 +129,4 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **Coverage proves unsteady between runs,** so a comment's numbers drift without a code change: compare within a tolerance instead of exactly.
 - **Agents game the score** in ways review misses, such as tests that run code without checking it: take up mutation testing.
 - **The suite grows slow enough** that the Stop hook delays sessions noticeably: run only the tests related to the change in the hook, and keep the full run in CI. A partial run's report then needs the script to know which functions it covers, so revisit the stale-report rule with it.
-- **Coverage on every `npm test` costs too much:** move it to a separate script, such as `test:coverage`, and run that before `npm run crap`.
+- **Coverage on every `npm test` costs too much:** move it to a separate script, such as `test:coverage`, and run that before `npm run oxcrap`.

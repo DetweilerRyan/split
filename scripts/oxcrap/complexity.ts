@@ -1,6 +1,6 @@
 // Counts a function's cyclomatic complexity from its oxc-parser AST node. These rules are this
 // repository's own, so they change only when this file does; they're close to ESLint's
-// `complexity` rule but not the same. Why is in crap.meta.md beside this file.
+// `complexity` rule but not the same. Why is in oxcrap.meta.md beside this file.
 
 /** An oxc-parser AST node: ESTree-shaped, with UTF-16 `start` and `end` offsets. */
 export type AstNode = { type: string; start: number; end: number; [key: string]: unknown };

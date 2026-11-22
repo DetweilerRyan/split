@@ -9,13 +9,13 @@ const script = fileURLToPath(new URL('./stop-hook.ts', import.meta.url));
 const directories: string[] = [];
 
 // Fakes of the three npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when
-// a file named tests-fail exists, and `crap` prints crap-output, then the arguments it was given,
-// and exits with crap-status. `crap` is a file, as the real one is, so npm's added arguments reach
+// a file named tests-fail exists, and `oxcrap` prints crap-output, then the arguments it was given,
+// and exits with crap-status. `oxcrap` is a file, as the real one is, so npm's added arguments reach
 // it rather than node.
 const scripts = {
   lint: 'node -e "if (process.env.LINT_FAILS) { console.log(\'lint: 1 problem\'); process.exit(1) }"',
   test: "node -e \"const fs = require('fs'); if (fs.existsSync('tests-fail')) { console.log('FAIL adds up'); process.exit(1) }\"",
-  crap: 'node fake-crap.mjs',
+  oxcrap: 'node fake-crap.mjs',
 };
 const fakeCrap = `import { existsSync, readFileSync } from 'node:fs';
 const read = (file, otherwise) => (existsSync(file) ? readFileSync(file, 'utf8') : otherwise);
@@ -83,7 +83,7 @@ describe('stop-hook', () => {
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).hookSpecificOutput.hookEventName).toBe('Stop');
     expect(result.context).toContain(
-      '`npm run crap` reports:\nCRAP findings: grade is over the limits.',
+      '`npm run oxcrap` reports:\nCRAP findings: grade is over the limits.',
     );
     expect(result.context).toContain('args: --base main');
     expect(result.context).toContain('This is advice; CI fails on each of these.');
@@ -134,6 +134,6 @@ describe('stop-hook', () => {
     expect(context).toContain(
       '`npm test` fails, so it wrote no coverage report and no CRAP score was calculated. Fix the tests first:\nFAIL adds up',
     );
-    expect(context).not.toContain('npm run crap');
+    expect(context).not.toContain('npm run oxcrap');
   });
 });
