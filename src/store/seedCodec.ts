@@ -312,6 +312,8 @@ export function hydrateFromSeed(
   const meta = ydoc.getMap<unknown>('meta');
   const claims = ydoc.getMap<boolean>('claims');
 
+  // crap-allow: CRAP 18.7, complexity 11. Debt from before the CRAP check (#63):
+  // its tests run 60% of it, but its complexity is over 10.
   ydoc.transact(() => {
     if (forceReset) {
       items.forEach((_value, key) => items.delete(key));
@@ -356,6 +358,8 @@ export function hydrateFromSeed(
       participants.set(id, participant);
     });
 
+    // crap-allow: CRAP 20.5, complexity 16. Debt from before the CRAP check (#63):
+    // its tests run 74% of it, but its complexity is over 10.
     seed.items.forEach((item, index) => {
       const id = item.id || `item-${index}`;
       let existing = items.get(id);

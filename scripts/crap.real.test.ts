@@ -1,12 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const script = fileURLToPath(new URL('./crap.ts', import.meta.url));
-const BASELINE = 'crap-baseline.jsonc';
 const directories: string[] = [];
 
 // Stands in for `npm test`: writes an istanbul report with one statement per non-blank line of
@@ -90,7 +89,7 @@ function crap(
   input?: string,
   env: Record<string, string> = {},
 ) {
-  const result = spawnSync(process.execPath, [script, '--baseline', BASELINE, ...args], {
+  const result = spawnSync(process.execPath, [script, ...args], {
     cwd,
     input,
     encoding: 'utf8',
@@ -108,6 +107,12 @@ afterEach(() => {
 });
 
 describe('crap', () => {
+  const allow = (
+    crap: number,
+    complexity: number,
+    reason = 'One branch per row of the rate table.',
+  ) => `// crap-allow: CRAP ${crap}, complexity ${complexity}. ${reason}\n`;
+
   it('reads each changed function’s complexity from oxlint and fails one over the limits', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
     write(cwd, { 'src/grade.ts': branchy('grade', 11) });
@@ -116,7 +121,7 @@ describe('crap', () => {
 
     expect(result.status).toBe(1);
     expect(result.output).toContain(
-      'src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%. Over the limits (CRAP 30, complexity 10).',
+      '- src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%. Over the limits (CRAP 30, complexity 10). To leave it, add `// crap-allow: CRAP 156, complexity 12. <reason>` directly above it.',
     );
     expect(result.output).toContain('Follow docs/engineering/crap.md to respond.');
   });
@@ -130,7 +135,7 @@ describe('crap', () => {
 
     const result = crap(cwd);
 
-    expect(result.output).toContain('No CRAP findings in functions changed since main.');
+    expect(result.output).toContain('No CRAP findings, checked against main.');
     expect(result.status).toBe(0);
   });
 
@@ -148,186 +153,113 @@ describe('crap', () => {
     const cwd = repository({ 'src/grade.ts': `${branchy('grade', 11)}export const other = 1;\n` });
     write(cwd, { 'src/grade.ts': `${branchy('grade', 11)}export const other = 2;\n` });
 
+    expect(crap(cwd).status).toBe(0);
+  });
+
+  it('passes a changed function over the limits whose crap-allow comment gives its numbers', () => {
+    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
+    write(cwd, {
+      'src/grade.ts': allow(156, 12) + branchy('grade', 11).replace('return -1', 'return -2'),
+    });
+
     const result = crap(cwd);
 
+    expect(result.output).toContain('No CRAP findings, checked against main.');
     expect(result.status).toBe(0);
   });
 
-  it('passes a changed function its baseline records at the same score, and fails it when it gets worse', () => {
-    const baseline = { 'src/grade.ts > grade': { crap: 156, complexity: 12 } };
-    const cwd = repository({
-      'src/grade.ts': branchy('grade', 11),
-      [BASELINE]: JSON.stringify(baseline),
-    });
-
-    write(cwd, { 'src/grade.ts': branchy('grade', 11).replace('return -1', 'return -2') });
-    expect(crap(cwd).status).toBe(0);
-
-    write(cwd, { 'src/grade.ts': branchy('grade', 12) });
-    const worse = crap(cwd);
-    expect(worse.status).toBe(1);
-    expect(worse.output).toContain(
-      'grade: CRAP 182, complexity 13, coverage 0%. Worse than its baseline (CRAP 156, complexity 12).',
-    );
-  });
-
-  it('asks for the baseline to be rewritten when a changed function gets better, and passes once it is', () => {
-    const cwd = repository({
-      'src/grade.ts': branchy('grade', 11),
-      [BASELINE]: JSON.stringify({
-        'src/grade.ts > grade': { crap: 156, complexity: 12 },
-      }),
-    });
-    write(cwd, {
-      'covered.json': JSON.stringify({ 'src/grade.ts': 'all' }),
-      'src/grade.ts': branchy('grade', 11).replace('return -1', 'return -2'),
-    });
-
-    const better = crap(cwd);
-    expect(better.status).toBe(1);
-    expect(better.output).toContain('Better than its baseline (CRAP 156, complexity 12)');
-
-    expect(crap(cwd, ['--write-baseline']).status).toBe(0);
-    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toContain(
-      '{\n  "src/grade.ts > grade": { "crap": 12, "complexity": 12 },\n}\n',
-    );
-    expect(crap(cwd).status).toBe(0);
-  });
-
-  it('asks for the baseline to be rewritten when a file it records is deleted', () => {
-    const cwd = repository({
-      'src/grade.ts': branchy('grade', 11),
-      'src/keep.ts': 'export const keep = 1;\n',
-      [BASELINE]: JSON.stringify({
-        'src/grade.ts > grade': { crap: 156, complexity: 12 },
-      }),
-    });
-    rmSync(join(cwd, 'src/grade.ts'));
+  it('fails when a function gets worse than its crap-allow comment says', () => {
+    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
+    write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 12) });
 
     const result = crap(cwd);
 
     expect(result.status).toBe(1);
     expect(result.output).toContain(
-      'src/grade.ts > grade: in the baseline, but no function has this name now.',
+      '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its crap-allow comment says CRAP 156, complexity 12. Update the comment to `// crap-allow: CRAP 182, complexity 13.`, and check its reason still holds.',
     );
   });
 
-  it('flags a baseline entry the branch adds, without failing', () => {
+  it('fails when a function gets better than its crap-allow comment says, even with its code unchanged', () => {
+    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
+    write(cwd, { 'covered.json': JSON.stringify({ 'src/grade.ts': 'all' }) });
+
+    const result = crap(cwd);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      'grade: CRAP 12, complexity 12, coverage 100%, but its crap-allow comment says CRAP 156, complexity 12.',
+    );
+  });
+
+  it('fails a crap-allow comment on a function that is within the limits now', () => {
+    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
+    write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 3) });
+
+    const result = crap(cwd);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      "grade: CRAP 20, complexity 4, coverage 0%. It's within the limits now, so delete its crap-allow comment.",
+    );
+  });
+
+  it('fails a crap-allow comment with no reason, or in the wrong form', () => {
+    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
+    write(cwd, {
+      'src/grade.ts': '// crap-allow: CRAP 156, complexity 12.\n' + branchy('grade', 11),
+      'src/rank.ts': '// crap-allow CRAP=156 complexity=12 because\n' + branchy('rank', 11),
+    });
+
+    const result = crap(cwd);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      '- src/grade.ts:1 The crap-allow comment for grade gives no reason.',
+    );
+    expect(result.output).toContain(
+      '- src/rank.ts:1 This crap-allow comment isn’t in the form `// crap-allow: CRAP <score>, complexity <n>. <reason>`.',
+    );
+  });
+
+  it('fails a crap-allow comment left behind when its function is gone', () => {
+    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
+    write(cwd, { 'src/grade.ts': `${allow(156, 12)}export const grade = 1;\n` });
+
+    const result = crap(cwd);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      '- src/grade.ts:1 This crap-allow comment isn’t directly above a function. Move it there, or delete it.',
+    );
+  });
+
+  it('applies a crap-allow comment across a doc comment, and flags one the branch adds with its whole reason', () => {
     const cwd = repository({ 'src/grade.ts': branchy('grade', 11) });
     write(cwd, {
-      [BASELINE]: JSON.stringify({
-        'src/grade.ts > grade': { crap: 156, complexity: 12 },
-      }),
+      'src/grade.ts':
+        allow(156, 12, 'One branch per row of the rate table.') +
+        '// Revisit when the table moves to data.\n' +
+        '/** Grades a score. */\n' +
+        branchy('grade', 11),
     });
 
     const result = crap(cwd);
 
     expect(result.status).toBe(0);
     expect(result.output).toContain(
-      'crap-baseline.jsonc raises src/grade.ts > grade to CRAP 156, complexity 12 (new entry). Give the reason in a comment above the entry.',
+      'Notice: src/grade.ts:1 Adds or changes the crap-allow comment for grade (CRAP 156, complexity 12). Its reason: One branch per row of the rate table. Revisit when the table moves to data.',
     );
   });
 
-  it('names an anonymous callback by the call it is passed to', () => {
+  it('labels an anonymous callback by the call it is passed to', () => {
     const body = branchy('inner', 11)
       .replace('export function inner(n: number) {', 'items.forEach((n: number) => {')
       .replace(/}\n$/, '});\n');
-    const cwd = repository({ 'src/list.ts': `declare const items: number[];\n${body}` });
-
-    expect(crap(cwd, ['--write-baseline']).status).toBe(0);
-    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toContain(
-      '  "src/list.ts > items.forEach callback": { "crap": 156, "complexity": 12 },\n',
-    );
-  });
-
-  it('quotes the reason above a baseline entry the branch adds', () => {
-    const cwd = repository({ 'src/grade.ts': branchy('grade', 11) });
-    write(cwd, {
-      [BASELINE]: `{
-  // One branch per row of the rate table.
-  // Revisit when the table moves to data.
-  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
-}
-`,
-    });
-
-    const result = crap(cwd);
-
-    expect(result.status).toBe(0);
-    expect(result.output).toContain(
-      '(new entry). Its reason: One branch per row of the rate table. Revisit when the table moves to data.',
-    );
-  });
-
-  it('reads a baseline with comments and trailing commas', () => {
-    const cwd = repository({
-      'src/grade.ts': branchy('grade', 11),
-      [BASELINE]: `// Header.
-{
-  /* A block comment, read but not kept. */
-  // Kept over the limits: the branches mirror the rate table, one per row.
-  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
-}
-`,
-    });
-    write(cwd, { 'src/grade.ts': branchy('grade', 11).replace('return -1', 'return -2') });
-
-    const result = crap(cwd);
-
-    expect(result.output).toContain('No CRAP findings in functions changed since main.');
-    expect(result.status).toBe(0);
-  });
-
-  it('keeps the header, and the comments above each entry it keeps, when it rewrites the baseline', () => {
-    const cwd = repository({
-      'src/grade.ts': branchy('grade', 11),
-      'src/rank.ts': branchy('rank', 11),
-      [BASELINE]: `// Our header.
-{
-  // Gone: rank is tested now.
-  "src/rank.ts > rank": { "crap": 156, "complexity": 12 },
-  // Kept over the limits: one branch per row of the rate table.
-  // Revisit when the table moves to data.
-  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
-}
-`,
-    });
-    write(cwd, {
-      'src/rank.ts': branchy('rank', 2),
-      'covered.json': JSON.stringify({ 'src/rank.ts': 'all' }),
-    });
-
-    expect(crap(cwd, ['--write-baseline']).status).toBe(0);
-
-    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toBe(`// Our header.
-{
-  // Kept over the limits: one branch per row of the rate table.
-  // Revisit when the table moves to data.
-  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
-}
-`);
-  });
-
-  it('writes a baseline entry over 100 characters across lines, as oxfmt lays it out', () => {
-    const name = `grade${'x'.repeat(80)}`;
-    const cwd = repository({ 'src/grade.ts': branchy(name, 11) });
-
-    expect(crap(cwd, ['--write-baseline']).status).toBe(0);
-
-    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toContain(
-      `{\n  "src/grade.ts > ${name}": {\n    "crap": 156,\n    "complexity": 12,\n  },\n}\n`,
-    );
-  });
-
-  it('asks for the baseline’s path when none is given', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
+    write(cwd, { 'src/list.ts': `declare const items: number[];\n${body}` });
 
-    const result = spawnSync(process.execPath, [script], { cwd, encoding: 'utf8' });
-
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain(
-      'Pass --baseline <file>, the baseline file’s path from the repository root.',
-    );
+    expect(crap(cwd).output).toContain('- src/list.ts:2 items.forEach callback: CRAP 156');
   });
 
   it('gives no score when the tests fail', () => {
@@ -346,17 +278,19 @@ describe('crap', () => {
       JSON.parse(stdout).hookSpecificOutput.additionalContext as string;
 
     it('gives the agent its findings as additional context, and exits 0', () => {
-      const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-      write(cwd, { 'src/grade.ts': branchy('grade', 11) });
+      const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
+      write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 12) });
 
       const result = crap(cwd, ['--hook'], JSON.stringify({ cwd, stop_hook_active: false }));
 
       expect(result.status).toBe(0);
       expect(JSON.parse(result.stdout).hookSpecificOutput.hookEventName).toBe('Stop');
       expect(context(result.stdout)).toContain(
-        '- src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%.',
+        '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its crap-allow comment says CRAP 156, complexity 12.',
       );
-      expect(context(result.stdout)).toContain('Follow docs/engineering/crap.md to respond.');
+      expect(context(result.stdout)).toContain(
+        'Follow docs/engineering/crap.md to respond. This is advice; CI fails on each CRAP finding.',
+      );
     });
 
     it('says nothing when Claude is already continuing because of a stop hook', () => {

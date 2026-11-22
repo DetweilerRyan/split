@@ -21,6 +21,8 @@ export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: Se
     onImportText();
   }
 
+  // crap-allow: CRAP 42, complexity 6. Debt from before the CRAP check (#63):
+  // no tests run it yet.
   function onImportText() {
     try {
       const input = text.trim();

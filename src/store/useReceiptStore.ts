@@ -193,6 +193,8 @@ export class ReceiptStore {
     this.listeners.forEach((listener) => listener());
   }
 
+  // crap-allow: CRAP 13, complexity 13. Debt from before the CRAP check (#63):
+  // its tests run 100% of it, but its complexity is over 10.
   private createSnapshot(): RoomSnapshot {
     const participants: Participant[] = [];
     this.participants.forEach((map, key) => {
@@ -251,6 +253,8 @@ export class ReceiptStore {
   }
 }
 
+// crap-allow: CRAP 56, complexity 7. Debt from before the CRAP check (#63):
+// no tests run it yet.
 export function useReceiptStore(store: ReceiptStore | null): RoomSnapshot {
   return useSyncExternalStore(
     store?.subscribe ?? (() => () => undefined),

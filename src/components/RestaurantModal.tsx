@@ -10,6 +10,8 @@ interface RestaurantModalProps {
   onClose: () => void;
 }
 
+// crap-allow: CRAP 210, complexity 14. Debt from before the CRAP check (#63):
+// no tests run it yet.
 export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantModalProps) {
   if (!open) return null;
   const purchase = parsePurchasedAt(snapshot.purchasedAt);
