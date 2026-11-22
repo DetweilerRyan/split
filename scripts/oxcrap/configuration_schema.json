@@ -50,8 +50,8 @@
       "type": "string",
       "minLength": 1
     },
-    "guide": {
-      "description": "A document the findings point to, such as a procedure for responding to them. `--guide` overrides it.",
+    "helpUrl": {
+      "description": "Where to get help when there are findings, as commitlint's helpUrl is: a URL, shown as it is, or a path from this file's folder, which must exist. Printed as \"Get help: <url>\" under the findings. `--help-url` overrides it.",
       "type": "string",
       "minLength": 1
     }

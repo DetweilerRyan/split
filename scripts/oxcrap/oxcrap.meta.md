@@ -46,7 +46,7 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 
 - **The owner's words:** "the test suite should write a coverage report to disk and the crap script should take the path to the coverage report as a command argument. the goal should be that the crap script is largely independant of the rest of the app and should not assume where or how to execute this project's unit tests."
 - **Every `npm test` writes the report.** [`vitest.config.ts`](../../vitest.config.ts) turns coverage on for every run, writing `coverage/coverage-final.json`. It took the suite from about 4 s to 5 s. CI's `Tests` step writes the report and its `CRAP score` step reads it, so CI runs the suite once instead of twice.
-- **The script knows nothing of this project.** It takes the report (`--coverage`), the paths to score and an optional document to point to (`--guide`). It reads files and runs nothing: no tests, no git, nothing from npm. It works on any folder of code, in a git repository or not, skipping `node_modules` and dot-folders. [`package.json`](../../package.json)'s `oxcrap` script supplies this repository's values.
+- **The script knows nothing of this project.** It takes the report (`--coverage`), the paths to score and an optional place to get help (`--help-url`). It reads files and runs nothing: no tests, no git, nothing from npm. It works on any folder of code, in a git repository or not, skipping `node_modules` and dot-folders. [`package.json`](../../package.json)'s `oxcrap` script supplies this repository's values.
 - **A stale report is refused, not scored.** The script fails when the report is older than any file under the scored paths, tests included. That way a report from before the latest edits can't make a function look covered.
   - **A failed test run can't leave a stale report behind:** Vitest empties `coverage/` at the start of a run, and writes no report when a test fails.
   - **A partial run is the one gap:** a run of some test files writes a fresh report with only their coverage. That can only lower coverage, so it makes false findings, never a false pass.
@@ -109,7 +109,7 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
   - **the format:** JSON with comments and trailing commas;
   - **the schema:** a `configuration_schema.json` beside the code, for a `$schema` key;
   - **the names:** camelCase keys. `ignorePatterns` is the name both tools use, and `files` is what oxlint's overrides call their globs.
-- **The options are what a run needs to differ between projects:** `files`, `ignorePatterns`, `limits`, `coverage` and `guide`. With `coverage` and `guide` in the config, `npm run oxcrap` needs no arguments.
+- **The options are what a run needs to differ between projects:** `files`, `ignorePatterns`, `limits`, `coverage` and `helpUrl`. With `coverage` and `helpUrl` in the config, `npm run oxcrap` needs no arguments.
 - **The command line overrides the config,** option by option, and paths given on it replace `files`, so one-off runs need no second config.
 - **A config covers its own folder,** as oxlint's does, and oxCrap refuses a `files` glob reaching outside it. One reason found while building it: the default `**/.*/**` pattern, meant for dot-folders, also matches `..`.
 - **Unknown options and wrong types are errors,** not warnings, and so are `files` that match nothing: a typo shouldn't quietly fall back to a default and pass.
@@ -154,6 +154,14 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 - **oxCrap reads the `.gitignore` in the config's folder,** or the current folder without a config, with the same `ignore` package as `ignorePatterns`. It keeps its stricter defaults too: `node_modules/` and dot-folders are skipped even without a `.gitignore`, since scoring them is never wanted.
 - **What a `.gitignore` lists is left out of the stale-report check as well as scoring.** Only `ignorePatterns` files, such as tests, still count. Otherwise a gitignored build output written after the tests ran, such as `*.gen.js`, would make a fresh report look stale. A folder either lists isn't searched at all.
 
+### `helpUrl`
+
+- **It started as `guide`,** an option I added for a document to point to from the findings. The owner found it "kinda smelly" and asked for precedent, then said: "rename it to helpUrl and follow commitlint's precedent. consider also making sure that the file exsits when oxcrap runs" ([feedback](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7087217244)).
+- **The precedent is [commitlint's `helpUrl`](https://commitlint.js.org/reference/configuration),** "a custom URL to show upon failure". It prints a "Get help:" line under the errors, and none when no `helpUrl` is set. oxCrap does the same: `Get help: <url>` under findings, nothing otherwise. dependency-cruiser's per-rule `comment` and linters' per-rule docs links are related, but set by rule rather than once per project.
+- **A URL is printed as it is,** and not checked, since that would need the network.
+- **A path is checked on every run,** findings or not, and refused if the file is missing, so a moved or misspelled document can't go unnoticed. It's read from the config's folder (or from the current directory with `--help-url`), like the other paths, and printed from the current directory, so it points to the right file wherever oxCrap runs. `guide` had been printed as written, the only path option that wasn't resolved.
+- **This repository's `.oxcraprc.json` points it at `docs/engineering/crap.md`,** a path, so it's checked to exist.
+
 ### The folder and its modules
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."
@@ -196,6 +204,7 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 
 ## Options not taken
 
+- **`guide`, printed as written:** a vague name, and a path that wasn't resolved or checked. Replaced by `helpUrl`.
 - **`.gitignore` files in subfolders,** which oxlint also reads: not asked for, and the one beside the config covers this repository. Add them if a project relies on nested ones.
 - **A hand-written glob matcher and folder walk,** `glob.ts`: Node's `fs.globSync` does the same, stably, from Node 22.17.
 - **`tinyglobby`** (already installed, through Vite and Vitest), **`fast-glob`**, **`picomatch`** or **`minimatch`:** each a dependency, for what Node now does itself.

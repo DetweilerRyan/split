@@ -18,14 +18,14 @@ describe('parseConfig', () => {
       "ignorePatterns": ["**/*.test.*"],
       "limits": { "crap": 40, },
       "coverage": "coverage/coverage-final.json",
-      "guide": "docs/crap.md",
+      "helpUrl": "docs/crap.md",
     } // after`;
     expect(parseConfig(text, 'c.json')).toEqual({
       files: ['src/**'],
       ignorePatterns: ['**/*.test.*'],
       limits: { crap: 40, complexity: 10 },
       coverage: 'coverage/coverage-final.json',
-      guide: 'docs/crap.md',
+      helpUrl: 'docs/crap.md',
     });
   });
 
@@ -48,7 +48,7 @@ describe('parseConfig', () => {
   it.each([
     [
       '{ "file": ["src/**"] }',
-      'c.json has no option "file". The options are files, ignorePatterns, limits, coverage, guide.',
+      'c.json has no option "file". The options are files, ignorePatterns, limits, coverage, helpUrl.',
     ],
     ['{ "limits": { "score": 30 } }', 'c.json: "limits" has no option "score".'],
     ['[]', 'c.json must be object.'],
@@ -60,7 +60,7 @@ describe('parseConfig', () => {
     ['{ "limits": { "complexity": "10" } }', 'c.json: "limits.complexity" must be number.'],
     ['{ "coverage": "" }', 'c.json: "coverage" must NOT have fewer than 1 characters.'],
     ['{ "$schema": 1 }', 'c.json: "$schema" must be string.'],
-    ['{\n  "__proto__": { "guide": "x" }\n}', 'c.json has no option "__proto__", at 2:3.'],
+    ['{\n  "__proto__": { "helpUrl": "x" }\n}', 'c.json has no option "__proto__", at 2:3.'],
   ])('checks %s against the schema', (text, message) => {
     expect(() => parseConfig(text, 'c.json')).toThrow(message);
   });
@@ -70,7 +70,7 @@ describe('parseConfig', () => {
       parseConfig('{ "file": 1, "limits": { "crap": 0, "complexity": -1 } }', 'c.json'),
     ).toThrow(
       [
-        'c.json has no option "file". The options are files, ignorePatterns, limits, coverage, guide.',
+        'c.json has no option "file". The options are files, ignorePatterns, limits, coverage, helpUrl.',
         'c.json: "limits.crap" must be > 0.',
         'c.json: "limits.complexity" must be > 0.',
       ].join('\n'),
@@ -81,18 +81,18 @@ describe('parseConfig', () => {
 describe('merge', () => {
   it('lays a config over the defaults, and the command line over both, skipping what a layer leaves unset', () => {
     expect(
-      merge({ files: ['src/**'], guide: 'a.md' }, { files: undefined, guide: 'b.md' }),
+      merge({ files: ['src/**'], helpUrl: 'a.md' }, { files: undefined, helpUrl: 'b.md' }),
     ).toEqual({
       ...DEFAULTS,
       files: ['src/**'],
-      guide: 'b.md',
+      helpUrl: 'b.md',
     });
   });
 });
 
 describe('configuration_schema.json', () => {
   it('names the options that OPTIONS and the error messages list', () => {
-    expect(OPTIONS).toEqual(['files', 'ignorePatterns', 'limits', 'coverage', 'guide']);
+    expect(OPTIONS).toEqual(['files', 'ignorePatterns', 'limits', 'coverage', 'helpUrl']);
   });
 
   it('gives the same defaults as the code', () => {

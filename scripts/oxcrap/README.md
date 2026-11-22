@@ -43,15 +43,15 @@ CRAP rewards coverage, so it is only as honest as the tests behind it. A test th
 ## Usage
 
 ```sh
-node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--guide <doc>] [<path>...]
+node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--help-url <url>] [<path>...]
 ```
 
-| Argument                  | Meaning                                                                                                                                                                           |
-| :------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-c`, `--config <config>` | The config file to read. Without it, oxCrap reads `.oxcraprc.json` or `.oxcraprc.jsonc` from the current directory if there is one, and uses the defaults if not.                 |
-| `--coverage <report>`     | The istanbul JSON coverage report, such as `coverage/coverage-final.json`, from a test run of the code as it is now. Overrides the config's `coverage`; one of the two is needed. |
-| `--guide <doc>`           | A document to point to when there are findings, such as your team's procedure for responding to them. Overrides the config's `guide`.                                             |
-| `<path>...`               | Folders or files to score, from the current directory, in place of the config's `files`. A folder means every JavaScript and TypeScript file in it.                               |
+| Argument                  | Meaning                                                                                                                                                                                                                                    |
+| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-c`, `--config <config>` | The config file to read. Without it, oxCrap reads `.oxcraprc.json` or `.oxcraprc.jsonc` from the current directory if there is one, and uses the defaults if not.                                                                          |
+| `--coverage <report>`     | The istanbul JSON coverage report, such as `coverage/coverage-final.json`, from a test run of the code as it is now. Overrides the config's `coverage`; one of the two is needed.                                                          |
+| `--help-url <url>`        | Where to get help when there are findings, as commitlint's `helpUrl` is: a URL, shown as it is, or a path from the current directory, which must exist. Printed as `Get help: <url>` under the findings. Overrides the config's `helpUrl`. |
+| `<path>...`               | Folders or files to score, from the current directory, in place of the config's `files`. A folder means every JavaScript and TypeScript file in it.                                                                                        |
 
 Run your tests with coverage first, then oxCrap. With Vitest, for example:
 
@@ -79,8 +79,8 @@ oxCrap's config follows oxlint's and oxfmt's:
   "ignorePatterns": ["node_modules/", ".*/", "*.test.*", "*.spec.*"],
   "limits": { "crap": 30, "complexity": 10 },
   "coverage": "coverage/coverage-final.json",
-  // Printed with the findings, so people know how to respond.
-  "guide": "docs/crap.md",
+  // Printed as "Get help: docs/crap.md" under any findings.
+  "helpUrl": "docs/crap.md",
 }
 ```
 
@@ -90,7 +90,7 @@ oxCrap's config follows oxlint's and oxfmt's:
 | `ignorePatterns` | Patterns left out of scoring, in gitignore style. A folder that matches isn't searched. Setting this replaces the default list. | `["node_modules/", ".*/", "*.test.*", "*.spec.*"]` |
 | `limits`         | The highest `crap` score and `complexity` a function may have. Either can be left out.                                          | `{ "crap": 30, "complexity": 10 }`                 |
 | `coverage`       | The coverage report's path.                                                                                                     | none, so `--coverage` is needed                    |
-| `guide`          | A document the findings point to.                                                                                               | none                                               |
+| `helpUrl`        | Where to get help when there are findings: a URL, or a path from the config's folder, which must exist.                         | none                                               |
 
 - **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it. Paths on the command line are read from the current directory.
 - **`files` are globs,** as Node's [`fs.globSync`](https://nodejs.org/api/fs.html#fsglobsyncpattern-options) takes them: `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. A folder given on the command line can't have glob characters in its name; list it in `files` instead.
@@ -111,7 +111,7 @@ CRAP findings:
 - src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%. Over the limits (CRAP 30, complexity 10). To leave it, add `// @crap-allow CRAP 156, complexity 12. <reason>` directly above it.
 - src/rate.ts:1 rate: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12. Update the comment to `// @crap-allow CRAP 182, complexity 13.`, and check its reason still holds.
 
-Follow docs/crap.md to respond.
+Get help: docs/crap.md
 ```
 
 A function inside another is named with the functions around it, such as `RoomView > changeDisplayCurrency`. An unnamed one is named by what it's assigned to, the call it's passed to (`items.forEach callback`), or its JSX attribute (`onClick`).
