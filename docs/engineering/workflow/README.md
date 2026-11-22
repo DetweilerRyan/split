@@ -36,7 +36,7 @@ A session that picks up work an earlier session left follows [resuming work](res
 | [Resuming work](resuming-work.md)                     | Before continuing work on a branch that an earlier session started, including after the session's context was cleared                                                               |
 | [Reviewing work](reviewing-work.md)                   | Before opening a pull request or pushing a revision, to review your own work; before reviewing someone else's pull request, or when asked to check one                              |
 | [Submitting work](submitting-work.md)                 | Before opening a pull request, writing its description, or marking it ready; before pushing to a branch that has had a pull request; when `main` moves while a pull request is open |
-| [Revising work](revising-work.md)                     | When the owner gives feedback on submitted work, in a review or in the session                                                                                                      |
+| [Revising work](revising-work.md)                     | When the owner gives feedback on submitted work, in a review or in the session. Any request in the session that changes an open pull request is feedback, including an approval     |
 | [Cleaning up merged work](cleaning-up-merged-work.md) | A pull request you worked on has been merged, before deleting any branch                                                                                                            |
 
 ## Adding a procedure

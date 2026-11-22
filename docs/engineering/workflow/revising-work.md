@@ -2,6 +2,14 @@
 
 When the owner gives feedback on submitted work, record it on the pull request, act on it, and record the response there too. Feedback can come as a GitHub review or in a session's conversation. Either way the pull request is the record: a session's context doesn't outlast it, and [resuming work](resuming-work.md) reads the pull request, not an earlier conversation.
 
+**Any request in the session that changes an open pull request is feedback,** draft or ready, even when it reads as a new task. That includes:
+
+- approving a dependency or a recommendation;
+- choosing between options the session offered;
+- asking for something to be added, moved or renamed.
+
+If the change will land on the branch of a pull request that is open, follow the steps below.
+
 ## Steps
 
 Replace `<n>` with the pull request number.
