@@ -1,44 +1,51 @@
 #!/usr/bin/env node
-// oxCrap: scores each function under the given paths by CRAP, complexity² × (1 − coverage)³ + complexity,
-// where complexity is counted by complexity.ts and coverage comes from the istanbul JSON report
-// it's given. It fails when a function the branch changes is over the limits in check.ts, unless
-// a `// @crap-allow` comment directly above it gives its current numbers and a reason; and when any
-// @crap-allow comment's numbers no longer match its function. It never runs the tests, and never
-// writes to source files. Why it works this way is in oxcrap.meta.md beside it; read that only when
-// changing or questioning it.
+// oxCrap: scores every function under the given paths by CRAP, complexity² × (1 − coverage)³ +
+// complexity, where complexity is counted by complexity.ts and coverage comes from the istanbul
+// JSON report it's given. It fails when a function is over the limits in check.ts, unless a
+// `// @crap-allow` comment directly above it gives its current numbers and a reason; and when any
+// @crap-allow comment's numbers no longer match its function. It reads files and nothing else: it
+// never runs the tests or git, and never writes to source files. Why it works this way is in
+// oxcrap.meta.md beside it; read that only when changing or questioning it.
 //
-// Usage, from anywhere in the repository:
-//   node scripts/oxcrap/oxcrap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...
+// Usage:
+//   node scripts/oxcrap/oxcrap.ts --coverage <report> [--guide <doc>] <path>...
 //     --coverage  an istanbul JSON report, such as coverage/coverage-final.json, written by a test
 //                 run of the code as it is now
-//     --base      the ref to find changed functions against (default origin/main)
 //     --guide     a document to point to from the findings, such as a procedure for responding
 //     <path>      the folders or files whose functions are scored, from the current directory
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type Allow, type Finding, findAllows } from './allow.ts';
 import { check, crapOf, type Scored } from './check.ts';
 import { coverageOf, newerThan, parseReport, type Report } from './coverage.ts';
-import { changedLines, git } from './diff.ts';
 import { type Fn, parse } from './functions.ts';
 
-const USAGE =
-  'Usage: node scripts/oxcrap/oxcrap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...';
+const USAGE = 'Usage: node scripts/oxcrap/oxcrap.ts --coverage <report> [--guide <doc>] <path>...';
 const CODE = /\.[cm]?[jt]sx?$/;
 const TEST = /\.(test|spec)\.[cm]?[jt]sx?$/;
+const SKIPPED = /(^|\/)(node_modules|\.[^/]+)(\/|$)/;
 
-/** The files git knows under `paths`, tracked or new, that exist in the working tree. */
-function files(root: string, paths: string[]) {
-  return git(root, 'ls-files', '--cached', '--others', '--exclude-standard', '--', ...paths)
-    .split('\n')
-    .filter((file) => file && existsSync(join(root, file)));
+/** Every file under `paths`, named from the current directory, leaving out node_modules and dot-folders. */
+function files(paths: string[]) {
+  const found = new Set<string>();
+  for (const path of paths) {
+    if (!existsSync(path)) throw new Error(`No file or folder at ${path}.`);
+    const entries = statSync(path).isDirectory()
+      ? readdirSync(path, { recursive: true, encoding: 'utf8' }).map((entry) => join(path, entry))
+      : [path];
+    for (const entry of entries) {
+      const file = relative('.', entry).split(sep).join('/');
+      if (!SKIPPED.test(file) && statSync(entry).isFile()) found.add(file);
+    }
+  }
+  return [...found].sort();
 }
 
-/** The report at `path`, refused when it's missing or older than any file under `paths`. */
-function readReport(root: string, path: string, paths: string[]): Report {
+/** The report at `path`, refused when it's missing or older than any of `all`. */
+function readReport(path: string, all: string[]): Report {
   if (!existsSync(path)) {
     throw new Error(
       `No coverage report at ${path}. Run the tests with coverage first; a run whose tests fail may write none.`,
@@ -46,7 +53,7 @@ function readReport(root: string, path: string, paths: string[]): Report {
   }
   const stale = newerThan(
     statSync(path).mtimeMs,
-    files(root, paths).map((file) => ({ file, time: statSync(join(root, file)).mtimeMs })),
+    all.map((file) => ({ file, time: statSync(file).mtimeMs })),
   );
   if (stale.length > 0) {
     const more = stale.length > 1 ? ` and ${stale.length - 1} more` : '';
@@ -57,14 +64,14 @@ function readReport(root: string, path: string, paths: string[]): Report {
   return parseReport(readFileSync(path, 'utf8'), path);
 }
 
-function findings(root: string, base: string, paths: string[], report: Report) {
+function findings(sources: string[], report: Report) {
   const scored: Scored[] = [];
   const allowed = new Map<Fn, Allow>();
   const problems: Finding[] = [];
-  for (const file of files(root, paths).filter((f) => CODE.test(f) && !TEST.test(f))) {
-    const source = readFileSync(join(root, file), 'utf8');
+  for (const file of sources) {
+    const source = readFileSync(file, 'utf8');
     const parsed = parse(file, source);
-    const coverage = coverageOf(parsed.functions, report[resolve(root, file)]);
+    const coverage = coverageOf(parsed.functions, report[resolve(file)]);
     for (const fn of parsed.functions) {
       const covered = coverage.get(fn) ?? 0;
       scored.push({ fn, file, coverage: covered, crap: crapOf(fn.complexity, covered) });
@@ -73,44 +80,31 @@ function findings(root: string, base: string, paths: string[], report: Report) {
     for (const [fn, allow] of allows.allowed) allowed.set(fn, allow);
     problems.push(...allows.problems);
   }
-  const result = check(scored, allowed, changedLines(root, base, paths));
-  return { problems: [...problems, ...result.problems], notices: result.notices };
+  return [...problems, ...check(scored, allowed)];
 }
-
-const list = (items: Finding[]) =>
-  items.map((f) => `- ${f.file}:${f.line} ${f.message}`).join('\n');
 
 function main(args: string[]) {
   const { values, positionals } = parseArgs({
     args,
     allowPositionals: true,
-    options: {
-      coverage: { type: 'string' },
-      base: { type: 'string', default: 'origin/main' },
-      guide: { type: 'string' },
-    },
+    options: { coverage: { type: 'string' }, guide: { type: 'string' } },
   });
   if (!values.coverage || positionals.length === 0) throw new Error(USAGE);
 
-  const root = git(process.cwd(), 'rev-parse', '--show-toplevel');
-  // git reports paths from the repository root, so name the scored paths the same way.
-  const paths = positionals.map((path) => relative(root, resolve(path)) || '.');
-  const report = readReport(root, resolve(values.coverage), paths);
-  const { problems, notices } = findings(root, values.base, paths, report);
-
-  for (const notice of notices) {
-    console.log(
-      process.env.GITHUB_ACTIONS
-        ? `::warning file=${notice.file},line=${notice.line}::${notice.message}`
-        : `Notice: ${notice.file}:${notice.line} ${notice.message}`,
-    );
-  }
+  const all = files(positionals);
+  const report = readReport(values.coverage, all);
+  const problems = findings(
+    all.filter((file) => CODE.test(file) && !TEST.test(file)),
+    report,
+  );
   if (problems.length) {
-    console.error(`CRAP findings, checked against ${values.base}:\n${list(problems)}`);
+    console.error(
+      `CRAP findings:\n${problems.map((f) => `- ${f.file}:${f.line} ${f.message}`).join('\n')}`,
+    );
     if (values.guide) console.error(`\nFollow ${values.guide} to respond.`);
     return 1;
   }
-  console.log(`No CRAP findings, checked against ${values.base}.`);
+  console.log('No CRAP findings.');
   return 0;
 }
 

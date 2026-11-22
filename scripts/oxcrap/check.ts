@@ -1,7 +1,6 @@
 // The CRAP rules: which functions are over the limits, and which @crap-allow comments no longer
 // match their function.
 import type { Allow, Finding } from './allow.ts';
-import { type Changed, isChanged } from './diff.ts';
 import type { Fn } from './functions.ts';
 
 export const MAX_CRAP = 30;
@@ -23,13 +22,12 @@ const order = (a: Finding, b: Finding) =>
   a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1;
 
 /**
- * Problems fail the check: a changed function over the limits with no @crap-allow comment, and
- * any comment whose numbers don't match its function or whose function is within the limits.
- * Notices are the comments the branch adds or changes, for the owner to see.
+ * Every function is checked: one over the limits fails unless a @crap-allow comment gives its
+ * current numbers, and a comment fails when its numbers don't match its function or its function
+ * is within the limits.
  */
-export function check(scored: Scored[], allowed: Map<Fn, Allow>, changed: Changed) {
+export function check(scored: Scored[], allowed: Map<Fn, Allow>) {
   const problems: Finding[] = [];
-  const notices: Finding[] = [];
   for (const s of scored) {
     const allow = allowed.get(s.fn);
     if (allow) {
@@ -45,13 +43,7 @@ export function check(scored: Scored[], allowed: Map<Fn, Allow>, changed: Change
           message: `${describe(s)}, but its @crap-allow comment says CRAP ${allow.crap}, complexity ${allow.complexity}. Update the comment to \`// @crap-allow ${numbers(s)}.\`, and check its reason still holds.`,
         });
       }
-      if (isChanged(changed.get(allow.file), allow.line, allow.lastLine)) {
-        notices.push({
-          ...at,
-          message: `Adds or changes the @crap-allow comment for ${s.fn.name} (CRAP ${allow.crap}, complexity ${allow.complexity}). Its reason: ${allow.reason || '(none)'}`,
-        });
-      }
-    } else if (overLimit(s) && isChanged(changed.get(s.file), s.fn.start.line, s.fn.end.line)) {
+    } else if (overLimit(s)) {
       problems.push({
         file: s.file,
         line: s.fn.start.line,
@@ -59,5 +51,5 @@ export function check(scored: Scored[], allowed: Map<Fn, Allow>, changed: Change
       });
     }
   }
-  return { problems: problems.sort(order), notices: notices.sort(order) };
+  return problems.sort(order);
 }

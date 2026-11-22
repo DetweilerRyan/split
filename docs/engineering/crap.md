@@ -1,14 +1,14 @@
 # CRAP score
 
-oxCrap, [`scripts/oxcrap/oxcrap.ts`](../../scripts/oxcrap/oxcrap.ts), scores each function in `src/` and `app/` by its complexity and how much of it the tests run. A function the branch changes fails when it's over the limits in [`check.ts`](../../scripts/oxcrap/check.ts), unless a [`@crap-allow` comment](#allowing-a-function-over-the-limits) above it records its current numbers and a reason. This procedure says what to do with a finding.
+oxCrap, [`scripts/oxcrap/oxcrap.ts`](../../scripts/oxcrap/oxcrap.ts), scores each function in `src/` and `app/` by its complexity and how much of it the tests run. Every function there fails when it's over the limits in [`check.ts`](../../scripts/oxcrap/check.ts), unless a [`@crap-allow` comment](#allowing-a-function-over-the-limits) above it records its current numbers and a reason. This procedure says what to do with a finding.
 
 ## Where findings come from
 
 The script never runs the tests. It reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`, and refuses a report older than any file in `src/` or `app/`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them.
 
 - **The Stop hook,** [`scripts/stop-hook.ts`](../../scripts/stop-hook.ts), runs lint, `npm test` and `npm run oxcrap` when a Claude Code session stops with changes in `src/` or `app/`. It gives the session what fails as advice, once per stop, and never blocks.
-- **CI** runs `npm test`, then `npm run oxcrap` against the pull request's base branch, and fails on any finding.
-- **`npm run oxcrap`,** one of the definition-of-done checks, compares the branch with `origin/main`.
+- **CI** runs `npm test`, then `npm run oxcrap`, and fails on any finding.
+- **`npm run oxcrap`** is one of the definition-of-done checks.
 
 All three run the same script on a fresh report, so they print the same findings.
 
@@ -46,7 +46,6 @@ export function RestaurantModal() {
 - **Give a reason after the numbers.** The check fails on a comment with no reason.
 - **Put the function on the line below the comment, on a line of its own.** Other comments, such as a lint directive or a doc comment, can sit between them. The check fails on a comment that isn't directly above a function, and on one above a line where two functions start.
 - **Delete the comment when the function is within the limits again.** The check fails on a comment for a function within the limits.
-- **A comment the branch adds or changes is flagged for the owner.** The check passes, but prints a notice quoting the reason, and CI shows it as a warning.
 
 A comment that mentions `@crap-allow` without starting with it is ignored, so a comment can explain one.
 
