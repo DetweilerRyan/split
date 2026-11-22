@@ -48,7 +48,8 @@ function targetLine(code: string[], comment: Comment, parsed: Parsed) {
   if (rest !== '' && rest !== '}') return end.line;
   for (let line = end.line + 1; line <= code.length; line++) {
     const trimmed = code[line - 1].trim();
-    if (trimmed !== '' && trimmed !== '{}') return line;
+    // A JSX comment, {/* … */}, leaves its braces behind once the comment is blanked.
+    if (trimmed.replace(/\s+/g, '') !== '' && trimmed.replace(/\s+/g, '') !== '{}') return line;
   }
   return undefined;
 }

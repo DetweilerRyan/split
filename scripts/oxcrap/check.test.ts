@@ -87,6 +87,14 @@ describe('check', () => {
     ]);
   });
 
+  it('compares the score with the limit as it prints it, to one decimal place', () => {
+    const justOver = { ...scored('a', 5, 0), crap: 30.04 };
+    expect(check([justOver], new Map(), limits)).toEqual([]);
+    expect(messages(check([{ ...justOver, crap: 30.06 }], new Map(), limits))).toEqual([
+      expect.stringContaining('a: CRAP 30.1, complexity 5, coverage 0%. Over the limits'),
+    ]);
+  });
+
   it('orders findings by file and line', () => {
     const findings = check(
       [scored('later', 12, 0, 30), scored('earlier', 12, 0, 5)],

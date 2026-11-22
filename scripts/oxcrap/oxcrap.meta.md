@@ -155,6 +155,18 @@ The project's Claude Code Stop hook runs `npm run oxcrap` and passes its finding
 - **A path is checked on every run,** findings or not, and refused if the file is missing, so a moved or misspelled document can't go unnoticed. It's read from the config's folder (or from the current directory with `--help-url`), like the other paths, and printed from the current directory, so it points to the right file wherever oxCrap runs. `guide` had been printed as written, the only path option that wasn't resolved.
 - **This repository's `.oxcraprc.json` points it at `docs/engineering/crap.md`,** a path, so it's checked to exist.
 
+### What an independent review changed
+
+A review by a subagent with none of the building session's context ([findings](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7087852542)) led to these fixes:
+
+- **Coverage is matched by real path.** Both the report's paths and the scored files' are resolved through symlinks, with `/` separators, and compared case-insensitively on Windows. Matching by exact text gave false 0% findings through a symlinked config, under macOS's `/var` (a symlink to `/private/var`), and with Windows separators.
+- **A report covering none of the scored files is an error,** rather than a 0% finding for every function. It's almost always the wrong report, or one written from another folder.
+- **A line holding only a JSX comment counts as a comment line** between a `@crap-allow` and its function. A second `{/* … */}` had broken the match.
+- **`..` is refused anywhere in a `files` glob,** not only at its start. A `-c` naming a folder, and a report missing `fnMap` or `f`, are clear errors.
+- **The score is compared with the limit to one decimal place,** as it's printed and written in comments, so 30.04 isn't a finding that reads "CRAP 30, over the limit of 30".
+- **A `!` in `ignorePatterns` can't bring back what the `.gitignore` lists,** so scoring and the stale-report check agree.
+- **Node 22.18, the README's minimum, was tested:** oxCrap's, the hook's and the lint config's tests pass on Node 22.18.0 in a container, with no experimental warnings.
+
 ### The folder and its modules
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."

@@ -12,6 +12,13 @@ The hook came with the CRAP check, which the owner decided on [#63](https://gith
   - **Exit code 2 and `"decision": "block"` would block instead.**
 - **It advises once per stop:** it stays quiet when `stop_hook_active` is true, which means Claude is already continuing because of a stop hook. Claude Code also caps continuations in a row at 8 (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`).
 - **It runs nothing when `src/` and `app/` haven't changed,** so a session that only touches docs isn't slowed by a test run.
+- **It stays quiet when nothing in `src/` or `app/` changed since the session's last stop,** by comparing a fingerprint of the work.
+  - **Why:** an [independent review](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7087852542) noted that, comparing only with the merge base, every stop on a branch with changes ran lint and the whole suite, Q&A turns included, and repeated any failure left from earlier. After research, the owner said "add the fingerprint and fix the review findings".
+  - **What the research found:** Claude Code's Stop input has no "changed this turn" field, and its docs suggest a Stop hook that scans the working tree ([hooks reference](https://code.claude.com/docs/en/hooks)). Its `FileChanged` event can't watch folders, since its matcher takes literal file names. The common community pattern, a `PostToolUse` hook marking Edit and Write as dirty, misses edits made through Bash ([one test](https://pub.towardsai.net/does-your-claude-code-hook-see-every-edit-an-edit-write-matcher-saw-3-of-7-5ca1defab37e) saw 3 of 7 edits).
+  - **What the fingerprint hashes:** the commit, `git diff HEAD` for the watched folders, and untracked files' names and contents. So it changes however an edit was made.
+  - **Where it's kept:** one file per `session_id`, in `git rev-parse --git-path claude-stop-hook`. That keeps it out of the working tree, uncommitted and per worktree. It's saved before the checks run, so a failure is reported once, and again after the next change. Files older than 7 days are deleted.
+  - **It also guards against a reported bug,** where `stop_hook_active` stays false on repeated fires ([issue #54360](https://github.com/anthropics/claude-code/issues/54360), closed without a fix): unchanged work stays quiet whatever that flag says.
+- **On Windows, npm runs through a shell,** because it's `npm.cmd` there, which Node won't start without one.
 - **It runs lint first and the tests second, and oxCrap only when the tests pass,** since a failing test run writes no coverage report.
 - **It doesn't add its own pointer to the CRAP procedure.** `npm run oxcrap` already ends its findings with `Get help:`, from `helpUrl` in [`.oxcraprc.json`](../.oxcraprc.json).
 - **No skill.** A hook defined in a skill runs only after the skill is invoked, a hook can't invoke a skill, and [`AGENTS.md`](../AGENTS.md) sends every agent to `docs/engineering/` for procedures.
@@ -20,3 +27,10 @@ The hook came with the CRAP check, which the owner decided on [#63](https://gith
 
 - **The suite grows slow enough that the hook delays sessions noticeably:** run only the tests related to the change in the hook, and keep the full run in CI. A partial run's coverage report then needs oxCrap to know which functions it covers, so revisit its stale-report rule too.
 - **[#65](https://github.com/DetweilerRyan/split/issues/65)** pilots running tooling tests apart from the app's, which would change what `npm test` runs here.
+
+## Options not taken
+
+- **Running on every stop while the branch has changes,** as the hook first did: every stop ran the whole suite, and repeated old failures.
+- **A `PostToolUse` hook marking edits as dirty:** it misses edits made through Bash, and it adds a second hook.
+- **`FileChanged`:** it can't watch a folder.
+- **Reading the turn's tool calls from the transcript:** it depends on the transcript's format, and misses Bash edits too.

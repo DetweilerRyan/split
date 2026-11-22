@@ -9,9 +9,7 @@ const script = fileURLToPath(new URL('./stop-hook.ts', import.meta.url));
 const directories: string[] = [];
 
 // Fakes of the three npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when
-// a file named tests-fail exists, and `oxcrap` prints crap-output, then the arguments it was given,
-// and exits with crap-status. `oxcrap` is a file, as the real one is, so npm's added arguments reach
-// it rather than node.
+// a file named tests-fail exists, and `oxcrap` prints crap-output and exits with crap-status.
 const scripts = {
   lint: 'node -e "if (process.env.LINT_FAILS) { console.log(\'lint: 1 problem\'); process.exit(1) }"',
   test: "node -e \"const fs = require('fs'); if (fs.existsSync('tests-fail')) { console.log('FAIL adds up'); process.exit(1) }\"",
@@ -19,7 +17,7 @@ const scripts = {
 };
 const fakeCrap = `import { existsSync, readFileSync } from 'node:fs';
 const read = (file, otherwise) => (existsSync(file) ? readFileSync(file, 'utf8') : otherwise);
-console.log(read('crap-output', 'No CRAP findings.') + ' args: ' + process.argv.slice(2).join(' '));
+console.log(read('crap-output', 'No CRAP findings.'));
 process.exit(Number(read('crap-status', '0')));
 `;
 
@@ -86,6 +84,59 @@ describe('stop-hook', () => {
       '`npm run oxcrap` reports:\nCRAP findings: grade is over the limits.',
     );
     expect(result.context).toContain('This is advice; CI fails on each of these.');
+  });
+
+  it('says nothing at a session’s next stop if src/ hasn’t changed since, and speaks again after an edit', () => {
+    const cwd = repository();
+    write(cwd, {
+      'src/grade.ts': 'export const grade = 1;\n',
+      'crap-output': 'CRAP findings: grade is over the limits.',
+      'crap-status': '1',
+    });
+    const stop = { stop_hook_active: false, session_id: 'session-1' };
+
+    expect(hook(cwd, stop).context).toContain('grade is over the limits.');
+    expect(hook(cwd, stop)).toMatchObject({ status: 0, stdout: '' });
+
+    write(cwd, { 'src/grade.ts': 'export const grade = 2;\n' });
+    expect(hook(cwd, stop).context).toContain('grade is over the limits.');
+  });
+
+  it('notices a new file’s contents changing, and a commit, as well as edits git tracks', () => {
+    const cwd = repository();
+    write(cwd, {
+      'src/new.ts': 'export const a = 1;\n',
+      'crap-status': '1',
+      'crap-output': 'Findings.',
+    });
+    const stop = { stop_hook_active: false, session_id: 'session-1' };
+    expect(hook(cwd, stop).context).toContain('Findings.');
+
+    write(cwd, { 'src/new.ts': 'export const a = 2;\n' });
+    expect(hook(cwd, stop).context).toContain('Findings.');
+
+    git(cwd, 'add', 'src/new.ts');
+    git(cwd, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'add');
+    expect(hook(cwd, stop).context).toContain('Findings.');
+    expect(hook(cwd, stop).stdout).toBe('');
+  });
+
+  it('keeps each session’s fingerprint apart, and checks every stop without a session id', () => {
+    const cwd = repository();
+    write(cwd, {
+      'src/grade.ts': 'export const grade = 1;\n',
+      'crap-status': '1',
+      'crap-output': 'Findings.',
+    });
+
+    expect(hook(cwd, { stop_hook_active: false, session_id: 'one' }).context).toContain(
+      'Findings.',
+    );
+    expect(hook(cwd, { stop_hook_active: false, session_id: 'two' }).context).toContain(
+      'Findings.',
+    );
+    expect(hook(cwd, { stop_hook_active: false }).context).toContain('Findings.');
+    expect(hook(cwd, { stop_hook_active: false }).context).toContain('Findings.');
   });
 
   it('says nothing when the checks pass', () => {

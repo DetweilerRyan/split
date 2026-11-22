@@ -6,7 +6,7 @@
 //
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type Allow, type Finding, findAllows } from './allow.ts';
@@ -27,7 +27,23 @@ const shown = (path: string) => posix(relative('.', path)) || '.';
  * Whether a path or glob, from the scored folder, reaches outside it. A config covers the folder
  * it's in, as oxlint's does.
  */
-const outside = (path: string) => path === '..' || path.startsWith('../') || path.startsWith('/');
+const outside = (path: string) =>
+  /(^|[/{,])\.\.(?=[/},]|$)/.test(path) || path.startsWith('/') || /^[a-z]:/i.test(path);
+
+/**
+ * A path as a key both sides of a coverage lookup agree on: real (symlinks resolved, as a test run
+ * sees it), with `/` between folders, and in one case on Windows, where paths aren't case-sensitive.
+ */
+function pathKey(path: string) {
+  let real: string;
+  try {
+    real = realpathSync(path);
+  } catch {
+    real = resolve(path);
+  }
+  const key = posix(real);
+  return process.platform === 'win32' ? key.toLowerCase() : key;
+}
 
 /** Whether a help value is a URL, such as https://…, rather than a path. */
 const isUrl = (value: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
@@ -56,6 +72,7 @@ function helpFrom(
 function configFile(given: string | undefined) {
   if (given) {
     if (!existsSync(given)) throw new Error(`No config file at ${given}.`);
+    if (statSync(given).isDirectory()) throw new Error(`${given} is a folder, not a config file.`);
     return given;
   }
   return CONFIG_NAMES.find((name) => existsSync(name));
@@ -106,15 +123,22 @@ function readReport(path: string, files: string[]): Report {
   return parseReport(readFileSync(path, 'utf8'), shown(path));
 }
 
-function findings(sources: string[], report: Report, config: Config) {
+function findings(sources: string[], report: Report, reportPath: string, config: Config) {
   const scored: Scored[] = [];
   const allowed = new Map<Fn, Allow>();
   const problems: Finding[] = [];
+  const byPath = new Map(Object.entries(report).map(([path, file]) => [pathKey(path), file]));
+  const covered = sources.filter((path) => byPath.has(pathKey(path))).length;
+  if (sources.length > 0 && covered === 0) {
+    throw new Error(
+      `The coverage report at ${shown(reportPath)} covers none of the ${sources.length} files being scored. Is it the report for this code, written from this folder?`,
+    );
+  }
   for (const path of sources) {
     const file = shown(path);
     const source = readFileSync(path, 'utf8');
     const parsed = parse(file, source);
-    const coverage = coverageOf(parsed.functions, report[path]);
+    const coverage = coverageOf(parsed.functions, byPath.get(pathKey(path)));
     for (const fn of parsed.functions) {
       const covered = coverage.get(fn) ?? 0;
       scored.push({ fn, file, coverage: covered, crap: crapOf(fn.complexity, covered) });
@@ -181,7 +205,7 @@ function main(args: string[]) {
   }
   const absolute = (file: string) => join(root, file);
   const report = readReport(coverage, matched.map(absolute));
-  const problems = findings(scored.map(absolute), report, config);
+  const problems = findings(scored.map(absolute), report, coverage, config);
 
   if (problems.length) {
     console.error(

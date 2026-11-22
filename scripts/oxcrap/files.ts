@@ -31,7 +31,9 @@ export function findFiles(
   gitignore = '',
 ) {
   const untracked = ignore().add(gitignore);
-  const ignored = ignore().add(gitignore).add(ignorePatterns);
+  const patterns = ignore().add(ignorePatterns);
+  // Kept apart, so a `!` in ignorePatterns can't bring back what the .gitignore lists.
+  const ignored = { ignores: (path: string) => untracked.ignores(path) || patterns.ignores(path) };
   // A Dirent's parentPath is relative to the search's cwd, which is `root`, not this process's.
   const from = (entry: Dirent) =>
     posix(relative(root, resolve(root, entry.parentPath, entry.name)));

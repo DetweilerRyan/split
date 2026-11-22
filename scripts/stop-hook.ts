@@ -10,13 +10,28 @@
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
 const WATCHED = ['src', 'app'];
+/** How long a session's fingerprint is kept after its last stop. */
+const KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 
 function run(command: string, args: string[], cwd: string) {
-  const result = spawnSync(command, args, {
+  // On Windows, npm is npm.cmd, which Node runs only through a shell.
+  const shell = process.platform === 'win32' && command === 'npm';
+  const result = spawnSync(shell ? `${command} ${args.join(' ')}` : command, shell ? [] : args, {
     cwd,
+    shell,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
     env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
@@ -27,8 +42,47 @@ function run(command: string, args: string[], cwd: string) {
 
 const tail = (text: string, lines: number) => text.split('\n').slice(-lines).join('\n');
 
+/**
+ * A hash of the work in WATCHED: the commit, every change git sees there since it, and the
+ * contents of new files. It changes with any edit, however it was made: an Edit, a Bash command
+ * or a commit.
+ */
+function fingerprint(root: string) {
+  const hash = createHash('sha256');
+  hash.update(run('git', ['rev-parse', 'HEAD'], root).output);
+  hash.update(
+    run('git', ['diff', 'HEAD', '--no-ext-diff', '--binary', '--', ...WATCHED], root).output,
+  );
+  const untracked = run(
+    'git',
+    ['ls-files', '--others', '--exclude-standard', '-z', '--', ...WATCHED],
+    root,
+  );
+  for (const file of untracked.output.split('\0').filter(Boolean).sort()) {
+    hash.update(`\0${file}\0`).update(readFileSync(join(root, file)));
+  }
+  return hash.digest('hex');
+}
+
+/**
+ * The file holding a session's fingerprint from its last stop, inside the repository's git folder
+ * (a worktree's own), so it's never committed and each worktree keeps its own. Old ones are pruned.
+ */
+function stateFile(root: string, session: string) {
+  const folder = resolve(
+    root,
+    run('git', ['rev-parse', '--git-path', 'claude-stop-hook'], root).output,
+  );
+  mkdirSync(folder, { recursive: true });
+  for (const name of readdirSync(folder)) {
+    const path = join(folder, name);
+    if (Date.now() - statSync(path).mtimeMs > KEEP_MS) rmSync(path, { force: true });
+  }
+  return join(folder, session.replace(/[^\w-]/g, '_'));
+}
+
 /** The advice for Claude, or nothing when there's nothing to say. */
-function advice(input: { cwd?: string; stop_hook_active?: boolean }) {
+function advice(input: { cwd?: string; stop_hook_active?: boolean; session_id?: string }) {
   // Advise once: when Claude is already continuing because of a stop hook, let it stop.
   if (input.stop_hook_active) return undefined;
   const top = run('git', ['rev-parse', '--show-toplevel'], input.cwd ?? process.cwd());
@@ -44,6 +98,16 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean }) {
     run('git', ['ls-files', '--others', '--exclude-standard', '--', ...WATCHED], root).output !==
       '';
   if (!changed) return undefined;
+
+  // Stay quiet when nothing in WATCHED changed since this session's last stop. It's saved before
+  // the checks run, so whatever they report is reported once, not on every stop after.
+  if (input.session_id) {
+    const state = stateFile(root, input.session_id);
+    const now = fingerprint(root);
+    if (existsSync(state) && readFileSync(state, 'utf8') === now) return undefined;
+    mkdirSync(dirname(state), { recursive: true });
+    writeFileSync(state, now);
+  }
 
   const sections: string[] = [];
   const lint = run('npm', ['run', 'lint', '--silent'], root);

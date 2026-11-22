@@ -8,10 +8,11 @@ It never blocks a session and always exits 0. CI runs the same checks and fails 
 
 1. **Stays quiet if Claude is already continuing because of a stop hook,** so it advises at most once per stop.
 2. **Stays quiet, and runs nothing, if nothing in `src/` or `app/` has changed** since the merge base with `origin/main`, or `main` if there's no `origin/main`. New, untracked files count as changes.
-3. **Runs `npm run lint`.** Failures come first in the advice.
-4. **Runs `npm test`,** which writes the coverage report. If a test fails, it says so and stops there: a failing run writes no report, so there's nothing to score.
-5. **Runs `npm run oxcrap`** if the tests passed, and passes on its findings. They end with oxCrap's `Get help:` line.
-6. **Sends what failed to Claude** as `hookSpecificOutput.additionalContext`, ending with "This is advice; CI fails on each of these." If everything passed, it sends nothing.
+3. **Stays quiet if nothing in `src/` or `app/` has changed since this session's last stop.** It compares a fingerprint: the commit, every change git sees there, and new files' contents, so an edit made any way counts, through a tool, a shell command or a commit. The fingerprint is saved per session in the repository's git folder before the checks run, so what they find is reported once, and again only after the next change.
+4. **Runs `npm run lint`.** Failures come first in the advice.
+5. **Runs `npm test`,** which writes the coverage report. If a test fails, it says so and stops there: a failing run writes no report, so there's nothing to score.
+6. **Runs `npm run oxcrap`** if the tests passed, and passes on its findings. They end with oxCrap's `Get help:` line.
+7. **Sends what failed to Claude** as `hookSpecificOutput.additionalContext`, ending with "This is advice; CI fails on each of these." If everything passed, it sends nothing.
 
 ## What Claude sees
 
@@ -27,7 +28,7 @@ This is advice; CI fails on each of these.
 
 ## Running it by hand
 
-Pass it the JSON a Stop hook receives:
+Pass it the JSON a Stop hook receives. Without a `session_id`, it checks every time, with no fingerprint:
 
 ```sh
 echo "{\"cwd\": \"$PWD\", \"stop_hook_active\": false}" | node scripts/stop-hook.ts
@@ -41,6 +42,7 @@ It prints the JSON it would send Claude, or nothing.
 - **What it runs:** the `npm run lint`, `npm test` and `npm run oxcrap` calls in `advice`. Each is a [definition-of-done check](../AGENTS.md#definition-of-done), so the hook and CI stay in step.
 - **Its tests:** [`stop-hook.real.test.ts`](stop-hook.real.test.ts) runs it on throwaway git repositories, with fake npm scripts. Add a case there for any change.
 - **Turning it off:** remove its entry from `.claude/settings.json`.
+- **Starting a session's fingerprint afresh:** delete its file from the `claude-stop-hook` folder that `git rev-parse --git-path claude-stop-hook` names. Fingerprints older than 7 days are deleted on their own.
 
 ## Changing this document
 
