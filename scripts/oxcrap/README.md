@@ -38,7 +38,7 @@ CRAP rewards coverage, so it is only as honest as the tests behind it. A test th
   - **Nested functions:** a function inside another is scored on its own, and its branches don't count toward the outer one.
 - **Coverage** comes from an istanbul JSON coverage report, the `coverage-final.json` that Vitest, Jest and nyc can all write. Each statement counts toward the innermost function holding it.
 - **The limits** come from the [config](#configuration): a function fails when its CRAP score or its complexity is over its limit.
-- **Which files** come from the config too. By default, every JavaScript and TypeScript file is scored, except tests (`*.test.*`, `*.spec.*`), `node_modules` and folders whose names start with a dot.
+- **Which files** come from the config too. By default, every JavaScript and TypeScript file is scored, except tests (`*.test.*`, `*.spec.*`), `node_modules`, folders whose names start with a dot, and whatever the `.gitignore` beside the config lists.
 
 ## Usage
 
@@ -98,6 +98,7 @@ oxCrap's config follows oxlint's and oxfmt's:
   - `name/` matches a folder of that name at any depth, and `*.test.*` a file at any depth;
   - a pattern with a `/` before its end is anchored to the config's folder;
   - `!` brings back a file an earlier pattern left out.
+- **The `.gitignore` in the config's folder is read too,** as oxlint reads one (or in the current folder, without a config). What it lists isn't scored, and doesn't count against the coverage report, so generated files written after the tests ran can't make the report look stale. `.gitignore` files in subfolders aren't read.
 - **The command line overrides the config,** option by option; paths given on the command line replace `files`.
 - **The config is checked against [`configuration_schema.json`](configuration_schema.json),** the schema editors use. An option oxCrap doesn't know, or a value of the wrong kind, is an error naming the option, and every problem is reported at once, so a typo can't quietly fall back to a default. So is a config whose `files` match nothing.
 
