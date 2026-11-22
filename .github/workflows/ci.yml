@@ -20,7 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
-      # Must match the `playwright` version in package.json exactly; update them together.
+      # Must match the `playwright` and `@playwright/test` versions in package.json exactly;
+      # update them together.
       image: mcr.microsoft.com/playwright:v1.65.0-noble
       options: --user 1001
     env:
@@ -42,3 +43,5 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: End-to-end tests
+        run: npm run test:e2e

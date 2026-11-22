@@ -254,6 +254,42 @@ describe('room sync provider selection', () => {
     expect(provider.store.getSnapshot().participants).toEqual([]);
     persistedDoc?.destroy();
   });
+
+  async function signalingUsedWith(configured: string) {
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', '');
+    vi.stubEnv('NEXT_PUBLIC_WEBRTC_SIGNALING_URLS', configured);
+    mocks.WebrtcProvider.mockImplementation(function () {
+      return {
+        awareness: { getStates: () => new Map(), on: vi.fn(), setLocalStateField: vi.fn() },
+        on: vi.fn(),
+      };
+    });
+    const { getRoomProvider } = await import('./yjsProvider');
+    const provider = await getRoomProvider(roomIdSchema.parse('split-sig'));
+    provider.doc.destroy();
+    return mocks.WebrtcProvider.mock.calls[0][2].signaling;
+  }
+
+  it('signals through the public servers when no signaling URLs are configured', async () => {
+    expect(await signalingUsedWith('')).toEqual([
+      'wss://signaling.yjs.dev',
+      'wss://y-webrtc-eu.fly.dev',
+    ]);
+  });
+
+  it('signals through the configured servers, separated by commas', async () => {
+    expect(await signalingUsedWith(' ws://localhost:4444 , ws://localhost:4445,')).toEqual([
+      'ws://localhost:4444',
+      'ws://localhost:4445',
+    ]);
+  });
+
+  it('falls back to the public servers when the configured list is blank', async () => {
+    expect(await signalingUsedWith(' , ')).toEqual([
+      'wss://signaling.yjs.dev',
+      'wss://y-webrtc-eu.fly.dev',
+    ]);
+  });
 });
 
 describe('room names derived from the room id', () => {

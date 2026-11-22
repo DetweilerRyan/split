@@ -38,6 +38,7 @@ A change is not done until each of these exits with code 0, run from the reposit
 | Types            | `npm run typecheck`    |
 | Tests            | `npm test`             |
 | Production build | `npm run build`        |
+| End-to-end tests | `npm run test:e2e`     |
 
 `npm run format` fixes formatting in place. Lint rules are in [`.oxlintrc.json`](.oxlintrc.json) and formatter settings in [`.oxfmtrc.json`](.oxfmtrc.json); a warning fails the lint check. Disable a rule only on the line it flags, with a comment saying why the rule doesn't fit there.
 

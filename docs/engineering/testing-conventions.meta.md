@@ -49,6 +49,30 @@ These rules come from Kent's [Common mistakes with React Testing Library](#commo
 - **Never mock React's hooks.** Kent: "You throw away a LOT of confidence in doing so" ([How to test custom React hooks](#custom-hooks)).
 - **`vi.mock` for directly imported third-party modules.** A repository rule, kept because `yjsProvider.ts` imports Liveblocks, `y-webrtc` and `y-indexeddb` directly. Passing them in would change its public interface for tests alone. A strict no-mocks rule, as market-research has, was not taken because it would contradict that existing test.
 
+## End-to-end tests
+
+Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/split/issues/55); the owner's decisions are in [this comment](https://github.com/DetweilerRyan/split/issues/55#issuecomment-7071299115).
+
+- **Gherkin run by Playwright Test through playwright-bdd.** Approved by the owner in the session on 2026-11-21, with `@playwright/test` 1.65.0 and `playwright-bdd` 9.2.1.
+  - **How it works:** playwright-bdd turns each feature into an ordinary Playwright test file, so traces, sharding, fixtures and the HTML report all still work ([playwright-bdd](#playwright-bdd)).
+  - **Not taken:** `@cucumber/cucumber` driving Playwright as a library. Cucumber would then run the tests, and Playwright's own reports and traces need plugins.
+- **A Screenplay layer of our own,** chosen by the owner as "option A".
+  - **Why:** a receipt is split by several people at once, which is a story about actors. The pattern also lets an actor hold an ability for an interface other than the browser ([Screenplay](#screenplay)).
+  - **Not taken: Serenity/JS** 3.49.0, the main TypeScript Screenplay library. Its Playwright packages pin `playwright-core ~1.64.0` while the repository is on 1.65.0, and its Gherkin support runs through Cucumber ([Serenity/JS](#serenity-js)).
+  - **Not taken: page objects,** which most comparisons find simpler but less reusable once journeys span several users or interfaces.
+  - **Reopen when:** the layer grows enough that maintaining it costs more than adopting a library that follows Playwright's releases.
+- **An MCP client is an actor's ability.** No published BDD or Screenplay tests of an MCP server turned up in the research. What exists either uses MCP to write Gherkin, or tests servers with the SDK's in-memory transport ([MCP SDK testing](#mcp-sdk-testing)). Treating the client as an ability follows Screenplay's own advice for APIs. `@modelcontextprotocol/client` 2.4.0 was approved by the owner on 2026-11-22 and stays behind `e2e/screenplay/mcp.ts`.
+- **A separate `npm run test:e2e`,** decided by the owner on 2026-11-22. It is not part of `npm test`, so the fast Vitest run stays fast.
+- **A local signaling server,** decided by the owner on 2026-11-22.
+  - **Why:** room sync uses public WebRTC signaling servers, which would break [Tests stay offline](testing-conventions.md#tests-stay-offline). `NEXT_PUBLIC_WEBRTC_SIGNALING_URLS` points the app at `y-webrtc`'s own server instead, and actors' browsers refuse every request to another host.
+  - **Not covered:** Liveblocks mode.
+- **The app is built for every run.** Next.js inlines `NEXT_PUBLIC_` variables at build time, so a server already running might point at the public signaling servers. `reuseExistingServer` is off for that reason.
+- **Actors browse on a phone.** `AGENTS.md` asks for a mobile-first interface, so the tests use what most people at the table will.
+- **Actors claim with their name's button on the item,** not by choosing an identity first. The header's identity button is named after whoever is active, so no stable name finds it.
+  - **Reopen when:** that button gets a fixed accessible name.
+- **The first refusal scenario uses a duplicated item id,** not the tax line #55 suggested. The schema rejects duplicated ids, but leaving out tax lines is only an instruction in the field description, so no code refuses them.
+- **Runs against Vercel previews are deferred** to [#56](https://github.com/DetweilerRyan/split/issues/56).
+
 ## Changed test expectations
 
 The rule that a changed expectation needs a reason in the pull request is owned by [reviewing work](workflow/reviewing-work.md#changed-test-expectations); its source is in that document's sidecar.
@@ -68,3 +92,7 @@ The rule that a changed expectation needs a reason in the pull request is owned 
 - <a id="vitest-component-testing"></a>Vitest, [Component Testing](https://vitest.dev/guide/browser/component-testing), v5.1.1.
 - <a id="swe-test-sizes"></a>Titus Winters, Tom Manshreck and Hyrum Wright (eds.), _Software Engineering at Google_, [chapter 11, "Testing Overview"](https://abseil.io/resources/swe-book/html/ch11.html): test size and test scope.
 - <a id="vitest-4675"></a>Vitest, [How to separate unit and integration test](https://github.com/vitest-dev/vitest/discussions/4675), discussion #4675.
+- <a id="playwright-bdd"></a>Vitaliy Potapov, [playwright-bdd](https://github.com/vitalets/playwright-bdd), v9.2.1.
+- <a id="screenplay"></a>John Ferguson Smart and Jan Molak, _BDD in Action_, 2nd ed., [chapter 12, "Scalable test automation with the Screenplay Pattern"](https://livebook.manning.com/book/bdd-in-action-second-edition/chapter-12).
+- <a id="serenity-js"></a>Serenity/JS, [Playwright Test integration](https://serenity-js.org/handbook/test-runners/playwright-test/), v3.49.0.
+- <a id="mcp-sdk-testing"></a>Model Context Protocol TypeScript SDK, [Test a server](https://ts.sdk.modelcontextprotocol.io/v2/testing.html), v2.
