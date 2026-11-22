@@ -37,20 +37,21 @@ CRAP rewards coverage, so it is only as honest as the tests behind it. A test th
 - **Complexity** is counted by oxCrap itself, by parsing each file with [`oxc-parser`](https://www.npmjs.com/package/oxc-parser). The rules are in [`complexity.ts`](complexity.ts). They're close to ESLint's `complexity` rule but not the same, so don't compare its numbers with another tool's.
   - **Nested functions:** a function inside another is scored on its own, and its branches don't count toward the outer one.
 - **Coverage** comes from an istanbul JSON coverage report, the `coverage-final.json` that Vitest, Jest and nyc can all write. Each statement counts toward the innermost function holding it.
-- **The limits** are `MAX_CRAP` and `MAX_COMPLEXITY` in [`check.ts`](check.ts). A function fails when it's over either one.
-- **Which files:** every JavaScript and TypeScript file under the paths you give is scored. Tests (`*.test.*`, `*.spec.*`), `node_modules` and folders whose names start with a dot are left out.
+- **The limits** come from the [config](#configuration): a function fails when its CRAP score or its complexity is over its limit.
+- **Which files** come from the config too. By default, every JavaScript and TypeScript file is scored, except tests (`*.test.*`, `*.spec.*`), `node_modules` and folders whose names start with a dot.
 
 ## Usage
 
 ```sh
-node scripts/oxcrap/oxcrap.ts --coverage <report> [--guide <doc>] <path>...
+node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--guide <doc>] [<path>...]
 ```
 
-| Argument              | Meaning                                                                                                                            |
-| :-------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| `--coverage <report>` | **Required.** The istanbul JSON coverage report, such as `coverage/coverage-final.json`, from a test run of the code as it is now. |
-| `--guide <doc>`       | Optional. A document to point to when there are findings, such as your team's procedure for responding to them.                    |
-| `<path>...`           | **At least one.** The folders or files to score, from the current directory.                                                       |
+| Argument                  | Meaning                                                                                                                                                                           |
+| :------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-c`, `--config <config>` | The config file to read. Without it, oxCrap reads `.oxcraprc.json` or `.oxcraprc.jsonc` from the current directory if there is one, and uses the defaults if not.                 |
+| `--coverage <report>`     | The istanbul JSON coverage report, such as `coverage/coverage-final.json`, from a test run of the code as it is now. Overrides the config's `coverage`; one of the two is needed. |
+| `--guide <doc>`           | A document to point to when there are findings, such as your team's procedure for responding to them. Overrides the config's `guide`.                                             |
+| `<path>...`               | Folders or files to score, from the current directory, in place of the config's `files`. A folder means every JavaScript and TypeScript file in it.                               |
 
 Run your tests with coverage first, then oxCrap. With Vitest, for example:
 
@@ -59,9 +60,42 @@ npx vitest run --coverage.enabled --coverage.reporter=json
 node scripts/oxcrap/oxcrap.ts --coverage coverage/coverage-final.json src
 ```
 
-**It refuses a report older than any file under the paths you give,** tests included, so a stale report can't make a function look covered. Run the tests again, and the report is fresh.
+**It refuses a report older than any file it finds,** tests included, so a stale report can't make a function look covered. Run the tests again, and the report is fresh.
 
-**It exits with 0** when there are no findings, and **with 1** when there are findings or it can't run: a missing report, a stale report, a missing path, or a file that doesn't parse.
+**It exits with 0** when there are no findings, and **with 1** when there are findings or it can't run: a missing or invalid config, a missing report, a stale report, a missing path, no files to score, or a file that doesn't parse.
+
+## Configuration
+
+oxCrap's config follows oxlint's and oxfmt's:
+
+- **The file:** `.oxcraprc.json` (or `.oxcraprc.jsonc`) in the folder you run it from, or the file `-c` names.
+- **The format:** JSON, with comments and trailing commas allowed.
+- **The schema:** a `$schema` key pointing at [`configuration_schema.json`](configuration_schema.json) lets editors check the file and complete its options.
+
+```jsonc
+{
+  "$schema": "./scripts/oxcrap/configuration_schema.json",
+  "files": ["src/**/*.{ts,tsx}"],
+  "ignorePatterns": ["**/node_modules/**", "**/.*/**", "**/*.test.*", "**/*.spec.*"],
+  "limits": { "crap": 30, "complexity": 10 },
+  "coverage": "coverage/coverage-final.json",
+  // Printed with the findings, so people know how to respond.
+  "guide": "docs/crap.md",
+}
+```
+
+| Option           | Meaning                                                                                                  | Default                                                            |
+| :--------------- | :------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------- |
+| `files`          | Globs of the files to score.                                                                             | `["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]`                         |
+| `ignorePatterns` | Globs left out of scoring. A folder that matches isn't searched. Setting this replaces the default list. | `["**/node_modules/**", "**/.*/**", "**/*.test.*", "**/*.spec.*"]` |
+| `limits`         | The highest `crap` score and `complexity` a function may have. Either can be left out.                   | `{ "crap": 30, "complexity": 10 }`                                 |
+| `coverage`       | The coverage report's path.                                                                              | none, so `--coverage` is needed                                    |
+| `guide`          | A document the findings point to.                                                                        | none                                                               |
+
+- **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it. Paths on the command line are read from the current directory.
+- **Globs** use `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. A `\` takes the next character literally.
+- **The command line overrides the config,** option by option; paths given on the command line replace `files`.
+- **An option oxCrap doesn't know, or a value of the wrong kind, is an error,** naming the option, so a typo can't quietly fall back to a default. So is a config whose `files` match nothing.
 
 ### Output
 
@@ -111,6 +145,6 @@ oxCrap imports nothing from outside this folder, and lint fails if it does, so i
 
 ## In this repository
 
-- **`npm test` writes the coverage report,** and **`npm run oxcrap`** runs oxCrap on `src/` and `app/`, as a [definition-of-done check](../../AGENTS.md#definition-of-done). CI runs both, and so does the Claude Code [Stop hook](../stop-hook.ts).
+- **`npm test` writes the coverage report,** and **`npm run oxcrap`** runs oxCrap with the repository's [`.oxcraprc.json`](../../.oxcraprc.json), as a [definition-of-done check](../../AGENTS.md#definition-of-done). CI runs both, and so does the Claude Code [Stop hook](../stop-hook.ts).
 - **[The CRAP score procedure](../../docs/engineering/crap.md)** says how to respond to a finding here.
 - **[`oxcrap.meta.md`](oxcrap.meta.md)** holds the reasons behind oxCrap's design and the options not taken.

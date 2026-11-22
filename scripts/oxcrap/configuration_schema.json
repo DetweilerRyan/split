@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "oxCrap configuration",
+  "description": "Options for oxCrap, in .oxcraprc.json. Paths and globs are read from the folder this file is in. See README.md beside this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "description": "The path to this schema, so editors can check the file.",
+      "type": "string"
+    },
+    "files": {
+      "description": "Globs of the files to score. `**` matches any number of folders, `*` any characters but `/`, and `{a,b}` either alternative.",
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "default": ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]
+    },
+    "ignorePatterns": {
+      "description": "Globs left out of scoring. A folder that matches isn't searched. Setting this replaces the default list.",
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["**/node_modules/**", "**/.*/**", "**/*.test.*", "**/*.spec.*"]
+    },
+    "limits": {
+      "description": "A function fails when its CRAP score or its complexity is over its limit.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "crap": {
+          "description": "The highest CRAP score a function may have.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 30
+        },
+        "complexity": {
+          "description": "The highest complexity a function may have, however well it's tested.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 10
+        }
+      }
+    },
+    "coverage": {
+      "description": "The istanbul JSON coverage report, such as coverage/coverage-final.json. `--coverage` overrides it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "guide": {
+      "description": "A document the findings point to, such as a procedure for responding to them. `--guide` overrides it.",
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

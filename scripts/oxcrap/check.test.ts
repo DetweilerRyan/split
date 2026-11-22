@@ -3,6 +3,8 @@ import type { Allow } from './allow.ts';
 import { check, crapOf, type Scored } from './check.ts';
 import type { Fn } from './functions.ts';
 
+const limits = { crap: 30, complexity: 10 };
+
 function scored(name: string, complexity: number, coverage: number, line = 1): Scored {
   const fn = {
     label: name,
@@ -38,6 +40,7 @@ describe('check', () => {
     const findings = check(
       [scored('a', 6, 0, 1), scored('b', 11, 1, 20), scored('c', 5, 0, 40)],
       new Map(),
+      limits,
     );
     expect(messages(findings)).toEqual([
       'a: CRAP 42, complexity 6, coverage 0%. Over the limits (CRAP 30, complexity 10). To leave it, add `// @crap-allow CRAP 42, complexity 6. <reason>` directly above it.',
@@ -47,7 +50,7 @@ describe('check', () => {
 
   it('passes a function whose @crap-allow comment matches its numbers', () => {
     const s = scored('a', 12, 0);
-    expect(check([s], new Map([[s.fn, allowFor(156, 12)]]))).toEqual([]);
+    expect(check([s], new Map([[s.fn, allowFor(156, 12)]]), limits)).toEqual([]);
   });
 
   it('fails a @crap-allow comment whose function got worse, or better', () => {
@@ -57,7 +60,7 @@ describe('check', () => {
       [worse.fn, allowFor(156, 12, 19)],
       [better.fn, allowFor(156, 12, 39)],
     ]);
-    expect(messages(check([worse, better], allowed))).toEqual([
+    expect(messages(check([worse, better], allowed, limits))).toEqual([
       'worse: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12. Update the comment to `// @crap-allow CRAP 182, complexity 13.`, and check its reason still holds.',
       'better: CRAP 12, complexity 12, coverage 100%, but its @crap-allow comment says CRAP 156, complexity 12. Update the comment to `// @crap-allow CRAP 12, complexity 12.`, and check its reason still holds.',
     ]);
@@ -65,7 +68,7 @@ describe('check', () => {
 
   it('fails a @crap-allow comment on a function within the limits', () => {
     const s = scored('a', 4, 0);
-    expect(messages(check([s], new Map([[s.fn, allowFor(20, 4)]])))).toEqual([
+    expect(messages(check([s], new Map([[s.fn, allowFor(20, 4)]]), limits))).toEqual([
       "a: CRAP 20, complexity 4, coverage 0%. It's within the limits now, so delete its @crap-allow comment.",
     ]);
   });
@@ -73,11 +76,23 @@ describe('check', () => {
   it('compares the score to one decimal place, as the comment gives it', () => {
     const s = scored('a', 11, 0.6);
     expect(s.crap).toBeCloseTo(18.744);
-    expect(check([s], new Map([[s.fn, allowFor(18.7, 11)]]))).toEqual([]);
+    expect(check([s], new Map([[s.fn, allowFor(18.7, 11)]]), limits)).toEqual([]);
+  });
+
+  it('uses the limits it’s given', () => {
+    const s = scored('a', 6, 0);
+    expect(check([s], new Map(), { crap: 50, complexity: 10 })).toEqual([]);
+    expect(messages(check([s], new Map(), { crap: 50, complexity: 5 }))).toEqual([
+      'a: CRAP 42, complexity 6, coverage 0%. Over the limits (CRAP 50, complexity 5). To leave it, add `// @crap-allow CRAP 42, complexity 6. <reason>` directly above it.',
+    ]);
   });
 
   it('orders findings by file and line', () => {
-    const findings = check([scored('later', 12, 0, 30), scored('earlier', 12, 0, 5)], new Map());
+    const findings = check(
+      [scored('later', 12, 0, 30), scored('earlier', 12, 0, 5)],
+      new Map(),
+      limits,
+    );
     expect(findings.map((f) => f.line)).toEqual([5, 30]);
   });
 });

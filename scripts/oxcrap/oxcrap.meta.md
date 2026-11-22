@@ -97,8 +97,25 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
   - the command line, its options and output;
   - the `@crap-allow` rules.
 - **The `@crap-allow` rules moved there from the [CRAP score procedure](../../docs/engineering/crap.md), and the usage from `oxcrap.ts`'s header,** so each is written once ([single source of truth](../../docs/prose/single-source-of-truth.md)). The procedure keeps what's particular to this repository: where findings come from, how to respond, when to allow a function, and replacing the stand-in reasons.
-- **The README links to the limits and the counting rules** in `check.ts` and `complexity.ts` rather than restating them, since the code owns them. Its output example is real output, from a run on a small throwaway project.
+- **The README links to the counting rules** in `complexity.ts` rather than restating them, since the code owns them. It does list the config's options and defaults, for people to read; `config.ts` owns them, `config.test.ts` checks the schema against it, and `oxcrap.real.test.ts` checks the README. Its output example is real output, from a run on a small throwaway project.
 - **It's written to stand alone,** with only a short "In this repository" section at the end, so it could serve as the README of a published package.
+
+### The config file
+
+- **The owner asked for it:** "the crap tool should take a config file as input. it can assume a default name and location while also accepting a config file path as an arg. the config file can include the threshold limits as well as path globs for which files to check against and anything else that you think may be useful. the config file format should follow oxc family precedents." ([feedback](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7086228840))
+- **It follows oxlint and oxfmt,** checked in their 1.91.0 and 0.76.0 releases:
+  - **the name:** `.oxcraprc.json` or `.oxcraprc.jsonc`, looked up in the current directory, like `.oxlintrc.json` and `.oxfmtrc.json`;
+  - **the flag:** `-c, --config <path>`;
+  - **the format:** JSON with comments and trailing commas;
+  - **the schema:** a `configuration_schema.json` beside the code, for a `$schema` key;
+  - **the names:** camelCase keys. `ignorePatterns` is the name both tools use, and `files` is what oxlint's overrides call their globs.
+- **The options are what a run needs to differ between projects:** `files`, `ignorePatterns`, `limits`, `coverage` and `guide`. With `coverage` and `guide` in the config, `npm run oxcrap` needs no arguments.
+- **The command line overrides the config,** option by option, and paths given on it replace `files`, so one-off runs need no second config.
+- **A config covers its own folder,** as oxlint's does, and oxCrap refuses a `files` glob reaching outside it. One reason found while building it: the default `**/.*/**` pattern, meant for dot-folders, also matches `..`.
+- **Unknown options and wrong types are errors,** not warnings, and so are `files` that match nothing: a typo shouldn't quietly fall back to a default and pass.
+- **JSONC is read with `oxc-parser`,** already a dependency, by parsing the text as one JavaScript expression and accepting only JSON's kinds of value. No JSONC package is needed.
+- **Globs are matched by `glob.ts`,** about 50 lines. Node's `fs.glob` and `path.matchesGlob` aren't stable in Node 22, which the README supports.
+- **The limits moved from constants in `check.ts` into the config,** with 30 and 10 as defaults in `config.ts`. This repository's [`.oxcraprc.json`](../../.oxcraprc.json) sets them explicitly, so a change to them shows up as a change to that file.
 
 ### The folder and its modules
 
@@ -111,9 +128,12 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 | [`complexity.ts`](complexity.ts) | The counting rules                                                            | [`complexity.test.ts`](complexity.test.ts)                             |
 | [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                    | [`allow.test.ts`](allow.test.ts)                                       |
 | [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions | [`coverage.test.ts`](coverage.test.ts)                                 |
+| [`config.ts`](config.ts)         | Reads and checks a config; holds the defaults                                 | [`config.test.ts`](config.test.ts)                                     |
+| [`glob.ts`](glob.ts)             | Matches paths against globs                                                   | [`glob.test.ts`](glob.test.ts)                                         |
+| [`files.ts`](files.ts)           | Finds the files a config's globs pick out                                     | [`oxcrap.real.test.ts`](oxcrap.real.test.ts)                           |
 | [`check.ts`](check.ts)           | The rules, on plain data                                                      | [`check.test.ts`](check.test.ts)                                       |
 
-- **Every module but `oxcrap.ts` takes plain values,** such as source text or a coverage report's text. Only `oxcrap.ts` reads files, and nothing runs a program.
+- **Every module but `oxcrap.ts` takes plain values,** such as source text, a config's text or a coverage report's text. Only `oxcrap.ts` and `files.ts` read the file system, and nothing runs a program.
 - **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
 - **The modules import each other with `.ts` extensions,** which Node needs to run them by stripping types. So `tsconfig.json` sets `allowImportingTsExtensions`, which `noEmit` permits.
 
