@@ -13,7 +13,7 @@
     "lint": "oxlint --deny-warnings && gplint e2e/features && node scripts/check-unused-steps.ts && rumdl check .",
     "format": "oxfmt && node scripts/format-features.ts",
     "format:check": "oxfmt --check && node scripts/format-features.ts --check",
-    "crap": "node scripts/crap.ts"
+    "crap": "node scripts/crap/crap.ts"
   },
   "dependencies": {
     "@liveblocks/client": "^3.24.5",
@@ -47,6 +47,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "gplint": "2.6.1",
     "jsdom": "^30.1.3",
+    "oxc-parser": "0.157.0",
     "oxfmt": "0.76.0",
     "oxlint": "1.91.0",
     "playwright": "1.65.0",

@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest';
+import { findAllows } from './allow.ts';
+import { parse } from './functions.ts';
+
+/** What findAllows makes of `code`: each allowed function's name and comment, and the problems. */
+function allows(code: string, file = 'example.tsx') {
+  const result = findAllows(file, code, parse(file, code));
+  return {
+    allowed: [...result.allowed].map(([fn, allow]) => ({ name: fn.name, ...allow })),
+    problems: result.problems.map((p) => `${p.line}: ${p.message}`),
+  };
+}
+
+const allow = '// @crap-allow CRAP 156, complexity 12. One branch per row of the rate table.';
+
+describe('findAllows', () => {
+  it('matches a comment to the function below it, with its numbers and reason', () => {
+    expect(allows(`${allow}\nfunction grade(n) {}\n`)).toEqual({
+      allowed: [
+        {
+          name: 'grade',
+          file: 'example.tsx',
+          line: 1,
+          lastLine: 1,
+          crap: 156,
+          complexity: 12,
+          reason: 'One branch per row of the rate table.',
+        },
+      ],
+      problems: [],
+    });
+  });
+
+  it('reads a block comment’s reason across its lines', () => {
+    const block =
+      '/* @crap-allow CRAP 156, complexity 12. One branch per row of\n   the rate table. */';
+    expect(allows(`${block}\nfunction grade(n) {}\n`).allowed[0]).toMatchObject({
+      reason: 'One branch per row of the rate table.',
+      lastLine: 2,
+    });
+  });
+
+  it('applies across a lint directive and a doc comment, keeping the directive out of the reason', () => {
+    const code = `${allow}\n// oxlint-disable-next-line eslint/no-unused-vars\n/** Grades. */\nfunction grade(n) {}\n`;
+    expect(allows(code).allowed[0]).toMatchObject({
+      name: 'grade',
+      reason: 'One branch per row of the rate table.',
+    });
+  });
+
+  it('applies to an arrow function and to a callback passed on the next line of code', () => {
+    const code = `${allow}\nconst grade = (n) => n;\nfunction A() {\n  ${allow}\n  useEffect(() => {});\n}\n`;
+    expect(allows(code).allowed.map((a) => a.name)).toEqual(['grade', 'A > useEffect callback']);
+  });
+
+  it('reads a JSX comment above a handler', () => {
+    const code = `const v = (\n  <div>\n    {/* @crap-allow CRAP 156, complexity 12. A reason. */}\n    <button onClick={() => 1} />\n  </div>\n);\n`;
+    expect(allows(code).allowed.map((a) => a.name)).toEqual(['onClick']);
+  });
+
+  it('ignores comments that only mention @crap-allow, and text in strings', () => {
+    const code = `// See docs/engineering/crap.md for @crap-allow comments.\n/** A @crap-allow comment gives a reason. */\nconst s = \`\n// @crap-allow CRAP 1, complexity 1. Not a comment.\n\`;\nfunction grade(n) {}\n`;
+    expect(allows(code)).toEqual({ allowed: [], problems: [] });
+  });
+
+  it('fails a comment in the wrong form', () => {
+    expect(
+      allows('// @crap-allow CRAP=156 complexity=12 because\nfunction grade(n) {}\n').problems,
+    ).toEqual([
+      '1: This @crap-allow comment isn’t in the form `// @crap-allow CRAP <score>, complexity <n>. <reason>`.',
+    ]);
+  });
+
+  it('fails a comment with no reason, but still matches it to its function', () => {
+    const result = allows('// @crap-allow CRAP 156, complexity 12.\nfunction grade(n) {}\n');
+    expect(result.problems).toEqual(['1: The @crap-allow comment for grade gives no reason.']);
+    expect(result.allowed.map((a) => a.name)).toEqual(['grade']);
+  });
+
+  it('fails a comment with no function below it', () => {
+    expect(allows(`${allow}\nexport const grade = 1;\n`).problems).toEqual([
+      '1: This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
+    ]);
+  });
+
+  it('fails a comment above a line where two functions start, rather than guessing', () => {
+    expect(allows(`${allow}\nconst pair = [(n) => n, (n) => -n];\n`).problems).toEqual([
+      "1: 2 functions start on line 2 ((anonymous), (anonymous)), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.",
+    ]);
+  });
+
+  it('matches a function nested on the same line to the outer one', () => {
+    expect(
+      allows(`${allow}\nconst grade = (n) => [n].map((m) => m);\n`).allowed.map((a) => a.name),
+    ).toEqual(['grade']);
+  });
+
+  it('fails a second comment for the same function', () => {
+    expect(allows(`${allow}\n${allow}\nfunction grade(n) {}\n`).problems).toEqual([
+      '2: grade already has a @crap-allow comment.',
+    ]);
+  });
+});

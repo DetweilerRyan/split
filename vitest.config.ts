@@ -25,7 +25,7 @@ export default defineConfig({
     dedupe: ['yjs'],
   },
   test: {
-    // Off unless a run turns it on. scripts/crap.ts does, to score each function by its
+    // Off unless a run turns it on. scripts/crap/crap.ts does, to score each function by its
     // complexity and how much of it the tests run; the CRAP score covers src/ and app/ only.
     coverage: {
       provider: 'v8',
