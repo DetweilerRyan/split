@@ -93,7 +93,7 @@ oxCrap's config follows oxlint's and oxfmt's:
 | `guide`          | A document the findings point to.                                                                        | none                                                               |
 
 - **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it. Paths on the command line are read from the current directory.
-- **Globs** use `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. A `\` takes the next character literally.
+- **Globs** are Node's [`fs.globSync`](https://nodejs.org/api/fs.html#fsglobsyncpattern-options) patterns: `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. `ignorePatterns` can't use `!` to bring a file back. A folder given on the command line can't have glob characters in its name; list it in `files` instead.
 - **The command line overrides the config,** option by option; paths given on the command line replace `files`.
 - **The config is checked against [`configuration_schema.json`](configuration_schema.json),** the schema editors use. An option oxCrap doesn't know, or a value of the wrong kind, is an error naming the option, and every problem is reported at once, so a typo can't quietly fall back to a default. So is a config whose `files` match nothing.
 

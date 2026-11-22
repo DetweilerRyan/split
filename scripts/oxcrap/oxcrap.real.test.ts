@@ -159,6 +159,33 @@ describe('oxcrap', () => {
     );
   });
 
+  it('refuses a coverage report older than a test file, though tests aren’t scored', () => {
+    const cwd = project({
+      'src/keep.ts': 'export const keep = 1;\n',
+      'src/keep.test.ts': 'export {};\n',
+    });
+    coverage(cwd, ['src/keep.ts']);
+    const later = new Date(Date.now() + 60_000);
+    utimesSync(join(cwd, 'src/keep.test.ts'), later, later);
+
+    expect(oxcrap(cwd).output).toContain(
+      'The coverage report at coverage.json is older than src/keep.test.ts.',
+    );
+  });
+
+  it('scores a single file named on the command line', () => {
+    const cwd = project({
+      'src/grade.ts': branchy('grade', 11),
+      'src/rank.ts': branchy('rank', 11),
+    });
+    coverage(cwd, ['src/grade.ts', 'src/rank.ts']);
+
+    const result = oxcrap(cwd, ['--coverage', 'coverage.json', 'src/grade.ts']);
+
+    expect(result.output).toContain('- src/grade.ts:1 grade: CRAP 156');
+    expect(result.output).not.toContain('rank');
+  });
+
   it('refuses a coverage report older than the code', () => {
     const cwd = project({ 'src/keep.ts': 'export const keep = 1;\n' });
     coverage(cwd, ['src/keep.ts']);
