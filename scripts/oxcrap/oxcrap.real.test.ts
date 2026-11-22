@@ -270,6 +270,24 @@ describe('oxcrap', () => {
       ).toContain('../src is outside ., the folder oxCrap scores.');
     });
 
+    it('reads ignorePatterns as gitignore does: a folder at any depth, and ! to bring a file back', () => {
+      const cwd = project({
+        '.oxcraprc.json': rc({
+          coverage: 'coverage.json',
+          ignorePatterns: ['legacy/', '*.gen.ts', '!keep.gen.ts'],
+        }),
+        'src/deep/legacy/old.ts': branchy('old', 11),
+        'src/a.gen.ts': branchy('generated', 11),
+        'src/keep.gen.ts': branchy('kept', 11),
+      });
+      coverage(cwd, []);
+
+      const result = oxcrap(cwd, []);
+
+      expect(result.output).toContain('- src/keep.gen.ts:1 kept: CRAP 156');
+      expect(result.output).not.toMatch(/old:|generated:/);
+    });
+
     it('uses its limits and ignorePatterns', () => {
       const cwd = project({
         '.oxcraprc.json': rc({

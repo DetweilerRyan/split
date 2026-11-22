@@ -10,7 +10,7 @@ export type Limits = { crap: number; complexity: number };
 export type Config = {
   /** Globs of the files to score, from the config's folder. */
   files: string[];
-  /** Globs left out of scoring. A folder that matches isn't searched at all. */
+  /** gitignore-style patterns left out of scoring. A folder that matches isn't searched at all. */
   ignorePatterns: string[];
   limits: Limits;
   /** The istanbul JSON coverage report, from the config's folder. */
@@ -28,7 +28,7 @@ export const CODE_FILES = '**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}';
 
 export const DEFAULTS: Config = {
   files: [CODE_FILES],
-  ignorePatterns: ['**/node_modules/**', '**/.*/**', '**/*.test.*', '**/*.spec.*'],
+  ignorePatterns: ['node_modules/', '.*/', '*.test.*', '*.spec.*'],
   limits: { crap: 30, complexity: 10 },
 };
 

@@ -76,7 +76,7 @@ oxCrap's config follows oxlint's and oxfmt's:
 {
   "$schema": "./scripts/oxcrap/configuration_schema.json",
   "files": ["src/**/*.{ts,tsx}"],
-  "ignorePatterns": ["**/node_modules/**", "**/.*/**", "**/*.test.*", "**/*.spec.*"],
+  "ignorePatterns": ["node_modules/", ".*/", "*.test.*", "*.spec.*"],
   "limits": { "crap": 30, "complexity": 10 },
   "coverage": "coverage/coverage-final.json",
   // Printed with the findings, so people know how to respond.
@@ -84,16 +84,20 @@ oxCrap's config follows oxlint's and oxfmt's:
 }
 ```
 
-| Option           | Meaning                                                                                                  | Default                                                            |
-| :--------------- | :------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------- |
-| `files`          | Globs of the files to score.                                                                             | `["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]`                         |
-| `ignorePatterns` | Globs left out of scoring. A folder that matches isn't searched. Setting this replaces the default list. | `["**/node_modules/**", "**/.*/**", "**/*.test.*", "**/*.spec.*"]` |
-| `limits`         | The highest `crap` score and `complexity` a function may have. Either can be left out.                   | `{ "crap": 30, "complexity": 10 }`                                 |
-| `coverage`       | The coverage report's path.                                                                              | none, so `--coverage` is needed                                    |
-| `guide`          | A document the findings point to.                                                                        | none                                                               |
+| Option           | Meaning                                                                                                                         | Default                                            |
+| :--------------- | :------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------- |
+| `files`          | Globs of the files to score.                                                                                                    | `["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]`         |
+| `ignorePatterns` | Patterns left out of scoring, in gitignore style. A folder that matches isn't searched. Setting this replaces the default list. | `["node_modules/", ".*/", "*.test.*", "*.spec.*"]` |
+| `limits`         | The highest `crap` score and `complexity` a function may have. Either can be left out.                                          | `{ "crap": 30, "complexity": 10 }`                 |
+| `coverage`       | The coverage report's path.                                                                                                     | none, so `--coverage` is needed                    |
+| `guide`          | A document the findings point to.                                                                                               | none                                               |
 
 - **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it. Paths on the command line are read from the current directory.
-- **Globs** are Node's [`fs.globSync`](https://nodejs.org/api/fs.html#fsglobsyncpattern-options) patterns: `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. `ignorePatterns` can't use `!` to bring a file back. A folder given on the command line can't have glob characters in its name; list it in `files` instead.
+- **`files` are globs,** as Node's [`fs.globSync`](https://nodejs.org/api/fs.html#fsglobsyncpattern-options) takes them: `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. A folder given on the command line can't have glob characters in its name; list it in `files` instead.
+- **`ignorePatterns` are gitignore-style,** as oxlint's are, matched by the [`ignore`](https://www.npmjs.com/package/ignore) package:
+  - `name/` matches a folder of that name at any depth, and `*.test.*` a file at any depth;
+  - a pattern with a `/` before its end is anchored to the config's folder;
+  - `!` brings back a file an earlier pattern left out.
 - **The command line overrides the config,** option by option; paths given on the command line replace `files`.
 - **The config is checked against [`configuration_schema.json`](configuration_schema.json),** the schema editors use. An option oxCrap doesn't know, or a value of the wrong kind, is an error naming the option, and every problem is reported at once, so a typo can't quietly fall back to a default. So is a config whose `files` match nothing.
 
@@ -139,10 +143,11 @@ A comment that mentions `@crap-allow` without starting with it is ignored, so pr
 ## Requirements
 
 - **Node.js 22.18 or later, or 23.6 or later,** which run TypeScript files directly by stripping their types.
-- **Three packages:**
+- **Four packages:**
   - [`oxc-parser`](https://www.npmjs.com/package/oxc-parser) parses the code;
   - [`jsonc-parser`](https://www.npmjs.com/package/jsonc-parser) reads the config;
-  - [`ajv`](https://ajv.js.org/) checks the config against its schema.
+  - [`ajv`](https://ajv.js.org/) checks the config against its schema;
+  - [`ignore`](https://www.npmjs.com/package/ignore) matches `ignorePatterns`.
 
 oxCrap imports nothing from outside this folder, and lint fails if it does, so it can be lifted out into a project of its own.
 
