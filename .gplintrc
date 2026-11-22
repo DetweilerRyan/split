@@ -1,0 +1,51 @@
+// gplint rules for e2e/features/*.feature, run by `npm run lint`. Reasons are in
+// docs/engineering/testing-conventions.meta.md, under "Linting and formatting features".
+//
+// Layout (indentation, spacing, blank lines, table alignment) is left to the formatter,
+// scripts/format-features.mjs, so the two never ask for different things.
+{
+  "file-name": ["error", { "style": "kebab-case" }],
+  "no-empty-file": "error",
+  "no-files-without-scenarios": "error",
+  "no-unnamed-features": "error",
+  "no-unnamed-scenarios": "error",
+  "no-dupe-feature-names": "error",
+  "no-dupe-scenario-names": ["error", "in-feature"],
+  "no-empty-background": "error",
+  "no-background-only-scenario": "error",
+  "no-examples-in-scenarios": "error",
+  "no-scenario-outlines-without-examples": "error",
+  "no-unused-variables": "error",
+  "keywords-in-logical-order": "error",
+  "use-and": "error",
+  // One action per scenario: a second When means a second scenario. `And` after `When` doesn't
+  // count, matching gherkin-lint's only-one-when.
+  "max-keywords": ["error", { "when": 1, "ignoreConjunctions": true }],
+  "scenario-size": "error",
+  "max-scenarios-per-file": ["error", { "maxScenarios": 12, "countOutlineExamples": false }],
+  "name-length": ["error", { "Feature": 70, "Scenario": 100, "Step": 110 }],
+  // Scenarios use the words of the people at the table. Each pattern names how the app is built,
+  // not what someone sees or does; matching ignores case.
+  "no-restricted-patterns": [
+    "error",
+    {
+      "Global": [
+        "\\bcreate_receipt_room\\b",
+        "/api/",
+        "\\bseed\\b",
+        "\\bjson\\b",
+        "\\byjs\\b",
+        "\\bwebrtc\\b",
+        "\\bliveblocks\\b",
+        "\\bindexeddb\\b",
+        "\\blocal ?storage\\b",
+        "\\baria-",
+        "\\brole=",
+        "\\btest ?id\\b",
+        "\\blocator\\b",
+        "\\bbutton\\b",
+        "\\bclicks?\\b"
+      ]
+    }
+  ]
+}
