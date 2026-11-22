@@ -2,7 +2,8 @@
 // Fails when a step definition is used by no feature. playwright-bdd's `bddgen` already fails a
 // step with no definition, or one that two definitions match; its `export --unused-steps`
 // report lists unused definitions but exits 0, so this script turns the report into a check.
-// `npm run lint` runs it from the repository root.
+// `npm run lint` runs it from the repository root. Why it exists and works this way is in
+// check-unused-steps.meta.md beside it; read that only when changing or questioning the script.
 //
 // Usage: node scripts/check-unused-steps.ts
 // BDDGEN_CLI replaces the path to playwright-bdd's CLI, so a test can supply a fake one.
