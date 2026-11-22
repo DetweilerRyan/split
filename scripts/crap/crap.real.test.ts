@@ -106,14 +106,13 @@ afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
 });
 
+// The script's contract, end to end: it runs as a program on a real git repository, with a fake
+// `npm test`. The rules themselves are tested beside each module.
 describe('crap', () => {
-  const allow = (
-    crap: number,
-    complexity: number,
-    reason = 'One branch per row of the rate table.',
-  ) => `// crap-allow: CRAP ${crap}, complexity ${complexity}. ${reason}\n`;
+  const allow = (crap: number, complexity: number) =>
+    `// @crap-allow CRAP ${crap}, complexity ${complexity}. One branch per row of the rate table.\n`;
 
-  it('reads each changed function’s complexity from oxlint and fails one over the limits', () => {
+  it('fails a changed function over the limits, and says what comment would allow it', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
     write(cwd, { 'src/grade.ts': branchy('grade', 11) });
 
@@ -121,7 +120,7 @@ describe('crap', () => {
 
     expect(result.status).toBe(1);
     expect(result.output).toContain(
-      '- src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%. Over the limits (CRAP 30, complexity 10). To leave it, add `// crap-allow: CRAP 156, complexity 12. <reason>` directly above it.',
+      '- src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%. Over the limits (CRAP 30, complexity 10). To leave it, add `// @crap-allow CRAP 156, complexity 12. <reason>` directly above it.',
     );
     expect(result.output).toContain('Follow docs/engineering/crap.md to respond.');
   });
@@ -139,16 +138,6 @@ describe('crap', () => {
     expect(result.status).toBe(0);
   });
 
-  it('fails a changed function over CRAP 30 even when its complexity is within 10', () => {
-    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-    write(cwd, { 'src/grade.ts': branchy('grade', 5) });
-
-    const result = crap(cwd);
-
-    expect(result.status).toBe(1);
-    expect(result.output).toContain('grade: CRAP 42, complexity 6, coverage 0%. Over the limits');
-  });
-
   it('ignores a function over the limits that the branch doesn’t change', () => {
     const cwd = repository({ 'src/grade.ts': `${branchy('grade', 11)}export const other = 1;\n` });
     write(cwd, { 'src/grade.ts': `${branchy('grade', 11)}export const other = 2;\n` });
@@ -156,7 +145,7 @@ describe('crap', () => {
     expect(crap(cwd).status).toBe(0);
   });
 
-  it('passes a changed function over the limits whose crap-allow comment gives its numbers', () => {
+  it('passes a changed function whose @crap-allow comment gives its numbers', () => {
     const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
     write(cwd, {
       'src/grade.ts': allow(156, 12) + branchy('grade', 11).replace('return -1', 'return -2'),
@@ -168,7 +157,7 @@ describe('crap', () => {
     expect(result.status).toBe(0);
   });
 
-  it('fails when a function gets worse than its crap-allow comment says', () => {
+  it('fails when a function’s numbers no longer match its @crap-allow comment', () => {
     const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
     write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 12) });
 
@@ -176,90 +165,20 @@ describe('crap', () => {
 
     expect(result.status).toBe(1);
     expect(result.output).toContain(
-      '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its crap-allow comment says CRAP 156, complexity 12. Update the comment to `// crap-allow: CRAP 182, complexity 13.`, and check its reason still holds.',
+      '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12. Update the comment to `// @crap-allow CRAP 182, complexity 13.`, and check its reason still holds.',
     );
   });
 
-  it('fails when a function gets better than its crap-allow comment says, even with its code unchanged', () => {
-    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
-    write(cwd, { 'covered.json': JSON.stringify({ 'src/grade.ts': 'all' }) });
-
-    const result = crap(cwd);
-
-    expect(result.status).toBe(1);
-    expect(result.output).toContain(
-      'grade: CRAP 12, complexity 12, coverage 100%, but its crap-allow comment says CRAP 156, complexity 12.',
-    );
-  });
-
-  it('fails a crap-allow comment on a function that is within the limits now', () => {
-    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
-    write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 3) });
-
-    const result = crap(cwd);
-
-    expect(result.status).toBe(1);
-    expect(result.output).toContain(
-      "grade: CRAP 20, complexity 4, coverage 0%. It's within the limits now, so delete its crap-allow comment.",
-    );
-  });
-
-  it('fails a crap-allow comment with no reason, or in the wrong form', () => {
-    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-    write(cwd, {
-      'src/grade.ts': '// crap-allow: CRAP 156, complexity 12.\n' + branchy('grade', 11),
-      'src/rank.ts': '// crap-allow CRAP=156 complexity=12 because\n' + branchy('rank', 11),
-    });
-
-    const result = crap(cwd);
-
-    expect(result.status).toBe(1);
-    expect(result.output).toContain(
-      '- src/grade.ts:1 The crap-allow comment for grade gives no reason.',
-    );
-    expect(result.output).toContain(
-      '- src/rank.ts:1 This crap-allow comment isn’t in the form `// crap-allow: CRAP <score>, complexity <n>. <reason>`.',
-    );
-  });
-
-  it('fails a crap-allow comment left behind when its function is gone', () => {
-    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
-    write(cwd, { 'src/grade.ts': `${allow(156, 12)}export const grade = 1;\n` });
-
-    const result = crap(cwd);
-
-    expect(result.status).toBe(1);
-    expect(result.output).toContain(
-      '- src/grade.ts:1 This crap-allow comment isn’t directly above a function. Move it there, or delete it.',
-    );
-  });
-
-  it('applies a crap-allow comment across a doc comment, and flags one the branch adds with its whole reason', () => {
+  it('flags a @crap-allow comment the branch adds, quoting its reason', () => {
     const cwd = repository({ 'src/grade.ts': branchy('grade', 11) });
-    write(cwd, {
-      'src/grade.ts':
-        allow(156, 12, 'One branch per row of the rate table.') +
-        '// Revisit when the table moves to data.\n' +
-        '/** Grades a score. */\n' +
-        branchy('grade', 11),
-    });
+    write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
 
     const result = crap(cwd);
 
     expect(result.status).toBe(0);
     expect(result.output).toContain(
-      'Notice: src/grade.ts:1 Adds or changes the crap-allow comment for grade (CRAP 156, complexity 12). Its reason: One branch per row of the rate table. Revisit when the table moves to data.',
+      'Notice: src/grade.ts:1 Adds or changes the @crap-allow comment for grade (CRAP 156, complexity 12). Its reason: One branch per row of the rate table.',
     );
-  });
-
-  it('labels an anonymous callback by the call it is passed to', () => {
-    const body = branchy('inner', 11)
-      .replace('export function inner(n: number) {', 'items.forEach((n: number) => {')
-      .replace(/}\n$/, '});\n');
-    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-    write(cwd, { 'src/list.ts': `declare const items: number[];\n${body}` });
-
-    expect(crap(cwd).output).toContain('- src/list.ts:2 items.forEach callback: CRAP 156');
   });
 
   it('gives no score when the tests fail', () => {
@@ -286,7 +205,7 @@ describe('crap', () => {
       expect(result.status).toBe(0);
       expect(JSON.parse(result.stdout).hookSpecificOutput.hookEventName).toBe('Stop');
       expect(context(result.stdout)).toContain(
-        '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its crap-allow comment says CRAP 156, complexity 12.',
+        '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12.',
       );
       expect(context(result.stdout)).toContain(
         'Follow docs/engineering/crap.md to respond. This is advice; CI fails on each CRAP finding.',

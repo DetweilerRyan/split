@@ -27,8 +27,7 @@ import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-// crap-allow: CRAP 110, complexity 10. Debt from before the CRAP check (#63):
-// no tests run it yet.
+// @crap-allow CRAP 110, complexity 10. Debt from before the CRAP check (#63): no tests yet.
 export default function RoomView({ roomId }: { roomId: RoomId }) {
   const router = useRouter();
   const provider = useRoomProvider(roomId);
@@ -110,8 +109,6 @@ export default function RoomView({ roomId }: { roomId: RoomId }) {
     router.push(roomPath(nextRoom));
   }
 
-  // crap-allow: CRAP 42, complexity 6. Debt from before the CRAP check (#63):
-  // no tests run it yet.
   async function changeDisplayCurrency(code: string, force = false, base = snapshot.currency) {
     if (!code || code === base) {
       provider.store.setExchangeRate('', 0, '');

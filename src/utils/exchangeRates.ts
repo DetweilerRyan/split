@@ -59,8 +59,7 @@ async function writeCache(key: string, value: ExchangeRate): Promise<void> {
   });
 }
 
-// crap-allow: CRAP 240, complexity 15. Debt from before the CRAP check (#63):
-// no tests run it yet.
+// @crap-allow CRAP 132, complexity 11. Debt from before the CRAP check (#63): no tests yet.
 /**
  * Gets a base->quote rate. Fresh cached values are used first; on network failure a stale
  * cached value is returned. Resolves to null when no rate is available (e.g. offline).

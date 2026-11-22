@@ -12,8 +12,7 @@ interface EditReceiptDrawerProps {
   onAddItem: (name: string, en: string, eur: number) => void;
 }
 
-// crap-allow: CRAP 42, complexity 6. Debt from before the CRAP check (#63):
-// no tests run it yet.
+// @crap-allow CRAP 42, complexity 6. Debt from before the CRAP check (#63): no tests yet.
 export function EditReceiptDrawer({
   snapshot,
   onMeta,

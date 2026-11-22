@@ -1,0 +1,128 @@
+// Parses a source file with oxc-parser into its functions, each with its place, a label for
+// findings and its complexity, and its comments.
+import { parseSync } from 'oxc-parser';
+import { type AstNode, children, complexity, FUNCTION_TYPES, isNode } from './complexity.ts';
+
+/** A 1-based line and a 0-based column in UTF-16 units, as istanbul coverage reports use. */
+export type Position = { line: number; column: number };
+export type Range = { start: Position; end: Position };
+export type Fn = Range & {
+  /** Its own label, such as "changeDisplayCurrency" or "seed.items.forEach callback". */
+  label: string;
+  /** Its label inside the functions around it: "RoomView > changeDisplayCurrency". */
+  name: string;
+  complexity: number;
+  /** UTF-16 offsets of the function in its file. */
+  offset: { start: number; end: number };
+  /** The functions it sits inside, outermost first. */
+  parents: Fn[];
+};
+export type Comment = { type: 'Line' | 'Block'; value: string; start: number; end: number };
+export type Parsed = {
+  functions: Fn[];
+  comments: Comment[];
+  position: (offset: number) => Position;
+};
+
+export class ParseError extends Error {}
+
+/** Converts UTF-16 offsets in `source` to lines and columns. */
+export function positions(source: string) {
+  const lineStarts = [0];
+  for (let i = source.indexOf('\n'); i !== -1; i = source.indexOf('\n', i + 1)) {
+    lineStarts.push(i + 1);
+  }
+  return (offset: number): Position => {
+    let low = 0;
+    let high = lineStarts.length - 1;
+    while (low < high) {
+      const middle = (low + high + 1) >> 1;
+      if (lineStarts[middle] <= offset) low = middle;
+      else high = middle - 1;
+    }
+    return { line: low + 1, column: offset - lineStarts[low] };
+  };
+}
+
+/** The source text of `node`, if it's short enough to read as a name. */
+function text(source: string, node: unknown) {
+  if (!isNode(node)) return undefined;
+  const value = source.slice(node.start, node.end);
+  return value.length <= 40 && !value.includes('\n') ? value : undefined;
+}
+
+/** A label for a function, from its own name or what it's assigned or passed to. */
+export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
+  const own = fn.id;
+  if (isNode(own) && typeof own.name === 'string') return own.name;
+  if (!parent) return '(anonymous)';
+  switch (parent.type) {
+    case 'VariableDeclarator':
+      return text(source, parent.id) ?? '(anonymous)';
+    case 'Property':
+    case 'MethodDefinition':
+    case 'PropertyDefinition':
+      return text(source, parent.key) ?? '(anonymous)';
+    case 'AssignmentExpression':
+      return text(source, parent.left) ?? '(anonymous)';
+    case 'CallExpression':
+    case 'NewExpression': {
+      const callee = text(source, parent.callee);
+      return callee ? `${callee} callback` : '(anonymous)';
+    }
+    case 'ExportDefaultDeclaration':
+      return 'default export';
+    default:
+      return '(anonymous)';
+  }
+}
+
+/** The JSX attribute a handler is the value of, as in `onClick={() => …}`. */
+function jsxAttribute(source: string, ancestors: AstNode[]) {
+  const [container, attribute] = ancestors.slice(-2).reverse();
+  if (container?.type !== 'JSXExpressionContainer' || attribute?.type !== 'JSXAttribute') {
+    return undefined;
+  }
+  return text(source, attribute.name);
+}
+
+export function parse(file: string, source: string): Parsed {
+  const result = parseSync(file, source);
+  if (result.errors.length > 0) {
+    throw new ParseError(`Couldn't parse ${file}: ${result.errors[0].message}`);
+  }
+  const position = positions(source);
+  const functions: Fn[] = [];
+
+  const visit = (node: AstNode, ancestors: AstNode[], enclosing: Fn[]) => {
+    let inside = enclosing;
+    if (FUNCTION_TYPES.has(node.type) && node.body) {
+      const parent = ancestors.at(-1);
+      const own =
+        parent?.type === 'JSXExpressionContainer'
+          ? (jsxAttribute(source, ancestors) ?? '(anonymous)')
+          : label(source, node, parent);
+      const fn: Fn = {
+        label: own,
+        name: [...enclosing.map((outer) => outer.label), own].join(' > '),
+        complexity: complexity(node),
+        offset: { start: node.start, end: node.end },
+        start: position(node.start),
+        end: position(node.end),
+        parents: enclosing,
+      };
+      functions.push(fn);
+      inside = [...enclosing, fn];
+    }
+    for (const child of children(node)) visit(child, [...ancestors, node], inside);
+  };
+  visit(result.program as unknown as AstNode, [], []);
+
+  const comments = (result.comments as Comment[]).map(({ type, value, start, end }) => ({
+    type,
+    value,
+    start,
+    end,
+  }));
+  return { functions, comments, position };
+}
