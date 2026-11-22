@@ -20,7 +20,7 @@ How to write tests in this repository: what they check, which project they belon
 
 ## Which project a test belongs in
 
-Tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../vitest.config.ts). The file name decides the project. `npm test` runs all three.
+Tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../vitest.config.ts). The file name decides the project. `npm test` runs all three. A journey through the whole running app is an [end-to-end test](#end-to-end-tests) instead.
 
 | Project   | File name                                               | Runs in                               | Put here                                                                                 |
 | :-------- | :------------------------------------------------------ | :------------------------------------ | :--------------------------------------------------------------------------------------- |
@@ -46,9 +46,29 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
 - **Test a hook through the component that uses it.** Use `renderHook` from `vitest-browser-react` instead only when the hook is complex enough that a component would obscure it, or when several components share it. `src/hooks/useActiveIdentity.browser.test.ts` is an example.
 - **A component's callback props are part of what it shows its developer user.** Checking that `onSelect` was called with the chosen id is fine. Checking which internal function ran is not.
 
+## End-to-end tests
+
+An end-to-end test checks a journey a person or an assistant takes through the running app, such as an assistant creating a room through `/api/mcp` and two people splitting it live. It is a Gherkin scenario, run by [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/) as [`playwright.config.ts`](../../playwright.config.ts) sets up, and `npm run test:e2e` runs them all. Keep edge cases in Vitest. Write a scenario only for what the whole app is needed to show.
+
+| Path                             | Holds                                                                                                                     |
+| :------------------------------- | :------------------------------------------------------------------------------------------------------------------------ |
+| `e2e/features/<journey>.feature` | Scenarios, in the words of the people at the table                                                                        |
+| `e2e/steps/<journey>.steps.ts`   | Step definitions                                                                                                          |
+| `e2e/screenplay/`                | The cast (`fixtures.ts`), actors and their abilities (`actor.ts`, `mcp.ts`), and the shared `tasks.ts` and `questions.ts` |
+
+Steps follow the Screenplay pattern: **actors** use **abilities** to perform **tasks** and answer **questions**.
+
+- **Name an actor in every step,** and get them with `actorCalled(name)`. The same name gives the same actor for the whole scenario. Each actor's abilities are created on first use: a browser of their own, a separate context on a phone-sized screen so each has their own storage and identity, and an MCP client session.
+- **Keep step definitions thin.** A step calls `actor.attemptsTo(...)` with tasks, or asserts on `actor.answer(...)` with a question. Clicks, typing and tool calls belong in tasks, and reading the page or a tool result belongs in questions. When a step needs one that doesn't exist, add it to `tasks.ts` or `questions.ts` rather than using `page` in the step.
+- **A question that reads the page returns a `Locator`,** so `await expect(locator)` retries until it passes, with no waits of your own. Find elements in the order [component tests](#writing-component-and-hook-tests) use, by role and accessible name first, and assert the text a user reads.
+- **Carry what an actor learns to a later step** with `remember` and `recall`, adding the key and its type to `Notes` in `actor.ts`.
+- **Import `test`, `Given`, `When` and `Then` from `e2e/screenplay/fixtures.ts` only.** `createBdd` works only with the `test` that playwright-bdd exports.
+- **Don't edit `.features-gen/`.** `bddgen` writes the Playwright tests there from the features, and git ignores it.
+
 ## Tests stay offline
 
 - **A test never makes a request to the internet,** not even to a public endpoint: no Liveblocks, no WebRTC signaling server, no exchange-rate service, no npm registry. The suite must pass with no network access. The browser is downloaded by setup, never by a test.
+- **End-to-end tests use servers on this machine only.** `playwright.config.ts` starts the app and a local WebRTC signaling server, and every actor's browser refuses requests to any other host. Use receipts in USD, so no exchange rate is fetched. A scenario that needs another outside service waits until that service can be replaced at its edge.
 - **A `real` test runs local programs and temporary files only,** in a temporary directory it cleans up. `scripts/prepare-sandbox.real.test.ts` runs the setup script there with fakes of `npm`, Playwright's CLI, `ldd` and `sudo`.
 - **Don't depend on state outside the test,** such as files in the home folder or IndexedDB from an earlier run. Clear `localStorage` before a test that reads it.
 

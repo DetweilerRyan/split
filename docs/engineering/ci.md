@@ -16,7 +16,7 @@
 
 ## Updating what CI runs
 
-- **`playwright` and the container image move together.** The image tag in `ci.yml` (`mcr.microsoft.com/playwright:v<version>-noble`) must equal the `playwright` version in `package.json`. Change both in the same commit, after checking the tag exists:
+- **`playwright`, `@playwright/test` and the container image move together.** The image tag in `ci.yml` (`mcr.microsoft.com/playwright:v<version>-noble`) must equal the `playwright` and `@playwright/test` versions in `package.json`. Change all three in the same commit, after checking the tag exists:
 
   ```bash
   curl -s https://mcr.microsoft.com/v2/playwright/tags/list | grep -o '"v<version>-noble"'

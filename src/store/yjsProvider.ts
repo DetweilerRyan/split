@@ -35,6 +35,14 @@ const providers =
   providerRegistry.__splitRoomProviders ??
   (providerRegistry.__splitRoomProviders = new Map<RoomId, Promise<RoomProvider>>());
 const liveblocksApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim();
+const publicSignalingUrls = ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'];
+const configuredSignalingUrls = (process.env.NEXT_PUBLIC_WEBRTC_SIGNALING_URLS ?? '')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
+const signalingUrls = configuredSignalingUrls.length
+  ? configuredSignalingUrls
+  : publicSignalingUrls;
 const participantColors = [
   '#4f46e5',
   '#059669',
@@ -88,7 +96,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
   const webrtc = liveblocks
     ? null
     : new WebrtcProvider(webrtcRoomName(roomId), doc, {
-        signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'],
+        signaling: signalingUrls,
       });
   const awareness = liveblocks?.awareness ?? webrtc!.awareness;
 

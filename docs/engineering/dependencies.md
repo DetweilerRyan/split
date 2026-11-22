@@ -32,7 +32,7 @@ Name two or three candidates, and always include the two baselines: writing it o
 - **Put the proposal in the issue or pull request:** the need, the candidates, the trial's result, and the recommendation.
 - **Only the owner approves a new dependency,** in writing, in the issue, the pull request, or the session. Until then, no commit adds it to `package.json` or imports it. Approval covers one package in one role; it doesn't carry over to the next package.
 - **A version update of an approved dependency needs no new approval,** including a security update. Read its changelog for breaking changes, and run the [definition-of-done checks](../../AGENTS.md#definition-of-done).
-- **Updating `playwright` also updates CI's container image.** Follow [CI](ci.md#updating-what-ci-runs).
+- **Updating `playwright` or `@playwright/test` also updates CI's container image.** Follow [CI](ci.md#updating-what-ci-runs).
 
 ## After approval
 
