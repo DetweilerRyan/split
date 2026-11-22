@@ -4,7 +4,7 @@ oxCrap scores each function in `src/` and `app/` by its complexity and how much 
 
 ## Where findings come from
 
-oxCrap reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them.
+oxCrap reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them. [`.oxcraprc.json`](../../.oxcraprc.json), at the root, sets what it scores here and the limits.
 
 - **The Stop hook,** [`scripts/stop-hook.ts`](../../scripts/stop-hook.ts), runs lint, `npm test` and `npm run oxcrap` when a Claude Code session stops with changes in `src/` or `app/`. It gives the session what fails as advice, once per stop, and never blocks.
 - **CI** runs `npm test`, then `npm run oxcrap`, and fails on any finding.

@@ -1,10 +1,8 @@
 // The CRAP rules: which functions are over the limits, and which @crap-allow comments no longer
 // match their function.
 import type { Allow, Finding } from './allow.ts';
+import type { Limits } from './config.ts';
 import type { Fn } from './functions.ts';
-
-export const MAX_CRAP = 30;
-export const MAX_COMPLEXITY = 10;
 
 export type Scored = { fn: Fn; file: string; coverage: number; crap: number };
 
@@ -13,7 +11,6 @@ export const crapOf = (complexity: number, coverage: number) =>
   complexity ** 2 * (1 - coverage) ** 3 + complexity;
 
 const round = (n: number) => Math.round(n * 10) / 10;
-const overLimit = (s: Scored) => s.crap > MAX_CRAP || s.fn.complexity > MAX_COMPLEXITY;
 const numbers = (s: Scored) => `CRAP ${round(s.crap)}, complexity ${s.fn.complexity}`;
 const describe = (s: Scored) =>
   `${s.fn.name}: ${numbers(s)}, coverage ${Math.round(s.coverage * 100)}%`;
@@ -26,7 +23,8 @@ const order = (a: Finding, b: Finding) =>
  * current numbers, and a comment fails when its numbers don't match its function or its function
  * is within the limits.
  */
-export function check(scored: Scored[], allowed: Map<Fn, Allow>) {
+export function check(scored: Scored[], allowed: Map<Fn, Allow>, limits: Limits) {
+  const overLimit = (s: Scored) => s.crap > limits.crap || s.fn.complexity > limits.complexity;
   const problems: Finding[] = [];
   for (const s of scored) {
     const allow = allowed.get(s.fn);
@@ -47,7 +45,7 @@ export function check(scored: Scored[], allowed: Map<Fn, Allow>) {
       problems.push({
         file: s.file,
         line: s.fn.start.line,
-        message: `${describe(s)}. Over the limits (CRAP ${MAX_CRAP}, complexity ${MAX_COMPLEXITY}). To leave it, add \`// @crap-allow ${numbers(s)}. <reason>\` directly above it.`,
+        message: `${describe(s)}. Over the limits (CRAP ${limits.crap}, complexity ${limits.complexity}). To leave it, add \`// @crap-allow ${numbers(s)}. <reason>\` directly above it.`,
       });
     }
   }

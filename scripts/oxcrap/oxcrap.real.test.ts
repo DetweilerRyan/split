@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { DEFAULTS } from './config.ts';
 
 // The script's contract, end to end: it runs as a program on a plain folder, not a git repository,
 // given a coverage report. The rules themselves are tested beside each module.
@@ -66,6 +67,21 @@ const allow = (crap: number, complexity: number) =>
 
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
+});
+
+describe('README.md', () => {
+  // The README lists the config's defaults for people; config.ts owns them, and config.test.ts
+  // checks the schema. This keeps the README from drifting.
+  it('shows the defaults the code uses', () => {
+    const readme = readFileSync(fileURLToPath(new URL('./README.md', import.meta.url)), 'utf8');
+    const json = (value: unknown) =>
+      JSON.stringify(value).replaceAll(',', ', ').replaceAll(':', ': ');
+    expect(readme).toContain(`\`${JSON.stringify(DEFAULTS.files)}\``);
+    expect(readme).toContain(
+      `\`${JSON.stringify(DEFAULTS.ignorePatterns).replaceAll(',', ', ')}\``,
+    );
+    expect(readme).toContain(`\`{ ${json(DEFAULTS.limits).slice(1, -1)} }\``);
+  });
 });
 
 describe('oxcrap', () => {
@@ -157,16 +173,125 @@ describe('oxcrap', () => {
     );
   });
 
-  it('says what’s wrong when a path is missing, or the report or paths aren’t given', () => {
+  it('says what’s wrong when a path is missing, or no coverage report is given', () => {
     const cwd = project({ 'src/keep.ts': 'export const keep = 1;\n' });
     coverage(cwd, ['src/keep.ts']);
-    const usage =
-      'Usage: node scripts/oxcrap/oxcrap.ts --coverage <report> [--guide <doc>] <path>...';
 
     expect(oxcrap(cwd, ['--coverage', 'coverage.json', 'lib']).output).toContain(
       'No file or folder at lib.',
     );
-    expect(oxcrap(cwd, ['src']).output).toContain(usage);
-    expect(oxcrap(cwd, ['--coverage', 'coverage.json']).output).toContain(usage);
+    expect(oxcrap(cwd, ['src']).output).toContain(
+      'Usage: node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--guide <doc>] [<path>...]\nGive the coverage report with --coverage, or as "coverage" in .oxcraprc.json.',
+    );
+  });
+
+  describe('with a config file', () => {
+    const rc = (options: object) => JSON.stringify(options, null, 2);
+
+    it('reads .oxcraprc.json from the current directory: its files, coverage and guide', () => {
+      const cwd = project({
+        '.oxcraprc.json': `{
+  // Comments are allowed, as in oxlint's and oxfmt's configs.
+  "files": ["lib/**/*.ts"],
+  "coverage": "coverage.json",
+  "guide": "GUIDE.md",
+}
+`,
+        'lib/grade.ts': branchy('grade', 11),
+        'src/ignored.ts': branchy('ignored', 11),
+      });
+      coverage(cwd, ['lib/grade.ts']);
+
+      const result = oxcrap(cwd, []);
+
+      expect(result.status).toBe(1);
+      expect(result.output).toContain('- lib/grade.ts:1 grade: CRAP 156');
+      expect(result.output).not.toContain('ignored');
+      expect(result.output).toContain('Follow GUIDE.md to respond.');
+    });
+
+    it('reads a config -c names, with its paths from the config’s folder', () => {
+      const cwd = project({
+        'web/crap.json': rc({ files: ['src/**/*.ts'], coverage: '../coverage.json' }),
+        'web/src/grade.ts': branchy('grade', 11),
+        'src/elsewhere.ts': branchy('elsewhere', 11),
+      });
+      coverage(cwd, ['web/src/grade.ts']);
+
+      const result = oxcrap(cwd, ['--config', 'web/crap.json']);
+
+      expect(result.status).toBe(1);
+      expect(result.output).toContain('- web/src/grade.ts:1 grade: CRAP 156');
+      expect(result.output).not.toContain('elsewhere');
+      expect(oxcrap(join(cwd, 'web'), ['-c', 'crap.json']).output).toContain(
+        '- src/grade.ts:1 grade: CRAP 156',
+      );
+    });
+
+    it('refuses files outside the config’s folder', () => {
+      const cwd = project({
+        'web/crap.json': rc({ files: ['../src/**/*.ts'], coverage: '../coverage.json' }),
+        'src/grade.ts': branchy('grade', 11),
+      });
+      coverage(cwd, ['src/grade.ts']);
+
+      expect(oxcrap(cwd, ['-c', 'web/crap.json']).output).toContain(
+        `web/crap.json: "files" can't reach outside the config's folder, as "../src/**/*.ts" does.`,
+      );
+      expect(
+        oxcrap(join(cwd, 'web'), ['--coverage', '../coverage.json', '../src']).output,
+      ).toContain('../src is outside ., the folder oxCrap scores.');
+    });
+
+    it('uses its limits and ignorePatterns', () => {
+      const cwd = project({
+        '.oxcraprc.json': rc({
+          coverage: 'coverage.json',
+          limits: { crap: 200, complexity: 20 },
+          ignorePatterns: ['**/legacy/**'],
+        }),
+        'src/grade.ts': branchy('grade', 11),
+        'src/legacy/old.ts': branchy('old', 30),
+      });
+      coverage(cwd, ['src/grade.ts']);
+
+      const result = oxcrap(cwd, []);
+
+      expect(result.output).toContain('No CRAP findings.');
+      expect(result.status).toBe(0);
+    });
+
+    it('lets the command line override it: paths replace its files, and options its settings', () => {
+      const cwd = project({
+        '.oxcraprc.json': rc({ files: ['lib/**/*.ts'], coverage: 'old.json', guide: 'A.md' }),
+        'lib/fine.ts': 'export const fine = 1;\n',
+        'src/grade.ts': branchy('grade', 11),
+      });
+      coverage(cwd, ['src/grade.ts']);
+
+      const result = oxcrap(cwd, ['--coverage', 'coverage.json', '--guide', 'B.md', 'src']);
+
+      expect(result.output).toContain('- src/grade.ts:1 grade: CRAP 156');
+      expect(result.output).toContain('Follow B.md to respond.');
+    });
+
+    it('says what’s wrong with a missing or invalid config, or files that match nothing', () => {
+      const cwd = project({ 'src/keep.ts': 'export const keep = 1;\n' });
+      coverage(cwd, ['src/keep.ts']);
+
+      expect(oxcrap(cwd, ['-c', 'nope.json']).output).toContain('No config file at nope.json.');
+
+      write(cwd, { '.oxcraprc.json': rc({ coverage: 'coverage.json', limit: { crap: 30 } }) });
+      expect(oxcrap(cwd, []).output).toContain(
+        '.oxcraprc.json has no option "limit". The options are files, ignorePatterns, limits, coverage, guide.',
+      );
+
+      write(cwd, { '.oxcraprc.json': rc({ coverage: 'coverage.json', files: ['lib/**'] }) });
+      const none = oxcrap(cwd, []);
+      expect(none.status).toBe(1);
+      expect(none.output).toContain(
+        'No files to score: nothing matches "files" in .oxcraprc.json that "ignorePatterns" leaves in.',
+      );
+    });
   });
 });
