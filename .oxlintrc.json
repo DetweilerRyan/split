@@ -1,4 +1,26 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import"]
+  "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import"],
+  "overrides": [
+    {
+      // oxCrap imports nothing from outside its folder: no parent folders, and not the app's
+      // `@/` alias. Node built-ins and npm packages are fine. Why is in
+      // scripts/oxcrap/oxcrap.meta.md.
+      "files": ["scripts/oxcrap/**"],
+      "rules": {
+        "import/no-relative-parent-imports": "error",
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/**", "@/"],
+                "message": "oxCrap imports nothing from outside scripts/oxcrap/."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
