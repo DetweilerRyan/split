@@ -1,0 +1,13 @@
+# rumdl checks the links in tracked Markdown files, run by `npm run lint`. The reasons, sources and
+# options not taken are in .rumdl.toml.meta.md; read it only when changing or questioning a setting.
+#
+# Formatting is left to oxfmt, so rumdl only checks: never run `rumdl fmt`.
+
+[global]
+# Only the link rules run. Turning on another rule is a separate decision.
+enable = [
+  "MD051", # a #fragment names a heading or anchor in the same file, or in the file it links to
+  "MD057", # a relative link points at a file that exists
+]
+# The check takes milliseconds, so a cache would only add a folder to ignore.
+cache = false
