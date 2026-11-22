@@ -15,8 +15,8 @@ export type Config = {
   limits: Limits;
   /** The istanbul JSON coverage report, from the config's folder. */
   coverage?: string;
-  /** A document the findings point to. */
-  guide?: string;
+  /** Where to get help when there are findings: a URL, or a path from the config's folder. */
+  helpUrl?: string;
 };
 /** What a config file holds, once the schema has checked it. */
 type File = Partial<Omit<Config, 'limits'>> & { limits?: Partial<Limits>; $schema?: string };

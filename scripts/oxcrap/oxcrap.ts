@@ -17,7 +17,7 @@ import { findFiles, gitignoreIn } from './files.ts';
 import { type Fn, parse } from './functions.ts';
 
 const USAGE =
-  'Usage: node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--guide <doc>] [<path>...]';
+  'Usage: node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--help-url <url>] [<path>...]';
 
 const posix = (path: string) => path.split(sep).join('/');
 /** A path as the person running oxCrap would write it: from the current directory. */
@@ -28,6 +28,29 @@ const shown = (path: string) => posix(relative('.', path)) || '.';
  * it's in, as oxlint's does.
  */
 const outside = (path: string) => path === '..' || path.startsWith('../') || path.startsWith('/');
+
+/** Whether a help value is a URL, such as https://…, rather than a path. */
+const isUrl = (value: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
+
+/**
+ * The help to print under findings, as commitlint's helpUrl is: a URL as it is, or a path, which
+ * must exist, shown from the current directory. `--help-url` is read from here; the config's
+ * `helpUrl` from the config's folder.
+ */
+function helpFrom(
+  given: string | undefined,
+  configured: string | undefined,
+  root: string,
+  from: string,
+) {
+  const value = given ?? configured;
+  if (!value || isUrl(value)) return value;
+  const path = given ? resolve(given) : resolve(root, value);
+  if (!existsSync(path)) {
+    throw new Error(`No help file at ${shown(path)}, which ${given ? '--help-url' : from} names.`);
+  }
+  return shown(path);
+}
 
 /** The config file to read: the one `-c` names, else the first default name in this directory. */
 function configFile(given: string | undefined) {
@@ -110,7 +133,7 @@ function main(args: string[]) {
     options: {
       config: { type: 'string', short: 'c' },
       coverage: { type: 'string' },
-      guide: { type: 'string' },
+      'help-url': { type: 'string' },
     },
   });
 
@@ -139,6 +162,12 @@ function main(args: string[]) {
     );
   }
 
+  const help = helpFrom(
+    values['help-url'],
+    config.helpUrl,
+    root,
+    configPath ? `"helpUrl" in ${shown(configPath)}` : 'the config',
+  );
   const { matched, scored } = findFiles(
     root,
     config.files,
@@ -158,8 +187,7 @@ function main(args: string[]) {
     console.error(
       `CRAP findings:\n${problems.map((f) => `- ${f.file}:${f.line} ${f.message}`).join('\n')}`,
     );
-    const guide = values.guide ?? config.guide;
-    if (guide) console.error(`\nFollow ${guide} to respond.`);
+    if (help) console.error(`\nGet help: ${help}`);
     return 1;
   }
   console.log('No CRAP findings.');

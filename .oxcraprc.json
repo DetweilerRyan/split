@@ -6,5 +6,5 @@
   "limits": { "crap": 30, "complexity": 10 },
   // Every `npm test` writes this report, so run the tests first.
   "coverage": "coverage/coverage-final.json",
-  "guide": "docs/engineering/crap.md"
+  "helpUrl": "docs/engineering/crap.md"
 }

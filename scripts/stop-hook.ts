@@ -60,7 +60,7 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean }) {
     }
   }
   if (sections.length === 0) return undefined;
-  // `npm run oxcrap` already points to its procedure, so this only says what kind of message it is.
+  // `npm run oxcrap` already says where to get help, so this only says what kind of message it is.
   return `${sections.join('\n\n')}\n\nThis is advice; CI fails on each of these.`;
 }
 
