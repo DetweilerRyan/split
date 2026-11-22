@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Scores each function under the given paths by CRAP: complexity² × (1 − coverage)³ + complexity,
+// oxCrap: scores each function under the given paths by CRAP, complexity² × (1 − coverage)³ + complexity,
 // where complexity is counted by complexity.ts and coverage comes from the istanbul JSON report
 // it's given. It fails when a function the branch changes is over the limits in check.ts, unless
 // a `// @crap-allow` comment directly above it gives its current numbers and a reason; and when any
 // @crap-allow comment's numbers no longer match its function. It never runs the tests, and never
-// writes to source files. Why it works this way is in crap.meta.md beside it; read that only when
+// writes to source files. Why it works this way is in oxcrap.meta.md beside it; read that only when
 // changing or questioning it.
 //
 // Usage, from anywhere in the repository:
-//   node scripts/crap/crap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...
+//   node scripts/oxcrap/oxcrap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...
 //     --coverage  an istanbul JSON report, such as coverage/coverage-final.json, written by a test
 //                 run of the code as it is now
 //     --base      the ref to find changed functions against (default origin/main)
@@ -26,7 +26,7 @@ import { changedLines, git } from './diff.ts';
 import { type Fn, parse } from './functions.ts';
 
 const USAGE =
-  'Usage: node scripts/crap/crap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...';
+  'Usage: node scripts/oxcrap/oxcrap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...';
 const CODE = /\.[cm]?[jt]sx?$/;
 const TEST = /\.(test|spec)\.[cm]?[jt]sx?$/;
 

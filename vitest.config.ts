@@ -25,7 +25,7 @@ export default defineConfig({
     dedupe: ['yjs'],
   },
   test: {
-    // Every run writes coverage/coverage-final.json, which `npm run crap` reads to score each
+    // Every run writes coverage/coverage-final.json, which `npm run oxcrap` reads to score each
     // function in src/ and app/. A run whose tests fail writes no report, and the folder is
     // emptied at the start of each run, so a report never outlives the run that made it.
     coverage: {

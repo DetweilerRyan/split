@@ -6,7 +6,7 @@ next-env.d.ts
 *.tsbuildinfo
 # Screenshots and attachments Vitest browser mode saves for failing tests
 .vitest/
-# The coverage report every `npm test` writes, which `npm run crap` reads
+# The coverage report every `npm test` writes, which `npm run oxcrap` reads
 coverage/
 # Branch worktrees (docs/engineering/workflow/starting-work.md)
 .claude/worktrees/

@@ -3,7 +3,7 @@
 // app/, it runs lint, the tests (which write the coverage report) and the CRAP check, and gives
 // Claude what fails as advice: `hookSpecificOutput.additionalContext`, which lets the session carry
 // on and act on it. It never blocks, and always exits 0. CI runs the same checks and fails on them.
-// Why it works this way is in crap/crap.meta.md; read that only when changing or questioning it.
+// Why it works this way is in oxcrap/oxcrap.meta.md; read that only when changing or questioning it.
 //
 // Usage: node scripts/stop-hook.ts, with the hook's JSON input on stdin.
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
@@ -54,13 +54,13 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean }) {
       `\`npm test\` fails, so it wrote no coverage report and no CRAP score was calculated. Fix the tests first:\n${tail(tests.output, 60)}`,
     );
   } else {
-    const crap = run('npm', ['run', 'crap', '--silent', '--', '--base', base], root);
+    const crap = run('npm', ['run', 'oxcrap', '--silent', '--', '--base', base], root);
     if (crap.status !== 0 || crap.output.includes('Notice:')) {
-      sections.push(`\`npm run crap\` reports:\n${tail(crap.output, 80)}`);
+      sections.push(`\`npm run oxcrap\` reports:\n${tail(crap.output, 80)}`);
     }
   }
   if (sections.length === 0) return undefined;
-  // `npm run crap` already points to its procedure, so this only says what kind of message it is.
+  // `npm run oxcrap` already points to its procedure, so this only says what kind of message it is.
   return `${sections.join('\n\n')}\n\nThis is advice; CI fails on each of these.`;
 }
 
