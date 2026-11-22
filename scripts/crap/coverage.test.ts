@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverageOf, type FileCoverage } from './coverage.ts';
+import { coverageOf, type FileCoverage, newerThan, parseReport } from './coverage.ts';
 import { parse } from './functions.ts';
 
 /** An istanbul file entry with one statement per listed line, run or not. */
@@ -60,5 +60,33 @@ describe('coverageOf', () => {
 
   it('scores 0 throughout a file the report doesn’t have', () => {
     expect(covered(undefined)).toEqual({ outer: 0, 'outer > inner': 0, one: 0 });
+  });
+});
+
+describe('parseReport', () => {
+  it('reads an istanbul JSON report', () => {
+    const file = report([[2, true]]);
+    expect(parseReport(JSON.stringify({ '/repo/src/a.ts': file }), 'c.json')).toEqual({
+      '/repo/src/a.ts': file,
+    });
+  });
+
+  it('refuses text that isn’t JSON, and JSON that isn’t an istanbul report', () => {
+    expect(() => parseReport('<html>', 'c.json')).toThrow("c.json isn't a JSON coverage report");
+    expect(() => parseReport('{"total": {"lines": {"pct": 90}}}', 'c.json')).toThrow(
+      "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
+    );
+  });
+});
+
+describe('newerThan', () => {
+  it('lists the files changed after the report, newest first', () => {
+    const files = [
+      { file: 'src/old.ts', time: 100 },
+      { file: 'src/newer.ts', time: 300 },
+      { file: 'src/new.ts', time: 200 },
+      { file: 'src/same.ts', time: 150 },
+    ];
+    expect(newerThan(150, files)).toEqual(['src/newer.ts', 'src/new.ts']);
   });
 });

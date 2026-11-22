@@ -4,11 +4,13 @@
 
 ## Where findings come from
 
-- **The Stop hook,** in [`.claude/settings.json`](../../.claude/settings.json), gives a Claude Code session its findings when it stops with changes in `src/` or `app/`. It advises once per stop and never blocks.
-- **CI,** whose `CRAP score` step fails the pull request on any finding.
-- **`npm run crap`,** one of the [definition-of-done checks](../../AGENTS.md#definition-of-done), which compares the branch with `origin/main`.
+The script never runs the tests. It reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`, and refuses a report older than any file in `src/` or `app/`. So **run `npm test` before `npm run crap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them.
 
-All three run the same script and print the same findings.
+- **The Stop hook,** [`scripts/stop-hook.ts`](../../scripts/stop-hook.ts), runs lint, `npm test` and `npm run crap` when a Claude Code session stops with changes in `src/` or `app/`. It gives the session what fails as advice, once per stop, and never blocks.
+- **CI** runs `npm test`, then `npm run crap` against the pull request's base branch, and fails on any finding.
+- **`npm run crap`,** one of the definition-of-done checks, compares the branch with `origin/main`.
+
+All three run the same script on a fresh report, so they print the same findings.
 
 ## How complexity is counted
 
@@ -16,7 +18,7 @@ The script counts complexity itself, with the rules in [`complexity.ts`](../../s
 
 ## Responding to a finding
 
-1. **Fix failing tests and lint first,** then run `npm run crap` again. The script gives no score while the tests fail, and fixing either can change the scores.
+1. **Fix failing tests and lint first,** then run `npm test` and `npm run crap` again. A test run that fails writes no coverage report, so there's no score until the tests pass, and fixing either can change the scores.
 2. **First add tests for the branches the function doesn't run yet.** This changes no behaviour and is usually enough to bring the score under the limit. Write them as [testing conventions](testing-conventions.md) say, in the project the function belongs in.
 3. **If its complexity is over the limit, refactor it,** into smaller functions only where the split reads better than the original. Don't extract a helper that exists only to pass the limit.
 4. **Never skip, delete or weaken a test, or write numbers in a `@crap-allow` comment other than the function's real ones, to pass.**
