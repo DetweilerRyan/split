@@ -25,26 +25,70 @@
   "max-scenarios-per-file": ["error", { "maxScenarios": 12, "countOutlineExamples": false }],
   "name-length": ["error", { "Feature": 70, "Scenario": 100, "Step": 110 }],
   // Scenarios use the words of the people at the table. Each pattern names how the app is built,
-  // not what someone sees or does; matching ignores case.
+  // not what someone sees or does. Matching ignores case and skips Examples cells. Domain words
+  // stay allowed: table (where people eat), link (a room link), page, request, phone, MCP server.
   "no-restricted-patterns": [
     "error",
     {
       "Global": [
-        "\\bcreate_receipt_room\\b",
+        // Code identifiers: any snake_case name, such as a tool's, and function calls.
+        "\\b\\w+_\\w+\\b",
+        "\\w\\(\\)",
+        // URLs and HTTP.
+        "https?://",
+        "\\burls?\\b",
         "/api/",
-        "\\bseed\\b",
+        "\\bendpoints?\\b",
+        "\\bapi\\b",
+        "\\bhttp\\b",
+        "\\bstatus code\\b",
+        "\\b(get|post|put|patch|delete) request\\b",
         "\\bjson\\b",
+        // Storage and sync internals.
+        "\\bseed\\b",
         "\\byjs\\b",
         "\\bwebrtc\\b",
         "\\bliveblocks\\b",
+        "\\bwebsockets?\\b",
+        "\\bsignal(l)?ing\\b",
+        "\\bdatabase\\b",
+        "\\bsql\\b",
         "\\bindexeddb\\b",
         "\\blocal ?storage\\b",
+        "\\bsession ?storage\\b",
+        "\\bcookies?\\b",
+        // The DOM and how tests find things in it.
         "\\baria-",
         "\\brole=",
         "\\btest ?id\\b",
         "\\blocator\\b",
-        "\\bbutton\\b",
-        "\\bclicks?\\b"
+        "\\bselectors?\\b",
+        "\\bxpath\\b",
+        "\\bcss\\b",
+        "\\bdom\\b",
+        "\\bdiv\\b",
+        "\\belements?\\b",
+        // Widgets and gestures: say what the person does, like claims, not how.
+        "\\bbuttons?\\b",
+        "\\bclicks?\\b",
+        "\\btaps?\\b",
+        "\\bfields?\\b",
+        "\\btext ?box\\b",
+        "\\bcheck ?box\\b",
+        "\\bdrop ?down\\b",
+        "\\binput\\b",
+        "\\bhovers?\\b",
+        "\\bscrolls?\\b",
+        "\\bnavigates? to\\b",
+        // The browser and the test harness.
+        "\\bchrom(e|ium)\\b",
+        "\\bviewport\\b",
+        "\\bheadless\\b",
+        "\\bwaits? for\\b",
+        "\\bseconds?\\b",
+        "\\bmock(s|ed)?\\b",
+        "\\bstub(s|bed)?\\b",
+        "\\bshould return\\b"
       ]
     }
   ]
