@@ -20,8 +20,18 @@
         // Run and debug single Vitest tests from the editor.
         "vitest.explorer",
         // Review and comment on draft pull requests in the editor.
-        "github.vscode-pull-request-github"
-      ]
+        "github.vscode-pull-request-github",
+        // Cucumber's own: highlights, formats and autocompletes e2e/features/*.feature, and jumps
+        // from a step to its definition.
+        "CucumberOpen.cucumber-official"
+      ],
+      "settings": {
+        // The extension's default paths don't include e2e/, where playwright.config.ts keeps them.
+        "cucumber.features": ["e2e/features/**/*.feature"],
+        "cucumber.glue": ["e2e/steps/**/*.ts"],
+        // Format features with Cucumber's formatter, the library `npm run format` uses.
+        "[cucumber]": { "editor.defaultFormatter": "CucumberOpen.cucumber-official" }
+      }
     }
   }
 }
