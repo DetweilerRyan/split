@@ -125,14 +125,21 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
     Bowtie's compliance report couldn't be read without a browser.
 
   - **A `"__proto__"` key is refused before validation.** `jsonc-parser` assigns it, which sets the object's prototype, so the schema would never see it, and it would be quietly ignored.
-- **Files are found with Node's `fs.globSync`, with no dependency.**
+- **Files are found with Node's `fs.globSync`.**
   - **The owner chose it** ("use fs.globSync", [feedback](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7086720954)), after asking "i thought node had a glob package".
   - **It's been stable since Node 22.17,** below the README's 22.18 minimum. Its `exclude` has taken glob patterns since 22.14.
   - **An excluded folder isn't searched.** With `**/node_modules/**` excluded, a search of this repository fell from 131 ms over 4,980 files to 3 ms.
   - **It replaced a hand-written `glob.ts`.** An earlier version of this note said wrongly that Node's glob wasn't stable in Node 22, without checking which 22 release.
-  - **The stale-report check makes a second search** that excludes only the folder patterns in `ignorePatterns` (those ending in `/**`), so test files still count against the report.
+  - **`exclude` is a function asking `ignore` about each folder,** so a folder `ignorePatterns` matches isn't searched, while ignored files, such as tests, are left out of scoring but still count against the coverage report.
   - **A single file named on the command line is passed through as it is,** not as a pattern. A folder whose name has glob characters is refused, because Node's glob has no escape that works on every platform.
 - **The limits moved from constants in `check.ts` into the config,** with 30 and 10 as defaults in `config.ts`. This repository's [`.oxcraprc.json`](../../.oxcraprc.json) sets them explicitly, so a change to them shows up as a change to that file.
+
+### gitignore-style `ignorePatterns`
+
+- **The owner approved the [`ignore`](https://www.npmjs.com/package/ignore) package** ("yes, add the ignore package", [feedback](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7086816626)), so `ignorePatterns` match as oxlint's do. oxlint's schema says its patterns "use gitignore-style matching, rooted at the directory containing the configuration file".
+- **`ignore` 7.0.14** is MIT, with no dependencies of its own, and is what ESLint and Prettier use for gitignore matching.
+- **The defaults became `node_modules/`, `.*/`, `*.test.*` and `*.spec.*`,** which match at any depth, as in a `.gitignore`.
+- **`files` stay globs, as Node's `fs.globSync` takes them.** oxlint's overrides make the same split: their `files` are globs.
 
 ### The folder and its modules
 
@@ -178,7 +185,7 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 
 - **A hand-written glob matcher and folder walk,** `glob.ts`: Node's `fs.globSync` does the same, stably, from Node 22.17.
 - **`tinyglobby`** (already installed, through Vite and Vitest), **`fast-glob`**, **`picomatch`** or **`minimatch`:** each a dependency, for what Node now does itself.
-- **gitignore-style `ignorePatterns`, with the `ignore` package,** as oxlint's are: it would need a second dependency, and Node's glob couldn't then skip ignored folders as it searches. `ignorePatterns` stay globs, unlike oxlint's.
+- **`ignorePatterns` as globs, passed to `fs.globSync`'s `exclude`:** unlike oxlint's gitignore-style patterns, and needing a guess at which patterns named folders.
 - **Reading the config with `oxc-parser`,** by parsing it as one JavaScript expression. It accepted syntax oxlint refuses, such as single quotes, unquoted keys, hex numbers and numeric separators. It mishandled a `__proto__` key, and its errors pointed at the wrapped text. The owner rejected it: "that doesn't make any sense at all."
 - **Stripping comments and trailing commas by hand, then `JSON.parse`:** the owner didn't trust it ("i don't trust a nieve aprroach").
 - **Hand-written type checks for each option,** as the first config reader had: they duplicated the schema, which `ajv` now applies directly.

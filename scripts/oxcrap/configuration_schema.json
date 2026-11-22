@@ -10,17 +10,21 @@
       "type": "string"
     },
     "files": {
-      "description": "Globs of the files to score. `**` matches any number of folders, `*` any characters but `/`, and `{a,b}` either alternative.",
+      "description": "Globs of the files to score, as Node's fs.globSync takes them: `**` matches any number of folders, `*` any characters but `/`, and `{a,b}` either alternative.",
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 1,
       "default": ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]
     },
     "ignorePatterns": {
-      "description": "Globs left out of scoring. A folder that matches isn't searched. Setting this replaces the default list.",
+      "description": "Patterns left out of scoring, in gitignore style, as oxlint's ignorePatterns are: from this file's folder, with `name/` for a folder at any depth and `!` to bring a file back. A folder that matches isn't searched. Setting this replaces the default list.",
       "type": "array",
-      "items": { "type": "string" },
-      "default": ["**/node_modules/**", "**/.*/**", "**/*.test.*", "**/*.spec.*"]
+      "items": {
+        "type": "string"
+      },
+      "default": ["node_modules/", ".*/", "*.test.*", "*.spec.*"]
     },
     "limits": {
       "description": "A function fails when its CRAP score or its complexity is over its limit.",
