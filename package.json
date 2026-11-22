@@ -10,9 +10,9 @@
     "test": "vitest run",
     "test:e2e": "bddgen && playwright test",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint --deny-warnings",
-    "format": "oxfmt",
-    "format:check": "oxfmt --check"
+    "lint": "oxlint --deny-warnings && gplint e2e/features",
+    "format": "oxfmt && node scripts/format-features.mjs",
+    "format:check": "oxfmt --check && node scripts/format-features.mjs --check"
   },
   "dependencies": {
     "@liveblocks/client": "^3.24.5",
@@ -33,6 +33,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cucumber/gherkin-utils": "12.0.2",
     "@modelcontextprotocol/client": "2.4.0",
     "@playwright/test": "1.65.0",
     "@types/node": "^26.6.6",
@@ -42,6 +43,7 @@
     "@vitest/browser-playwright": "5.0.5",
     "autoprefixer": "^10.6.2",
     "babel-plugin-react-compiler": "^1.0.0",
+    "gplint": "2.6.1",
     "jsdom": "^30.1.3",
     "oxfmt": "0.76.0",
     "oxlint": "1.91.0",

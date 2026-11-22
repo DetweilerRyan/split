@@ -6,7 +6,7 @@ Feature: Split a receipt live
     Given Claude has read a receipt from "Luigi's" for "Alice" and "Bob":
       | item   | price |
       | Burger | 12.00 |
-      | Fries  | 4.00  |
+      | Fries  |  4.00 |
     And Claude has created a receipt room
     And Alice has opened the room link Claude was given
     And Bob has joined Alice's room

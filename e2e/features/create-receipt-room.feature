@@ -1,12 +1,12 @@
 Feature: Create a receipt room through the MCP server
-  An assistant that has read a receipt calls the create_receipt_room tool,
+  An assistant that has read a receipt asks the MCP server for a room,
   and the people at the table open the link it returns.
 
   Background:
     Given Claude has read a receipt from "Luigi's" for "Alice" and "Bob":
       | item   | price |
       | Burger | 12.00 |
-      | Fries  | 4.00  |
+      | Fries  |  4.00 |
 
   Scenario: The link opens a room holding the receipt
     When Claude creates a receipt room

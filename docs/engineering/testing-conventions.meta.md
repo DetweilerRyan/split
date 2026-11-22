@@ -73,6 +73,29 @@ Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/s
 - **The first refusal scenario uses a duplicated item id,** not the tax line #55 suggested. The schema rejects duplicated ids, but leaving out tax lines is only an instruction in the field description, so no code refuses them.
 - **Runs against Vercel previews are deferred** to [#56](https://github.com/DetweilerRyan/split/issues/56).
 
+### Linting and formatting features
+
+Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 and `gplint` 2.6.1 in the session that day, to add to [PR #57](https://github.com/DetweilerRyan/split/pull/57).
+
+- **Precedents:** the owner's `gol` and `gol2` repositories.
+  - **`gol`** formats features with Prettier's `prettier-plugin-gherkin` and gates them with `gherkin-lint-plus`. Its config turns on every structure rule, plus `no-restricted-patterns` as a check that scenarios stay at domain altitude. It also has a report-only checker for duplicated step wording.
+  - **`gol2`** lints Markdown beside oxfmt. Its rule is that only one tool formats, and the linter's style rules are pinned to what the formatter writes, because "the two tools rewrite each other's output".
+- **Formatter: `@cucumber/gherkin-utils`,** Cucumber's own, the same project as the parser.
+  - **Why:** oxfmt doesn't read `.feature` files. Cucumber's editor language server depends on the same library, so editors that use it should format the same way.
+  - **Its CLI has no check mode,** so `scripts/format-features.mjs` pipes each file through it and compares the output.
+  - **Not taken:** `prettier-plugin-gherkin`, `gol`'s choice. It would add Prettier as a second formatter beside oxfmt, and `gol`'s own move to oxfmt still kept Prettier for this reason.
+- **Linter: `gplint`,** with `gol`'s rules.
+  - **Why:** it is a maintained fork of gherkin-lint, with releases on 2026-10-31 and 2026-11-15. Version 2.6.1 is used because 2.6.2 was under two weeks old.
+  - **Not taken: `gherkin-lint-plus`,** `gol`'s choice. One maintainer, first published 2026-04-05, and no release since 2026-04-27. `gol` doesn't record why it chose it.
+  - **Not taken: `gherkin-lint`,** with no release since 2023-12.
+- **Rules ported from `gol`:**
+  - `only-one-when` doesn't exist in gplint. `max-keywords` with `when: 1` and `ignoreConjunctions: true` does the same: without `ignoreConjunctions`, an `And` after a `When` counts as a second When.
+  - The `max-scenarios-per-file` and `name-length` limits are `gol`'s measured values, kept until a feature here shows they don't fit.
+- **Layout rules are off** (indentation, trailing spaces, blank lines, end-of-file newline, `table-align`), following `gol2`: the formatter owns layout, so the two can't disagree.
+- **The vocabulary list** names implementation words for this app. Its first run caught `create_receipt_room` in a feature description, reworded in the same change. Planting two `When`s, `button` and `clicks` in a scenario made the lint fail with six findings.
+- **Not taken: a checker for duplicated step wording** like `gol`'s. Two features don't have enough steps to drift.
+  - **Reopen when:** features grow enough that similar steps are written twice.
+
 ## Changed test expectations
 
 The rule that a changed expectation needs a reason in the pull request is owned by [reviewing work](workflow/reviewing-work.md#changed-test-expectations); its source is in that document's sidecar.
