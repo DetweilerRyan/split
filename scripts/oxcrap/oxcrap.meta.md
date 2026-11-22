@@ -102,6 +102,20 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
 - **The modules import each other with `.ts` extensions,** which Node needs to run them by stripping types. So `tsconfig.json` sets `allowImportingTsExtensions`, which `noEmit` permits.
 
+### Nothing imported from outside the folder
+
+- **The owner asked for the rule** "that oxcrap must not import anything from outside it's own folder", and chose to add it to #64 ([choice](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085786799)).
+- **oxlint enforces it, with no new dependency.** An override in [`.oxlintrc.json`](../../.oxlintrc.json) scopes two rules to `scripts/oxcrap/**`:
+  - `import/no-relative-parent-imports` stops any import through a parent folder: a value or type-only import, a re-export, or a dynamic `import()`.
+  - `no-restricted-imports` with the pattern `@/**` stops the app's `@/` alias. Its patterns follow `.gitignore` rules, where `*` doesn't cross a `/`, so `@/*` alone wouldn't match `@/utils/math`.
+- **Siblings, Node built-ins and npm packages stay allowed.** That covers `./allow.ts`, `node:fs` and `oxc-parser`.
+- **[`oxlintrc.real.test.ts`](../../oxlintrc.real.test.ts) runs the real oxlint with the real config** on throwaway files laid out like the repository, so dropping the override, or a pattern that stops matching, fails a test.
+- **What the rules don't catch:**
+  - an import by absolute path;
+  - loading a file with `new URL('../…', import.meta.url)`, which isn't an import;
+  - an npm package that isn't meant to be used.
+    oxCrap does none of these today.
+
 ## How it works
 
 - **`oxc-parser` gives functions, their places and the file's comments in one parse.** Offsets are UTF-16, as JavaScript strings are, and lines and columns come from them in `positions`.
@@ -121,6 +135,12 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **The script running the tests itself,** as it did before the third round of feedback: it tied the script to `npm test`. CI also ran the suite twice.
 - **A hook mode inside the CRAP script:** it tied the script to Claude Code, and to running lint and the tests.
 - **A blocking hook:** #63 chose advice inside the session and a gate in CI.
+- **Other ways to enforce the import rule,** checked 2026-11-22:
+  - **[dependency-cruiser](https://github.com/sverweij/dependency-cruiser)** 18.9.0 checks the resolved import graph, and could allow only specific npm packages. It has 18 dependencies of its own, for a one-folder rule. Revisit if the rule grows, such as an allowlist of packages before publishing.
+  - **TypeScript's `rootDir`,** in a `tsconfig.json` of the folder's own, caught the same imports, but needs a second typecheck command and reports per imported file rather than per import.
+  - **[eslint-plugin-boundaries](https://github.com/javierbrea/eslint-plugin-boundaries)** needs ESLint, which this repository doesn't use, and reports disagree on whether it runs under oxlint.
+  - **oxlint-plugin-boundaries** is third-party and young, and it matches files by path rather than resolving imports.
+- **A separate pull request for the import rule,** off `main` with #64 stacked on it: `scripts/oxcrap/` exists only on #64's branch, so the rule would have enforced nothing until #64 merged.
 - **Mutation testing:** deferred. Revisit Stryker for `src/utils/math.ts` and `src/store/seedCodec.ts` in its own issue.
 
 ## What would reopen this
