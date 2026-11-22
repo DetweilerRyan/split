@@ -87,7 +87,7 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
   - **Why:** oxfmt doesn't read `.feature` files. Cucumber's editor language server depends on the same library, so editors that use it should format the same way.
   - **In the editor:** the dev container installs Cucumber's VS Code extension, `CucumberOpen.cucumber-official`, approved by the owner on 2026-11-22. It formats `.feature` files and links steps to `e2e/steps`. Version 1.12.1 was checked that day: updated 2026-11-07, about 473,000 installs, source in `cucumber/vscode`.
   - **Not checked:** which `@cucumber/gherkin-utils` version the extension bundles, because its code is minified, so its formatting isn't confirmed to match `npm run format`. `npm run format:check` decides.
-  - **Its CLI has no check mode,** so `scripts/format-features.mjs` pipes each file through it and compares the output.
+  - **Its CLI has no check mode,** so `scripts/format-features.ts` pipes each file through it and compares the output.
   - **Not taken:** `prettier-plugin-gherkin`, `gol`'s choice. It would add Prettier as a second formatter beside oxfmt, and `gol`'s own move to oxfmt still kept Prettier for this reason.
 - **Linter: `gplint`,** with `gol`'s rules and a list of banned implementation words. Why gplint, where each rule comes from, and the research behind the word list are in [`.gplintrc.meta.md`](../../.gplintrc.meta.md).
 - **Not taken: a checker for duplicated step wording** like `gol`'s. Two features don't have enough steps to drift.

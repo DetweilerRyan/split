@@ -2,7 +2,7 @@
 // options not taken are in .gplintrc.meta.md; read it only when changing or questioning a rule.
 //
 // Layout (indentation, spacing, blank lines, table alignment) is left to the formatter,
-// scripts/format-features.mjs, so the two never ask for different things.
+// scripts/format-features.ts, so the two never ask for different things.
 {
   "file-name": ["error", { "style": "kebab-case" }],
   "no-empty-file": "error",

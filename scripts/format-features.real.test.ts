@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const script = fileURLToPath(new URL('./format-features.mjs', import.meta.url));
+const script = fileURLToPath(new URL('./format-features.ts', import.meta.url));
 const directories: string[] = [];
 
 const formatted = `Feature: Split a bill

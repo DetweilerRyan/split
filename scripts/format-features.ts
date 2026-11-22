@@ -3,7 +3,9 @@
 // oxfmt doesn't cover. `npm run format` writes them; `npm run format:check` runs this with
 // --check, which changes nothing and exits 1 if any file isn't formatted.
 //
-// Usage: node scripts/format-features.mjs [--check] [path ...]   (default path: e2e/features)
+// Usage: node scripts/format-features.ts [--check] [path ...]   (default path: e2e/features)
+// Node runs it as TypeScript by stripping the types, so use only syntax that erases: no enums,
+// namespaces or parameter properties.
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -18,15 +20,15 @@ const check = args.includes('--check');
 const paths = args.filter((arg) => arg !== '--check');
 if (paths.length === 0) paths.push('e2e/features');
 
-function featureFiles(path) {
+function featureFiles(path: string): string[] {
   if (!statSync(path).isDirectory()) return path.endsWith('.feature') ? [path] : [];
-  return readdirSync(path, { recursive: true })
+  return readdirSync(path, { recursive: true, encoding: 'utf8' })
     .filter((entry) => entry.endsWith('.feature'))
     .map((entry) => join(path, entry))
     .sort();
 }
 
-function format(source) {
+function format(source: string): string {
   const result = spawnSync(process.execPath, [formatter, 'format'], {
     input: source,
     encoding: 'utf8',
@@ -45,14 +47,15 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-const unformatted = [];
+const unformatted: string[] = [];
 for (const file of files) {
   const source = readFileSync(file, 'utf8');
-  let formatted;
+  let formatted: string;
   try {
     formatted = format(source);
   } catch (error) {
-    console.error(`${relative(process.cwd(), file)}: ${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`${relative(process.cwd(), file)}: ${message}`);
     process.exit(1);
   }
   if (formatted === source) continue;
