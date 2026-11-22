@@ -85,18 +85,7 @@ describe('stop-hook', () => {
     expect(result.context).toContain(
       '`npm run oxcrap` reports:\nCRAP findings: grade is over the limits.',
     );
-    expect(result.context).toContain('args: --base main');
     expect(result.context).toContain('This is advice; CI fails on each of these.');
-  });
-
-  it('passes on the CRAP check’s notices even when it passes', () => {
-    const cwd = repository();
-    write(cwd, {
-      'src/grade.ts': 'export const grade = 1;\n',
-      'crap-output': 'Notice: a new @crap-allow.',
-    });
-
-    expect(hook(cwd, { stop_hook_active: false }).context).toContain('Notice: a new @crap-allow.');
   });
 
   it('says nothing when the checks pass', () => {

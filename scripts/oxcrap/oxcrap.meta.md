@@ -7,6 +7,7 @@ Decided by the owner on [#63](https://github.com/DetweilerRyan/split/issues/63),
 - **[`crap-allow` comments](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7083296497)** replaced the baseline file.
 - **[`oxc-parser`, our own complexity count, `@crap-allow`, and this folder of modules](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7083803193).**
 - **[The script reads a coverage report instead of running the tests](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085342018).**
+- **[It checks every function, and reads no git diff](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085953510).**
 
 [The name oxCrap](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085518444) came last; see [the name](#the-name).
 
@@ -25,24 +26,27 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 ## Decisions
 
 - **Limits: CRAP 30, complexity 10.** CRAP 30 is crap4j's and cargo-crap's default. The complexity limit catches a well-tested function that is still too complex, since full coverage only brings CRAP down to the complexity.
-- **Only changed functions are checked against the limits.** A function is changed when the diff from the merge base, working tree and new files included, touches a line between its first and last. A change inside a nested function also touches the functions around it.
+- **Every function is checked against the limits,** not only those a branch changes.
+  - **The owner's words:** "yes, check every function and drop the git diff".
+  - **#63 first chose changed functions only,** so that existing debt wouldn't fail pull requests that never touched it. Once every function over the limits had to carry a `@crap-allow` comment, existing debt had a record of its own, and checking every function gave the same result on the code as it stood.
+  - **It also catches an untouched function pushed over the limits,** for example by a pull request that deletes or weakens its tests. That's the one case where the two differ.
+  - **Dropping the diff dropped git:** `--base`, the merge-base lookup and CI's full-history checkout all went with it.
 - **Exceptions are hand-written `@crap-allow` comments directly above the function.** The owner chose them over a baseline file so that exceptions survive renames and moves, and so that the script never writes to source files ("not a big fan of --write-baseline modifying the code").
   - **It's `@crap-allow`, not `crap-allow`,** "following typescripts lead" with `@ts-expect-error`: a directive is a comment that starts with it. A comment that only mentions it is prose.
   - **The format is `// @crap-allow CRAP <score>, complexity <n>. <reason>`.** A longer reason goes in a block comment, which also serves JSX as `{/* … */}`. Continuing a reason over `//` lines was dropped: it swallowed lint directives on the lines below into the reason.
   - **A doc-comment tag form (`/** … @crap-allow … */`) was left out,** since there the directive wouldn't start the comment.
-- **The comment carries the function's numbers, and every comment is checked against them,** whether or not the branch changes its function. The owner's words: so "the crap script can flag (warn in the hook and error/fail in ci) when the numbers in a crap-allow comment don't match the function anymore."
+- **The comment carries the function's numbers, and every comment is checked against them.** The owner's words: so "the crap script can flag (warn in the hook and error/fail in ci) when the numbers in a crap-allow comment don't match the function anymore."
   - **This is the ratchet #63 approved.** A function that gets worse, or better, no longer matches its comment, and the fix is a visible edit to that comment.
   - **It replaces a merge-base comparison:** with the numbers in the comment, there's nothing to compare against.
 - **A comment applies to the function starting on the next line of code.** Lines holding only other comments are skipped. It's an error, not a guess, when two functions that don't contain each other start on that line.
 - **The 15 functions over the limits when the check started have comments** saying so ("Debt from before the CRAP check (#63)"). Replace a reason with a real justification when you next work on its function.
-- **A comment the branch adds or changes is a notice, not a failure,** so the owner sees each new or changed exception and its reason.
 - **Coverage comes from all three Vitest projects together.** Components and hooks are tested in the `browser` project ([testing conventions](../../docs/engineering/testing-conventions.md#which-project-a-test-belongs-in)), so `unit` coverage alone would score every component at 0%.
 
 ### The script reads coverage; it doesn't run the tests
 
 - **The owner's words:** "the test suite should write a coverage report to disk and the crap script should take the path to the coverage report as a command argument. the goal should be that the crap script is largely independant of the rest of the app and should not assume where or how to execute this project's unit tests."
 - **Every `npm test` writes the report.** [`vitest.config.ts`](../../vitest.config.ts) turns coverage on for every run, writing `coverage/coverage-final.json`. It took the suite from about 4 s to 5 s. CI's `Tests` step writes the report and its `CRAP score` step reads it, so CI runs the suite once instead of twice.
-- **The script knows nothing of this project.** It takes the report (`--coverage`), the paths to score, the ref to compare with (`--base`) and an optional document to point to (`--guide`). It runs git and nothing else. [`package.json`](../../package.json)'s `crap` script supplies this repository's values.
+- **The script knows nothing of this project.** It takes the report (`--coverage`), the paths to score and an optional document to point to (`--guide`). It reads files and runs nothing: no tests, no git, nothing from npm. It works on any folder of code, in a git repository or not, skipping `node_modules` and dot-folders. [`package.json`](../../package.json)'s `oxcrap` script supplies this repository's values.
 - **A stale report is refused, not scored.** The script fails when the report is older than any file under the scored paths, tests included. That way a report from before the latest edits can't make a function look covered.
   - **A failed test run can't leave a stale report behind:** Vitest empties `coverage/` at the start of a run, and writes no report when a test fails.
   - **A partial run is the one gap:** a run of some test files writes a fresh report with only their coverage. That can only lower coverage, so it makes false findings, never a false pass.
@@ -95,10 +99,9 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 | [`complexity.ts`](complexity.ts) | The counting rules                                                            | [`complexity.test.ts`](complexity.test.ts)                             |
 | [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                    | [`allow.test.ts`](allow.test.ts)                                       |
 | [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions | [`coverage.test.ts`](coverage.test.ts)                                 |
-| [`diff.ts`](diff.ts)             | Runs `git diff`; reads changed lines from it                                  | [`diff.test.ts`](diff.test.ts)                                         |
 | [`check.ts`](check.ts)           | The rules, on plain data                                                      | [`check.test.ts`](check.test.ts)                                       |
 
-- **Every module but `oxcrap.ts` takes plain values,** such as source text, diff text or a coverage report's text. Only `oxcrap.ts` reads files, and only it and `changedLines` run git.
+- **Every module but `oxcrap.ts` takes plain values,** such as source text or a coverage report's text. Only `oxcrap.ts` reads files, and nothing runs a program.
 - **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
 - **The modules import each other with `.ts` extensions,** which Node needs to run them by stripping types. So `tsconfig.json` sets `allowImportingTsExtensions`, which `noEmit` permits.
 
@@ -129,6 +132,8 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **A baseline file,** `scripts/crap-baseline.json` and then a commented `crap-baseline.jsonc` with `--baseline` and `--write-baseline`. Its keys break on renames and moves, and rewriting it dropped the reasons. Comparable tools share the problem; see the research above.
 - **`--write-baseline` writing the comments into source files:** the owner didn't want the script to modify code.
 - **Comparing each function with its score at the merge base,** as Semgrep's `--baseline-commit` does: unnecessary once the comment carries the numbers.
+- **Checking only the functions a branch changes,** from `git diff` against the merge base. That was #63's choice, then dropped once comments recorded every exception; see the decisions above. It tied the script to git and to a base ref, and missed an untouched function pushed over the limits.
+- **Notices for `@crap-allow` comments a branch adds or changes:** they needed the diff. A reviewer sees those comments in the pull request's own diff.
 - **Text-only comment handling,** without a parser. It failed on comments that mention `crap-allow`, swallowed lint directives into the reason, mistook strings for comments, couldn't read JSX comments, and guessed between two functions on one line.
 - **A CRAP package from npm** (`crap4ts`, `crap-ts`, `@crap4ts/crap4ts`, `@bladesk/crap-check`, `@barney-media/crap-typescript` and others): about a dozen similar packages all published in 2026, mostly by single maintainers, with no clear original. They fail [dependencies](../../docs/engineering/dependencies.md)' maintenance checks.
 - **`@vitest/istanbul-lib-coverage`, to read the coverage report:** it only wraps a simple, stable JSON format.

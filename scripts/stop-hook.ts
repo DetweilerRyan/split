@@ -54,8 +54,8 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean }) {
       `\`npm test\` fails, so it wrote no coverage report and no CRAP score was calculated. Fix the tests first:\n${tail(tests.output, 60)}`,
     );
   } else {
-    const crap = run('npm', ['run', 'oxcrap', '--silent', '--', '--base', base], root);
-    if (crap.status !== 0 || crap.output.includes('Notice:')) {
+    const crap = run('npm', ['run', 'oxcrap', '--silent'], root);
+    if (crap.status !== 0) {
       sections.push(`\`npm run oxcrap\` reports:\n${tail(crap.output, 80)}`);
     }
   }
