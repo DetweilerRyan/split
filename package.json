@@ -11,8 +11,8 @@
     "test:e2e": "bddgen && playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --deny-warnings && gplint e2e/features",
-    "format": "oxfmt && node scripts/format-features.mjs",
-    "format:check": "oxfmt --check && node scripts/format-features.mjs --check"
+    "format": "oxfmt && node scripts/format-features.ts",
+    "format:check": "oxfmt --check && node scripts/format-features.ts --check"
   },
   "dependencies": {
     "@liveblocks/client": "^3.24.5",
