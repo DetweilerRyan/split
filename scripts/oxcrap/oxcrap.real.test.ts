@@ -270,6 +270,52 @@ describe('oxcrap', () => {
       ).toContain('../src is outside ., the folder oxCrap scores.');
     });
 
+    it('leaves out what the .gitignore in its folder lists, as oxlint does', () => {
+      const cwd = project({
+        '.gitignore': 'generated/\n*.gen.ts\n',
+        '.oxcraprc.json': rc({ coverage: 'coverage.json' }),
+        'src/grade.ts': branchy('grade', 11),
+        'src/generated/types.ts': branchy('types', 11),
+        'src/api.gen.ts': branchy('api', 11),
+      });
+      coverage(cwd, ['src/grade.ts']);
+
+      const result = oxcrap(cwd, []);
+
+      expect(result.output).toContain('- src/grade.ts:1 grade: CRAP 156');
+      expect(result.output).not.toMatch(/types:|api:/);
+    });
+
+    it('doesn’t count a gitignored file written after the tests ran against the report', () => {
+      // A file pattern, not a folder: a folder the .gitignore lists isn't searched at all.
+      const cwd = project({
+        '.gitignore': '*.gen.js\n',
+        '.oxcraprc.json': rc({ coverage: 'coverage.json' }),
+        'src/keep.ts': 'export const keep = 1;\n',
+        'src/api.gen.js': 'export const api = 1;\n',
+      });
+      coverage(cwd, ['src/keep.ts']);
+      const later = new Date(Date.now() + 60_000);
+      utimesSync(join(cwd, 'src/api.gen.js'), later, later);
+
+      const result = oxcrap(cwd, []);
+
+      expect(result.output).toContain('No CRAP findings.');
+      expect(result.status).toBe(0);
+    });
+
+    it('reads the .gitignore beside the config, not in the current directory', () => {
+      const cwd = project({
+        'web/.gitignore': 'legacy/\n',
+        'web/crap.json': rc({ files: ['src/**/*.ts'], coverage: '../coverage.json' }),
+        'web/src/legacy/old.ts': branchy('old', 11),
+        'web/src/grade.ts': 'export const grade = 1;\n',
+      });
+      coverage(cwd, ['web/src/grade.ts']);
+
+      expect(oxcrap(cwd, ['-c', 'web/crap.json']).output).toContain('No CRAP findings.');
+    });
+
     it('reads ignorePatterns as gitignore does: a folder at any depth, and ! to bring a file back', () => {
       const cwd = project({
         '.oxcraprc.json': rc({

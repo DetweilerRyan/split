@@ -141,6 +141,19 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 - **The defaults became `node_modules/`, `.*/`, `*.test.*` and `*.spec.*`,** which match at any depth, as in a `.gitignore`.
 - **`files` stay globs, as Node's `fs.globSync` takes them.** oxlint's overrides make the same split: their `files` are globs.
 
+### Reading the `.gitignore`
+
+- **The owner asked for it** ("yes, read the .gitignore too", [feedback](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7086963677)) after a test of oxlint 1.91.0 in a throwaway folder:
+  - **with no `.gitignore`,** it linted `node_modules/`, a nested `node_modules/` and a dot-folder;
+  - **with a `.gitignore` of `node_modules/`,** even outside a git repository, it skipped both `node_modules` folders;
+  - **in a git repository with no `.gitignore`,** it linted everything again;
+  - **with `ignorePatterns`,** it skipped what they listed.
+
+  So oxlint's own skipping comes from `.gitignore` files and its config, with no built-in list.
+
+- **oxCrap reads the `.gitignore` in the config's folder,** or the current folder without a config, with the same `ignore` package as `ignorePatterns`. It keeps its stricter defaults too: `node_modules/` and dot-folders are skipped even without a `.gitignore`, since scoring them is never wanted.
+- **What a `.gitignore` lists is left out of the stale-report check as well as scoring.** Only `ignorePatterns` files, such as tests, still count. Otherwise a gitignored build output written after the tests ran, such as `*.gen.js`, would make a fresh report look stale. A folder either lists isn't searched at all.
+
 ### The folder and its modules
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."
@@ -183,6 +196,7 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 
 ## Options not taken
 
+- **`.gitignore` files in subfolders,** which oxlint also reads: not asked for, and the one beside the config covers this repository. Add them if a project relies on nested ones.
 - **A hand-written glob matcher and folder walk,** `glob.ts`: Node's `fs.globSync` does the same, stably, from Node 22.17.
 - **`tinyglobby`** (already installed, through Vite and Vitest), **`fast-glob`**, **`picomatch`** or **`minimatch`:** each a dependency, for what Node now does itself.
 - **`ignorePatterns` as globs, passed to `fs.globSync`'s `exclude`:** unlike oxlint's gitignore-style patterns, and needing a guess at which patterns named folders.

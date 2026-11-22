@@ -19,7 +19,7 @@
       "default": ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]
     },
     "ignorePatterns": {
-      "description": "Patterns left out of scoring, in gitignore style, as oxlint's ignorePatterns are: from this file's folder, with `name/` for a folder at any depth and `!` to bring a file back. A folder that matches isn't searched. Setting this replaces the default list.",
+      "description": "Patterns left out of scoring, in gitignore style, as oxlint's ignorePatterns are: from this file's folder, with `name/` for a folder at any depth and `!` to bring a file back. A folder that matches isn't searched. Setting this replaces the default list. The .gitignore in this file's folder is read as well.",
       "type": "array",
       "items": {
         "type": "string"

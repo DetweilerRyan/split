@@ -13,7 +13,7 @@ import { type Allow, type Finding, findAllows } from './allow.ts';
 import { check, crapOf, type Scored } from './check.ts';
 import { CODE_FILES, CONFIG_NAMES, type Config, merge, parseConfig } from './config.ts';
 import { coverageOf, newerThan, parseReport, type Report } from './coverage.ts';
-import { findFiles } from './files.ts';
+import { findFiles, gitignoreIn } from './files.ts';
 import { type Fn, parse } from './functions.ts';
 
 const USAGE =
@@ -139,7 +139,13 @@ function main(args: string[]) {
     );
   }
 
-  const { matched, scored } = findFiles(root, config.files, config.ignorePatterns, given?.named);
+  const { matched, scored } = findFiles(
+    root,
+    config.files,
+    config.ignorePatterns,
+    given?.named,
+    gitignoreIn(root),
+  );
   if (scored.length === 0) {
     const where = configPath ? `"files" in ${shown(configPath)}` : 'the paths given';
     throw new Error(`No files to score: nothing matches ${where} that "ignorePatterns" leaves in.`);
