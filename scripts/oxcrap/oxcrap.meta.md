@@ -88,6 +88,18 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 
 - **Before publishing it,** weigh that an `ox` prefix can read as part of the official oxc project. Ask its maintainers, or say in the README that it's unofficial.
 
+### The README
+
+- **The owner asked for it:** "we should put a README.md file in the oxcrap folder. it should introduce the concept of crap and detail usage for the oxcrap cli tool."
+- **[`README.md`](README.md) is the tool's documentation, and owns it.** It covers:
+  - what CRAP measures;
+  - how oxCrap scores;
+  - the command line, its options and output;
+  - the `@crap-allow` rules.
+- **The `@crap-allow` rules moved there from the [CRAP score procedure](../../docs/engineering/crap.md), and the usage from `oxcrap.ts`'s header,** so each is written once ([single source of truth](../../docs/prose/single-source-of-truth.md)). The procedure keeps what's particular to this repository: where findings come from, how to respond, when to allow a function, and replacing the stand-in reasons.
+- **The README links to the limits and the counting rules** in `check.ts` and `complexity.ts` rather than restating them, since the code owns them. Its output example is real output, from a run on a small throwaway project.
+- **It's written to stand alone,** with only a short "In this repository" section at the end, so it could serve as the README of a published package.
+
 ### The folder and its modules
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."

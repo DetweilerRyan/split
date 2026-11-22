@@ -1,18 +1,9 @@
 #!/usr/bin/env node
-// oxCrap: scores every function under the given paths by CRAP, complexity² × (1 − coverage)³ +
-// complexity, where complexity is counted by complexity.ts and coverage comes from the istanbul
-// JSON report it's given. It fails when a function is over the limits in check.ts, unless a
-// `// @crap-allow` comment directly above it gives its current numbers and a reason; and when any
-// @crap-allow comment's numbers no longer match its function. It reads files and nothing else: it
-// never runs the tests or git, and never writes to source files. Why it works this way is in
-// oxcrap.meta.md beside it; read that only when changing or questioning it.
+// oxCrap's command line: scores every function under the given paths by CRAP, from a coverage
+// report, and fails on one over the limits without a matching @crap-allow comment. What CRAP is,
+// the options and the comment's rules are in README.md beside this file; why it works this way is
+// in oxcrap.meta.md, to read only when changing or questioning it.
 //
-// Usage:
-//   node scripts/oxcrap/oxcrap.ts --coverage <report> [--guide <doc>] <path>...
-//     --coverage  an istanbul JSON report, such as coverage/coverage-final.json, written by a test
-//                 run of the code as it is now
-//     --guide     a document to point to from the findings, such as a procedure for responding
-//     <path>      the folders or files whose functions are scored, from the current directory
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';

@@ -1,20 +1,16 @@
 # CRAP score
 
-oxCrap, [`scripts/oxcrap/oxcrap.ts`](../../scripts/oxcrap/oxcrap.ts), scores each function in `src/` and `app/` by its complexity and how much of it the tests run. Every function there fails when it's over the limits in [`check.ts`](../../scripts/oxcrap/check.ts), unless a [`@crap-allow` comment](#allowing-a-function-over-the-limits) above it records its current numbers and a reason. This procedure says what to do with a finding.
+oxCrap scores each function in `src/` and `app/` by its complexity and how much of it the tests run, and fails on one that's over the limits without a `@crap-allow` comment. Its [README](../../scripts/oxcrap/README.md) says what CRAP is, how oxCrap scores, how to run it and how to write a `@crap-allow` comment. This procedure says what to do with a finding in this repository.
 
 ## Where findings come from
 
-The script never runs the tests. It reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`, and refuses a report older than any file in `src/` or `app/`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them.
+oxCrap reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them.
 
 - **The Stop hook,** [`scripts/stop-hook.ts`](../../scripts/stop-hook.ts), runs lint, `npm test` and `npm run oxcrap` when a Claude Code session stops with changes in `src/` or `app/`. It gives the session what fails as advice, once per stop, and never blocks.
 - **CI** runs `npm test`, then `npm run oxcrap`, and fails on any finding.
 - **`npm run oxcrap`** is one of the definition-of-done checks.
 
-All three run the same script on a fresh report, so they print the same findings.
-
-## How complexity is counted
-
-The script counts complexity itself, with the rules in [`complexity.ts`](../../scripts/oxcrap/complexity.ts). They're close to ESLint's `complexity` rule but not the same, so don't compare its numbers with another tool's.
+All three run oxCrap on a fresh report, so they print the same findings.
 
 ## Responding to a finding
 
@@ -26,29 +22,11 @@ The script counts complexity itself, with the rules in [`complexity.ts`](../../s
 
 ## Allowing a function over the limits
 
-Write a comment that starts with `@crap-allow` directly above the function, above its doc comment if it has one. The finding gives the line to start from:
-
-```ts
-// @crap-allow CRAP 210, complexity 14. One branch per form field.
-export function RestaurantModal() {
-```
-
-For a reason longer than a line, use a block comment. Inside JSX, use `{/* … */}` on the line above the handler:
-
-```ts
-/* @crap-allow CRAP 210, complexity 14. One branch per form field; splitting it would scatter
-   the form's validation across files. */
-export function RestaurantModal() {
-```
-
-- **The numbers must be the function's current CRAP score and complexity,** exactly as the finding prints them. The check fails on any comment whose numbers don't match, anywhere in `src/` and `app/`, whether the function got worse or better, and even when its code didn't change.
-- **When a function's numbers change, update its comment by hand,** and check the reason still holds. The script never edits source files.
-- **Give a reason after the numbers.** The check fails on a comment with no reason.
-- **Put the function on the line below the comment, on a line of its own.** Other comments, such as a lint directive or a doc comment, can sit between them. The check fails on a comment that isn't directly above a function, and on one above a line where two functions start.
-- **Delete the comment when the function is within the limits again.** The check fails on a comment for a function within the limits.
-
-A comment that mentions `@crap-allow` without starting with it is ignored, so a comment can explain one.
+- **Allow a function only when the other steps would make the code worse:** when splitting it would scatter one idea across helpers, and testing the rest of it isn't worth it.
+- **Write the comment as [the README](../../scripts/oxcrap/README.md#allowing-a-function-over-the-limits) says,** with the numbers from the finding and a reason a reviewer can check: why this function, and what would change your mind.
+- **When a function's numbers change, update its comment by hand,** and check the reason still holds.
+- **Replace a stand-in reason when you work on its function.** The 15 comments added when the check started say "Debt from before the CRAP check (#63)", followed by "no tests yet" or "too complex". Give the real reason, or bring the function within the limits and delete the comment.
 
 ## Changing this document
 
-The reasons for this procedure and the script, their sources, and the options not taken are in [`scripts/oxcrap/oxcrap.meta.md`](../../scripts/oxcrap/oxcrap.meta.md). Read it only when changing or questioning a rule here.
+The reasons for this procedure and for oxCrap, their sources, and the options not taken are in [`scripts/oxcrap/oxcrap.meta.md`](../../scripts/oxcrap/oxcrap.meta.md). Read it only when changing or questioning a rule here.
