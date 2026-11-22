@@ -67,6 +67,9 @@ Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/s
   - **Why:** room sync uses public WebRTC signaling servers, which would break [Tests stay offline](testing-conventions.md#tests-stay-offline). `NEXT_PUBLIC_WEBRTC_SIGNALING_URLS` points the app at `y-webrtc`'s own server instead, and actors' browsers refuse every request to another host.
   - **Not covered:** Liveblocks mode.
 - **The app is built for every run.** Next.js inlines `NEXT_PUBLIC_` variables at build time, so a server already running might point at the public signaling servers. `reuseExistingServer` is off for that reason.
+- **Features live in `e2e/features/`, not a top-level `features/`.** Decided by the owner in the session on 2026-11-22.
+  - **Why:** everything for the suite stays under one folder named for the kind of test, as in Next.js's own `with-playwright` example (`testDir: path.join(__dirname, "e2e")`). A top-level `features/` can read as feature-sliced app code beside `app/` and `src/`.
+  - **Not taken:** `features/`, Cucumber's default and the owner's `gol` repository's layout. With it, cucumber-js and Cucumber's VS Code extension need no paths configured. Here only the two `cucumber.*` settings in `.devcontainer/devcontainer.json` differ.
 - **Actors browse on a phone.** `AGENTS.md` asks for a mobile-first interface, so the tests use what most people at the table will.
 - **Actors claim with their name's button on the item,** not by choosing an identity first. The header's identity button is named after whoever is active, so no stable name finds it.
   - **Reopen when:** that button gets a fixed accessible name.
