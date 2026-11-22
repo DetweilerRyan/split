@@ -24,7 +24,9 @@ const order = (a: Finding, b: Finding) =>
  * is within the limits.
  */
 export function check(scored: Scored[], allowed: Map<Fn, Allow>, limits: Limits) {
-  const overLimit = (s: Scored) => s.crap > limits.crap || s.fn.complexity > limits.complexity;
+  // The score is compared as it's printed and written in @crap-allow comments: to one decimal place.
+  const overLimit = (s: Scored) =>
+    round(s.crap) > limits.crap || s.fn.complexity > limits.complexity;
   const problems: Finding[] = [];
   for (const s of scored) {
     const allow = allowed.get(s.fn);

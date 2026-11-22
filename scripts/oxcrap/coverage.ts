@@ -20,7 +20,10 @@ export function parseReport(text: string, path: string): Report {
     throw new Error(`${path} isn't a JSON coverage report: ${(error as Error).message}`);
   }
   const files = report && typeof report === 'object' ? Object.values(report) : [];
-  if (Array.isArray(report) || files.some((file) => !file?.statementMap || !file?.s)) {
+  if (
+    Array.isArray(report) ||
+    files.some((file) => !file?.statementMap || !file?.s || !file?.fnMap || !file?.f)
+  ) {
     throw new Error(`${path} isn't an istanbul JSON coverage report, such as coverage-final.json.`);
   }
   return report as Report;

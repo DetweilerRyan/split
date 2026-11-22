@@ -58,6 +58,11 @@ describe('findAllows', () => {
     expect(allows(code).allowed.map((a) => a.name)).toEqual(['onClick']);
   });
 
+  it('reads a JSX comment above a handler across another JSX comment', () => {
+    const code = `const v = (\n  <div>\n    {/* @crap-allow CRAP 156, complexity 12. A reason. */}\n    {/* Another comment. */}\n    <button onClick={() => 1} />\n  </div>\n);\n`;
+    expect(allows(code)).toMatchObject({ allowed: [{ name: 'onClick' }], problems: [] });
+  });
+
   it('ignores comments that only mention @crap-allow, and text in strings', () => {
     const code = `// See docs/engineering/crap.md for @crap-allow comments.\n/** A @crap-allow comment gives a reason. */\nconst s = \`\n// @crap-allow CRAP 1, complexity 1. Not a comment.\n\`;\nfunction grade(n) {}\n`;
     expect(allows(code)).toEqual({ allowed: [], problems: [] });

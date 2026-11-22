@@ -36,7 +36,7 @@ CRAP rewards coverage, so it is only as honest as the tests behind it. A test th
 
 - **Complexity** is counted by oxCrap itself, by parsing each file with [`oxc-parser`](https://www.npmjs.com/package/oxc-parser). The rules are in [`complexity.ts`](complexity.ts). They're close to ESLint's `complexity` rule but not the same, so don't compare its numbers with another tool's.
   - **Nested functions:** a function inside another is scored on its own, and its branches don't count toward the outer one.
-- **Coverage** comes from an istanbul JSON coverage report, the `coverage-final.json` that Vitest, Jest and nyc can all write. Each statement counts toward the innermost function holding it.
+- **Coverage** comes from an istanbul JSON coverage report, the `coverage-final.json` that Vitest, Jest and nyc can all write. Each statement counts toward the innermost function holding it. Files are matched to the report by their real paths, so a symlink in the way doesn't matter.
 - **The limits** come from the [config](#configuration): a function fails when its CRAP score or its complexity is over its limit.
 - **Which files** come from the config too. By default, every JavaScript and TypeScript file is scored, except tests (`*.test.*`, `*.spec.*`), `node_modules`, folders whose names start with a dot, and whatever the `.gitignore` beside the config lists.
 
@@ -62,7 +62,7 @@ node scripts/oxcrap/oxcrap.ts --coverage coverage/coverage-final.json src
 
 **It refuses a report older than any file it finds,** tests included, so a stale report can't make a function look covered. Run the tests again, and the report is fresh.
 
-**It exits with 0** when there are no findings, and **with 1** when there are findings or it can't run: a missing or invalid config, a missing report, a stale report, a missing path, no files to score, or a file that doesn't parse.
+**It exits with 0** when there are no findings, and **with 1** when there are findings or it can't run: a missing or invalid config, a missing help file, a missing or stale report, a report that covers none of the files being scored, a missing path, no files to score, or a file that doesn't parse.
 
 ## Configuration
 
@@ -92,12 +92,12 @@ oxCrap's config follows oxlint's and oxfmt's:
 | `coverage`       | The coverage report's path.                                                                                                     | none, so `--coverage` is needed                    |
 | `helpUrl`        | Where to get help when there are findings: a URL, or a path from the config's folder, which must exist.                         | none                                               |
 
-- **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it. Paths on the command line are read from the current directory.
+- **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it, with `..` anywhere in it. Paths on the command line are read from the current directory.
 - **`files` are globs,** as Node's [`fs.globSync`](https://nodejs.org/api/fs.html#fsglobsyncpattern-options) takes them: `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. A folder given on the command line can't have glob characters in its name; list it in `files` instead.
 - **`ignorePatterns` are gitignore-style,** as oxlint's are, matched by the [`ignore`](https://www.npmjs.com/package/ignore) package:
   - `name/` matches a folder of that name at any depth, and `*.test.*` a file at any depth;
   - a pattern with a `/` before its end is anchored to the config's folder;
-  - `!` brings back a file an earlier pattern left out.
+  - `!` brings back a file an earlier pattern left out, though not one the `.gitignore` lists.
 - **The `.gitignore` in the config's folder is read too,** as oxlint reads one (or in the current folder, without a config). What it lists isn't scored, and doesn't count against the coverage report, so generated files written after the tests ran can't make the report look stale. `.gitignore` files in subfolders aren't read.
 - **The command line overrides the config,** option by option; paths given on the command line replace `files`.
 - **The config is checked against [`configuration_schema.json`](configuration_schema.json),** the schema editors use. An option oxCrap doesn't know, or a value of the wrong kind, is an error naming the option, and every problem is reported at once, so a typo can't quietly fall back to a default. So is a config whose `files` match nothing.
@@ -143,7 +143,7 @@ A comment that mentions `@crap-allow` without starting with it is ignored, so pr
 
 ## Requirements
 
-- **Node.js 22.18 or later, or 23.6 or later,** which run TypeScript files directly by stripping their types.
+- **Node.js 22.18 or later, or 23.6 or later,** which run TypeScript files directly by stripping their types. Its tests pass on Node 22.18 and 26.
 - **Four packages:**
   - [`oxc-parser`](https://www.npmjs.com/package/oxc-parser) parses the code;
   - [`jsonc-parser`](https://www.npmjs.com/package/jsonc-parser) reads the config;

@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -129,7 +137,7 @@ describe('oxcrap', () => {
       'src/node_modules/lib/index.ts': branchy('lib', 11),
       'src/.cache/built.ts': branchy('built', 11),
     });
-    coverage(cwd, []);
+    coverage(cwd, ['src/deep/rank.ts']);
 
     const result = oxcrap(cwd);
 
@@ -212,6 +220,43 @@ describe('oxcrap', () => {
     );
   });
 
+  it('refuses a report that covers none of the files being scored', () => {
+    const cwd = project({ 'src/grade.ts': branchy('grade', 11), 'lib/other.ts': 'export {};\n' });
+    coverage(cwd, ['lib/other.ts']);
+
+    expect(oxcrap(cwd).output).toContain(
+      'The coverage report at coverage.json covers none of the 1 files being scored. Is it the report for this code, written from this folder?',
+    );
+  });
+
+  it('matches coverage to files through a symlink, as the test run saw them', () => {
+    const cwd = project({
+      '.oxcraprc.json': JSON.stringify({ coverage: 'coverage.json' }),
+      'src/grade.ts': branchy('grade', 5),
+    });
+    coverage(cwd, ['src/grade.ts'], ['src/grade.ts']);
+    const link = join(mkdtempSync(join(tmpdir(), 'splitsmart-oxcrap-link-')), 'project');
+    directories.push(dirname(link));
+    symlinkSync(cwd, link, 'dir');
+
+    const result = oxcrap(dirname(link), ['-c', 'project/.oxcraprc.json']);
+
+    expect(result.output).toContain('No CRAP findings.');
+    expect(result.status).toBe(0);
+  });
+
+  it('refuses a report missing a part the scoring reads', () => {
+    const cwd = project({ 'src/keep.ts': 'export const keep = 1;\n' });
+    writeFileSync(
+      join(cwd, 'coverage.json'),
+      JSON.stringify({ [resolve(cwd, 'src/keep.ts')]: { statementMap: {}, s: {} } }),
+    );
+
+    expect(oxcrap(cwd).output).toContain(
+      "coverage.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
+    );
+  });
+
   describe('with a config file', () => {
     const rc = (options: object) => JSON.stringify(options, null, 2);
 
@@ -254,6 +299,31 @@ describe('oxcrap', () => {
       expect(oxcrap(join(cwd, 'web'), ['-c', 'crap.json']).output).toContain(
         '- src/grade.ts:1 grade: CRAP 156',
       );
+    });
+
+    it('refuses ".." anywhere in a files glob, and a folder given as the config', () => {
+      const cwd = project({ 'src/keep.ts': 'export const keep = 1;\n' });
+      coverage(cwd, ['src/keep.ts']);
+
+      for (const glob of ['src/../../other/*.ts', '{src,../other}/*.ts']) {
+        write(cwd, { '.oxcraprc.json': rc({ coverage: 'coverage.json', files: [glob] }) });
+        expect(oxcrap(cwd, []).output).toContain(
+          `can't reach outside the config's folder, as "${glob}" does.`,
+        );
+      }
+      expect(oxcrap(cwd, ['-c', 'src']).output).toContain('src is a folder, not a config file.');
+    });
+
+    it('doesn’t let a ! in ignorePatterns bring back what the .gitignore lists', () => {
+      const cwd = project({
+        '.gitignore': '*.gen.ts\n',
+        '.oxcraprc.json': rc({ coverage: 'coverage.json', ignorePatterns: ['!api.gen.ts'] }),
+        'src/keep.ts': 'export const keep = 1;\n',
+        'src/api.gen.ts': branchy('api', 11),
+      });
+      coverage(cwd, ['src/keep.ts']);
+
+      expect(oxcrap(cwd, []).output).toContain('No CRAP findings.');
     });
 
     it('refuses files outside the config’s folder', () => {
@@ -337,7 +407,7 @@ describe('oxcrap', () => {
         '.oxcraprc.json': rc({ coverage: 'coverage.json', helpUrl: 'https://example.com/crap' }),
         'src/grade.ts': branchy('grade', 11),
       });
-      coverage(cwd, []);
+      coverage(cwd, ['src/grade.ts']);
 
       expect(oxcrap(cwd, []).output).toContain('Get help: https://example.com/crap');
     });
@@ -367,7 +437,7 @@ describe('oxcrap', () => {
         'src/a.gen.ts': branchy('generated', 11),
         'src/keep.gen.ts': branchy('kept', 11),
       });
-      coverage(cwd, []);
+      coverage(cwd, ['src/keep.gen.ts']);
 
       const result = oxcrap(cwd, []);
 
