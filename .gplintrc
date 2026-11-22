@@ -1,5 +1,5 @@
-// gplint rules for e2e/features/*.feature, run by `npm run lint`. Reasons are in
-// docs/engineering/testing-conventions.meta.md, under "Linting and formatting features".
+// gplint rules for e2e/features/*.feature, run by `npm run lint`. The reasons, sources and
+// options not taken are in .gplintrc.meta.md; read it only when changing or questioning a rule.
 //
 // Layout (indentation, spacing, blank lines, table alignment) is left to the formatter,
 // scripts/format-features.mjs, so the two never ask for different things.

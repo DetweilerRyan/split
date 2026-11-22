@@ -84,24 +84,7 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
   - **Why:** oxfmt doesn't read `.feature` files. Cucumber's editor language server depends on the same library, so editors that use it should format the same way.
   - **Its CLI has no check mode,** so `scripts/format-features.mjs` pipes each file through it and compares the output.
   - **Not taken:** `prettier-plugin-gherkin`, `gol`'s choice. It would add Prettier as a second formatter beside oxfmt, and `gol`'s own move to oxfmt still kept Prettier for this reason.
-- **Linter: `gplint`,** with `gol`'s rules.
-  - **Why:** it is a maintained fork of gherkin-lint, with releases on 2026-10-31 and 2026-11-15. Version 2.6.1 is used because 2.6.2 was under two weeks old.
-  - **Not taken: `gherkin-lint-plus`,** `gol`'s choice. One maintainer, first published 2026-04-05, and no release since 2026-04-27. `gol` doesn't record why it chose it.
-  - **Not taken: `gherkin-lint`,** with no release since 2023-12.
-- **Rules ported from `gol`:**
-  - `only-one-when` doesn't exist in gplint. `max-keywords` with `when: 1` and `ignoreConjunctions: true` does the same: without `ignoreConjunctions`, an `And` after a `When` counts as a second When.
-  - The `max-scenarios-per-file` and `name-length` limits are `gol`'s measured values, kept until a feature here shows they don't fit.
-- **Layout rules are off** (indentation, trailing spaces, blank lines, end-of-file newline, `table-align`), following `gol2`: the formatter owns layout, so the two can't disagree.
-- **The vocabulary list** names implementation words for this app. Its first run caught `create_receipt_room` in a feature description, reworded in the same change. Planting two `When`s, `button` and `clicks` in a scenario made the lint fail with six findings.
-- **The vocabulary list's categories** come from web research on 2026-11-22, approved by the owner in the session that day. No source gives a word list. They name kinds of detail that don't belong in a scenario, and treat words like "click" as symptoms:
-  - **Seb Rose's BRIEF:** "reveal intent, don't describe mechanics" and keep only the essential details ([BRIEF](#brief)).
-  - **Practitioner guides list what leaks:** selectors and element ids, database tables and fields, endpoints and status codes, internal method names, URLs and browsers. They also flag "the language of clicking buttons and filling things in" ([helpmetest](#helpmetest), [andredesousa](#andredesousa), [CucumberStudio](#cucumberstudio), [Automation Panda](#automation-panda)).
-  - **The patterns** group those kinds of detail into six categories: code identifiers, URLs and HTTP, storage and sync internals, the DOM, widgets and gestures, and the browser and test harness. `should return` comes from `gol`'s list.
-  - **Snake_case, not camelCase:** gplint ignores case, so `\b\w+_\w+\b` catches any snake_case identifier, but camelCase can't be told apart from an ordinary word.
-- **Words left allowed:** `table` (where people eat), `link` (a room link is the product), `page`, `request` alone, `phone` and `MCP server` (the interface the assistant actor uses).
-  - **Why:** Automation Panda accepts UI words when a feature is about the UI itself, and a pattern can only fail the lint, never warn. So a word that is only sometimes wrong stays off the list.
-  - **Reopen when:** a feature is about the interface itself, such as keyboard navigation. Its UI words may then be what the scenario has to say.
-- **Checked against the features:** none of the patterns matches the two current features. A planted scenario naming a URL, a snake_case table, the database, a field, a tap on a button, a wait in seconds, a GET request, an endpoint and a status code got 13 findings.
+- **Linter: `gplint`,** with `gol`'s rules and a list of banned implementation words. Why gplint, where each rule comes from, and the research behind the word list are in [`.gplintrc.meta.md`](../../.gplintrc.meta.md).
 - **Not taken: a checker for duplicated step wording** like `gol`'s. Two features don't have enough steps to drift.
   - **Reopen when:** features grow enough that similar steps are written twice.
 
@@ -128,8 +111,3 @@ The rule that a changed expectation needs a reason in the pull request is owned 
 - <a id="screenplay"></a>John Ferguson Smart and Jan Molak, _BDD in Action_, 2nd ed., [chapter 12, "Scalable test automation with the Screenplay Pattern"](https://livebook.manning.com/book/bdd-in-action-second-edition/chapter-12).
 - <a id="serenity-js"></a>Serenity/JS, [Playwright Test integration](https://serenity-js.org/handbook/test-runners/playwright-test/), v3.49.0.
 - <a id="mcp-sdk-testing"></a>Model Context Protocol TypeScript SDK, [Test a server](https://ts.sdk.modelcontextprotocol.io/v2/testing.html), v2.
-- <a id="brief"></a>Seb Rose, [Keep your scenarios BRIEF](https://cucumber.io/blog/keep-your-scenarios-brief), Cucumber blog, and [Writing Better BDD Scenarios](https://accu.org/conf-docs/PDFs_2022/seb_rose_WritingBetterBDDScenarios-ACCU2022.pdf), ACCU 2022.
-- <a id="helpmetest"></a>HelpMeTest, [Writing Great Gherkin Scenarios: Best Practices and Common Mistakes](https://helpmetest.com/blog/gherkin-scenarios-best-practices/).
-- <a id="andredesousa"></a>André de Sousa, [gherkin-best-practices](https://github.com/andredesousa/gherkin-best-practices).
-- <a id="cucumberstudio"></a>SmartBear, [CucumberStudio best practices](https://support.smartbear.com/cucumberstudio/docs/tests/best-practices.html).
-- <a id="automation-panda"></a>Andrew Knight, [Solving: How to write good UI interaction tests?](https://automationpanda.com/2021/03/08/solving-how-to-write-good-ui-interaction-tests-givenwhenthenwithstyle/), Automation Panda, 2021-03-08.
