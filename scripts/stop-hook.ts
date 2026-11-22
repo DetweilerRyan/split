@@ -3,7 +3,8 @@
 // app/, it runs lint, the tests (which write the coverage report) and the CRAP check, and gives
 // Claude what fails as advice: `hookSpecificOutput.additionalContext`, which lets the session carry
 // on and act on it. It never blocks, and always exits 0. CI runs the same checks and fails on them.
-// Why it works this way is in oxcrap/oxcrap.meta.md; read that only when changing or questioning it.
+// Its README is stop-hook.md beside it; why it works this way is in stop-hook.meta.md, to read
+// only when changing or questioning it.
 //
 // Usage: node scripts/stop-hook.ts, with the hook's JSON input on stdin.
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,

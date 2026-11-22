@@ -1,6 +1,6 @@
 # oxCrap: reasons and sources
 
-Why oxCrap, the CRAP script in this folder, its `@crap-allow` comments, the Stop hook in [`../stop-hook.ts`](../stop-hook.ts) and the CI step work the way they do, and why [the CRAP score procedure](../../docs/engineering/crap.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only the procedure.
+Why oxCrap, the CRAP script in this folder, its `@crap-allow` comments and the CI step work the way they do, and why [the CRAP score procedure](../../docs/engineering/crap.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only the procedure.
 
 Decided by the owner on [#63](https://github.com/DetweilerRyan/split/issues/63), which records the trial, the research and each decision, all approved on 2026-11-22. In feedback on [#64](https://github.com/DetweilerRyan/split/pull/64) the same day, the owner then changed it in three rounds:
 
@@ -53,14 +53,7 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 
 ### The Stop hook
 
-- **The hook is the project's own script, [`scripts/stop-hook.ts`](../stop-hook.ts),** not a mode of the CRAP script. It's where this project's choices live: which folders count as changes, and running `npm run lint`, `npm test` and `npm run oxcrap` in that order. The CRAP script stays independent of them, and of Claude Code.
-- **It advises and never blocks.** It sends what fails through `hookSpecificOutput.additionalContext`, which the [hooks reference](https://code.claude.com/docs/en/hooks) describes as "non-error feedback for Claude"; plain output from a Stop hook never reaches Claude.
-  - It stays quiet when `stop_hook_active` is true, so it advises once per stop.
-  - It runs nothing when `src/` and `app/` haven't changed.
-  - CI fails on the same checks.
-- **It runs lint first and the tests second, and the CRAP check only when the tests pass,** since a failing run writes no report.
-- **No skill.** A hook defined in a skill runs only after the skill is invoked, a hook can't invoke a skill, and [`AGENTS.md`](../../AGENTS.md) sends every agent to `docs/engineering/` for procedures.
-- **[#65](https://github.com/DetweilerRyan/split/issues/65)** pilots running tooling tests apart from the app's.
+The project's Claude Code Stop hook runs `npm run oxcrap` and passes its findings to Claude. It's the project's own script, not part of oxCrap: its README is [`../stop-hook.md`](../stop-hook.md), and its reasons are in [`../stop-hook.meta.md`](../stop-hook.meta.md).
 
 ### Our own complexity count
 
@@ -237,5 +230,5 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **`oxc-parser` changes its AST shape in an update:** `functions.test.ts` and `complexity.test.ts` should fail first. Fix the module, not the tests.
 - **Coverage proves unsteady between runs,** so a comment's numbers drift without a code change: compare within a tolerance instead of exactly.
 - **Agents game the score** in ways review misses, such as tests that run code without checking it: take up mutation testing.
-- **The suite grows slow enough** that the Stop hook delays sessions noticeably: run only the tests related to the change in the hook, and keep the full run in CI. A partial run's report then needs the script to know which functions it covers, so revisit the stale-report rule with it.
+- **The project runs only part of its suite before oxCrap,** such as the Stop hook running only related tests ([`../stop-hook.meta.md`](../stop-hook.meta.md#what-would-reopen-this)): a partial run's report needs oxCrap to know which functions it covers, so revisit the stale-report rule.
 - **Coverage on every `npm test` costs too much:** move it to a separate script, such as `test:coverage`, and run that before `npm run oxcrap`.

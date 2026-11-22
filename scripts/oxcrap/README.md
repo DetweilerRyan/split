@@ -154,6 +154,6 @@ oxCrap imports nothing from outside this folder, and lint fails if it does, so i
 
 ## In this repository
 
-- **`npm test` writes the coverage report,** and **`npm run oxcrap`** runs oxCrap with the repository's [`.oxcraprc.json`](../../.oxcraprc.json), as a [definition-of-done check](../../AGENTS.md#definition-of-done). CI runs both, and so does the Claude Code [Stop hook](../stop-hook.ts).
+- **`npm test` writes the coverage report,** and **`npm run oxcrap`** runs oxCrap with the repository's [`.oxcraprc.json`](../../.oxcraprc.json), as a [definition-of-done check](../../AGENTS.md#definition-of-done). CI runs both, and so does the Claude Code [Stop hook](../stop-hook.md).
 - **[The CRAP score procedure](../../docs/engineering/crap.md)** says how to respond to a finding here.
 - **[`oxcrap.meta.md`](oxcrap.meta.md)** holds the reasons behind oxCrap's design and the options not taken.
