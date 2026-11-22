@@ -13,7 +13,7 @@
     "lint": "oxlint --deny-warnings && gplint e2e/features && node scripts/check-unused-steps.ts && rumdl check .",
     "format": "oxfmt && node scripts/format-features.ts",
     "format:check": "oxfmt --check && node scripts/format-features.ts --check",
-    "crap": "node scripts/crap.ts"
+    "crap": "node scripts/crap.ts --baseline crap-baseline.jsonc"
   },
   "dependencies": {
     "@liveblocks/client": "^3.24.5",

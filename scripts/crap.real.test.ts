@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const script = fileURLToPath(new URL('./crap.ts', import.meta.url));
+const BASELINE = 'crap-baseline.jsonc';
 const directories: string[] = [];
 
 // Stands in for `npm test`: writes an istanbul report with one statement per non-blank line of
@@ -89,7 +90,7 @@ function crap(
   input?: string,
   env: Record<string, string> = {},
 ) {
-  const result = spawnSync(process.execPath, [script, ...args], {
+  const result = spawnSync(process.execPath, [script, '--baseline', BASELINE, ...args], {
     cwd,
     input,
     encoding: 'utf8',
@@ -156,7 +157,7 @@ describe('crap', () => {
     const baseline = { 'src/grade.ts > grade': { crap: 156, complexity: 12 } };
     const cwd = repository({
       'src/grade.ts': branchy('grade', 11),
-      'scripts/crap-baseline.json': JSON.stringify(baseline),
+      [BASELINE]: JSON.stringify(baseline),
     });
 
     write(cwd, { 'src/grade.ts': branchy('grade', 11).replace('return -1', 'return -2') });
@@ -173,7 +174,7 @@ describe('crap', () => {
   it('asks for the baseline to be rewritten when a changed function gets better, and passes once it is', () => {
     const cwd = repository({
       'src/grade.ts': branchy('grade', 11),
-      'scripts/crap-baseline.json': JSON.stringify({
+      [BASELINE]: JSON.stringify({
         'src/grade.ts > grade': { crap: 156, complexity: 12 },
       }),
     });
@@ -187,9 +188,9 @@ describe('crap', () => {
     expect(better.output).toContain('Better than its baseline (CRAP 156, complexity 12)');
 
     expect(crap(cwd, ['--write-baseline']).status).toBe(0);
-    expect(JSON.parse(readFileSync(join(cwd, 'scripts/crap-baseline.json'), 'utf8'))).toEqual({
-      'src/grade.ts > grade': { crap: 12, complexity: 12 },
-    });
+    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toContain(
+      '{\n  "src/grade.ts > grade": { "crap": 12, "complexity": 12 },\n}\n',
+    );
     expect(crap(cwd).status).toBe(0);
   });
 
@@ -197,7 +198,7 @@ describe('crap', () => {
     const cwd = repository({
       'src/grade.ts': branchy('grade', 11),
       'src/keep.ts': 'export const keep = 1;\n',
-      'scripts/crap-baseline.json': JSON.stringify({
+      [BASELINE]: JSON.stringify({
         'src/grade.ts > grade': { crap: 156, complexity: 12 },
       }),
     });
@@ -214,7 +215,7 @@ describe('crap', () => {
   it('flags a baseline entry the branch adds, without failing', () => {
     const cwd = repository({ 'src/grade.ts': branchy('grade', 11) });
     write(cwd, {
-      'scripts/crap-baseline.json': JSON.stringify({
+      [BASELINE]: JSON.stringify({
         'src/grade.ts > grade': { crap: 156, complexity: 12 },
       }),
     });
@@ -223,7 +224,7 @@ describe('crap', () => {
 
     expect(result.status).toBe(0);
     expect(result.output).toContain(
-      'scripts/crap-baseline.json raises src/grade.ts > grade to CRAP 156, complexity 12 (new entry). Say why in the pull request.',
+      'crap-baseline.jsonc raises src/grade.ts > grade to CRAP 156, complexity 12 (new entry). Give the reason in a comment above the entry.',
     );
   });
 
@@ -234,9 +235,99 @@ describe('crap', () => {
     const cwd = repository({ 'src/list.ts': `declare const items: number[];\n${body}` });
 
     expect(crap(cwd, ['--write-baseline']).status).toBe(0);
-    expect(
-      Object.keys(JSON.parse(readFileSync(join(cwd, 'scripts/crap-baseline.json'), 'utf8'))),
-    ).toEqual(['src/list.ts > items.forEach callback']);
+    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toContain(
+      '  "src/list.ts > items.forEach callback": { "crap": 156, "complexity": 12 },\n',
+    );
+  });
+
+  it('quotes the reason above a baseline entry the branch adds', () => {
+    const cwd = repository({ 'src/grade.ts': branchy('grade', 11) });
+    write(cwd, {
+      [BASELINE]: `{
+  // One branch per row of the rate table.
+  // Revisit when the table moves to data.
+  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
+}
+`,
+    });
+
+    const result = crap(cwd);
+
+    expect(result.status).toBe(0);
+    expect(result.output).toContain(
+      '(new entry). Its reason: One branch per row of the rate table. Revisit when the table moves to data.',
+    );
+  });
+
+  it('reads a baseline with comments and trailing commas', () => {
+    const cwd = repository({
+      'src/grade.ts': branchy('grade', 11),
+      [BASELINE]: `// Header.
+{
+  /* A block comment, read but not kept. */
+  // Kept over the limits: the branches mirror the rate table, one per row.
+  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
+}
+`,
+    });
+    write(cwd, { 'src/grade.ts': branchy('grade', 11).replace('return -1', 'return -2') });
+
+    const result = crap(cwd);
+
+    expect(result.output).toContain('No CRAP findings in functions changed since main.');
+    expect(result.status).toBe(0);
+  });
+
+  it('keeps the header, and the comments above each entry it keeps, when it rewrites the baseline', () => {
+    const cwd = repository({
+      'src/grade.ts': branchy('grade', 11),
+      'src/rank.ts': branchy('rank', 11),
+      [BASELINE]: `// Our header.
+{
+  // Gone: rank is tested now.
+  "src/rank.ts > rank": { "crap": 156, "complexity": 12 },
+  // Kept over the limits: one branch per row of the rate table.
+  // Revisit when the table moves to data.
+  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
+}
+`,
+    });
+    write(cwd, {
+      'src/rank.ts': branchy('rank', 2),
+      'covered.json': JSON.stringify({ 'src/rank.ts': 'all' }),
+    });
+
+    expect(crap(cwd, ['--write-baseline']).status).toBe(0);
+
+    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toBe(`// Our header.
+{
+  // Kept over the limits: one branch per row of the rate table.
+  // Revisit when the table moves to data.
+  "src/grade.ts > grade": { "crap": 156, "complexity": 12 },
+}
+`);
+  });
+
+  it('writes a baseline entry over 100 characters across lines, as oxfmt lays it out', () => {
+    const name = `grade${'x'.repeat(80)}`;
+    const cwd = repository({ 'src/grade.ts': branchy(name, 11) });
+
+    expect(crap(cwd, ['--write-baseline']).status).toBe(0);
+
+    expect(readFileSync(join(cwd, BASELINE), 'utf8')).toContain(
+      `{\n  "src/grade.ts > ${name}": {\n    "crap": 156,\n    "complexity": 12,\n  },\n}\n`,
+    );
+  });
+
+  it('asks for the baseline’s path when none is given', () => {
+    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
+
+    const result = spawnSync(process.execPath, [script], { cwd, encoding: 'utf8' });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'Pass --baseline <file>, the baseline file’s path from the repository root.',
+    );
   });
 
   it('gives no score when the tests fail', () => {
