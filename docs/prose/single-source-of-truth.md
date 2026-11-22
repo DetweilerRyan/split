@@ -21,6 +21,7 @@ Every fact in this repository is written in one place, its **owner**, and everyt
 | The Docker Sandbox kit and dev container                                           | [`.sbx-kits/splitsmart/README.md`](../../.sbx-kits/splitsmart/README.md)         |
 | Sandbox credentials                                                                | [`docs/sandbox/secrets.md`](../sandbox/secrets.md)                               |
 | Tool settings                                                                      | The config file itself, with a comment saying why where the format allows one    |
+| Why a config's settings are as they are, when that's longer than a comment         | That config file's `<config>.meta.md` sidecar, such as `.gplintrc.meta.md`       |
 | Writing conventions like this one                                                  | `docs/prose/`                                                                    |
 | Why a document's rules are as they are: reasons, sources, cases, options not taken | That document's `<name>.meta.md` sidecar                                         |
 
@@ -34,6 +35,7 @@ A document says what to do, clearly enough to follow without reading anything el
 - **The document links to its sidecar once,** in a final "Changing this document" section, and says to read it only when changing or questioning a rule there.
 - **A sidecar never gets an index row** and isn't linked from `AGENTS.md`. The index points to instructions; the sidecar is for whoever changes them.
 - **A sidecar holds no instructions.** If a line in a sidecar tells the reader what to do, move it to the document.
+- **A config file can have a sidecar too,** named for the whole file name: `.gplintrc.meta.md` beside `.gplintrc`. Keep a comment in the config when a sentence says why. Use the sidecar when the reasons need sources, cases or options not taken. The config's header comment links to it once, and says to read it only when changing or questioning a setting.
 - **Record a decision in the sidecar before the work that carries it is called done.** A pull request is where a decision is made, not where it's kept.
 
 ## Facts, not text
