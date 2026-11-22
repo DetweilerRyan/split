@@ -93,6 +93,27 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 - **Not taken: a checker for duplicated step wording** like `gol`'s. Two features don't have enough steps to drift.
   - **Reopen when:** features grow enough that similar steps are written twice.
 
+### Unused step definitions fail lint
+
+Decided by the owner in the session on 2026-11-22 ("i want the gate"), on [#59](https://github.com/DetweilerRyan/split/issues/59), after web research that day.
+
+- **Undefined and ambiguous steps:** the research found consensus.
+  - **Undefined steps fail the run.** That's cucumber-js's default strict mode ([cucumber-js CLI](#cucumber-js-cli)), Behave's behaviour, and playwright-bdd's `missingSteps: 'fail-on-gen'`.
+  - **A step two definitions match is an error,** as in Reqnroll ([Reqnroll](#reqnroll-scoped-bindings)).
+  - **`bddgen` does both** while generating the tests, so `npm run test:e2e` covered them before this check.
+- **Don't rely on a dry run for these.** cucumber-js changed `--dry-run` so undefined or ambiguous steps "no longer cause the process to exit with code 1" ([cucumber-js changelog](#cucumber-js-changelog)). playwright-bdd's check doesn't depend on running anything.
+- **Unused definitions:** no consensus on gating.
+  - **Every ecosystem reports them:** Cucumber's `usage` and `stepdefs` formatters, SpecFlow LivingDoc, Reqnroll's extension, a Behat extension, SpecHygiene, and `bddgen export --unused-steps` ([makandra](#makandra-unused-steps)).
+  - **Gating is a team's own check,** like one Cucumber-JVM team's that "prevents new ones in the future" ([JDriven](#jdriven-plugin)).
+- **Why gate here:** the usual objection is that a step called only from another step looks unused ([makandra](#makandra-unused-steps)). Steps don't call other steps here, as the conventions now say, so that false positive can't arise.
+- **How it works:** `bddgen export --unused-steps` exits 0 whatever it finds, so `scripts/check-unused-steps.ts` reads the count from its `Unused steps (<n>):` line.
+  - **If the line is missing,** the script fails rather than passing. A playwright-bdd update that rewords the report then breaks the lint instead of switching the check off.
+  - **`BDDGEN_CLI`** lets the script's test give it a fake CLI.
+- **Checked:**
+  - A definition planted in `e2e/steps` failed `npm run lint`, naming its file and line, and the lint passed once it was removed.
+  - With the count check removed from the script, its test for an unused definition failed.
+  - The report takes under a second.
+
 ## Changed test expectations
 
 The rule that a changed expectation needs a reason in the pull request is owned by [reviewing work](workflow/reviewing-work.md#changed-test-expectations); its source is in that document's sidecar.
@@ -116,3 +137,8 @@ The rule that a changed expectation needs a reason in the pull request is owned 
 - <a id="screenplay"></a>John Ferguson Smart and Jan Molak, _BDD in Action_, 2nd ed., [chapter 12, "Scalable test automation with the Screenplay Pattern"](https://livebook.manning.com/book/bdd-in-action-second-edition/chapter-12).
 - <a id="serenity-js"></a>Serenity/JS, [Playwright Test integration](https://serenity-js.org/handbook/test-runners/playwright-test/), v3.49.0.
 - <a id="mcp-sdk-testing"></a>Model Context Protocol TypeScript SDK, [Test a server](https://ts.sdk.modelcontextprotocol.io/v2/testing.html), v2.
+- <a id="cucumber-js-cli"></a>cucumber-js, [CLI documentation](https://github.com/DanForys/cucumber-js/blob/master/docs/cli.md): strict mode.
+- <a id="cucumber-js-changelog"></a>cucumber-js, [changelog](https://www.github.com/cucumber/cucumber-js/blob/main/CHANGELOG.md), #1814: `--dry-run` exit codes.
+- <a id="reqnroll-scoped-bindings"></a>Reqnroll, [Scoped bindings](https://docs.reqnroll.net/latest/automation/scoped-bindings.html): ambiguous step definitions.
+- <a id="makandra-unused-steps"></a>makandra, [Cucumber: How to find unused step definitions](https://makandracards.com/makandra/59552-cucumber-how-to-find-unused-step-definitions).
+- <a id="jdriven-plugin"></a>JDriven, [Cucumber JVM plugin](https://jdriven.com/blog/2019/01/cucumber-jvm-plugin), 2019-01.
