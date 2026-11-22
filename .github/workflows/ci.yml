@@ -28,6 +28,9 @@ jobs:
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The CRAP score step compares with the base branch, so it needs the history back to it.
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
@@ -41,6 +44,11 @@ jobs:
         run: npm run typecheck
       - name: Tests
         run: npm test
+      - name: CRAP score
+        # A pull request is compared with its base branch; a push to main with main before it.
+        run: npm run crap -- --base "$CRAP_BASE"
+        env:
+          CRAP_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
       - name: Production build
         run: npm run build
       - name: End-to-end tests
