@@ -53,6 +53,8 @@ const participantColors = [
   '#c026d3',
 ];
 
+// crap-allow: CRAP 15, complexity 15. Debt from before the CRAP check (#63):
+// its tests run 100% of it, but its complexity is over 10.
 async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
   const liveblocksRoom = liveblocksApiKey
     ? (providerRegistry.__splitLiveblocksClient ??= createClient({

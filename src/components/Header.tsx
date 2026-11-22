@@ -18,6 +18,8 @@ interface HeaderProps {
   onShare: () => void;
 }
 
+// crap-allow: CRAP 110, complexity 10. Debt from before the CRAP check (#63):
+// no tests run it yet.
 export function Header({
   title,
   purchasedAt,

@@ -1,24 +1,22 @@
 #!/usr/bin/env node
 // Scores each function in src/ and app/ by CRAP: complexity² × (1 − coverage)³ + complexity,
 // where complexity is oxlint's cyclomatic complexity and coverage is the share of the function's
-// statements the Vitest suite runs. It fails when a function the branch changes scores over the
-// limits below, unless the baseline file already records it at that score or higher.
-// docs/engineering/crap.md says what to do with a finding. Why the script works this way is in
-// crap.meta.md beside it; read that only when changing or questioning the script.
+// statements the Vitest suite runs. It fails when a function the branch changes is over the limits
+// below, unless a `// crap-allow:` comment directly above it gives its current numbers and a
+// reason; and when any crap-allow comment's numbers no longer match its function. The script
+// never writes to source files. docs/engineering/crap.md says what to do with a finding. Why the
+// script works this way is in crap.meta.md beside it; read that only when changing or questioning
+// the script.
 //
-// Usage, from the repository root, where <file> is the baseline's path from the root:
-//   node scripts/crap.ts --baseline <file> [--base <ref>]  check functions changed since <ref>
-//                                                          (default origin/main)
-//   node scripts/crap.ts --baseline <file> --hook          Claude Code Stop hook; reads its input
-//                                                          on stdin
-//   node scripts/crap.ts --baseline <file> --write-baseline  rewrite the baseline from every
-//                                                          function's score, keeping its comments
-// `npm run crap` passes the repository's baseline. Node runs this as TypeScript by stripping the
-// types, so use only syntax that erases: no enums, namespaces or parameter properties.
+// Usage, from the repository root:
+//   node scripts/crap.ts [--base <ref>]  check against <ref> (default origin/main)
+//   node scripts/crap.ts --hook          Claude Code Stop hook; reads the hook's input on stdin
+// Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
+// namespaces or parameter properties.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
@@ -26,34 +24,24 @@ const MAX_CRAP = 30;
 const MAX_COMPLEXITY = 10;
 const SCORED = ['src', 'app'];
 const PROCEDURE = 'docs/engineering/crap.md';
-const REWRITE = '`npm run crap -- --write-baseline`';
-const HEADER = [
-  '// Functions over the CRAP limits when they were last measured, written by',
-  '// `npm run crap -- --write-baseline`. docs/engineering/crap.md says when to change it.',
-  '// Give the reason a function stays over the limits in // comments on the lines above its',
-  '// entry. Rewriting the file keeps them.',
-];
 const oxlint = fileURLToPath(new URL('../node_modules/.bin/oxlint', import.meta.url));
 
 type Position = { line: number; column: number };
 type Range = { start: Position; end: Position };
 type Scored = Range & {
   file: string;
-  key: string;
+  name: string;
   complexity: number;
   coverage: number;
   crap: number;
 };
-type Entry = { crap: number; complexity: number };
-type Baseline = Record<string, Entry>;
-/** A baseline file: its header comments, and each entry with the comments above it. */
-type BaselineFile = { header: string[]; entries: Map<string, Entry & { comments: string[] }> };
 type FileCoverage = {
   statementMap: Record<string, Range>;
   s: Record<string, number>;
   fnMap: Record<string, { loc: Range }>;
   f: Record<string, number>;
 };
+type Finding = { file: string; line: number; message: string };
 
 class CheckError extends Error {}
 
@@ -92,9 +80,9 @@ function position(source: Buffer, offset: number): Position {
 }
 
 /**
- * Names a function oxlint calls anonymous by what the code before it on its line says, so the
- * name stays the same when other functions are added around it: `seed.items.forEach((item) =>`
- * gives "seed.items.forEach callback", and `onSave: () =>` or `const onSave = () =>` gives "onSave".
+ * Names a function oxlint calls anonymous by what the code before it on its line says:
+ * `seed.items.forEach((item) =>` gives "seed.items.forEach callback", and `onSave: () =>` or
+ * `const onSave = () =>` gives "onSave". The name only labels findings.
  */
 function anonymousName(source: Buffer, offset: number) {
   const lineStart = source.lastIndexOf(10, offset - 1) + 1;
@@ -163,11 +151,13 @@ function complexities(root: string): Found[] {
         span: span.length,
       });
     }
-    return found.filter((fn) => !/\.test\.tsx?$/.test(fn.file));
+    return found.filter((fn) => !isTest(fn.file));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 }
+
+const isTest = (file: string) => /\.test\.tsx?$/.test(file);
 
 /** Runs `npm test` with coverage on, and returns its istanbul JSON report keyed by absolute path. */
 function coverage(root: string) {
@@ -226,21 +216,17 @@ function score(root: string, found: Found[], report: Record<string, FileCoverage
       }
     }
 
-    const siblings = new Map<string, number>();
     for (const fn of functions) {
-      // Name a function by the functions around it, so its key survives edits elsewhere in the file.
+      // Label a function by the functions around it, as in "RoomView > changeDisplayCurrency".
       const parents = functions
         .filter((other) => other !== fn && contains(other, fn))
         .sort((a, b) => b.span - a.span);
-      const path = [...parents.map((parent) => parent.name), fn.name].join(' > ');
-      const count = (siblings.get(path) ?? 0) + 1;
-      siblings.set(path, count);
       const counts = statements.get(fn);
       const covered =
         counts && counts.total > 0 ? counts.run / counts.total : called.get(fn) ? 1 : 0;
       scored.push({
         ...fn,
-        key: `${file} > ${path}${count > 1 ? ` (${count})` : ''}`,
+        name: [...parents.map((parent) => parent.name), fn.name].join(' > '),
         coverage: covered,
         crap: fn.complexity ** 2 * (1 - covered) ** 3 + fn.complexity,
       });
@@ -281,198 +267,156 @@ function changedLines(root: string, base: string) {
   }
   const untracked = git(root, 'ls-files', '--others', '--exclude-standard', '--', ...SCORED);
   for (const path of untracked.split('\n').filter(Boolean)) changed.set(path, 'all');
-  return { mergeBase, changed };
+  return changed;
+}
+
+const isChanged = (lines: Set<number> | 'all' | undefined, from: number, to: number) =>
+  lines === 'all' || (lines !== undefined && [...lines].some((n) => n >= from && n <= to));
+
+const ALLOW = /crap-allow/;
+const ALLOW_FORMAT = /^\/\/ crap-allow: CRAP (\d+(?:\.\d)?), complexity (\d+)\.(?: (\S.*))?$/;
+const isComment = (line: string) => /^(\/\/|\/\*|\*)/.test(line.trim());
+
+type Allow = {
+  file: string;
+  line: number;
+  crap: number;
+  complexity: number;
+  reason: string;
+  lastLine: number;
+};
+
+/**
+ * Every `// crap-allow:` comment in src/ and app/, with its reason: the text after the numbers and
+ * any `//` lines straight below it. Malformed ones become findings.
+ */
+function allows(root: string, problems: Finding[]) {
+  const files = git(root, 'ls-files', '--cached', '--others', '--exclude-standard', '--', ...SCORED)
+    .split('\n')
+    .filter(
+      (file) => /\.[cm]?[jt]sx?$/.test(file) && !isTest(file) && existsSync(join(root, file)),
+    );
+  const found: Allow[] = [];
+  for (const file of files) {
+    const lines = readFileSync(join(root, file), 'utf8').split('\n');
+    lines.forEach((text, index) => {
+      if (!ALLOW.test(text) || !isComment(text)) return;
+      const line = index + 1;
+      const match = ALLOW_FORMAT.exec(text.trim());
+      if (!match) {
+        problems.push({
+          file,
+          line,
+          message:
+            'This crap-allow comment isn’t in the form `// crap-allow: CRAP <score>, complexity <n>. <reason>`.',
+        });
+        return;
+      }
+      const reason = [match[3] ?? ''];
+      let last = index;
+      while (
+        last + 1 < lines.length &&
+        lines[last + 1].trim().startsWith('//') &&
+        !ALLOW.test(lines[last + 1])
+      ) {
+        last++;
+        reason.push(lines[last].trim().replace(/^\/\/\s?/, ''));
+      }
+      found.push({
+        file,
+        line,
+        crap: Number(match[1]),
+        complexity: Number(match[2]),
+        reason: reason.join(' ').trim(),
+        lastLine: last + 1,
+      });
+    });
+  }
+  return found;
 }
 
 /**
- * Reads a JSONC baseline: comments and trailing commas allowed, as oxfmt writes it. It keeps the
- * `//` comments before the opening brace as the header, and those above each entry with that
- * entry. Block comments are allowed but not kept.
+ * The function a crap-allow comment applies to: the outermost one starting on the first line
+ * after the comment block it sits in, so it can share that block with a doc comment.
  */
-function parseBaseline(text: string, path: string): BaselineFile {
-  let code = '';
-  const header: string[] = [];
-  const comments = new Map<string, string[]>();
-  let pending: string[] = [];
-  let depth = 0;
-  let expectKey = false;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char === '/' && text[i + 1] === '/') {
-      const newline = text.indexOf('\n', i);
-      const end = newline === -1 ? text.length : newline;
-      const comment = text.slice(i, end).trim();
-      if (depth === 0) header.push(comment);
-      else if (depth === 1) pending.push(comment);
-      i = end - 1;
-    } else if (char === '/' && text[i + 1] === '*') {
-      const end = text.indexOf('*/', i + 2);
-      if (end === -1) throw new CheckError(`${path} has a /* comment with no closing */.`);
-      i = end + 1;
-    } else if (char === '"') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== '"') j += text[j] === '\\' ? 2 : 1;
-      const literal = text.slice(i, j + 1);
-      code += literal;
-      // A string straight after `{` or `,` in the top-level object is an entry's key.
-      if (depth === 1 && expectKey) {
-        comments.set(JSON.parse(literal), pending);
-        pending = [];
-      }
-      expectKey = false;
-      i = j;
-    } else {
-      if (char === '{') expectKey = ++depth === 1;
-      else if (char === '}') depth--;
-      else if (char === ',' && depth === 1) expectKey = true;
-      code += char;
-    }
-  }
-
-  let data: unknown;
-  try {
-    data = JSON.parse(code.replace(/,(\s*[}\]])/g, '$1'));
-  } catch (error) {
-    throw new CheckError(`${path} isn't valid JSONC: ${(error as Error).message}`);
-  }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new CheckError(`${path} should hold one object, keyed by function.`);
-  }
-
-  const entries = new Map<string, Entry & { comments: string[] }>();
-  for (const [key, value] of Object.entries(data as Record<string, Entry>)) {
-    if (typeof value?.crap !== 'number' || typeof value.complexity !== 'number') {
-      throw new CheckError(`${path}: "${key}" needs a numeric crap and complexity.`);
-    }
-    entries.set(key, {
-      crap: value.crap,
-      complexity: value.complexity,
-      comments: comments.get(key) ?? [],
-    });
-  }
-  return { header, entries };
-}
-
-function readBaselineFile(root: string, path: string, ref?: string): BaselineFile {
-  if (ref) {
-    const shown = run('git', ['show', `${ref}:${path}`], root);
-    return shown.status === 0
-      ? parseBaseline(shown.stdout, `${ref}:${path}`)
-      : { header: [], entries: new Map() };
-  }
-  const file = join(root, path);
-  return existsSync(file)
-    ? parseBaseline(readFileSync(file, 'utf8'), path)
-    : { header: [], entries: new Map() };
-}
-
-function readBaseline(root: string, path: string, ref?: string): Baseline {
-  return Object.fromEntries(readBaselineFile(root, path, ref).entries);
+function owner(allow: Allow, scored: Scored[], root: string) {
+  const lines = readFileSync(join(root, allow.file), 'utf8').split('\n');
+  let next = allow.lastLine; // 0-based index of the line after the comment block
+  while (next < lines.length && isComment(lines[next])) next++;
+  const starting = scored.filter((fn) => fn.file === allow.file && fn.start.line === next + 1);
+  return starting.sort((a, b) => b.end.line - a.end.line)[0];
 }
 
 const round = (n: number) => Math.round(n * 10) / 10;
-const overLimit = (fn: { crap: number; complexity: number }) =>
-  fn.crap > MAX_CRAP || fn.complexity > MAX_COMPLEXITY;
+const overLimit = (fn: Scored) => fn.crap > MAX_CRAP || fn.complexity > MAX_COMPLEXITY;
+const numbers = (fn: Scored) => `CRAP ${round(fn.crap)}, complexity ${fn.complexity}`;
 const describe = (fn: Scored) =>
-  `${fn.file}:${fn.start.line} ${fn.key.slice(fn.file.length + 3)}: CRAP ${round(fn.crap)}, complexity ${fn.complexity}, coverage ${Math.round(fn.coverage * 100)}%`;
+  `${fn.name}: ${numbers(fn)}, coverage ${Math.round(fn.coverage * 100)}%`;
 
-type Findings = { problems: string[]; notices: string[] };
-
-function check(
-  root: string,
-  path: string,
-  base: string,
-  report: Record<string, FileCoverage>,
-): Findings {
-  const { mergeBase, changed } = changedLines(root, base);
+function check(root: string, base: string, report: Record<string, FileCoverage>) {
+  const changed = changedLines(root, base);
   const scored = score(root, complexities(root), report);
-  const baseline = readBaseline(root, path);
-  const problems: string[] = [];
-  const notices: string[] = [];
+  const problems: Finding[] = [];
+  const notices: Finding[] = [];
+
+  const allowed = new Map<Scored, Allow>();
+  for (const allow of allows(root, problems)) {
+    const fn = owner(allow, scored, root);
+    const at = { file: allow.file, line: allow.line };
+    if (!fn) {
+      problems.push({
+        ...at,
+        message:
+          'This crap-allow comment isn’t directly above a function. Move it there, or delete it.',
+      });
+      continue;
+    }
+    if (allowed.has(fn)) {
+      problems.push({ ...at, message: `${fn.name} already has a crap-allow comment.` });
+      continue;
+    }
+    allowed.set(fn, allow);
+    if (!allow.reason) {
+      problems.push({ ...at, message: `The crap-allow comment for ${fn.name} gives no reason.` });
+    }
+    if (!overLimit(fn)) {
+      problems.push({
+        ...at,
+        message: `${describe(fn)}. It's within the limits now, so delete its crap-allow comment.`,
+      });
+    } else if (round(fn.crap) !== allow.crap || fn.complexity !== allow.complexity) {
+      problems.push({
+        ...at,
+        message: `${describe(fn)}, but its crap-allow comment says CRAP ${allow.crap}, complexity ${allow.complexity}. Update the comment to \`// crap-allow: ${numbers(fn)}.\`, and check its reason still holds.`,
+      });
+    }
+    if (isChanged(changed.get(allow.file), allow.line, allow.lastLine)) {
+      notices.push({
+        ...at,
+        message: `Adds or changes the crap-allow comment for ${fn.name} (CRAP ${allow.crap}, complexity ${allow.complexity}). Its reason: ${allow.reason || '(none)'}`,
+      });
+    }
+  }
 
   for (const fn of scored) {
-    const lines = changed.get(fn.file);
-    if (!lines) continue;
-    const touched =
-      lines === 'all' || [...lines].some((line) => line >= fn.start.line && line <= fn.end.line);
-    if (!touched) continue;
-    const recorded = baseline[fn.key];
-    if (recorded) {
-      if (round(fn.crap) > recorded.crap || fn.complexity > recorded.complexity) {
-        problems.push(
-          `${describe(fn)}. Worse than its baseline (CRAP ${recorded.crap}, complexity ${recorded.complexity}).`,
-        );
-      } else if (round(fn.crap) < recorded.crap || fn.complexity < recorded.complexity) {
-        problems.push(
-          `${describe(fn)}. Better than its baseline (CRAP ${recorded.crap}, complexity ${recorded.complexity}): run ${REWRITE} to record it.`,
-        );
-      }
-    } else if (overLimit(fn)) {
-      problems.push(
-        `${describe(fn)}. Over the limits (CRAP ${MAX_CRAP}, complexity ${MAX_COMPLEXITY}).`,
-      );
-    }
+    if (!overLimit(fn) || allowed.has(fn)) continue;
+    if (!isChanged(changed.get(fn.file), fn.start.line, fn.end.line)) continue;
+    problems.push({
+      file: fn.file,
+      line: fn.start.line,
+      message: `${describe(fn)}. Over the limits (CRAP ${MAX_CRAP}, complexity ${MAX_COMPLEXITY}). To leave it, add \`// crap-allow: ${numbers(fn)}. <reason>\` directly above it.`,
+    });
   }
-
-  const keys = new Set(scored.map((fn) => fn.key));
-  for (const key of Object.keys(baseline)) {
-    const file = key.split(' > ')[0];
-    if (!keys.has(key) && (changed.has(file) || !existsSync(join(root, file)))) {
-      problems.push(
-        `${key}: in the baseline, but no function has this name now. Run ${REWRITE} to drop it.`,
-      );
-    }
-  }
-
-  const previous = readBaseline(root, path, mergeBase);
-  for (const [key, entry] of readBaselineFile(root, path).entries) {
-    const old = previous[key];
-    if (!old || entry.crap > old.crap || entry.complexity > old.complexity) {
-      const reason = entry.comments.length
-        ? `Its reason: ${entry.comments.map((line) => line.replace(/^\/\/\s?/, '')).join(' ')}`
-        : 'Give the reason in a comment above the entry.';
-      notices.push(
-        `${path} raises ${key} to CRAP ${entry.crap}, complexity ${entry.complexity}${old ? ` (was ${old.crap}, ${old.complexity})` : ' (new entry)'}. ${reason}`,
-      );
-    }
-  }
-  return { problems, notices };
-}
-
-/** Rewrites the baseline from every function's score, keeping the header and each kept entry's comments. */
-function writeBaseline(root: string, path: string, report: Record<string, FileCoverage>) {
-  const existing = readBaselineFile(root, path);
-  const entries = score(root, complexities(root), report)
-    .filter(overLimit)
-    .sort((a, b) => (a.key < b.key ? -1 : 1));
-  const lines = existing.header.length > 0 ? [...existing.header] : [...HEADER];
-  lines.push('{');
-  for (const fn of entries) {
-    for (const comment of existing.entries.get(fn.key)?.comments ?? []) lines.push(`  ${comment}`);
-    const key = JSON.stringify(fn.key);
-    const crap = round(fn.crap);
-    const line = `  ${key}: { "crap": ${crap}, "complexity": ${fn.complexity} },`;
-    // Lay entries out as oxfmt does, so a rewritten baseline passes `npm run format:check`:
-    // on one line, unless that passes oxfmt's 100-character width.
-    if (line.length <= 100) lines.push(line);
-    else {
-      lines.push(
-        `  ${key}: {`,
-        `    "crap": ${crap},`,
-        `    "complexity": ${fn.complexity},`,
-        '  },',
-      );
-    }
-  }
-  lines.push('}');
-  mkdirSync(dirname(join(root, path)), { recursive: true });
-  writeFileSync(join(root, path), `${lines.join('\n')}\n`);
-  return entries.length;
+  const order = (a: Finding, b: Finding) =>
+    a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1;
+  return { problems: problems.sort(order), notices: notices.sort(order) };
 }
 
 const tail = (text: string, lines: number) => text.trimEnd().split('\n').slice(-lines).join('\n');
+const list = (findings: Finding[]) =>
+  findings.map((f) => `- ${f.file}:${f.line} ${f.message}`).join('\n');
 
-function hook(path: string, input: { cwd?: string; stop_hook_active?: boolean }) {
+function hook(input: { cwd?: string; stop_hook_active?: boolean }) {
   // Advise once: when Claude is already continuing because of a stop hook, let it stop.
   if (input.stop_hook_active) return undefined;
   const root = git(input.cwd ?? process.cwd(), 'rev-parse', '--show-toplevel');
@@ -480,7 +424,7 @@ function hook(path: string, input: { cwd?: string; stop_hook_active?: boolean })
     (ref) => run('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], root).status === 0,
   );
   if (!base) return `The CRAP check couldn't find origin/main or main to compare with.`;
-  if (changedLines(root, base).changed.size === 0) return undefined;
+  if (changedLines(root, base).size === 0) return undefined;
 
   const sections: string[] = [];
   const lint = run('npm', ['run', 'lint'], root);
@@ -492,15 +436,12 @@ function hook(path: string, input: { cwd?: string; stop_hook_active?: boolean })
       `\`npm test\` fails, so no CRAP score was calculated this run. Fix the tests first:\n${tail(tests.output, 60)}`,
     );
   } else {
-    const { problems, notices } = check(root, path, base, tests.report);
-    if (problems.length)
-      sections.push(
-        `CRAP findings in changed functions:\n${problems.map((p) => `- ${p}`).join('\n')}`,
-      );
-    if (notices.length) sections.push(notices.map((n) => `- ${n}`).join('\n'));
+    const { problems, notices } = check(root, base, tests.report);
+    if (problems.length) sections.push(`CRAP findings:\n${list(problems)}`);
+    if (notices.length) sections.push(`crap-allow comments this branch changes:\n${list(notices)}`);
   }
   if (sections.length === 0) return undefined;
-  return `${sections.join('\n\n')}\n\nFollow ${PROCEDURE} to respond. This is advice: fix each finding, or record it in the baseline with its reason.`;
+  return `${sections.join('\n\n')}\n\nFollow ${PROCEDURE} to respond. This is advice; CI fails on each CRAP finding.`;
 }
 
 function main(args: string[]) {
@@ -510,25 +451,19 @@ function main(args: string[]) {
     options = parseArgs({
       args,
       options: {
-        baseline: { type: 'string' },
         base: { type: 'string', default: 'origin/main' },
         hook: { type: 'boolean', default: false },
-        'write-baseline': { type: 'boolean', default: false },
       },
     }).values;
   } catch (error) {
     throw new CheckError((error as Error).message);
   }
-  const path = options.baseline;
-  const missing =
-    'Pass --baseline <file>, the baseline file’s path from the repository root. `npm run crap` passes the repository’s.';
 
   if (options.hook) {
     let message: string | undefined;
     try {
-      if (!path) throw new CheckError(missing);
       const stdin = readFileSync(0, 'utf8').trim();
-      message = hook(path, stdin ? JSON.parse(stdin) : {});
+      message = hook(stdin ? JSON.parse(stdin) : {});
     } catch (error) {
       message = `The CRAP check couldn't run: ${error instanceof Error ? error.message : String(error)}`;
     }
@@ -542,33 +477,25 @@ function main(args: string[]) {
     return 0;
   }
 
-  if (!path) throw new CheckError(missing);
   const tests = coverage(root);
   if (!tests.passed) {
     console.error(`${tail(tests.output, 60)}\n\nThe tests fail, so no CRAP score was calculated.`);
     return 1;
   }
-  if (options['write-baseline']) {
-    console.log(
-      `Wrote ${writeBaseline(root, path, tests.report)} functions over the limits to ${path}.`,
-    );
-    return 0;
-  }
-
-  const base = options.base;
-  const { problems, notices } = check(root, path, base, tests.report);
+  const { problems, notices } = check(root, options.base, tests.report);
   for (const notice of notices) {
     console.log(
-      process.env.GITHUB_ACTIONS ? `::warning file=${path}::${notice}` : `Notice: ${notice}`,
+      process.env.GITHUB_ACTIONS
+        ? `::warning file=${notice.file},line=${notice.line}::${notice.message}`
+        : `Notice: ${notice.file}:${notice.line} ${notice.message}`,
     );
   }
   if (problems.length) {
-    console.error(`CRAP findings in functions changed since ${base}:`);
-    for (const problem of problems) console.error(`- ${problem}`);
+    console.error(`CRAP findings, checked against ${options.base}:\n${list(problems)}`);
     console.error(`\nFollow ${PROCEDURE} to respond.`);
     return 1;
   }
-  console.log(`No CRAP findings in functions changed since ${base}.`);
+  console.log(`No CRAP findings, checked against ${options.base}.`);
   return 0;
 }
 
