@@ -45,7 +45,8 @@ jobs:
       - name: Tests
         run: npm test
       - name: CRAP score
-        # A pull request is compared with its base branch; a push to main with main before it.
+        # Reads the coverage report the Tests step wrote, so it must come after it. A pull request
+        # is compared with its base branch; a push to main with main before it.
         run: npm run crap -- --base "$CRAP_BASE"
         env:
           CRAP_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}

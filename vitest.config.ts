@@ -25,10 +25,14 @@ export default defineConfig({
     dedupe: ['yjs'],
   },
   test: {
-    // Off unless a run turns it on. scripts/crap/crap.ts does, to score each function by its
-    // complexity and how much of it the tests run; the CRAP score covers src/ and app/ only.
+    // Every run writes coverage/coverage-final.json, which `npm run crap` reads to score each
+    // function in src/ and app/. A run whose tests fail writes no report, and the folder is
+    // emptied at the start of each run, so a report never outlives the run that made it.
     coverage: {
+      enabled: true,
       provider: 'v8',
+      reporter: ['json'],
+      reportsDirectory: 'coverage',
       include: ['src/**', 'app/**'],
       exclude: ['**/*.test.ts', '**/*.test.tsx'],
     },

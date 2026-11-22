@@ -6,6 +6,8 @@ next-env.d.ts
 *.tsbuildinfo
 # Screenshots and attachments Vitest browser mode saves for failing tests
 .vitest/
+# The coverage report every `npm test` writes, which `npm run crap` reads
+coverage/
 # Branch worktrees (docs/engineering/workflow/starting-work.md)
 .claude/worktrees/
 # Playwright e2e output: the tests playwright-bdd generates from e2e/features, and run results

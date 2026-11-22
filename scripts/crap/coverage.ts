@@ -1,8 +1,5 @@
-// Runs the test suite with coverage, and works out how much of each function it ran.
-import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+// Reads an istanbul JSON coverage report, and works out how much of each function it ran. The
+// script never runs the tests itself: whatever runs them writes the report it's given.
 import type { Fn, Range } from './functions.ts';
 
 /** One file's entry in an istanbul JSON coverage report. */
@@ -14,35 +11,30 @@ export type FileCoverage = {
 };
 export type Report = Record<string, FileCoverage>;
 
-/** Runs `npm test` with coverage on, returning its report keyed by absolute path, or its output. */
-export function runCoverage(root: string) {
-  const directory = mkdtempSync(join(tmpdir(), 'splitsmart-coverage-'));
+/** Reads a report's text, keyed by absolute path as istanbul writes it, or says what's wrong. */
+export function parseReport(text: string, path: string): Report {
+  let report: unknown;
   try {
-    const result = spawnSync(
-      'npm',
-      [
-        'test',
-        '--',
-        '--coverage.enabled',
-        '--coverage.reporter=json',
-        `--coverage.reportsDirectory=${directory}`,
-      ],
-      {
-        cwd: root,
-        encoding: 'utf8',
-        maxBuffer: 64 * 1024 * 1024,
-        env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
-      },
-    );
-    const output = `${result.stdout}${result.stderr}`;
-    if (result.error) throw new Error(`Couldn't run npm test: ${result.error.message}`);
-    if (result.status !== 0) return { passed: false as const, output };
-    const path = join(directory, 'coverage-final.json');
-    if (!existsSync(path)) throw new Error(`The test run wrote no coverage report:\n${output}`);
-    return { passed: true as const, report: JSON.parse(readFileSync(path, 'utf8')) as Report };
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
+    report = JSON.parse(text);
+  } catch (error) {
+    throw new Error(`${path} isn't a JSON coverage report: ${(error as Error).message}`);
   }
+  const files = report && typeof report === 'object' ? Object.values(report) : [];
+  if (Array.isArray(report) || files.some((file) => !file?.statementMap || !file?.s)) {
+    throw new Error(`${path} isn't an istanbul JSON coverage report, such as coverage-final.json.`);
+  }
+  return report as Report;
+}
+
+/**
+ * The files changed after the report was written, newest first, so a report made before the
+ * latest edits isn't mistaken for one that covers them.
+ */
+export function newerThan(reportTime: number, files: { file: string; time: number }[]) {
+  return files
+    .filter((f) => f.time > reportTime)
+    .sort((a, b) => b.time - a.time)
+    .map((f) => f.file);
 }
 
 const before = (a: Range['start'], b: Range['start']) =>

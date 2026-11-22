@@ -1,74 +1,20 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+
+// The script's contract, end to end: it runs as a program on a real git repository, given a
+// coverage report. The rules themselves are tested beside each module.
 
 const script = fileURLToPath(new URL('./crap.ts', import.meta.url));
 const directories: string[] = [];
 
-// Stands in for `npm test`: writes an istanbul report with one statement per non-blank line of
-// each file in src/, run when the line is listed in covered.json ("all" covers every line).
-// It fails instead when a file named tests-fail exists.
-const fakeTests = `import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-if (existsSync('tests-fail')) { console.log('FAIL src/a.test.ts > adds up'); process.exit(1); }
-const directory = process.argv.find((arg) => arg.startsWith('--coverage.reportsDirectory=')).split('=')[1];
-const covered = existsSync('covered.json') ? JSON.parse(readFileSync('covered.json', 'utf8')) : {};
-const report = {};
-for (const name of readdirSync('src')) {
-  const file = 'src/' + name;
-  const statementMap = {}, s = {};
-  readFileSync(file, 'utf8').split('\\n').forEach((text, index) => {
-    if (!text.trim()) return;
-    const id = String(index);
-    statementMap[id] = { start: { line: index + 1, column: 0 }, end: { line: index + 1, column: text.length } };
-    s[id] = covered[file] === 'all' || covered[file]?.includes(index + 1) ? 1 : 0;
-  });
-  report[resolve(file)] = { path: resolve(file), statementMap, s, fnMap: {}, f: {}, branchMap: {}, b: {} };
-}
-mkdirSync(directory, { recursive: true });
-writeFileSync(join(directory, 'coverage-final.json'), JSON.stringify(report));
-`;
-
-/** A function with `branches` if statements, so oxlint gives it a complexity of branches + 1. */
+/** A function with `branches` if statements, so its complexity is branches + 1. */
 function branchy(name: string, branches: number) {
   const ifs = Array.from({ length: branches }, (_, i) => `  if (n === ${i}) return ${i};`);
   return `export function ${name}(n: number) {\n${ifs.join('\n')}\n  return -1;\n}\n`;
-}
-
-/** A git repository on `main` holding `files`, with the fake test runner as `npm test`. */
-function repository(files: Record<string, string>) {
-  const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-crap-test-'));
-  directories.push(cwd);
-  write(cwd, {
-    'package.json': JSON.stringify({
-      type: 'module',
-      scripts: {
-        test: 'node fake-tests.mjs',
-        lint: 'node -e "process.exit(+!!process.env.LINT_FAILS)"',
-      },
-    }),
-    'fake-tests.mjs': fakeTests,
-    '.gitignore': 'covered.json\ntests-fail\n',
-    ...files,
-  });
-  git(cwd, 'init', '--quiet', '--initial-branch=main');
-  git(cwd, 'add', '.');
-  git(
-    cwd,
-    '-c',
-    'user.name=Test',
-    '-c',
-    'user.email=test@example.com',
-    'commit',
-    '--quiet',
-    '-m',
-    'base',
-  );
-  git(cwd, 'checkout', '--quiet', '-b', 'work');
-  return cwd;
 }
 
 function write(cwd: string, files: Record<string, string>) {
@@ -83,54 +29,90 @@ function git(cwd: string, ...args: string[]) {
   if (result.status !== 0) throw new Error(result.stderr);
 }
 
-function crap(
-  cwd: string,
-  args: string[] = ['--base', 'main'],
-  input?: string,
-  env: Record<string, string> = {},
-) {
+/** A git repository on `main` holding `files`, checked out on a branch `work`. */
+function repository(files: Record<string, string>) {
+  const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-crap-test-'));
+  directories.push(cwd);
+  write(cwd, { '.gitignore': 'coverage.json\n', ...files });
+  git(cwd, 'init', '--quiet', '--initial-branch=main');
+  git(cwd, 'add', '.');
+  git(cwd, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'base');
+  git(cwd, 'checkout', '--quiet', '-b', 'work');
+  return cwd;
+}
+
+/**
+ * Writes coverage.json as a test run would: one statement per non-blank line of each file in
+ * src/, run when its file is listed in `covered`. Written last, so it's newer than the code.
+ */
+function coverage(cwd: string, covered: string[] = []) {
+  const report: Record<string, unknown> = {};
+  for (const name of ['grade.ts', 'keep.ts']) {
+    const file = `src/${name}`;
+    let text: string;
+    try {
+      text = readFileSync(join(cwd, file), 'utf8');
+    } catch {
+      continue;
+    }
+    const statementMap: Record<string, unknown> = {};
+    const s: Record<string, number> = {};
+    text.split('\n').forEach((line, index) => {
+      if (!line.trim()) return;
+      statementMap[index] = {
+        start: { line: index + 1, column: 0 },
+        end: { line: index + 1, column: line.length },
+      };
+      s[index] = covered.includes(file) ? 1 : 0;
+    });
+    report[resolve(cwd, file)] = { statementMap, s, fnMap: {}, f: {}, branchMap: {}, b: {} };
+  }
+  writeFileSync(join(cwd, 'coverage.json'), JSON.stringify(report));
+}
+
+function crap(cwd: string, args = ['--coverage', 'coverage.json', '--base', 'main', 'src']) {
   const result = spawnSync(process.execPath, [script, ...args], {
     cwd,
-    input,
     encoding: 'utf8',
-    env: { ...process.env, GITHUB_ACTIONS: '', ...env },
+    env: { ...process.env, GITHUB_ACTIONS: '' },
   });
-  return {
-    status: result.status,
-    output: `${result.stdout}${result.stderr}`,
-    stdout: result.stdout,
-  };
+  return { status: result.status, output: `${result.stdout}${result.stderr}` };
 }
+
+const allow = (crap: number, complexity: number) =>
+  `// @crap-allow CRAP ${crap}, complexity ${complexity}. One branch per row of the rate table.\n`;
 
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
 });
 
-// The script's contract, end to end: it runs as a program on a real git repository, with a fake
-// `npm test`. The rules themselves are tested beside each module.
 describe('crap', () => {
-  const allow = (crap: number, complexity: number) =>
-    `// @crap-allow CRAP ${crap}, complexity ${complexity}. One branch per row of the rate table.\n`;
-
-  it('fails a changed function over the limits, and says what comment would allow it', () => {
+  it('fails a changed function over the limits, says what comment would allow it, and points to the guide', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
     write(cwd, { 'src/grade.ts': branchy('grade', 11) });
+    coverage(cwd);
 
-    const result = crap(cwd);
+    const result = crap(cwd, [
+      '--coverage',
+      'coverage.json',
+      '--base',
+      'main',
+      '--guide',
+      'GUIDE.md',
+      'src',
+    ]);
 
     expect(result.status).toBe(1);
     expect(result.output).toContain(
       '- src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%. Over the limits (CRAP 30, complexity 10). To leave it, add `// @crap-allow CRAP 156, complexity 12. <reason>` directly above it.',
     );
-    expect(result.output).toContain('Follow docs/engineering/crap.md to respond.');
+    expect(result.output).toContain('Follow GUIDE.md to respond.');
   });
 
-  it('passes a changed function whose tests run all of it', () => {
+  it('passes a changed function its tests run all of', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-    write(cwd, {
-      'src/grade.ts': branchy('grade', 5),
-      'covered.json': JSON.stringify({ 'src/grade.ts': 'all' }),
-    });
+    write(cwd, { 'src/grade.ts': branchy('grade', 5) });
+    coverage(cwd, ['src/grade.ts']);
 
     const result = crap(cwd);
 
@@ -141,28 +123,20 @@ describe('crap', () => {
   it('ignores a function over the limits that the branch doesn’t change', () => {
     const cwd = repository({ 'src/grade.ts': `${branchy('grade', 11)}export const other = 1;\n` });
     write(cwd, { 'src/grade.ts': `${branchy('grade', 11)}export const other = 2;\n` });
+    coverage(cwd);
 
     expect(crap(cwd).status).toBe(0);
   });
 
-  it('passes a changed function whose @crap-allow comment gives its numbers', () => {
+  it('passes a function whose @crap-allow comment gives its numbers, and fails one that no longer matches', () => {
     const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
-    write(cwd, {
-      'src/grade.ts': allow(156, 12) + branchy('grade', 11).replace('return -1', 'return -2'),
-    });
+    write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 11).replace('-1', '-2') });
+    coverage(cwd);
+    expect(crap(cwd).status).toBe(0);
 
-    const result = crap(cwd);
-
-    expect(result.output).toContain('No CRAP findings, checked against main.');
-    expect(result.status).toBe(0);
-  });
-
-  it('fails when a function’s numbers no longer match its @crap-allow comment', () => {
-    const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
     write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 12) });
-
+    coverage(cwd);
     const result = crap(cwd);
-
     expect(result.status).toBe(1);
     expect(result.output).toContain(
       '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12. Update the comment to `// @crap-allow CRAP 182, complexity 13.`, and check its reason still holds.',
@@ -172,6 +146,7 @@ describe('crap', () => {
   it('flags a @crap-allow comment the branch adds, quoting its reason', () => {
     const cwd = repository({ 'src/grade.ts': branchy('grade', 11) });
     write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
+    coverage(cwd);
 
     const result = crap(cwd);
 
@@ -181,67 +156,54 @@ describe('crap', () => {
     );
   });
 
-  it('gives no score when the tests fail', () => {
+  it('scores the paths it’s given from the directory it runs in', () => {
     const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-    write(cwd, { 'src/grade.ts': branchy('grade', 11), 'tests-fail': '' });
+    write(cwd, { 'src/grade.ts': branchy('grade', 11) });
+    coverage(cwd);
+
+    const result = crap(join(cwd, 'src'), [
+      '--coverage',
+      '../coverage.json',
+      '--base',
+      'main',
+      '.',
+    ]);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain('- src/grade.ts:1 grade: CRAP 156');
+  });
+
+  it('refuses to score without a coverage report', () => {
+    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
 
     const result = crap(cwd);
 
     expect(result.status).toBe(1);
-    expect(result.output).toContain('FAIL src/a.test.ts > adds up');
-    expect(result.output).toContain('The tests fail, so no CRAP score was calculated.');
+    expect(result.output).toContain(
+      `No coverage report at ${join(cwd, 'coverage.json')}. Run the tests with coverage first; a run whose tests fail may write none.`,
+    );
   });
 
-  describe('as a Stop hook', () => {
-    const context = (stdout: string) =>
-      JSON.parse(stdout).hookSpecificOutput.additionalContext as string;
+  it('refuses a coverage report older than the code', () => {
+    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
+    coverage(cwd);
+    const later = new Date(Date.now() + 60_000);
+    utimesSync(join(cwd, 'src/keep.ts'), later, later);
 
-    it('gives the agent its findings as additional context, and exits 0', () => {
-      const cwd = repository({ 'src/grade.ts': allow(156, 12) + branchy('grade', 11) });
-      write(cwd, { 'src/grade.ts': allow(156, 12) + branchy('grade', 12) });
+    const result = crap(cwd);
 
-      const result = crap(cwd, ['--hook'], JSON.stringify({ cwd, stop_hook_active: false }));
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      `The coverage report at ${join(cwd, 'coverage.json')} is older than src/keep.ts. Run the tests again, so it covers the code as it is.`,
+    );
+  });
 
-      expect(result.status).toBe(0);
-      expect(JSON.parse(result.stdout).hookSpecificOutput.hookEventName).toBe('Stop');
-      expect(context(result.stdout)).toContain(
-        '- src/grade.ts:1 grade: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12.',
-      );
-      expect(context(result.stdout)).toContain(
-        'Follow docs/engineering/crap.md to respond. This is advice; CI fails on each CRAP finding.',
-      );
-    });
+  it('says how to run it when the report or paths are missing', () => {
+    const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
+    const usage =
+      'Usage: node scripts/crap/crap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...';
 
-    it('says nothing when Claude is already continuing because of a stop hook', () => {
-      const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-      write(cwd, { 'src/grade.ts': branchy('grade', 11) });
-
-      const result = crap(cwd, ['--hook'], JSON.stringify({ cwd, stop_hook_active: true }));
-
-      expect(result).toMatchObject({ status: 0, stdout: '' });
-    });
-
-    it('says nothing when src/ and app/ haven’t changed', () => {
-      const cwd = repository({ 'src/grade.ts': branchy('grade', 11) });
-
-      const result = crap(cwd, ['--hook'], JSON.stringify({ cwd, stop_hook_active: false }));
-
-      expect(result).toMatchObject({ status: 0, stdout: '' });
-    });
-
-    it('puts lint failures first, and gives no score while the tests fail', () => {
-      const cwd = repository({ 'src/keep.ts': 'export const keep = 1;\n' });
-      write(cwd, { 'src/grade.ts': branchy('grade', 11), 'tests-fail': '' });
-
-      const result = crap(cwd, ['--hook'], JSON.stringify({ cwd, stop_hook_active: false }), {
-        LINT_FAILS: '1',
-      });
-
-      const message = context(result.stdout);
-      expect(result.status).toBe(0);
-      expect(message.indexOf('`npm run lint` fails. Fix it first')).toBe(0);
-      expect(message).toContain('`npm test` fails, so no CRAP score was calculated this run.');
-      expect(message).not.toContain('CRAP 156');
-    });
+    expect(crap(cwd, ['src']).output).toContain(usage);
+    expect(crap(cwd, ['--coverage', 'coverage.json']).output).toContain(usage);
   });
 });

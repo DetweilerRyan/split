@@ -1,47 +1,67 @@
 #!/usr/bin/env node
-// Scores each function in src/ and app/ by CRAP: complexity² × (1 − coverage)³ + complexity,
-// where complexity is counted by complexity.ts and coverage is the share of the function's
-// statements the Vitest suite runs. It fails when a function the branch changes is over the
-// limits in check.ts, unless a `// @crap-allow` comment directly above it gives its current
-// numbers and a reason; and when any @crap-allow comment's numbers no longer match its function.
-// It never writes to source files. docs/engineering/crap.md says what to do with a finding. Why
-// it works this way is in crap.meta.md beside it; read that only when changing or questioning it.
+// Scores each function under the given paths by CRAP: complexity² × (1 − coverage)³ + complexity,
+// where complexity is counted by complexity.ts and coverage comes from the istanbul JSON report
+// it's given. It fails when a function the branch changes is over the limits in check.ts, unless
+// a `// @crap-allow` comment directly above it gives its current numbers and a reason; and when any
+// @crap-allow comment's numbers no longer match its function. It never runs the tests, and never
+// writes to source files. Why it works this way is in crap.meta.md beside it; read that only when
+// changing or questioning it.
 //
-// Usage, from the repository root:
-//   node scripts/crap/crap.ts [--base <ref>]  check against <ref> (default origin/main)
-//   node scripts/crap/crap.ts --hook          Claude Code Stop hook; reads its input on stdin
+// Usage, from anywhere in the repository:
+//   node scripts/crap/crap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...
+//     --coverage  an istanbul JSON report, such as coverage/coverage-final.json, written by a test
+//                 run of the code as it is now
+//     --base      the ref to find changed functions against (default origin/main)
+//     --guide     a document to point to from the findings, such as a procedure for responding
+//     <path>      the folders or files whose functions are scored, from the current directory
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type Allow, type Finding, findAllows } from './allow.ts';
 import { check, crapOf, type Scored } from './check.ts';
-import { coverageOf, type Report, runCoverage } from './coverage.ts';
+import { coverageOf, newerThan, parseReport, type Report } from './coverage.ts';
 import { changedLines, git } from './diff.ts';
 import { type Fn, parse } from './functions.ts';
 
-const SCORED = ['src', 'app'];
-const PROCEDURE = 'docs/engineering/crap.md';
+const USAGE =
+  'Usage: node scripts/crap/crap.ts --coverage <report> [--base <ref>] [--guide <doc>] <path>...';
+const CODE = /\.[cm]?[jt]sx?$/;
+const TEST = /\.(test|spec)\.[cm]?[jt]sx?$/;
 
-/** The JavaScript and TypeScript files in src/ and app/, tests left out. */
-function sourceFiles(root: string) {
-  return git(root, 'ls-files', '--cached', '--others', '--exclude-standard', '--', ...SCORED)
+/** The files git knows under `paths`, tracked or new, that exist in the working tree. */
+function files(root: string, paths: string[]) {
+  return git(root, 'ls-files', '--cached', '--others', '--exclude-standard', '--', ...paths)
     .split('\n')
-    .filter(
-      (file) =>
-        /\.[cm]?[jt]sx?$/.test(file) &&
-        !/\.test\.[cm]?[jt]sx?$/.test(file) &&
-        existsSync(join(root, file)),
-    );
+    .filter((file) => file && existsSync(join(root, file)));
 }
 
-function findings(root: string, base: string, report: Report) {
+/** The report at `path`, refused when it's missing or older than any file under `paths`. */
+function readReport(root: string, path: string, paths: string[]): Report {
+  if (!existsSync(path)) {
+    throw new Error(
+      `No coverage report at ${path}. Run the tests with coverage first; a run whose tests fail may write none.`,
+    );
+  }
+  const stale = newerThan(
+    statSync(path).mtimeMs,
+    files(root, paths).map((file) => ({ file, time: statSync(join(root, file)).mtimeMs })),
+  );
+  if (stale.length > 0) {
+    const more = stale.length > 1 ? ` and ${stale.length - 1} more` : '';
+    throw new Error(
+      `The coverage report at ${path} is older than ${stale[0]}${more}. Run the tests again, so it covers the code as it is.`,
+    );
+  }
+  return parseReport(readFileSync(path, 'utf8'), path);
+}
+
+function findings(root: string, base: string, paths: string[], report: Report) {
   const scored: Scored[] = [];
   const allowed = new Map<Fn, Allow>();
   const problems: Finding[] = [];
-  for (const file of sourceFiles(root)) {
+  for (const file of files(root, paths).filter((f) => CODE.test(f) && !TEST.test(f))) {
     const source = readFileSync(join(root, file), 'utf8');
     const parsed = parse(file, source);
     const coverage = coverageOf(parsed.functions, report[resolve(root, file)]);
@@ -53,87 +73,31 @@ function findings(root: string, base: string, report: Report) {
     for (const [fn, allow] of allows.allowed) allowed.set(fn, allow);
     problems.push(...allows.problems);
   }
-  const result = check(scored, allowed, changedLines(root, base, SCORED));
+  const result = check(scored, allowed, changedLines(root, base, paths));
   return { problems: [...problems, ...result.problems], notices: result.notices };
 }
 
-const tail = (text: string, lines: number) => text.trimEnd().split('\n').slice(-lines).join('\n');
 const list = (items: Finding[]) =>
   items.map((f) => `- ${f.file}:${f.line} ${f.message}`).join('\n');
 
-function hook(input: { cwd?: string; stop_hook_active?: boolean }) {
-  // Advise once: when Claude is already continuing because of a stop hook, let it stop.
-  if (input.stop_hook_active) return undefined;
-  const root = git(input.cwd ?? process.cwd(), 'rev-parse', '--show-toplevel');
-  const base = ['origin/main', 'main'].find(
-    (ref) =>
-      spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: root })
-        .status === 0,
-  );
-  if (!base) return `The CRAP check couldn't find origin/main or main to compare with.`;
-  if (changedLines(root, base, SCORED).size === 0) return undefined;
-
-  const sections: string[] = [];
-  const lint = spawnSync('npm', ['run', 'lint'], {
-    cwd: root,
-    encoding: 'utf8',
-    env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
-  });
-  if (lint.status !== 0) {
-    sections.push(
-      `\`npm run lint\` fails. Fix it first:\n${tail(`${lint.stdout}${lint.stderr}`, 40)}`,
-    );
-  }
-  const tests = runCoverage(root);
-  if (!tests.passed) {
-    sections.push(
-      `\`npm test\` fails, so no CRAP score was calculated this run. Fix the tests first:\n${tail(tests.output, 60)}`,
-    );
-  } else {
-    const { problems, notices } = findings(root, base, tests.report);
-    if (problems.length) sections.push(`CRAP findings:\n${list(problems)}`);
-    if (notices.length) {
-      sections.push(`@crap-allow comments this branch changes:\n${list(notices)}`);
-    }
-  }
-  if (sections.length === 0) return undefined;
-  return `${sections.join('\n\n')}\n\nFollow ${PROCEDURE} to respond. This is advice; CI fails on each CRAP finding.`;
-}
-
 function main(args: string[]) {
-  const { values: options } = parseArgs({
+  const { values, positionals } = parseArgs({
     args,
+    allowPositionals: true,
     options: {
+      coverage: { type: 'string' },
       base: { type: 'string', default: 'origin/main' },
-      hook: { type: 'boolean', default: false },
+      guide: { type: 'string' },
     },
   });
+  if (!values.coverage || positionals.length === 0) throw new Error(USAGE);
 
-  if (options.hook) {
-    let message: string | undefined;
-    try {
-      const stdin = readFileSync(0, 'utf8').trim();
-      message = hook(stdin ? JSON.parse(stdin) : {});
-    } catch (error) {
-      message = `The CRAP check couldn't run: ${error instanceof Error ? error.message : String(error)}`;
-    }
-    if (message) {
-      console.log(
-        JSON.stringify({
-          hookSpecificOutput: { hookEventName: 'Stop', additionalContext: message },
-        }),
-      );
-    }
-    return 0;
-  }
+  const root = git(process.cwd(), 'rev-parse', '--show-toplevel');
+  // git reports paths from the repository root, so name the scored paths the same way.
+  const paths = positionals.map((path) => relative(root, resolve(path)) || '.');
+  const report = readReport(root, resolve(values.coverage), paths);
+  const { problems, notices } = findings(root, values.base, paths, report);
 
-  const root = process.cwd();
-  const tests = runCoverage(root);
-  if (!tests.passed) {
-    console.error(`${tail(tests.output, 60)}\n\nThe tests fail, so no CRAP score was calculated.`);
-    return 1;
-  }
-  const { problems, notices } = findings(root, options.base, tests.report);
   for (const notice of notices) {
     console.log(
       process.env.GITHUB_ACTIONS
@@ -142,11 +106,11 @@ function main(args: string[]) {
     );
   }
   if (problems.length) {
-    console.error(`CRAP findings, checked against ${options.base}:\n${list(problems)}`);
-    console.error(`\nFollow ${PROCEDURE} to respond.`);
+    console.error(`CRAP findings, checked against ${values.base}:\n${list(problems)}`);
+    if (values.guide) console.error(`\nFollow ${values.guide} to respond.`);
     return 1;
   }
-  console.log(`No CRAP findings, checked against ${options.base}.`);
+  console.log(`No CRAP findings, checked against ${values.base}.`);
   return 0;
 }
 

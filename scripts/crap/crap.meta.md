@@ -1,11 +1,12 @@
 # CRAP script: reasons and sources
 
-Why the CRAP script in this folder, its `@crap-allow` comments, its Stop hook and its CI step work the way they do, and why [the CRAP score procedure](../../docs/engineering/crap.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only the procedure.
+Why the CRAP script in this folder, its `@crap-allow` comments, the Stop hook in [`../stop-hook.ts`](../stop-hook.ts) and the CI step work the way they do, and why [the CRAP score procedure](../../docs/engineering/crap.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only the procedure.
 
-Decided by the owner on [#63](https://github.com/DetweilerRyan/split/issues/63), which records the trial, the research and each decision, all approved on 2026-11-22. In feedback on [#64](https://github.com/DetweilerRyan/split/pull/64) the same day, the owner then changed it in two rounds:
+Decided by the owner on [#63](https://github.com/DetweilerRyan/split/issues/63), which records the trial, the research and each decision, all approved on 2026-11-22. In feedback on [#64](https://github.com/DetweilerRyan/split/pull/64) the same day, the owner then changed it in three rounds:
 
 - **[`crap-allow` comments](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7083296497)** replaced the baseline file.
 - **[`oxc-parser`, our own complexity count, `@crap-allow`, and this folder of modules](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7083803193).**
+- **[The script reads a coverage report instead of running the tests](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085342018).**
 
 ## What the research found
 
@@ -34,10 +35,26 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 - **The 15 functions over the limits when the check started have comments** saying so ("Debt from before the CRAP check (#63)"). Replace a reason with a real justification when you next work on its function.
 - **A comment the branch adds or changes is a notice, not a failure,** so the owner sees each new or changed exception and its reason.
 - **Coverage comes from all three Vitest projects together.** Components and hooks are tested in the `browser` project ([testing conventions](../../docs/engineering/testing-conventions.md#which-project-a-test-belongs-in)), so `unit` coverage alone would score every component at 0%.
-- **The Stop hook advises and never blocks.** It sends findings through `hookSpecificOutput.additionalContext`, which the [hooks reference](https://code.claude.com/docs/en/hooks) describes as "non-error feedback for Claude"; plain output from a Stop hook never reaches Claude. It stays quiet when `stop_hook_active` is true, so it advises once per stop. CI fails on the same findings.
-- **The hook runs lint and the tests first.** Lint failures come first in its message. While the tests fail it gives no score, since coverage from a failing run misleads.
+
+### The script reads coverage; it doesn't run the tests
+
+- **The owner's words:** "the test suite should write a coverage report to disk and the crap script should take the path to the coverage report as a command argument. the goal should be that the crap script is largely independant of the rest of the app and should not assume where or how to execute this project's unit tests."
+- **Every `npm test` writes the report.** [`vitest.config.ts`](../../vitest.config.ts) turns coverage on for every run, writing `coverage/coverage-final.json`. It took the suite from about 4 s to 5 s. CI's `Tests` step writes the report and its `CRAP score` step reads it, so CI runs the suite once instead of twice.
+- **The script knows nothing of this project.** It takes the report (`--coverage`), the paths to score, the ref to compare with (`--base`) and an optional document to point to (`--guide`). It runs git and nothing else. [`package.json`](../../package.json)'s `crap` script supplies this repository's values.
+- **A stale report is refused, not scored.** The script fails when the report is older than any file under the scored paths, tests included. That way a report from before the latest edits can't make a function look covered.
+  - **A failed test run can't leave a stale report behind:** Vitest empties `coverage/` at the start of a run, and writes no report when a test fails.
+  - **A partial run is the one gap:** a run of some test files writes a fresh report with only their coverage. That can only lower coverage, so it makes false findings, never a false pass.
+
+### The Stop hook
+
+- **The hook is the project's own script, [`scripts/stop-hook.ts`](../stop-hook.ts),** not a mode of the CRAP script. It's where this project's choices live: which folders count as changes, and running `npm run lint`, `npm test` and `npm run crap` in that order. The CRAP script stays independent of them, and of Claude Code.
+- **It advises and never blocks.** It sends what fails through `hookSpecificOutput.additionalContext`, which the [hooks reference](https://code.claude.com/docs/en/hooks) describes as "non-error feedback for Claude"; plain output from a Stop hook never reaches Claude.
+  - It stays quiet when `stop_hook_active` is true, so it advises once per stop.
+  - It runs nothing when `src/` and `app/` haven't changed.
+  - CI fails on the same checks.
+- **It runs lint first and the tests second, and the CRAP check only when the tests pass,** since a failing run writes no report.
 - **No skill.** A hook defined in a skill runs only after the skill is invoked, a hook can't invoke a skill, and [`AGENTS.md`](../../AGENTS.md) sends every agent to `docs/engineering/` for procedures.
-- **CI runs the tests a second time** in the `CRAP score` step, with coverage on, rather than turning coverage on for every `npm test`. [#65](https://github.com/DetweilerRyan/split/issues/65) pilots running tooling tests apart from the app's.
+- **[#65](https://github.com/DetweilerRyan/split/issues/65)** pilots running tooling tests apart from the app's.
 
 ### Our own complexity count
 
@@ -53,17 +70,18 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."
 
-| Module                           | Does                                                             | Tested by                                                          |
-| :------------------------------- | :--------------------------------------------------------------- | :----------------------------------------------------------------- |
-| [`crap.ts`](crap.ts)             | Command line, check and hook modes, output                       | [`crap.real.test.ts`](crap.real.test.ts): the contract, end to end |
-| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                    | [`functions.test.ts`](functions.test.ts)                           |
-| [`complexity.ts`](complexity.ts) | The counting rules                                               | [`complexity.test.ts`](complexity.test.ts)                         |
-| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions       | [`allow.test.ts`](allow.test.ts)                                   |
-| [`coverage.ts`](coverage.ts)     | Runs the tests with coverage; shares statements out to functions | [`coverage.test.ts`](coverage.test.ts)                             |
-| [`diff.ts`](diff.ts)             | Runs `git diff`; reads changed lines from it                     | [`diff.test.ts`](diff.test.ts)                                     |
-| [`check.ts`](check.ts)           | The rules, on plain data                                         | [`check.test.ts`](check.test.ts)                                   |
+| Module                           | Does                                                                          | Tested by                                                          |
+| :------------------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------- |
+| [`crap.ts`](crap.ts)             | Command line: reads the report, refuses a stale one, prints findings          | [`crap.real.test.ts`](crap.real.test.ts): the contract, end to end |
+| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                                 | [`functions.test.ts`](functions.test.ts)                           |
+| [`complexity.ts`](complexity.ts) | The counting rules                                                            | [`complexity.test.ts`](complexity.test.ts)                         |
+| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                    | [`allow.test.ts`](allow.test.ts)                                   |
+| [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions | [`coverage.test.ts`](coverage.test.ts)                             |
+| [`diff.ts`](diff.ts)             | Runs `git diff`; reads changed lines from it                                  | [`diff.test.ts`](diff.test.ts)                                     |
+| [`check.ts`](check.ts)           | The rules, on plain data                                                      | [`check.test.ts`](check.test.ts)                                   |
 
-- **Every module but `crap.ts` takes plain values,** such as source text, diff text or a coverage object. Only `crap.ts`, `runCoverage` and `changedLines` run programs.
+- **Every module but `crap.ts` takes plain values,** such as source text, diff text or a coverage report's text. Only `crap.ts` reads files, and only it and `changedLines` run git.
+- **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
 - **The modules import each other with `.ts` extensions,** which Node needs to run them by stripping types. So `tsconfig.json` sets `allowImportingTsExtensions`, which `noEmit` permits.
 
 ## How it works
@@ -82,6 +100,8 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **Text-only comment handling,** without a parser. It failed on comments that mention `crap-allow`, swallowed lint directives into the reason, mistook strings for comments, couldn't read JSX comments, and guessed between two functions on one line.
 - **A CRAP package from npm** (`crap4ts`, `crap-ts`, `@crap4ts/crap4ts`, `@bladesk/crap-check`, `@barney-media/crap-typescript` and others): about a dozen similar packages all published in 2026, mostly by single maintainers, with no clear original. They fail [dependencies](../../docs/engineering/dependencies.md)' maintenance checks.
 - **`@vitest/istanbul-lib-coverage`, to read the coverage report:** it only wraps a simple, stable JSON format.
+- **The script running the tests itself,** as it did before the third round of feedback: it tied the script to `npm test`. CI also ran the suite twice.
+- **A hook mode inside the CRAP script:** it tied the script to Claude Code, and to running lint and the tests.
 - **A blocking hook:** #63 chose advice inside the session and a gate in CI.
 - **Mutation testing:** deferred. Revisit Stryker for `src/utils/math.ts` and `src/store/seedCodec.ts` in its own issue.
 
@@ -90,4 +110,5 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **`oxc-parser` changes its AST shape in an update:** `functions.test.ts` and `complexity.test.ts` should fail first. Fix the module, not the tests.
 - **Coverage proves unsteady between runs,** so a comment's numbers drift without a code change: compare within a tolerance instead of exactly.
 - **Agents game the score** in ways review misses, such as tests that run code without checking it: take up mutation testing.
-- **The suite grows slow enough** that the Stop hook delays sessions noticeably: run only the tests related to the change in the hook, and keep the full run in CI.
+- **The suite grows slow enough** that the Stop hook delays sessions noticeably: run only the tests related to the change in the hook, and keep the full run in CI. A partial run's report then needs the script to know which functions it covers, so revisit the stale-report rule with it.
+- **Coverage on every `npm test` costs too much:** move it to a separate script, such as `test:coverage`, and run that before `npm run crap`.
