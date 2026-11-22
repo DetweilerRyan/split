@@ -1,37 +1,28 @@
-// Finds the files a config's globs pick out.
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import { baseOf, globToRegExp, matchesAny } from './glob.ts';
+// Finds the files a config's globs pick out, with Node's fs.globSync (stable since Node 22.17).
+import { globSync } from 'node:fs';
+import { sep } from 'node:path';
+
+const posix = (path: string) => path.split(sep).join('/');
+const unique = (paths: string[]) => [...new Set(paths.map(posix))].sort();
 
 /**
- * The files under `root` that match `files`, with paths from `root` and `/` between folders. It
- * starts from the fixed part of each glob, and doesn't search a folder `ignorePatterns` matches.
- * `matched` is every file found, which a coverage report must be newer than, tests included;
- * `scored` leaves out the files `ignorePatterns` matches.
+ * The files under `root` that `files` match, with paths from `root` and `/` between folders, and
+ * `extra` files named outright, which are always scored.
+ * - `scored` leaves out everything `ignorePatterns` matches. A folder it matches isn't searched.
+ * - `matched` is what a coverage report must be newer than. It leaves out only the folders
+ *   `ignorePatterns` names (patterns ending in `/**`, such as `**\/node_modules/**`), so tests
+ *   still count.
  */
-export function findFiles(root: string, files: string[], ignorePatterns: string[]) {
-  const include = files.map(globToRegExp);
-  const ignore = ignorePatterns.map(globToRegExp);
-  const matched = new Set<string>();
-
-  const walk = (folder: string) => {
-    const at = folder === '.' ? root : join(root, folder);
-    if (!existsSync(at)) return;
-    if (!statSync(at).isDirectory()) {
-      if (matchesAny(folder, include)) matched.add(folder);
-      return;
-    }
-    for (const entry of readdirSync(at, { withFileTypes: true })) {
-      const path = folder === '.' ? entry.name : `${folder}/${entry.name}`;
-      if (entry.isDirectory()) {
-        if (!matchesAny(`${path}/`, ignore)) walk(path);
-      } else if (entry.isFile() && matchesAny(path, include)) {
-        matched.add(path);
-      }
-    }
+export function findFiles(
+  root: string,
+  files: string[],
+  ignorePatterns: string[],
+  extra: string[] = [],
+) {
+  const folders = ignorePatterns.filter((pattern) => pattern.endsWith('/**'));
+  const find = (exclude: string[]) => globSync(files, { cwd: root, exclude });
+  return {
+    matched: unique([...find(folders), ...extra]),
+    scored: unique([...find(ignorePatterns), ...extra]),
   };
-  for (const base of new Set(files.map(baseOf))) walk(base);
-
-  const all = [...matched].sort();
-  return { matched: all, scored: all.filter((path) => !matchesAny(path, ignore)) };
 }
