@@ -1,8 +1,10 @@
 // Reads an .oxcraprc.json config: JSON with comments and trailing commas allowed, as oxlint's and
-// oxfmt's configs are. configuration_schema.json beside this file describes the same options for
-// editors; config.test.ts checks the two agree.
-import { parseSync } from 'oxc-parser';
-import { type AstNode, isNode } from './complexity.ts';
+// oxfmt's configs are, parsed by jsonc-parser and checked by ajv against configuration_schema.json
+// beside this file. The schema owns which options there are and what each may hold; this file
+// owns their defaults and how they combine with the command line.
+import Ajv, { type ErrorObject } from 'ajv';
+import { type ParseError, parse, printParseErrorCode, visit } from 'jsonc-parser';
+import schema from './configuration_schema.json' with { type: 'json' };
 
 export type Limits = { crap: number; complexity: number };
 export type Config = {
@@ -16,6 +18,8 @@ export type Config = {
   /** A document the findings point to. */
   guide?: string;
 };
+/** What a config file holds, once the schema has checked it. */
+type File = Partial<Omit<Config, 'limits'>> & { limits?: Partial<Limits>; $schema?: string };
 
 /** The names oxCrap looks for in the current directory when no config is given, in order. */
 export const CONFIG_NAMES = ['.oxcraprc.json', '.oxcraprc.jsonc'];
@@ -28,122 +32,57 @@ export const DEFAULTS: Config = {
   limits: { crap: 30, complexity: 10 },
 };
 
-/** The options a config may set, with `$schema` for editors. */
-export const OPTIONS = ['$schema', 'files', 'ignorePatterns', 'limits', 'coverage', 'guide'];
+/** The options a config may set, as the schema lists them, leaving out `$schema`. */
+export const OPTIONS = Object.keys(schema.properties).filter((name) => name !== '$schema');
 
 export class ConfigError extends Error {}
 
-/** The value of a JSON literal in an oxc-parser AST, or an error naming what isn't JSON. */
-function value(node: AstNode, path: string): unknown {
-  switch (node.type) {
-    case 'ObjectExpression': {
-      const object: Record<string, unknown> = {};
-      for (const property of node.properties as AstNode[]) {
-        const key = property.key as AstNode | undefined;
-        const name =
-          key?.type === 'Literal' ? key.value : key?.type === 'Identifier' ? key.name : undefined;
-        if (property.type !== 'Property' || property.computed || typeof name !== 'string') {
-          throw new ConfigError(`${path} isn't JSON: an object key must be a string.`);
-        }
-        object[name] = value(property.value as AstNode, path);
-      }
-      return object;
-    }
-    case 'ArrayExpression':
-      return (node.elements as (AstNode | null)[]).map((element) => {
-        if (!element) throw new ConfigError(`${path} isn't JSON: an array has a hole in it.`);
-        return value(element, path);
-      });
-    case 'Literal':
-      if (node.regex) throw new ConfigError(`${path} isn't JSON: it has a regular expression.`);
-      return node.value;
-    case 'UnaryExpression': {
-      const argument = node.argument as AstNode;
-      if (
-        node.operator === '-' &&
-        argument.type === 'Literal' &&
-        typeof argument.value === 'number'
-      ) {
-        return -argument.value;
-      }
-      break;
-    }
-  }
-  throw new ConfigError(`${path} isn't JSON: it has a ${node.type}.`);
+const validate = new Ajv({ allErrors: true }).compile<File>(schema);
+
+/** The line and column of an offset in `text`, both from 1. */
+function lineAndColumn(text: string, offset: number) {
+  const before = text.slice(0, offset).split('\n');
+  return `${before.length}:${before.at(-1)!.length + 1}`;
 }
 
-/** Reads JSON text, allowing comments and trailing commas. */
-export function readJsonc(text: string, path: string): unknown {
-  // A line comment at the end would swallow the closing parenthesis on the same line.
-  const result = parseSync('config.ts', `(${text}\n)`);
-  const statement = (result.program as unknown as { body: AstNode[] }).body;
-  if (result.errors.length > 0 || statement.length !== 1 || !isNode(statement[0].expression)) {
-    const why = result.errors[0]?.message ?? 'expected one JSON value';
-    throw new ConfigError(`${path} isn't valid JSON: ${why}`);
+/** One schema error as a sentence about the option it concerns. */
+function describe(error: ErrorObject, path: string) {
+  const option = error.instancePath.slice(1).replaceAll('/', '.');
+  if (error.keyword === 'additionalProperties') {
+    const name = (error.params as { additionalProperty: string }).additionalProperty;
+    return option
+      ? `${path}: "${option}" has no option "${name}".`
+      : `${path} has no option "${name}". The options are ${OPTIONS.join(', ')}.`;
   }
-  // oxc-parser keeps the parentheses this wraps the text in; the JSON value is inside them.
-  const wrapped = statement[0].expression as AstNode;
-  return value(
-    wrapped.type === 'ParenthesizedExpression' ? (wrapped.expression as AstNode) : wrapped,
-    path,
-  );
+  return option ? `${path}: "${option}" ${error.message}.` : `${path} ${error.message}.`;
 }
 
-const isStrings = (v: unknown): v is string[] =>
-  Array.isArray(v) && v.every((item) => typeof item === 'string');
-
-/** The options a config sets, checked; what it leaves out comes from DEFAULTS when merged. */
+/** The options a config file sets, checked against the schema. */
 export function parseConfig(text: string, path: string): Partial<Config> {
-  const raw = readJsonc(text, path);
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new ConfigError(`${path} should hold one object of options.`);
+  const errors: ParseError[] = [];
+  const data: unknown = parse(text, errors, { allowTrailingComma: true });
+  if (errors.length > 0) {
+    const [first] = errors;
+    throw new ConfigError(
+      `${path} isn't valid JSON at ${lineAndColumn(text, first.offset)}: ${printParseErrorCode(first.error)}.`,
+    );
   }
-  const options = raw as Record<string, unknown>;
-  const config: Partial<Config> = {};
-  for (const [key, setting] of Object.entries(options)) {
-    const problem = (expected: string) =>
-      new ConfigError(`${path}: "${key}" should be ${expected}.`);
-    switch (key) {
-      case '$schema':
-        if (typeof setting !== 'string') throw problem('a string');
-        break;
-      case 'files':
-      case 'ignorePatterns':
-        if (!isStrings(setting)) throw problem('a list of globs');
-        if (key === 'files' && setting.length === 0) throw problem('at least one glob');
-        config[key] = setting;
-        break;
-      case 'limits': {
-        if (!setting || typeof setting !== 'object' || Array.isArray(setting)) {
-          throw problem('an object such as { "crap": 30, "complexity": 10 }');
-        }
-        const limits = { ...DEFAULTS.limits };
-        for (const [name, limit] of Object.entries(setting)) {
-          if (name !== 'crap' && name !== 'complexity') {
-            throw new ConfigError(
-              `${path}: "limits" has no option "${name}"; it takes "crap" and "complexity".`,
-            );
-          }
-          if (typeof limit !== 'number' || !(limit > 0)) {
-            throw new ConfigError(`${path}: "limits.${name}" should be a number above 0.`);
-          }
-          limits[name] = limit;
-        }
-        config.limits = limits;
-        break;
-      }
-      case 'coverage':
-      case 'guide':
-        if (typeof setting !== 'string' || setting === '') throw problem('a path');
-        config[key] = setting;
-        break;
-      default:
-        throw new ConfigError(
-          `${path} has no option "${key}". The options are ${OPTIONS.filter((o) => o !== '$schema').join(', ')}.`,
-        );
-    }
+  // jsonc-parser assigns a "__proto__" key, which sets the object's prototype instead, so the
+  // schema would never see it and the key would be quietly ignored.
+  let proto: number | undefined;
+  visit(text, {
+    onObjectProperty: (property, offset) => {
+      if (property === '__proto__') proto ??= offset;
+    },
+  });
+  if (proto !== undefined) {
+    throw new ConfigError(`${path} has no option "__proto__", at ${lineAndColumn(text, proto)}.`);
   }
-  return config;
+  if (!validate(data)) {
+    throw new ConfigError((validate.errors ?? []).map((error) => describe(error, path)).join('\n'));
+  }
+  const { $schema: _, limits, ...rest } = data;
+  return limits ? { ...rest, limits: { ...DEFAULTS.limits, ...limits } } : rest;
 }
 
 /** A config's options over the defaults, and then the command line's over both. */
@@ -152,6 +91,6 @@ export const merge = (...layers: Partial<Config>[]): Config =>
     {},
     DEFAULTS,
     ...layers.map((layer) =>
-      Object.fromEntries(Object.entries(layer).filter(([, v]) => v !== undefined)),
+      Object.fromEntries(Object.entries(layer).filter(([, value]) => value !== undefined)),
     ),
   );
