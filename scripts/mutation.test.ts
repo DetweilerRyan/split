@@ -36,4 +36,24 @@ describe('changedRanges', () => {
     ].join('\n');
     expect(changedRanges(text)).toEqual([]);
   });
+
+  it('reads a path with a space, which git ends with a tab', () => {
+    const text = [
+      'diff --git a/scripts/oxcrap/a b.ts b/scripts/oxcrap/a b.ts',
+      '--- a/scripts/oxcrap/a b.ts\t',
+      '+++ b/scripts/oxcrap/a b.ts\t',
+      '@@ -1 +1 @@',
+    ].join('\n');
+    expect(changedRanges(text)).toEqual(['scripts/oxcrap/a b.ts:1-1']);
+  });
+
+  it('never counts a hunk against the file before it, if a path can’t be read', () => {
+    const text = [
+      diff('scripts/oxcrap/check.ts', ['@@ -1 +1 @@']),
+      'diff --git "a/scripts/oxcrap/\\303\\251.ts" "b/scripts/oxcrap/\\303\\251.ts"',
+      '+++ "b/scripts/oxcrap/\\303\\251.ts"',
+      '@@ -50 +50 @@',
+    ].join('\n');
+    expect(changedRanges(text)).toEqual(['scripts/oxcrap/check.ts:1-1']);
+  });
 });

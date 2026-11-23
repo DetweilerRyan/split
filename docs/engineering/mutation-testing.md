@@ -9,14 +9,16 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
 
 ## Running it
 
-| Command                         | What it does                                                                                                      |
-| :------------------------------ | :---------------------------------------------------------------------------------------------------------------- |
-| `npm run test:mutation:changed` | Mutates only the lines of `scripts/oxcrap/` changed since the merge base with `origin/main`, and lists survivors. |
-| `npm run test:mutation`         | Mutates all of oxCrap again. On `main`, it also refreshes the baseline other worktrees start from.                |
+| Command                         | What it does                                                                                                                      |
+| :------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run test:mutation:changed` | Mutates only the lines of `scripts/oxcrap/` changed since the merge base with `origin/main`, and lists survivors.                 |
+| `npm run test:mutation`         | Mutates all of oxCrap again. When oxCrap hasn't changed on the branch, it also refreshes the baseline other worktrees start from. |
 
-- **Both keep an incremental results file per worktree,** in git's folder (`git rev-parse --git-path stryker/incremental.json`), so a re-run tests only mutants in code or tests that changed. It's never committed.
-- **A worktree without one starts from the baseline:** `stryker/baseline.json` in the folder `git rev-parse --git-common-dir` names, which every worktree shares. A full run on `main` writes it.
-- **Run a full run on `main`** after `npm install`, or when a change to a shared helper or a dependency should be retested. Incremental mode only notices changes to mutated files and test files.
+- **Each worktree keeps an incremental results file,** in git's folder (`git rev-parse --git-path stryker/incremental.json`). It's never committed.
+  - **A full run** tests every mutant again, and writes the file.
+  - **A changed-lines run** reuses its results for mutants whose code and tests haven't changed, and doesn't write it back.
+- **A worktree without one starts from the baseline:** `stryker/baseline.json` in the folder `git rev-parse --git-common-dir` names, which every worktree shares. A full run writes it when oxCrap hasn't changed on the branch, so it describes `main`'s oxCrap.
+- **Run a full run on a branch that hasn't changed oxCrap** after a pull request that changed it merges, after `npm install`, or when a change to a shared helper or a dependency should be retested. Incremental mode only notices changes to mutated files and test files.
 - **The report** is in `reports/mutation/mutation.html`, and Stryker's working copy is in `.stryker-tmp/`. Both are gitignored, and the Vitest configs leave the working copy out.
 
 ## When oxCrap's code changes

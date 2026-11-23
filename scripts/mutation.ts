@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // Runs Stryker's mutation testing on oxCrap, as docs/engineering/mutation-testing.md says: a full
-// run, or only the lines of scripts/oxcrap/ changed since the merge base with origin/main. Either
-// way it keeps an incremental results file per worktree, in git's folder, seeded from a baseline
-// every worktree shares, which a full run on main refreshes. Why is in mutation-testing.meta.md.
+// run, or only the lines of scripts/oxcrap/ changed since the merge base with origin/main. It's
+// expensive: run it once, after the definition of done passes. Each worktree keeps its own
+// incremental results file in git's folder, seeded from a baseline every worktree shares. Why is
+// in mutation-testing.meta.md.
 //
-// Usage: node scripts/mutation.ts [--changed]
+// Usage: npm run test:mutation [-- ...] or npm run test:mutation:changed
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases.
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 
 /** The code mutation testing covers; tests and the feature contract aren't mutated. */
 const SCOPE = 'scripts/oxcrap';
@@ -20,15 +22,22 @@ const mutated = (file: string) =>
 
 /**
  * The line ranges `git diff --unified=0` reports as added or changed, by file, as Stryker's
- * `--mutate` takes them: `file:start-end`. Deleted lines leave nothing to mutate.
+ * `--mutate` takes them: `file:start-end`. Deleted lines leave nothing to mutate. It expects the
+ * diff `diffArgs` asks for: `a/` and `b/` prefixes and unquoted paths.
  */
 export function changedRanges(diff: string): string[] {
   const ranges: string[] = [];
   let file: string | undefined;
   for (const line of diff.split('\n')) {
-    const header = /^\+\+\+ (?:b\/(.+)|\/dev\/null)$/.exec(line);
-    if (header) {
-      file = header[1];
+    // Each file's section starts here, so no hunk is ever counted against the file before it.
+    if (line.startsWith('diff --git ')) {
+      file = undefined;
+      continue;
+    }
+    if (line.startsWith('+++ ')) {
+      // Git ends a path that holds a space with a tab.
+      const path = line.slice(4).replace(/\t$/, '');
+      file = path.startsWith('b/') ? path.slice(2) : undefined;
       continue;
     }
     const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
@@ -41,61 +50,108 @@ export function changedRanges(diff: string): string[] {
   return ranges;
 }
 
-function git(args: string[]) {
-  const result = spawnSync('git', args, { encoding: 'utf8' });
+/** `git diff` with the output `changedRanges` reads, whatever the user's git settings. */
+export const diffArgs = (base: string) => [
+  '-c',
+  'core.quotePath=false',
+  'diff',
+  '--unified=0',
+  '--no-color',
+  '--no-ext-diff',
+  '--no-relative',
+  '--src-prefix=a/',
+  '--dst-prefix=b/',
+  base,
+  '--',
+  SCOPE,
+];
+
+function git(args: string[], cwd: string) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   if (result.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${result.stderr.trim()}`);
   return result.stdout.trim();
 }
 
 /** The mutate arguments for the lines changed since the merge base, new files included whole. */
-function changedMutate() {
+function changedMutate(root: string) {
   const base = ['origin/main', 'main'].find(
-    (ref) => spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).status === 0,
+    (ref) =>
+      spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: root })
+        .status === 0,
   );
   if (!base) throw new Error("Couldn't find origin/main or main to compare with.");
-  const mergeBase = git(['merge-base', base, 'HEAD']);
-  const ranges = changedRanges(
-    git(['diff', '--unified=0', '--no-ext-diff', mergeBase, '--', SCOPE]),
-  );
-  const untracked = git(['ls-files', '--others', '--exclude-standard', '--', SCOPE])
+  const mergeBase = git(['merge-base', base, 'HEAD'], root);
+  const ranges = changedRanges(git(diffArgs(mergeBase), root));
+  const untracked = git(['ls-files', '--others', '--exclude-standard', '--', SCOPE], root)
     .split('\n')
     .filter((file) => file && mutated(file));
   return [...ranges, ...untracked];
 }
 
-/** Runs the mutation test, keeping and seeding the incremental file. */
-function run() {
-  const changed = process.argv.slice(2).includes('--changed');
-  const own = resolve(git(['rev-parse', '--git-path', 'stryker/incremental.json']));
-  const baseline = resolve(git(['rev-parse', '--git-common-dir']), 'stryker/baseline.json');
-  mkdirSync(dirname(own), { recursive: true });
-  // A new worktree starts from main's results, so it re-tests only what differs.
-  if (!existsSync(own) && existsSync(baseline)) copyFileSync(baseline, own);
-
-  const args = ['run', '--incremental', '--incrementalFile', own];
-  if (changed) {
-    const mutate = changedMutate();
-    if (mutate.length === 0) {
-      console.log(`No changed code in ${SCOPE}/ to mutation-test.`);
-      return;
-    }
-    args.push('--mutate', mutate.join(','));
-  } else {
-    // A full run tests every mutant again, so it also catches what incremental mode can't see: a
-    // change to a dependency or a shared helper.
-    args.push('--force');
-  }
-
-  const stryker = resolve('node_modules/.bin/stryker');
-  const result = spawnSync(stryker, args, { stdio: 'inherit' });
-  if (result.status !== 0) process.exit(result.status ?? 1);
-
-  if (!changed && git(['rev-parse', '--abbrev-ref', 'HEAD']) === 'main') {
-    mkdirSync(dirname(baseline), { recursive: true });
-    copyFileSync(own, baseline);
-    console.log(`Saved this run as the baseline other worktrees start from: ${baseline}`);
-  }
+/** Copies `from` to `to` through a temporary file, so a reader never sees half of it. */
+function copyAtomically(from: string, to: string) {
+  mkdirSync(dirname(to), { recursive: true });
+  const partial = `${to}.${process.pid}.partial`;
+  copyFileSync(from, partial);
+  renameSync(partial, to);
 }
 
-// Run when called as a program; a test only imports `changedRanges`.
-if (import.meta.main) run();
+function stryker(root: string, args: string[]) {
+  const result = spawnSync(resolve(root, 'node_modules/.bin/stryker'), args, {
+    cwd: root,
+    stdio: 'inherit',
+  });
+  if (result.error) throw new Error(`Couldn't run Stryker: ${result.error.message}`);
+  return result.status ?? 1;
+}
+
+/** Runs the mutation test, keeping and seeding the incremental file. */
+function run() {
+  const root = git(['rev-parse', '--show-toplevel'], process.cwd());
+  const changed = process.argv.slice(2).includes('--changed');
+  const own = resolve(root, git(['rev-parse', '--git-path', 'stryker/incremental.json'], root));
+  const common = git(['rev-parse', '--git-common-dir'], root);
+  const baseline = resolve(root, common, 'stryker/baseline.json');
+  // A new worktree starts from the shared results, so it re-tests only what differs.
+  if (!existsSync(own) && existsSync(baseline)) copyAtomically(baseline, own);
+
+  if (changed) {
+    const mutate = changedMutate(root);
+    if (mutate.length === 0) {
+      console.log(`No changed code in ${SCOPE}/ to mutation-test.`);
+      return 0;
+    }
+    // Stryker writes back only the mutants a run tests, so a changed-lines run works on a scratch
+    // copy and leaves this worktree's full results in place for the next run.
+    const scratch = mkdtempSync(join(tmpdir(), 'stryker-changed-'));
+    const file = join(scratch, 'incremental.json');
+    if (existsSync(own)) copyFileSync(own, file);
+    try {
+      return stryker(root, [
+        'run',
+        '--incremental',
+        '--incrementalFile',
+        file,
+        '--mutate',
+        mutate.join(','),
+      ]);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  }
+
+  // A full run tests every mutant again, so it also catches what incremental mode can't see: a
+  // change to a dependency or a shared helper.
+  const status = stryker(root, ['run', '--incremental', '--force', '--incrementalFile', own]);
+  if (status !== 0) return status;
+  // Its results describe main's oxCrap when this worktree hasn't changed oxCrap, so they become
+  // the baseline every new worktree starts from.
+  if (changedMutate(root).length === 0) {
+    copyAtomically(own, baseline);
+    console.log(`Saved this run as the baseline other worktrees start from: ${baseline}`);
+  }
+  return 0;
+}
+
+// Run when called as a program; a test only imports what it checks.
+if (import.meta.main) process.exitCode = run();

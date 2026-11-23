@@ -20,5 +20,6 @@
   "jsonReporter": {
     "fileName": "reports/mutation/mutation.json"
   },
-  "tempDirName": ".stryker-tmp"
+  "tempDirName": ".stryker-tmp",
+  "ignorePatterns": ["/.claude", "/coverage", "/test-results", "/.features-gen", "/reports"]
 }

@@ -16,6 +16,12 @@ Why [mutation testing](mutation-testing.md) works the way it does here. Read thi
 - **The incremental file isn't committed.**
   - **Why:** it's rewritten on every run and keyed to file contents, so committed it would show in most diffs, conflict between branches, and describe whichever branch last ran it.
   - **Instead:** each worktree keeps its own in git's folder, seeded from a baseline in the folder all worktrees share. Reusing results from other code is safe, because incremental mode compares contents and re-tests what changed.
+  - **A changed-lines run works on a scratch copy,** because Stryker writes back only the mutants a run tests. An independent review found the first version's changed run replaced the worktree's 1,429 results with its own 4.
+  - **The baseline is refreshed by a full run on any branch that hasn't changed oxCrap,** not only on `main`, because agents work in worktrees and rarely on `main`. Such a branch's oxCrap is `main`'s.
+  - **Checked on 10.1.1:**
+    - `incrementalFile` is the option's name.
+    - `--incremental` works with `--mutate`, which [stryker-js#3609](https://redirect.github.com/stryker-mutator/stryker-js/issues/3609) had tracked: a second run of the same lines reused all 27 of its mutants' results.
+    - `--mutate` takes line ranges such as `check.ts:20-40`.
 - **The agent procedure** follows the owner's three changes, from agentpatterns.ai's evidence:
   - **Run it once, last.** [Staged evidence gates](https://agentpatterns.ai/verification/staged-evidence-gates-program-repair/) order checks cheapest first, and [execution budgeting](https://agentpatterns.ai/verification/execution-budgeting-program-repair/) suggests telling an agent a run is "expensive; use sparingly".
   - **Stop after four rounds.** MUTGEN ([arXiv 2506.02954](https://arxiv.org/abs/2506.02954)) reports the kill rate "plateaus around four iterations". Further loops "start exercising equivalent mutants the filter missed".
@@ -28,7 +34,12 @@ Why [mutation testing](mutation-testing.md) works the way it does here. Read thi
   - **What would bring it back:** [stryker-js#6110](https://github.com/stryker-mutator/stryker-js/issues/6110) and [#6111](https://github.com/stryker-mutator/stryker-js/issues/6111). Re-add the checker when they land.
 - **Vitest 5 is fine as of 10.1.1.** [stryker-js#6263](https://github.com/stryker-mutator/stryker-js/issues/6263) reported every mutant surviving with no tests run under Vitest 5. It was fixed the day 10.1.1 shipped, and the first run here confirms it.
 - **The config is at the root, as `stryker.config.json`,** beside the other tool configs, rather than in `scripts/oxcrap/`. Stryker copies the project from where it runs.
-- **`scripts/mutation.ts` has no property test.** Its only logic, reading `git diff`'s hunk headers into line ranges, is a small parse of a documented format, which [the property-test guidance](testing-conventions.md#property-tests) leaves to example tests.
+  - **`ignorePatterns`** keeps `.claude/` (other worktrees), `coverage/`, `test-results/`, `.features-gen/` and `reports/` out of its sandbox.
+- **`vitest.mutation.config.ts` exists because Stryker's Vitest runner can't choose projects.** Its options are `configFile`, `dir`, `related` and `pool`, so it would run `tooling-real` out of `vitest.tooling.config.ts`. The owner asked for the alternative, splitting the tooling config into unit and real configs, to be done with [#70](https://github.com/DetweilerRyan/split/issues/70#issuecomment-7111420730), which needs the same split. Stryker would then point at the unit config, and this file would go.
+- **`scripts/mutation.ts`'s diff parsing has a property test.** It generates diffs from known files and hunks, including paths with spaces and files oxCrap doesn't mutate, and expects those ranges back.
+  - **The first version had none.** It was judged a small parse that example tests could cover. The review then found it filed hunks under the wrong file when a path was quoted, and dropped paths with spaces, which git ends with a tab. Under the reviewing-work check, that was the wrong call.
+  - **Run against the buggy version,** the property and both new example tests failed.
+  - **Git is run with explicit flags,** prefixes and unquoted paths, so a user's git settings can't change what the parser reads.
 
 ## The baseline
 
@@ -47,7 +58,7 @@ The first full run, on 2026-11-23, before any survivor was addressed:
 | `oxcrap.ts`     |             0% |      0 |         0 |        0 |         191 |
 | **All files**   |      **60.5%** |    800 |        11 |      263 |         267 |
 
-- **How it ran:** 1,429 mutants, 8 tests per mutant on average, in 78 s on 15 worker processes. The tests themselves take about 3 s.
+- **How it ran:** 1,429 mutants, 88 of them static and skipped by `ignoreStatic`, so 1,341 tested. That's 8 tests per mutant on average, in 78 s on 15 worker processes. The tests themselves take about 3 s.
 - **Survivors are left to follow-ups:** the owner said "set up and record the baseline, survivors in follow-ups".
 - **Where they are:** `oxcrap.ts` and `files.ts` have no coverage because only real tests and the feature contract reach them. That's [#70](https://github.com/DetweilerRyan/split/issues/70)'s gap. `recursion.ts`'s survivors are most likely its scope handling for imports, `catch` parameters, `switch` cases and loops, which no test declares names in.
 

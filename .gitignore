@@ -16,4 +16,4 @@ test-results/
 
 # Mutation testing: Stryker's sandbox and its reports (docs/engineering/mutation-testing.md)
 .stryker-tmp/
-reports/
+/reports/
