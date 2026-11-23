@@ -218,25 +218,26 @@ type Context = { scopes: readonly Scope[]; fn: AstNode | undefined; self: Member
 /** A call from the function it's written in to the function it resolves to, if any. */
 type Call = { from: AstNode | undefined; to: AstNode | null | undefined };
 
-/** The calls in `node` and below it. `members` is what `this` reaches in a class member's function. */
-function callsIn(node: AstNode, context: Context, members: Members | null): Call[] {
-  const own = node.type === 'CallExpression' ? callsOf(node, context) : [];
-  return [...own, ...callsBelow(node, context, members)];
-}
-
-/** The calls below `node`, in the scope and `this` each kind of node gives its children. */
-function callsBelow(node: AstNode, context: Context, members: Members | null): Call[] {
-  if (node.type === 'ClassBody') return callsInClass(node, context);
-  if (FUNCTION_TYPES.has(node.type)) return callsInFunction(node, context, members);
-  if (opensScope(node)) {
-    const scopes = [...context.scopes, blockScope(node)];
-    return childCalls(node, { ...context, scopes }, members);
-  }
-  return childCalls(node, context, members);
-}
-
-function childCalls(node: AstNode, context: Context, members: Members | null): Call[] {
-  return children(node).flatMap((child) => callsIn(child, context, members));
+/**
+ * Adds the calls in `node` and below it to `into`, in the scope and `this` each kind of node gives
+ * its children, and returns it. `members` is what `this` reaches in a class member's function.
+ * Adding to one list, rather than joining each child's, keeps each level of the tree to one stack
+ * frame, as deeply nested code needs.
+ */
+function callsIn(
+  node: AstNode,
+  context: Context,
+  members: Members | null,
+  into: Call[] = [],
+): Call[] {
+  if (node.type === 'ClassBody') return callsInClass(node, context, into);
+  if (FUNCTION_TYPES.has(node.type)) return callsInFunction(node, context, members, into);
+  if (node.type === 'CallExpression') into.push(...callsOf(node, context));
+  const inner = opensScope(node)
+    ? { ...context, scopes: [...context.scopes, blockScope(node)] }
+    : context;
+  for (const child of children(node)) callsIn(child, inner, members, into);
+  return into;
 }
 
 /** A bare `f()` or a `this.f()`, resolved to the function it calls. */
@@ -249,25 +250,32 @@ function callsOf(call: AstNode, context: Context): Call[] {
   return [...named, ...viaThis].map((to) => ({ from: context.fn, to }));
 }
 
-/** The calls in a class's members, each with the class's methods and fields as its `this`. */
-function callsInClass(body: AstNode, context: Context): Call[] {
+/** Adds the calls in a class's members to `into`, each with the class's methods and fields as its `this`. */
+function callsInClass(body: AstNode, context: Context, into: Call[]): Call[] {
   const own = classMembers(body);
-  return ((body.body as AstNode[]) ?? []).flatMap((member) =>
-    children(member).flatMap((child) => {
+  for (const member of (body.body as AstNode[]) ?? []) {
+    for (const child of children(member)) {
       // A method's or field's function gets the class as its `this`.
       const value = functionValue(child);
-      return callsIn(value && child === member.value ? value : child, context, own);
-    }),
-  );
+      callsIn(value && child === member.value ? value : child, context, own, into);
+    }
+  }
+  return into;
 }
 
-/** The calls in a function, in its own scope. */
-function callsInFunction(fn: AstNode, context: Context, members: Members | null): Call[] {
+/** Adds the calls in a function, in its own scope, to `into`. */
+function callsInFunction(
+  fn: AstNode,
+  context: Context,
+  members: Members | null,
+  into: Call[],
+): Call[] {
   // An arrow keeps the `this` around it; any other function has its own.
   // A class field's arrow has the instance as its `this`, which `members` then gives.
   const self = fn.type === 'ArrowFunctionExpression' ? (members ?? context.self) : members;
   const scopes = [...context.scopes, functionScope(fn)];
-  return childCalls(fn, { scopes, fn, self }, null);
+  for (const child of children(fn)) callsIn(child, { scopes, fn, self }, null, into);
+  return into;
 }
 
 /** What `name` is bound to in the nearest scope that declares it, or undefined if none does. */
