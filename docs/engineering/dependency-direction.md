@@ -18,8 +18,8 @@ Every import in the repository must also resolve. An import rev-dep can't resolv
 npx rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,orphan-module-globs,overlapping-globs
 ```
 
-- **`--list-all-issues`** lists every issue. Without it, rev-dep stops at five.
-- **`--lint-config-rules`** fails the run when a rule's pattern matches no files or overlaps another, so a moved folder can't quietly switch a rule off. It names only the pattern rules, because rev-dep's trailing-comma rule disagrees with oxfmt, which formats the config.
+- **`--list-all-issues`** lists every issue, not only the first five.
+- **`--lint-config-rules`** fails the run when a rule's pattern matches no files or overlaps another. It names only the pattern rules, not rev-dep's trailing-comma rule.
 
 ## When it fails
 
@@ -29,16 +29,15 @@ npx rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,o
 
 ## What it doesn't check
 
-Don't rely on rev-dep for these. Check them in review instead.
-
 - **A JSON or other asset import.** rev-dep doesn't check where an asset import lands, so `import p from '../../package.json' with { type: 'json' }` passes a rule it breaks.
 - **A file read with `new URL('../…', import.meta.url)`,** `import.meta.resolve()` or a `/// <reference path>`, none of which is an import it follows.
 - **A symlink to a single file,** which counts as inside the folder it sits in.
+- **Which npm packages a folder uses,** as long as `package.json` declares them.
 
 ## Adding or changing a rule
 
 1. **Add or change a `moduleBoundaries` entry** in `.rev-dep.config.jsonc`: a `name`, the files it covers as `pattern`, and what they may import as `allow`, with `deny` for exceptions.
-2. **Test it in [`rev-dep.config.real.test.ts`](../../rev-dep.config.real.test.ts).** Add one import the rule must refuse for each way out: a parent folder, type-only, re-export, dynamic `import()`, an alias. Then add one import it must allow. That file runs the real rev-dep with the real config on throwaway files.
+2. **Test it in [`rev-dep.config.real.test.ts`](../../rev-dep.config.real.test.ts).** Add one import the rule must refuse for each way out: a parent folder, type-only, re-export, dynamic `import()`, an alias, and a path that goes back up through a folder. Then add one import it must allow. That file runs the real rev-dep with the real config on throwaway files.
 3. **Add the rule to the table above,** and its reasons to the sidecar.
 4. **Run `npm run lint`** on the repository, so the rule's pattern matches real files.
 

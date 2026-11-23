@@ -37,6 +37,7 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 - **`--list-all-issues`:** without it, rev-dep lists at most five issues per check, so a test that counts them can pass with some unlisted.
 - **`--lint-config-rules orphan-file-globs,orphan-module-globs,overlapping-globs`** fails on a pattern that matches nothing. Without it, moving `scripts/oxcrap/` would leave a rule that checks no files and passes.
   - **Its fourth rule, trailing commas, is left out.** oxfmt adds trailing commas to `.jsonc` files, and rev-dep flags them as redundant, so the two tools would disagree on every format.
+  - **`--list-all-issues` and `--lint-config-rules` are in `npm run lint`,** so the check the procedure describes is the one CI runs.
 - **`unresolvedImportsDetection`, with `reportNonLiteralImports`:** an independent review found imports that escaped the boundary rule because rev-dep couldn't resolve them: an absolute path, a `file://` URL, an import through a symlinked folder, and `import(variable)`. They now fail.
   - **It covers the whole repository,** which had no unresolved imports when it was turned on.
   - **rev-dep resolves an npm package only when `package.json` declares it,** so an undeclared package fails too.
@@ -47,14 +48,15 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 - **Asset imports, such as JSON.** rev-dep 3.3.0 treats assets as resolvable and doesn't check where they land, and no setting changes that.
   - **This is a regression:** the oxlint override caught `import p from '../../package.json' with { type: 'json' }`.
   - **Today it doesn't matter in practice:** oxCrap's only JSON import is its own `./configuration_schema.json`.
-  - **The gap was accepted on #66.** Two alternatives were offered there: a narrow oxlint pattern for `../**/*.json`, which brings back string matching, or asking rev-dep upstream for asset boundaries.
+  - **It's recorded under "Decisions made" on #66,** with two alternatives: a narrow oxlint pattern for `../**/*.json`, which brings back string matching, or asking rev-dep upstream for asset boundaries.
 - **`import.meta.resolve()`, `/// <reference path>`, and a symlink to a single file,** found by the same review. None is a normal import.
+- **An npm package that's declared but isn't meant to be used.** rev-dep checks that a package resolves, not which packages a folder may use.
 - **No binary for Windows on ARM,** so `npm run lint` can't run there.
 
 ## Options not taken
 
 - **The oxlint override,** used first. It matched strings, banned `../` within the folder, and couldn't tell where an import landed.
-- **[dependency-cruiser](https://github.com/sverweij/dependency-cruiser):** the most used. It resolves imports too, but needed two rules, is about 80 times slower here, and brings about 18 dependencies.
+- **[dependency-cruiser](https://github.com/sverweij/dependency-cruiser):** the most used. It resolves imports too, but needed two rules, took 0.39 s against rev-dep's 2 ms on the same scratch project, and brings about 18 dependencies.
 - **TypeScript's `rootDir`,** in a `tsconfig.json` of oxCrap's own: checked for #64. It caught the same imports, but needs a second typecheck command, and reports per imported file rather than per import.
 - **[eslint-plugin-boundaries](https://github.com/javierbrea/eslint-plugin-boundaries):** it needs ESLint, which this repository doesn't use.
 - **oxlint-plugin-boundaries:** third-party and young, and it matches files by path rather than resolving imports.
