@@ -40,6 +40,8 @@ const TOOLING = [
   '.oxlintrc.json',
   '.rev-dep.config.jsonc',
   'rev-dep.config.real.test.ts',
+  'stryker.config.json',
+  'vitest.mutation.config.ts',
   'package.json',
 ];
 const WATCHED = [...new Set([...APP, ...TOOLING])];

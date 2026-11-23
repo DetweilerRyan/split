@@ -19,6 +19,8 @@ const ignored = [
   ...configDefaults.exclude,
   '**/.next/**',
   '**/.claude/worktrees/**',
+  // Stryker's sandbox, a copy of the repository while a mutation run is going.
+  '**/.stryker-tmp/**',
   // vitest.tooling.config.ts's.
   'scripts/**',
   'rev-dep.config.real.test.ts',

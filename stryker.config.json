@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.mutation.config.ts",
+    "related": true
+  },
+  "tsconfigFile": "stryker-has-no-tsconfig.json",
+  "mutate": [
+    "scripts/oxcrap/**/*.ts",
+    "!scripts/oxcrap/**/*.test.ts",
+    "!scripts/oxcrap/features/**"
+  ],
+  "ignoreStatic": true,
+  "disableTypeChecks": false,
+  "reporters": ["clear-text", "progress", "html", "json"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/mutation.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "tempDirName": ".stryker-tmp"
+}

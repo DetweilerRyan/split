@@ -13,3 +13,7 @@ coverage/
 # Playwright e2e output: the tests playwright-bdd generates from e2e/features, and run results
 .features-gen/
 test-results/
+
+# Mutation testing: Stryker's sandbox and its reports (docs/engineering/mutation-testing.md)
+.stryker-tmp/
+reports/
