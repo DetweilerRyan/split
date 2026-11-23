@@ -61,7 +61,8 @@ function innermost(functions: Fn[], range: Range) {
 
 /**
  * The share of each function's statements the tests ran, from 0 to 1. A statement counts toward
- * the innermost function holding it, as complexity is counted without nested functions. A
+ * the innermost of `functions` holding it: with `enclosing` counting only outermost functions are
+ * passed, so it's the outermost function around it, as complexity counts nested functions. A
  * function with no statements of its own, such as a one-line arrow, counts as covered when the
  * report shows it was called. A file the report doesn't have scores 0 throughout.
  */

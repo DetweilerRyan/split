@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { findAllows } from './allow.ts';
-import { COUNT_ALL, type Counting } from './complexity.ts';
+import { COUNT_ALL, COUNT_SEPARATELY, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
-/** Counting as before #74: each function on its own, with no default values or `?.`. */
-const SEPARATELY: Counting = {
-  nestedFunctions: 'own',
-  defaultValues: false,
-  optionalChaining: false,
-};
+/** Counting as before #74, for the tests that pin it. */
+const SEPARATELY = COUNT_SEPARATELY;
 
 /** What findAllows makes of `code`: each allowed function's name and comment, and the problems. */
 function allows(code: string, counting: Counting = SEPARATELY, file = 'example.tsx') {
@@ -63,6 +59,13 @@ describe('findAllows', () => {
 
   it('fails a comment above a nested function when it counts towards the one around it', () => {
     const code = `function A() {\n  ${allow}\n  useEffect(() => {});\n}\n`;
+    expect(allows(code, COUNT_ALL).problems).toEqual([
+      '2: This @crap-allow comment is above A > useEffect callback, which is inside A and counts towards it. Move the comment above A, with its numbers.',
+    ]);
+  });
+
+  it('fails a comment above a wrapped call whose callback counts towards the function around it', () => {
+    const code = `function A() {\n  ${allow}\n  useEffect(\n    () => {},\n  );\n}\n`;
     expect(allows(code, COUNT_ALL).problems).toEqual([
       '2: This @crap-allow comment is above A > useEffect callback, which is inside A and counts towards it. Move the comment above A, with its numbers.',
     ]);
