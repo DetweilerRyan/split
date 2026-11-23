@@ -253,20 +253,20 @@ It checks that each function's complexity, which functions a `@crap-allow` match
 - switches with and without `default`;
 - catch and finally;
 - `?:`, `&&` chains and logical assignments;
-- optional chaining;
-- nested functions, whose branches must not count.
+- optional links (`?.`) and default values, in destructuring and in nested functions' parameters;
+- nested functions, assigned and passed to calls, whose branches count or not as `counting.nestedFunctions` says.
 
 - **The owner approved fast-check:** "Approve fast-check now" ([decisions](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227)).
   - **Version:** pinned at 4.10.2, published 2026-09-19. 4.11.0 and 4.10.3 were under two weeks old when it was added, against [the dependency rule](../../docs/engineering/dependencies.md#after-approval).
   - **What it brings:** one dependency, `pure-rand`, and no install scripts. It's used by this one test.
 - **Why fast-check rather than a seeded generator:** shrinking. With catch clauses no longer counted, it reduced a failure to `try {} catch {}`. Counting a switch's `default:` failed too.
-- **Cost:** 300 runs in about 0.1 s. The reformatting checks' 121 cases take about 2 s, so `npm run test:tooling` went from about 12 s to 12.9 s.
+- **Cost:** 500 runs, one per drawn combination of the counting options, in about 0.2 s. The reformatting checks run under the default counting and with each function on its own, 242 cases in about 4 s, so `npm run test:tooling` went from about 12 s to 12.9 s.
 
 ## How it works
 
 - **`oxc-parser` gives functions, their places and the file's comments in one parse.** Offsets are UTF-16, as JavaScript strings are, and lines and columns come from them in `positions`.
 - **Only real comments are read,** so text in a string that looks like a comment is never mistaken for one.
-- **Each statement counts toward the innermost function that holds it,** matching how complexity leaves out nested functions. A function with no statements of its own, such as a one-line arrow, is covered when the report shows it was called.
+- **Each statement counts toward the function scored for it:** the outermost function around it by default, as complexity counts nested functions, or the innermost with `own` counting. A function with no statements of its own, such as a one-line arrow, is covered when the report shows it was called.
 - **Findings label a function by the functions around it,** such as `RoomView > changeDisplayCurrency`. An unnamed function is labelled by what it's assigned to, the call it's passed to (`seed.items.forEach callback`), or its JSX attribute (`onClick`). Labels are only for reading; nothing is keyed on them.
 
 ## Options not taken

@@ -6,7 +6,14 @@ import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { afterAll, describe, expect, it } from 'vitest';
 import { findAllows } from './allow.ts';
-import { children, isNode, type AstNode } from './complexity.ts';
+import {
+  children,
+  COUNT_ALL,
+  COUNT_SEPARATELY,
+  type Counting,
+  isNode,
+  type AstNode,
+} from './complexity.ts';
 import { parse } from './functions.ts';
 
 // Reformatting checks on this repository's own code: changing only a file's layout must change no
@@ -48,8 +55,8 @@ function sourceFiles() {
  * them a @crap-allow comment matches. Not their names: a name comes from source text, such as
  * `seed.items.forEach callback`, so a reflow can change it, and it only labels a finding.
  */
-function shape(file: string, source: string) {
-  const parsed = parse(file, source);
+function shape(file: string, source: string, counting: Counting) {
+  const parsed = parse(file, source, counting);
   const allows = findAllows(file, source, parsed);
   return {
     complexities: parsed.functions.map((fn) => fn.complexity),
@@ -121,11 +128,18 @@ describe('reformatting this repository’s code', () => {
     expect(files.length).toBeGreaterThan(30);
   });
 
-  describe.each(transforms)('%s', (_, transform) => {
-    it.each(files)('changes nothing oxCrap sees in %s', (file) => {
-      const source = readFileSync(join(root, file), 'utf8');
-      const before = shape(file, source);
-      expect(shape(file, transform(file, source))).toEqual(before);
+  // Under the default counting, and with each function on its own, so nested functions'
+  // own counts and their @crap-allow comments are checked too.
+  describe.each([
+    ['counting everything', COUNT_ALL],
+    ['scoring each function on its own', COUNT_SEPARATELY],
+  ] as const)('%s', (_, counting) => {
+    describe.each(transforms)('%s', (_, transform) => {
+      it.each(files)('changes nothing oxCrap sees in %s', (file) => {
+        const source = readFileSync(join(root, file), 'utf8');
+        const before = shape(file, source, counting);
+        expect(shape(file, transform(file, source), counting)).toEqual(before);
+      });
     });
   });
 });

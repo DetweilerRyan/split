@@ -86,6 +86,34 @@ Feature: Counting what branches
     Then Dana's check fails
     And Dana sees "- src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%."
 
+  Scenario: Default values count by default
+    Given Dana has a file "src/grade.ts":
+      """
+      export function grade(a = 0, b = 1, c = 2, d = 3, e = 4, f = 5, g = 6, h = 7, i = 8, j = 9, k = 10) {
+        return a + b + c + d + e + f + g + h + i + j + k;
+      }
+      """
+    And Dana's tests ran none of "src/grade.ts"
+    When Dana runs "oxcrap --coverage coverage.json src"
+    Then Dana's check fails
+    And Dana sees "- src/grade.ts:1 grade: CRAP 156, complexity 12, coverage 0%."
+
+  Scenario: The config can turn off counting ?.
+    Given Dana has a file "src/grade.ts":
+      """
+      export function grade(o: any) {
+        return o?.a?.b?.c?.d?.e?.f?.g?.h?.i?.j?.k;
+      }
+      """
+    And Dana has a file ".oxcraprc.json":
+      """
+      { "coverage": "coverage.json", "counting": { "optionalChaining": false } }
+      """
+    And Dana's tests ran none of "src/grade.ts"
+    When Dana runs "oxcrap"
+    Then Dana's check passes
+    And Dana sees "No CRAP findings."
+
   Scenario: A @crap-allow comment above a nested function says which function to move it to
     Given Dana has a file "src/grade.ts":
       """

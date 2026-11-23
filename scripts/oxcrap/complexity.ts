@@ -11,7 +11,7 @@ export const isNode = (value: unknown): value is AstNode =>
   value !== null &&
   typeof (value as { type?: unknown }).type === 'string';
 
-/** A function's own node types; a nested one is scored separately. */
+/** A function's own node types. A nested one is scored separately only with `own` counting. */
 export const FUNCTION_TYPES = new Set([
   'FunctionDeclaration',
   'FunctionExpression',
@@ -49,6 +49,13 @@ export const COUNT_ALL: Counting = {
   nestedFunctions: 'enclosing',
   defaultValues: true,
   optionalChaining: true,
+};
+
+/** Each function on its own, with no default values or `?.`: the counting before #74. */
+export const COUNT_SEPARATELY: Counting = {
+  nestedFunctions: 'own',
+  defaultValues: false,
+  optionalChaining: false,
 };
 
 /** The child nodes of `node`, in source order. */

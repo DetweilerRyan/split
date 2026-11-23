@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coverageOf, type FileCoverage, newerThan, parseReport } from './coverage.ts';
-import { COUNT_ALL, type Counting } from './complexity.ts';
+import { COUNT_ALL, COUNT_SEPARATELY, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
 /** An istanbul file entry with one statement per listed line, run or not. */
@@ -32,12 +32,8 @@ const code = `function outer(a) {
 const one = () => 1;
 `;
 
-/** Counting as before #74: each function on its own, with no default values or `?.`. */
-const SEPARATELY: Counting = {
-  nestedFunctions: 'own',
-  defaultValues: false,
-  optionalChaining: false,
-};
+/** Counting as before #74, for the tests that pin it. */
+const SEPARATELY = COUNT_SEPARATELY;
 
 /** Each function's share of coverage, with functions scored as `counting` says. */
 const covered = (file: FileCoverage | undefined, counting: Counting = SEPARATELY) =>
