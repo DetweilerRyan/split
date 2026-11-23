@@ -48,7 +48,7 @@ describe('parseConfig', () => {
   it.each([
     [
       '{ "file": ["src/**"] }',
-      'c.json has no option "file". The options are files, ignorePatterns, limits, coverage, helpUrl.',
+      'c.json has no option "file". The options are files, ignorePatterns, limits, counting, coverage, helpUrl.',
     ],
     ['{ "limits": { "score": 30 } }', 'c.json: "limits" has no option "score".'],
     ['[]', 'c.json must be object.'],
@@ -65,12 +65,32 @@ describe('parseConfig', () => {
     expect(() => parseConfig(text, 'c.json')).toThrow(message);
   });
 
+  it('lays a config’s counting over the defaults, one option at a time', () => {
+    expect(parseConfig('{ "counting": { "nestedFunctions": "own" } }', 'c.json').counting).toEqual({
+      ...DEFAULTS.counting,
+      nestedFunctions: 'own',
+    });
+  });
+
+  it.each([
+    [
+      '{ "counting": { "nestedFunctions": "inner" } }',
+      'c.json: "counting.nestedFunctions" must be equal to one of the allowed values.',
+    ],
+    [
+      '{ "counting": { "defaultValues": "yes" } }',
+      'c.json: "counting.defaultValues" must be boolean.',
+    ],
+  ])('checks counting %s against the schema', (text, message) => {
+    expect(() => parseConfig(text, 'c.json')).toThrow(message);
+  });
+
   it('reports every problem at once, one per line', () => {
     expect(() =>
       parseConfig('{ "file": 1, "limits": { "crap": 0, "complexity": -1 } }', 'c.json'),
     ).toThrow(
       [
-        'c.json has no option "file". The options are files, ignorePatterns, limits, coverage, helpUrl.',
+        'c.json has no option "file". The options are files, ignorePatterns, limits, counting, coverage, helpUrl.',
         'c.json: "limits.crap" must be > 0.',
         'c.json: "limits.complexity" must be > 0.',
       ].join('\n'),
@@ -92,7 +112,14 @@ describe('merge', () => {
 
 describe('configuration_schema.json', () => {
   it('names the options that OPTIONS and the error messages list', () => {
-    expect(OPTIONS).toEqual(['files', 'ignorePatterns', 'limits', 'coverage', 'helpUrl']);
+    expect(OPTIONS).toEqual([
+      'files',
+      'ignorePatterns',
+      'limits',
+      'counting',
+      'coverage',
+      'helpUrl',
+    ]);
   });
 
   it('gives the same defaults as the code', () => {
@@ -102,5 +129,11 @@ describe('configuration_schema.json', () => {
     expect(schema.properties.limits.properties?.complexity.default).toBe(
       DEFAULTS.limits.complexity,
     );
+    const counting = schema.properties.counting.properties!;
+    expect({
+      nestedFunctions: counting.nestedFunctions.default,
+      defaultValues: counting.defaultValues.default,
+      optionalChaining: counting.optionalChaining.default,
+    }).toEqual(DEFAULTS.counting);
   });
 });

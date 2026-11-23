@@ -53,7 +53,7 @@ const participantColors = [
   '#c026d3',
 ];
 
-// @crap-allow CRAP 12, complexity 12. Debt from before the CRAP check (#63): too complex.
+// @crap-allow CRAP 24, complexity 24. Debt from before the CRAP check (#63): too complex.
 async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
   const liveblocksRoom = liveblocksApiKey
     ? (providerRegistry.__splitLiveblocksClient ??= createClient({

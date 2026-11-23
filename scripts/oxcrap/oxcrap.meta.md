@@ -70,9 +70,24 @@ The project's Claude Code Stop hook runs `npm run oxcrap` and passes its finding
 - **Drift doesn't matter here.** Complexity has no single official count, and the limits are rules of thumb.
 - **Owning the count keeps every comment's numbers stable.** An oxlint update that changed how it counts would have stopped every affected `@crap-allow` comment matching, and failed CI on the upgrade alone.
 - **The rules are in [`complexity.ts`](complexity.ts).** Start at 1, then add 1 for each `if`, `?:`, loop, non-default `case`, `catch`, `&&`, `||` and `??`, including `&&=`, `||=` and `??=`.
-  - **Nested functions** are scored on their own, never toward the function around them.
-  - **Default parameter values and `?.` are left out,** unlike ESLint. Each one is a path, but counting them inflated the scores of plain data-handling code. That's why `getExchangeRate` scores 11 here against oxlint's 15: it has three default values and one `?.`.
+  - **Everything that branches counts by default** ([#74](https://github.com/DetweilerRyan/split/issues/74#issuecomment-7108596445)): nested functions' branches towards the outermost function, default values, and each `?.`. Each is a `counting` option.
   - **A JSX condition such as `{open && <Modal />}` counts,** as a branch it is.
+
+### Counting everything that branches
+
+[#74](https://github.com/DetweilerRyan/split/issues/74) changed what counts, as the owner decided ([decisions](https://github.com/DetweilerRyan/split/issues/74#issuecomment-7108596445)).
+
+- **Why nested functions count towards the function around them:** the owner [argued](https://github.com/DetweilerRyan/split/pull/71#discussion_r4668877357) that a `filter` callback is the same logic as a `for` loop with an `if`, which counted. Scored apart, the same logic scored lower for being written as a callback. `hydrateFromSeed` scored 1, because its whole body was a `ydoc.transact` callback.
+- **Every nested function, not only callbacks,** as SonarSource's Cognitive Complexity does: its [white paper](https://www.sonarsource.com/docs/CognitiveComplexity.pdf) (version 1.7) counts a lambda's contents towards the enclosing method. The owner chose this over callbacks only. A function written inside another is part of it.
+- **Coverage rolls up with it,** since CRAP combines the two. Each statement counts towards the outermost function around it.
+- **A comment above a nested function fails** and names the function to move it to, rather than being applied to the outer one silently.
+- **A higher-order call isn't a branch in itself.** Neither ESLint nor Sonar counts one, and `items.filter(…)` can't be told from any other method call by name.
+- **Default values and `?.` count,** as in ESLint's `complexity` rule ([docs](https://eslint.org/docs/latest/rules/complexity)): "`function c(a = {}) { // default parameter -> 2nd path`", and "optional chaining with two optional properties creates two additional branches". #64 had left them out because they inflated the scores of plain data-handling code. The owner chose to count all branching.
+- **Each is an option, all on by default.** The owner said "we default to all complexity branching counted". ESLint's `variant` option is a precedent for configurable counting.
+- **What it changed here:** 10 `@crap-allow` comments got new numbers, and 4 comments on nested functions moved up into 3 on the functions around them.
+  - **The biggest changes:** `hydrateFromSeed` went to complexity 30, `createSnapshot` from 13 to 27, `createProvider` from 12 to 24, and `RoomView` from 10 to 22.
+  - **Newly over the limits,** with stand-in comments citing #74: `ParticipantCards` and `useReceiptStore`.
+- **The fast-check property** checks every combination of the options. Its grammar keeps a function's own branches, its default values, its `?.` links and its nested functions' contents apart.
 
 ### The name
 

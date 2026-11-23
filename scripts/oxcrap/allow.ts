@@ -63,16 +63,14 @@ const outermost = (functions: Fn[]) =>
  * that, the outermost functions passed straight to a call in the simple statement starting on it,
  * so a call a formatter wrapped, with its callback on the line below, still counts.
  */
-function functionsAt(line: number | undefined, parsed: Parsed) {
+function functionsAt(line: number | undefined, parsed: Parsed, among = parsed.functions) {
   if (line === undefined) return { candidates: [], where: '' };
-  const starting = outermost(parsed.functions.filter((fn) => fn.start.line === line));
+  const starting = outermost(among.filter((fn) => fn.start.line === line));
   if (starting.length > 0) return { candidates: starting, where: `start on line ${line}` };
   // Statements are listed outermost first, so this is the widest one starting on the line.
   const statement = parsed.statements.find((s) => parsed.position(s.start).line === line);
   const inside = statement
-    ? parsed.functions.filter(
-        (fn) => fn.offset.start >= statement.start && fn.offset.end <= statement.end,
-      )
+    ? among.filter((fn) => fn.offset.start >= statement.start && fn.offset.end <= statement.end)
     : [];
   const callbacks = outermost(inside).filter((fn) => fn.passedToCall);
   return { candidates: callbacks, where: `are passed to calls in the statement on line ${line}` };
@@ -96,6 +94,16 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
 
     const target = targetLine(code, comment, parsed);
     const { candidates, where } = functionsAt(target, parsed);
+    const [inner] =
+      candidates.length === 0 ? functionsAt(target, parsed, parsed.nested).candidates : [];
+    if (inner) {
+      const outer = inner.parents[0];
+      problems.push({
+        ...at,
+        message: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
+      });
+      continue;
+    }
     if (candidates.length === 0) {
       problems.push({
         ...at,

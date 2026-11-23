@@ -14,7 +14,7 @@ interface ItemRowProps {
   onDelete: (itemId: string) => void;
 }
 
-// @crap-allow CRAP 132, complexity 11. Debt from before the CRAP check (#63): no tests yet.
+// @crap-allow CRAP 210, complexity 14. Debt from before the CRAP check (#63): no tests yet.
 export function ItemRow({
   item,
   participants,

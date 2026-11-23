@@ -45,6 +45,28 @@
         }
       }
     },
+    "counting": {
+      "description": "What counts towards a function's complexity beyond the fixed branches. Everything counts by default.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nestedFunctions": {
+          "description": "enclosing: a function's nested functions, callbacks included, count towards it, and only outermost functions are scored. own: each function is scored on its own.",
+          "enum": ["enclosing", "own"],
+          "default": "enclosing"
+        },
+        "defaultValues": {
+          "description": "Whether each default value, in a parameter or in destructuring, adds a path.",
+          "type": "boolean",
+          "default": true
+        },
+        "optionalChaining": {
+          "description": "Whether each optional link, ?., adds a path.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
     "coverage": {
       "description": "The istanbul JSON coverage report, such as coverage/coverage-final.json. `--coverage` overrides it.",
       "type": "string",

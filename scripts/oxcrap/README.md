@@ -35,8 +35,9 @@ CRAP rewards coverage, so it is only as honest as the tests behind it. A test th
 ## How oxCrap scores
 
 - **Complexity** is counted by oxCrap itself, by parsing each file with [`oxc-parser`](https://www.npmjs.com/package/oxc-parser). The rules are in [`complexity.ts`](complexity.ts). They're close to ESLint's `complexity` rule but not the same, so don't compare its numbers with another tool's.
-  - **Nested functions:** a function inside another is scored on its own, and its branches don't count toward the outer one.
-- **Coverage** comes from an istanbul JSON coverage report, the `coverage-final.json` that Vitest, Jest and nyc can all write. Each statement counts toward the innermost function holding it. Files are matched to the report by their real paths, so a symlink in the way doesn't matter.
+  - **Everything that branches counts, by default:** a nested function's branches, callbacks included, count towards the outermost function around it, which is the one scored. So do default values, in parameters and in destructuring, and each `?.`. The [`counting`](#configuration) option turns any of these off.
+  - **A higher-order call doesn't count** in itself: `items.filter(…)` adds only what its callback holds.
+- **Coverage** comes from an istanbul JSON coverage report, the `coverage-final.json` that Vitest, Jest and nyc can all write. Each statement counts toward the function scored for it: the outermost one around it, or with nested functions scored on their own, the innermost. Files are matched to the report by their real paths, so a symlink in the way doesn't matter.
 - **The limits** come from the [config](#configuration): a function fails when its CRAP score or its complexity is over its limit.
 - **Which files** come from the config too. By default, every JavaScript and TypeScript file is scored, except tests (`*.test.*`, `*.spec.*`), `node_modules`, folders whose names start with a dot, and whatever the `.gitignore` beside the config lists.
 
@@ -84,13 +85,14 @@ oxCrap's config follows oxlint's and oxfmt's:
 }
 ```
 
-| Option           | Meaning                                                                                                                         | Default                                            |
-| :--------------- | :------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------- |
-| `files`          | Globs of the files to score.                                                                                                    | `["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]`         |
-| `ignorePatterns` | Patterns left out of scoring, in gitignore style. A folder that matches isn't searched. Setting this replaces the default list. | `["node_modules/", ".*/", "*.test.*", "*.spec.*"]` |
-| `limits`         | The highest `crap` score and `complexity` a function may have. Either can be left out.                                          | `{ "crap": 30, "complexity": 10 }`                 |
-| `coverage`       | The coverage report's path.                                                                                                     | none, so `--coverage` is needed                    |
-| `helpUrl`        | Where to get help when there are findings: a URL, or a path from the config's folder, which must exist.                         | none                                               |
+| Option           | Meaning                                                                                                                                    | Default                                                                               |
+| :--------------- | :----------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| `files`          | Globs of the files to score.                                                                                                               | `["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"]`                                            |
+| `ignorePatterns` | Patterns left out of scoring, in gitignore style. A folder that matches isn't searched. Setting this replaces the default list.            | `["node_modules/", ".*/", "*.test.*", "*.spec.*"]`                                    |
+| `limits`         | The highest `crap` score and `complexity` a function may have. Either can be left out.                                                     | `{ "crap": 30, "complexity": 10 }`                                                    |
+| `counting`       | What counts towards complexity: `nestedFunctions` (`"enclosing"` or `"own"`), `defaultValues` and `optionalChaining`. Any can be left out. | `{ "nestedFunctions": "enclosing", "defaultValues": true, "optionalChaining": true }` |
+| `coverage`       | The coverage report's path.                                                                                                                | none, so `--coverage` is needed                                                       |
+| `helpUrl`        | Where to get help when there are findings: a URL, or a path from the config's folder, which must exist.                                    | none                                                                                  |
 
 - **Paths and globs in a config are read from the config's folder,** and a config covers only that folder, as oxlint's does. oxCrap refuses a `files` glob that reaches outside it, with `..` anywhere in it. Paths on the command line are read from the current directory.
 - **`files` are globs,** as Node's [`fs.globSync`](https://nodejs.org/api/fs.html#fsglobsyncpattern-options) takes them: `**` for any number of folders, `*` for any characters but `/`, `?` for one character, and `{a,b}` for either alternative. A folder given on the command line can't have glob characters in its name; list it in `files` instead.
@@ -136,6 +138,7 @@ export function RestaurantModal() {
 - **The numbers must be the function's current CRAP score and complexity,** exactly as a finding prints them. oxCrap checks every comment against its function, and fails on one whose numbers don't match, whether the function got worse or better, and even when its code didn't change. The comment is a ratchet: any change to the function's risk shows up as an edit to it.
 - **Update the comment by hand when the numbers change,** and check the reason still holds.
 - **Give a reason after the numbers.** A comment with no reason fails.
+- **Put it above the function that's scored.** With nested functions counting towards the one around them, that's the outermost function. A comment above a nested function fails, and says which function to move it to.
 - **Put the function on the line below the comment, on a line of its own.** Other comments, such as a lint directive or a doc comment, can sit between them. If no function starts on the line below, the comment applies to the one function passed to a call in the statement that starts there, such as a callback a formatter wrapped onto the next line. That statement must be an expression, a variable declaration, a `return` or an export. A comment that isn't directly above a function fails. So does one above a line where two functions start, or above a statement passing two to calls.
 - **Delete the comment when the function is within the limits again.** A comment on a function within the limits fails.
 

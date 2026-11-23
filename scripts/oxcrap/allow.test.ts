@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { findAllows } from './allow.ts';
+import { COUNT_ALL, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
+/** Counting as before #74: each function on its own, with no default values or `?.`. */
+const SEPARATELY: Counting = {
+  nestedFunctions: 'own',
+  defaultValues: false,
+  optionalChaining: false,
+};
+
 /** What findAllows makes of `code`: each allowed function's name and comment, and the problems. */
-function allows(code: string, file = 'example.tsx') {
-  const result = findAllows(file, code, parse(file, code));
+function allows(code: string, counting: Counting = SEPARATELY, file = 'example.tsx') {
+  const result = findAllows(file, code, parse(file, code, counting));
   return {
     allowed: [...result.allowed].map(([fn, allow]) => ({ name: fn.name, ...allow })),
     problems: result.problems.map((p) => `${p.line}: ${p.message}`),
@@ -51,6 +59,13 @@ describe('findAllows', () => {
   it('applies to an arrow function and to a callback passed on the next line of code', () => {
     const code = `${allow}\nconst grade = (n) => n;\nfunction A() {\n  ${allow}\n  useEffect(() => {});\n}\n`;
     expect(allows(code).allowed.map((a) => a.name)).toEqual(['grade', 'A > useEffect callback']);
+  });
+
+  it('fails a comment above a nested function when it counts towards the one around it', () => {
+    const code = `function A() {\n  ${allow}\n  useEffect(() => {});\n}\n`;
+    expect(allows(code, COUNT_ALL).problems).toEqual([
+      '2: This @crap-allow comment is above A > useEffect callback, which is inside A and counts towards it. Move the comment above A, with its numbers.',
+    ]);
   });
 
   it('reads a JSX comment above a handler', () => {

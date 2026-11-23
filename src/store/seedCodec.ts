@@ -302,6 +302,7 @@ export function parseRoomHash(hash: string): { roomId: RoomId | null; seed: stri
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }
 
+// @crap-allow CRAP 51.6, complexity 30. Debt from before the CRAP check (#63): too complex.
 export function hydrateFromSeed(
   ydoc: Y.Doc,
   seed: ReceiptSeed,
@@ -312,7 +313,6 @@ export function hydrateFromSeed(
   const meta = ydoc.getMap<unknown>('meta');
   const claims = ydoc.getMap<boolean>('claims');
 
-  // @crap-allow CRAP 18.7, complexity 11. Debt from before the CRAP check (#63): too complex.
   ydoc.transact(() => {
     if (forceReset) {
       items.forEach((_value, key) => items.delete(key));
@@ -357,7 +357,6 @@ export function hydrateFromSeed(
       participants.set(id, participant);
     });
 
-    // @crap-allow CRAP 20.5, complexity 16. Debt from before the CRAP check (#63): too complex.
     seed.items.forEach((item, index) => {
       const id = item.id || `item-${index}`;
       let existing = items.get(id);

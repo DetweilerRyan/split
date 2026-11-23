@@ -134,7 +134,7 @@ Feature: Configuring the check
     When Dana runs "oxcrap"
     Then Dana sees:
       """
-      .oxcraprc.json has no option "limit". The options are files, ignorePatterns, limits, coverage, helpUrl.
+      .oxcraprc.json has no option "limit". The options are files, ignorePatterns, limits, counting, coverage, helpUrl.
       """
 
   Scenario: Files that match nothing are an error

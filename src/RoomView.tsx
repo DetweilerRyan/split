@@ -27,7 +27,7 @@ import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-// @crap-allow CRAP 110, complexity 10. Debt from before the CRAP check (#63): no tests yet.
+// @crap-allow CRAP 506, complexity 22. Debt from before the CRAP check (#63): no tests yet.
 export default function RoomView({ roomId }: { roomId: RoomId }) {
   const router = useRouter();
   const provider = useRoomProvider(roomId);

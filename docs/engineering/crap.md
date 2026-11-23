@@ -27,7 +27,7 @@ All three run oxCrap on a fresh report, so they print the same findings.
 - **Allow a function only when the other steps would make the code worse:** when splitting it would scatter one idea across helpers, and testing the rest of it isn't worth it.
 - **Write the comment as [the README](../../scripts/oxcrap/README.md#allowing-a-function-over-the-limits) says,** with the numbers from the finding and a reason a reviewer can check: why this function, and what would change your mind.
 - **When a function's numbers change, update its comment by hand,** and check the reason still holds.
-- **Replace a stand-in reason when you work on its function.** The 15 comments added when the check started say "Debt from before the CRAP check (#63)", followed by "no tests yet" or "too complex". Give the real reason, or bring the function within the limits and delete the comment.
+- **Replace a stand-in reason when you work on its function.** The comments added when the check started say "Debt from before the CRAP check (#63)", and those added when everything that branches started counting say "Debt from before nested functions, default values and ?. counted (#74)". Each is followed by "no tests yet" or "too complex". Give the real reason, or bring the function within the limits and delete the comment.
 
 ## Changing this document
 
