@@ -5,9 +5,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
-// .rev-dep.config.jsonc keeps scripts/oxcrap/ from importing anything outside it. If its rule is
-// dropped or its patterns stop matching, the rest of the suite still passes, so this runs the real
-// rev-dep with the real config on throwaway files laid out like the repository.
+// The rules in .rev-dep.config.jsonc, which docs/engineering/dependency-direction.md describes. If a
+// rule is dropped or its pattern stops matching, the rest of the suite still passes, so this runs the
+// real rev-dep with the real config on throwaway files laid out like the repository.
 const config = fileURLToPath(new URL('./.rev-dep.config.jsonc', import.meta.url));
 const revDep = fileURLToPath(new URL('./node_modules/.bin/rev-dep', import.meta.url));
 const directories: string[] = [];

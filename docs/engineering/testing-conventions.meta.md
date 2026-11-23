@@ -130,7 +130,7 @@ Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), wh
 **Options not taken:**
 
 - **Sharing `e2e/screenplay`:** oxCrap imports nothing from outside its folder, and the e2e cast is built around a browser.
-- **Steps beside the features, with no `steps/` folder,** as first built: the oxlint rule then banned every `../` import in oxCrap's folder. With rev-dep checking where imports land, the layout matches `e2e/` ([feedback](https://github.com/DetweilerRyan/split/pull/66#issuecomment-7104488494)).
+- **Steps beside the features, with no `steps/` folder,** as first built: the oxlint rule then banned every `../` import in oxCrap's folder. With rev-dep checking where imports land ([dependency direction](dependency-direction.meta.md)), the layout matches `e2e/` ([feedback](https://github.com/DetweilerRyan/split/pull/66#issuecomment-7104488494)).
 - **Running the features from the root `playwright.config.ts`:** that config starts the app's servers, and `npm run test:e2e` is the app's.
 - **Two commands,** `test:tooling` and `test:contracts`: the owner chose one.
 - **Tooling projects in `vitest.config.ts`:** they would run through the app's React Compiler, coverage and alias.

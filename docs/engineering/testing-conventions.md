@@ -101,7 +101,7 @@ A deep module's contract is tested by Gherkin features beside it, run end to end
 - **Follow the [end-to-end tests' Screenplay rules](#end-to-end-tests),** with these differences:
   - **The actor's abilities** are a throwaway project folder and running the program, not a browser or an MCP session.
   - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
-  - **The screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it. A rule in [`.rev-dep.config.jsonc`](../../.rev-dep.config.jsonc) can enforce that, as it does for oxCrap.
+  - **The screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it. A [dependency-direction](dependency-direction.md) rule can enforce that, as one does for oxCrap.
   - **Steps import `test`, `Given`, `When` and `Then`** from the tool's own `screenplay/fixtures.ts`.
 - **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
 - **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words. Its structural rules are copied from the root `.gplintrc`: change a rule in both.

@@ -1,11 +1,5 @@
-// rev-dep's import rules. `npm run lint` runs `rev-dep config run --list-all-issues
-// --lint-config-rules orphan-file-globs,orphan-module-globs,overlapping-globs`: it lists every issue,
-// and fails on a pattern that matches nothing or overlaps another. (Its trailing-comma rule is left
-// out; oxfmt formats this file.) rev-dep resolves each import, through `../`, `.ts` extensions and
-// tsconfig aliases such as `@/`, and checks where it lands. Node built-ins and npm packages aren't
-// files in the repository, so the rules leave them alone; nor does it check where a JSON or other
-// asset import lands (scripts/oxcrap/oxcrap.meta.md says more). rev-dep.config.real.test.ts checks the
-// rules catch what they should.
+// rev-dep's import rules, run by `npm run lint`. docs/engineering/dependency-direction.md says what
+// they are and how to change them; its sidecar says why.
 {
   "configVersion": "2.2",
   "$schema": "https://github.com/jayu/rev-dep/blob/master/config-schema/2.2.schema.json?raw=true",
@@ -14,15 +8,11 @@
       "path": ".",
       "moduleBoundaries": [
         {
-          // oxCrap imports nothing from outside its folder, so it can be lifted out into a
-          // project of its own. Why is in scripts/oxcrap/oxcrap.meta.md.
           "name": "oxcrap-self-contained",
           "pattern": "scripts/oxcrap/**/*",
           "allow": ["scripts/oxcrap/**/*"],
         },
       ],
-      // An import rev-dep can't resolve, such as an absolute path or `import(variable)`, can't be
-      // checked against the rule above, so it fails too.
       "unresolvedImportsDetection": { "enabled": true, "reportNonLiteralImports": true },
     },
   ],

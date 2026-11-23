@@ -188,27 +188,8 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 
 ### Nothing imported from outside the folder
 
-- **The owner asked for the rule** "that oxcrap must not import anything from outside it's own folder", and chose to add it to #64 ([choice](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085786799)).
-- **[rev-dep](https://github.com/jayu/rev-dep) enforces it.** One `moduleBoundaries` entry in [`.rev-dep.config.jsonc`](../../.rev-dep.config.jsonc) allows files under `scripts/oxcrap/` to import only files under `scripts/oxcrap/`. `npm run lint` runs it.
-  - **It resolves each import and checks where it lands,** through `../`, `.ts` extensions and the app's `@/` alias. So the features' `steps/` can import `../screenplay/`, and a code import leaving the folder fails: a value or type-only import, a re-export, a dynamic `import()`, `require`, or a path that goes back up through a folder. Asset imports, such as JSON, are the exception below.
-  - **Node built-ins and npm packages aren't repository files,** so the rule leaves them alone. That covers `node:fs` and `oxc-parser`.
-  - **`--lint-config-rules` fails the run if the rule's pattern matches nothing,** so moving the folder can't quietly switch it off. It runs only the pattern rules, since rev-dep's trailing-comma rule disagrees with oxfmt. **`--list-all-issues`** lists every issue, not only the first five.
-- **[`rev-dep.config.real.test.ts`](../../rev-dep.config.real.test.ts) runs the real rev-dep with the real config** on throwaway files laid out like the repository. So dropping the rule, or a pattern that stops matching, fails a test.
-- **Why rev-dep:**
-  - **The rule had grown.** It first ran as an oxlint override, banning every `../` import under `scripts/oxcrap/`. The owner wanted the features to use `steps/` and `screenplay/` folders, which needs `../` within the folder. They turned down widening the oxlint patterns, and a nested `package.json` with subpath imports. They asked for "a purpose built dependency direction tool that will be easy to configure and quick to run" ([feedback](https://github.com/DetweilerRyan/split/pull/66#issuecomment-7104488494)).
-  - **rev-dep was tried against dependency-cruiser and fallow,** on 2026-11-23, in a scratch folder with the same violations:
-    - **rev-dep 3.3.0:** a one-entry allowlist caught all of them, including the `@/` alias, reported per import. It checked this repository in 5 ms. It ships one Go binary per platform, with no JavaScript dependencies.
-    - **dependency-cruiser 18.9.0:** it needed a second rule for unresolvable imports, and took 0.39 s. It reports an aliased and a relative import of the same file once, and brings about 18 dependencies.
-    - **fallow:** its README documents no boundary rule syntax.
-  - **The owner approved it:** "approved, add rev-dep on #66 with the steps layout".
-- **Imports rev-dep can't resolve fail too,** through its `unresolvedImportsDetection`: an absolute path, a `file://` URL, an import through a symlinked folder, or `import(variable)`. That check covers the whole repository, which has none today.
-- **An npm package must be declared in `package.json`,** or rev-dep can't resolve it, and the import fails.
-- **What the rule doesn't catch:**
-  - **A JSON or other asset import from outside the folder,** such as `import p from '../../package.json' with { type: 'json' }`. rev-dep treats assets as resolvable and doesn't check where they land; no setting changes that in 3.3.0. The oxlint override caught it, so this is a gap the change opened. oxCrap's only JSON import is its own schema, `./configuration_schema.json`.
-  - **Loading a file with `new URL('../…', import.meta.url)`,** which isn't an import. The features reach the CLI this way, inside the folder.
-  - **`import.meta.resolve()`, a `/// <reference path>` and a symlinked single file,** which rev-dep sees as inside the folder.
-  - **An npm package that's declared but isn't meant to be used.**
-- **rev-dep publishes no binary for Windows on ARM,** so `npm run lint` can't run there.
+- **The owner asked for the rule** "that oxcrap must not import anything from outside it's own folder" ([choice](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085786799)), so oxCrap can be lifted out into a project of its own.
+- **[Dependency direction](../../docs/engineering/dependency-direction.md) says how it's checked,** and [its sidecar](../../docs/engineering/dependency-direction.meta.md) why rev-dep checks it, what it doesn't catch, and the options not taken.
 
 ## How it works
 
@@ -239,14 +220,7 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **The script running the tests itself,** as it did before the third round of feedback: it tied the script to `npm test`. CI also ran the suite twice.
 - **A hook mode inside the CRAP script:** it tied the script to Claude Code, and to running lint and the tests.
 - **A blocking hook:** #63 chose advice inside the session and a gate in CI.
-- **Other ways to enforce the import rule:**
-  - **The oxlint override** (`import/no-relative-parent-imports` and an `@/**` pattern), used first, from #64. It matched import strings, so it banned `../` even within the folder, and couldn't tell where an import landed.
-  - **[dependency-cruiser](https://github.com/sverweij/dependency-cruiser)** 18.9.0 resolves imports too, but needed two rules and is slower and heavier; see "Why rev-dep" above.
-  - **TypeScript's `rootDir`,** in a `tsconfig.json` of the folder's own, caught the same imports, but needs a second typecheck command and reports per imported file rather than per import.
-  - **[eslint-plugin-boundaries](https://github.com/javierbrea/eslint-plugin-boundaries)** needs ESLint, which this repository doesn't use.
-  - **oxlint-plugin-boundaries** is third-party and young, and it matches files by path rather than resolving imports.
-  - **A `package.json` in `scripts/oxcrap/` with subpath imports** (`#screenplay/*`): the owner liked a package file there, "but not for this reason".
-- **A separate pull request for the import rule,** off `main` with #64 stacked on it: `scripts/oxcrap/` exists only on #64's branch, so the rule would have enforced nothing until #64 merged.
+- **Other ways to enforce the import rule:** in [dependency direction's sidecar](../../docs/engineering/dependency-direction.meta.md#options-not-taken).
 - **Mutation testing:** deferred. Revisit Stryker for `src/utils/math.ts` and `src/store/seedCodec.ts` in its own issue.
 
 ## What would reopen this
