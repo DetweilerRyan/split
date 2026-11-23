@@ -30,8 +30,6 @@ const BRANCHES = new Set([
   'CatchClause',
 ]);
 const LOGICAL_ASSIGNMENTS = new Set(['&&=', '||=', '??=']);
-/** Node types an optional link, `?.`, can mark. */
-const OPTIONAL_LINKS = new Set(['MemberExpression', 'CallExpression']);
 
 /** What counts beyond the fixed branches. Each is on by default. */
 export type Counting = {
@@ -90,35 +88,51 @@ export function children(node: AstNode): AstNode[] {
   return found;
 }
 
+/** How many paths a node of one type adds, beyond the fixed branches, under `counting`. */
+type Rule = (node: AstNode, parent: AstNode | undefined, counting: Counting) => number;
+
+const labelledJump: Rule = (node, _parent, counting) =>
+  node.label && counting.labelledJumps ? 1 : 0;
+// `a?.b` and `f?.()`; a TypeScript optional parameter, `x?: number`, is an Identifier, not these.
+const optionalLink: Rule = (node, _parent, counting) =>
+  node.optional === true && counting.optionalChaining ? 1 : 0;
+
+const RULES = new Map<string, Rule>([
+  // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
+  [
+    'SwitchStatement',
+    (node, _parent, counting) =>
+      counting.switchCases === 'once' &&
+      ((node.cases as AstNode[] | undefined) ?? []).some((c) => c.test !== null)
+        ? 1
+        : 0,
+  ],
+  // Each case but `default:`.
+  [
+    'SwitchCase',
+    (node, _parent, counting) => (counting.switchCases === 'each' && node.test !== null ? 1 : 0),
+  ],
+  // Each operator, or with `sequence`, the outermost operator counts its runs and the rest add 0.
+  [
+    'LogicalExpression',
+    (node, parent, counting) => {
+      if (counting.logicalOperators === 'each') return 1;
+      return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
+    },
+  ],
+  ['BreakStatement', labelledJump],
+  ['ContinueStatement', labelledJump],
+  // `&&=`, `||=` and `??=`.
+  ['AssignmentExpression', (node) => (LOGICAL_ASSIGNMENTS.has(node.operator as string) ? 1 : 0)],
+  // `x = 1` as a parameter, or `{ x = 1 }` and `[x = 1]` in destructuring.
+  ['AssignmentPattern', (_node, _parent, counting) => (counting.defaultValues ? 1 : 0)],
+  ['MemberExpression', optionalLink],
+  ['CallExpression', optionalLink],
+]);
+
 function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
-  if (node.type === 'SwitchStatement') {
-    // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
-    const cases = (node.cases as AstNode[] | undefined) ?? [];
-    return counting.switchCases === 'once' && cases.some((c) => c.test !== null) ? 1 : 0;
-  }
-  if (node.type === 'SwitchCase') {
-    // `default:` adds no path.
-    return counting.switchCases === 'each' && node.test !== null ? 1 : 0;
-  }
-  if (node.type === 'LogicalExpression') {
-    if (counting.logicalOperators === 'each') return 1;
-    // The outermost operator of an expression counts its runs, in source order; the rest add 0.
-    return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
-  }
-  if ((node.type === 'BreakStatement' || node.type === 'ContinueStatement') && node.label) {
-    return counting.labelledJumps ? 1 : 0;
-  }
-  if (node.type === 'AssignmentExpression') {
-    return LOGICAL_ASSIGNMENTS.has(node.operator as string) ? 1 : 0;
-  }
-  // `x = 1` as a parameter, or `{ x = 1 }` and `[x = 1]` in destructuring.
-  if (node.type === 'AssignmentPattern') return counting.defaultValues ? 1 : 0;
-  // `a?.b` and `f?.()`; a TypeScript optional parameter, `x?: number`, is an Identifier, not these.
-  if (OPTIONAL_LINKS.has(node.type) && node.optional === true) {
-    return counting.optionalChaining ? 1 : 0;
-  }
-  return 0;
+  return RULES.get(node.type)?.(node, parent, counting) ?? 0;
 }
 
 /**

@@ -8,15 +8,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 const script = fileURLToPath(new URL('./stop-hook.ts', import.meta.url));
 const directories: string[] = [];
 
-// Fakes of the four npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when
-// a file named tests-fail exists, `test:tooling` when tooling-fails exists, and `oxcrap` prints
-// crap-output and exits with crap-status.
+// Fakes of the npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when a file
+// named tests-fail exists, `test:tooling` when tooling-fails exists, and `oxcrap:app` and
+// `oxcrap:tooling` print crap-output and exit with crap-status.
 const scripts = {
   lint: 'node -e "if (process.env.LINT_FAILS) { console.log(\'lint: 1 problem\'); process.exit(1) }"',
   test: "node -e \"const fs = require('fs'); if (fs.existsSync('tests-fail')) { console.log('FAIL adds up'); process.exit(1) }\"",
   'test:tooling':
     "node -e \"const fs = require('fs'); if (fs.existsSync('tooling-fails')) { console.log('FAIL the tool'); process.exit(1) }\"",
-  oxcrap: 'node fake-crap.mjs',
+  'oxcrap:app': 'node fake-crap.mjs',
+  'oxcrap:tooling': 'node fake-crap.mjs',
 };
 const fakeCrap = `import { existsSync, readFileSync } from 'node:fs';
 const read = (file, otherwise) => (existsSync(file) ? readFileSync(file, 'utf8') : otherwise);
@@ -84,7 +85,7 @@ describe('stop-hook', () => {
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).hookSpecificOutput.hookEventName).toBe('Stop');
     expect(result.context).toContain(
-      '`npm run oxcrap` reports:\nCRAP findings: grade is over the limits.',
+      '`npm run oxcrap:app` reports:\nCRAP findings: grade is over the limits.',
     );
     expect(result.context).toContain('This is advice; CI fails on each of these.');
   });
@@ -169,7 +170,9 @@ describe('stop-hook', () => {
 
     const { context } = hook(cwd, { stop_hook_active: false });
 
-    expect(context).toContain('`npm run test:tooling` fails:\nFAIL the tool');
+    expect(context).toContain(
+      '`npm run test:tooling` fails, so no CRAP score was calculated for oxCrap. Fix the tests first:\nFAIL the tool',
+    );
     expect(context).not.toContain('npm test');
   });
 
@@ -202,6 +205,22 @@ describe('stop-hook', () => {
     expect(hook(cwd, stop).context).toContain('`npm run test:tooling` fails');
   });
 
+  it('scores oxCrap’s own code after the tooling tests pass, when only scripts/ has changed', () => {
+    const cwd = repository();
+    write(cwd, {
+      'scripts/tool.ts': 'export {};\n',
+      'crap-output': 'CRAP findings: run is over the limits.',
+      'crap-status': '1',
+    });
+
+    const { context } = hook(cwd, { stop_hook_active: false });
+
+    expect(context).toContain(
+      '`npm run oxcrap:tooling` reports:\nCRAP findings: run is over the limits.',
+    );
+    expect(context).not.toContain('oxcrap:app');
+  });
+
   it('puts lint failures first, and gives no CRAP score while the tests fail', () => {
     const cwd = repository();
     write(cwd, {
@@ -216,6 +235,6 @@ describe('stop-hook', () => {
     expect(context).toContain(
       '`npm test` fails, so it wrote no coverage report and no CRAP score was calculated. Fix the tests first:\nFAIL adds up',
     );
-    expect(context).not.toContain('npm run oxcrap');
+    expect(context).not.toContain('npm run oxcrap:app');
   });
 });

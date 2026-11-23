@@ -80,29 +80,25 @@ function text(source: string, node: unknown) {
 }
 
 /** A label for a function, from its own name or what it's assigned or passed to. */
+/** How each kind of parent names the function it holds, or nothing if it can't. */
+const NAMERS = new Map<string, (source: string, parent: AstNode) => string | undefined>([
+  ['VariableDeclarator', (source, parent) => text(source, parent.id)],
+  ['Property', (source, parent) => text(source, parent.key)],
+  ['MethodDefinition', (source, parent) => text(source, parent.key)],
+  ['PropertyDefinition', (source, parent) => text(source, parent.key)],
+  ['AssignmentExpression', (source, parent) => text(source, parent.left)],
+  ['CallExpression', (source, parent) => callback(text(source, parent.callee))],
+  ['NewExpression', (source, parent) => callback(text(source, parent.callee))],
+  ['ExportDefaultDeclaration', () => 'default export'],
+]);
+
+const callback = (callee: string | undefined) => (callee ? `${callee} callback` : undefined);
+
 export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
   const own = fn.id;
   if (isNode(own) && typeof own.name === 'string') return own.name;
-  if (!parent) return '(anonymous)';
-  switch (parent.type) {
-    case 'VariableDeclarator':
-      return text(source, parent.id) ?? '(anonymous)';
-    case 'Property':
-    case 'MethodDefinition':
-    case 'PropertyDefinition':
-      return text(source, parent.key) ?? '(anonymous)';
-    case 'AssignmentExpression':
-      return text(source, parent.left) ?? '(anonymous)';
-    case 'CallExpression':
-    case 'NewExpression': {
-      const callee = text(source, parent.callee);
-      return callee ? `${callee} callback` : '(anonymous)';
-    }
-    case 'ExportDefaultDeclaration':
-      return 'default export';
-    default:
-      return '(anonymous)';
-  }
+  const named = parent && NAMERS.get(parent.type)?.(source, parent);
+  return named ?? '(anonymous)';
 }
 
 /** The JSX attribute a handler is the value of, as in `onClick={() => …}`. */
@@ -114,75 +110,101 @@ function jsxAttribute(source: string, ancestors: AstNode[]) {
   return text(source, attribute.name);
 }
 
+/** One file's walk: its functions, the nodes they came from, and its simple statements. */
+class Parser {
+  constructor(source: string, counting: Counting) {
+    this.source = source;
+    this.counting = counting;
+    this.position = positions(source);
+  }
+
+  readonly source: string;
+  readonly counting: Counting;
+  readonly position: (offset: number) => Position;
+  readonly functions: Fn[] = [];
+  readonly nodes = new Map<AstNode, Fn>();
+  readonly statements: Parsed['statements'] = [];
+
+  visit(node: AstNode, ancestors: AstNode[], enclosing: Fn[]) {
+    if (SIMPLE_STATEMENTS.has(node.type))
+      this.statements.push({ start: node.start, end: node.end });
+    let inside = enclosing;
+    if (FUNCTION_TYPES.has(node.type) && node.body) {
+      const fn = this.describe(node, ancestors, enclosing);
+      this.functions.push(fn);
+      this.nodes.set(node, fn);
+      inside = [...enclosing, fn];
+    }
+    for (const child of children(node)) this.visit(child, [...ancestors, node], inside);
+  }
+
+  /** A function node as a scored `Fn`: its name, complexity and place. */
+  describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[]): Fn {
+    const parent = ancestors.at(-1);
+    const own =
+      parent?.type === 'JSXExpressionContainer'
+        ? (jsxAttribute(this.source, ancestors) ?? '(anonymous)')
+        : label(this.source, node, parent);
+    return {
+      label: own,
+      name: [...enclosing.map((outer) => outer.label), own].join(' > '),
+      complexity: complexity(node, this.counting),
+      offset: { start: node.start, end: node.end },
+      start: this.position(node.start),
+      end: this.position(node.end),
+      parents: enclosing,
+      passedToCall: passedToCall(node, parent),
+    };
+  }
+
+  /**
+   * Adds 1 to each scored function in a recursion cycle. A call counts towards the scored function
+   * it's written in; it reaches a function only if that function is scored itself.
+   */
+  countRecursion(program: AstNode, scored: Fn[]) {
+    const enclosing = this.counting.nestedFunctions === 'enclosing';
+    const scoredSet = new Set(scored);
+    const callerOf = (node: AstNode) => {
+      const fn = this.nodes.get(node);
+      return fn && enclosing ? (fn.parents[0] ?? fn) : fn;
+    };
+    const scoredAt = (node: AstNode) => {
+      const fn = this.nodes.get(node);
+      return fn && scoredSet.has(fn) ? fn : undefined;
+    };
+    for (const fn of recursive(program, callerOf, scoredAt)) fn.complexity += 1;
+  }
+}
+
+/** Whether `node` is passed straight to a call, as `items.forEach(() => …)` passes its callback. */
+function passedToCall(node: AstNode, parent: AstNode | undefined) {
+  const call = parent?.type === 'CallExpression' || parent?.type === 'NewExpression';
+  return call && Array.isArray(parent.arguments) && parent.arguments.includes(node);
+}
+
 export function parse(file: string, source: string, counting: Counting = COUNT_ALL): Parsed {
   const result = parseSync(file, source);
   if (result.errors.length > 0) {
     throw new ParseError(`Couldn't parse ${file}: ${result.errors[0].message}`);
   }
-  const position = positions(source);
-  const functions: Fn[] = [];
-  const nodes = new Map<Fn, AstNode>();
-  const statements: Parsed['statements'] = [];
-
-  const visit = (node: AstNode, ancestors: AstNode[], enclosing: Fn[]) => {
-    let inside = enclosing;
-    if (SIMPLE_STATEMENTS.has(node.type)) statements.push({ start: node.start, end: node.end });
-    if (FUNCTION_TYPES.has(node.type) && node.body) {
-      const parent = ancestors.at(-1);
-      const own =
-        parent?.type === 'JSXExpressionContainer'
-          ? (jsxAttribute(source, ancestors) ?? '(anonymous)')
-          : label(source, node, parent);
-      const fn: Fn = {
-        label: own,
-        name: [...enclosing.map((outer) => outer.label), own].join(' > '),
-        complexity: complexity(node, counting),
-        offset: { start: node.start, end: node.end },
-        start: position(node.start),
-        end: position(node.end),
-        parents: enclosing,
-        passedToCall:
-          (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') &&
-          Array.isArray(parent.arguments) &&
-          parent.arguments.includes(node),
-      };
-      functions.push(fn);
-      nodes.set(fn, node);
-      inside = [...enclosing, fn];
-    }
-    for (const child of children(node)) visit(child, [...ancestors, node], inside);
-  };
-  visit(result.program as unknown as AstNode, [], []);
-
+  const program = result.program as unknown as AstNode;
+  const parser = new Parser(source, counting);
+  parser.visit(program, [], []);
+  const enclosing = counting.nestedFunctions === 'enclosing';
+  const all = parser.functions;
+  const scored = enclosing ? all.filter((fn) => fn.parents.length === 0) : all;
+  if (counting.recursion) parser.countRecursion(program, scored);
   const comments = (result.comments as Comment[]).map(({ type, value, start, end }) => ({
     type,
     value,
     start,
     end,
   }));
-  const enclosing = counting.nestedFunctions === 'enclosing';
-  const scored = enclosing ? functions.filter((fn) => fn.parents.length === 0) : functions;
-  if (counting.recursion) {
-    const byNode = new Map([...nodes].map(([fn, node]) => [node, fn]));
-    const scoredSet = new Set(scored);
-    // A call counts towards the scored function it's written in; it reaches a function only if
-    // that function is scored itself.
-    const callerOf = (node: AstNode) => {
-      const fn = byNode.get(node);
-      return fn && (enclosing ? (fn.parents[0] ?? fn) : fn);
-    };
-    const scoredAt = (node: AstNode) => {
-      const fn = byNode.get(node);
-      return fn && scoredSet.has(fn) ? fn : undefined;
-    };
-    const program = result.program as unknown as AstNode;
-    for (const fn of recursive(program, callerOf, scoredAt)) fn.complexity += 1;
-  }
   return {
     functions: scored,
-    nested: enclosing ? functions.filter((fn) => fn.parents.length > 0) : [],
+    nested: enclosing ? all.filter((fn) => fn.parents.length > 0) : [],
     comments,
-    statements,
-    position,
+    statements: parser.statements,
+    position: parser.position,
   };
 }

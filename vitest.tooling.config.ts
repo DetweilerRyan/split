@@ -29,7 +29,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['json'],
       reportsDirectory: 'coverage-tooling',
-      include: ['scripts/oxcrap/**'],
+      include: ['scripts/oxcrap/**/*.ts'],
       exclude: ['**/*.test.ts', 'scripts/oxcrap/features/**'],
     },
   },

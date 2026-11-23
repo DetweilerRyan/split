@@ -14,7 +14,7 @@ The hook came with the CRAP check, which the owner decided on [#63](https://gith
 - **It runs nothing when neither the app nor tooling has changed,** so a session that only touches docs isn't slowed by a test run.
 - **It watches tooling too, and runs only what a change needs.** When the tooling tests left `npm test` ([#65](https://github.com/DetweilerRyan/split/issues/65)), a session editing `scripts/` would otherwise have had no advice. The owner said "Yes, watch scripts/ too" ([decisions](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227)).
   - **An app change** runs `npm test` and oxCrap.
-  - **A tooling change** runs `npm run test:tooling`.
+  - **A tooling change** runs `npm run test:tooling`, then oxCrap's own score.
   - **Lint runs once** for either.
   - **Beyond `src/`, `app/` and `scripts/`,** the session added the root files each suite depends on: `vitest.config.ts`, `vitest.config.browser.test.ts` and `.oxcraprc.json` for the app; `vitest.tooling.config.ts`, `.oxlintrc.json`, and `.rev-dep.config.jsonc` with its test, for tooling; and `package.json` for both, since scripts and dependencies live there. The owner had said an app change is `src/` or `app/`, "as now", so the pull request lists these under "Decisions made".
 - **It stays quiet when nothing it watches changed since the session's last stop,** by comparing a fingerprint of the work.

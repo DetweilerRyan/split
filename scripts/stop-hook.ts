@@ -24,7 +24,7 @@ import {
 import { dirname, join, resolve } from 'node:path';
 
 // What counts as a change, and what each kind runs. A path in both runs both.
-/** The app's code and its test setup: lint, `npm test` and `npm run oxcrap`. */
+/** The app's code and its test setup: lint, `npm test` and `npm run oxcrap:app`. */
 const APP = [
   'src',
   'app',
@@ -33,15 +33,18 @@ const APP = [
   '.oxcraprc.json',
   'package.json',
 ];
-/** Tooling and its tests (vitest.tooling.config.ts says which): lint and `npm run test:tooling`. */
+/**
+ * Tooling and its tests: lint, `npm run test:tooling` and `npm run oxcrap:tooling`, which scores
+ * oxCrap's own code.
+ */
 const TOOLING = [
   'scripts',
   'vitest.tooling.config.ts',
+  'vitest.tooling-real.config.ts',
   '.oxlintrc.json',
   '.rev-dep.config.jsonc',
   'rev-dep.config.real.test.ts',
   'stryker.config.json',
-  'vitest.mutation.config.ts',
   'package.json',
 ];
 const WATCHED = [...new Set([...APP, ...TOOLING])];
@@ -143,20 +146,27 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean; session_id?: 
         `\`npm test\` fails, so it wrote no coverage report and no CRAP score was calculated. Fix the tests first:\n${tail(tests.output, 60)}`,
       );
     } else {
-      const crap = run('npm', ['run', 'oxcrap', '--silent'], root);
+      const crap = run('npm', ['run', 'oxcrap:app', '--silent'], root);
       if (crap.status !== 0) {
-        sections.push(`\`npm run oxcrap\` reports:\n${tail(crap.output, 80)}`);
+        sections.push(`\`npm run oxcrap:app\` reports:\n${tail(crap.output, 80)}`);
       }
     }
   }
   if (tooling) {
     const tools = run('npm', ['run', 'test:tooling', '--silent'], root);
     if (tools.status !== 0) {
-      sections.push(`\`npm run test:tooling\` fails:\n${tail(tools.output, 60)}`);
+      sections.push(
+        `\`npm run test:tooling\` fails, so no CRAP score was calculated for oxCrap. Fix the tests first:\n${tail(tools.output, 60)}`,
+      );
+    } else {
+      const crap = run('npm', ['run', 'oxcrap:tooling', '--silent'], root);
+      if (crap.status !== 0) {
+        sections.push(`\`npm run oxcrap:tooling\` reports:\n${tail(crap.output, 80)}`);
+      }
     }
   }
   if (sections.length === 0) return undefined;
-  // `npm run oxcrap` already says where to get help, so this only says what kind of message it is.
+  // oxCrap already says where to get help, so this only says what kind of message it is.
   return `${sections.join('\n\n')}\n\nThis is advice; CI fails on each of these.`;
 }
 
