@@ -14,6 +14,7 @@ How work on this repository gets done: writing and testing code, choosing depend
 | [Types and schemas](types-and-schemas.md)           | Before adding, moving or changing a type, interface or zod schema                                                                                                                                                                          |
 | [CRAP score](crap.md)                               | When a CRAP report from the hook, CI or `npm run oxcrap` lists a function, or before adding or changing a `@crap-allow` comment                                                                                                            |
 | [Dependency direction](dependency-direction.md)     | Before adding an import that crosses a folder with its own rule, such as into or out of `scripts/oxcrap/`; when `npm run lint` reports a module boundary or unresolved import; before adding or changing a rule in `.rev-dep.config.jsonc` |
+| [Mutation testing](mutation-testing.md)             | When oxCrap's code (`scripts/oxcrap/`) changes and the definition of done passes; before running `npm run test:mutation`, or handling a surviving mutant                                                                                   |
 | [CI](ci.md)                                         | Before changing `.github/workflows/`, updating `playwright`, `@playwright/test` or a GitHub Action, or when a pull request's CI run fails                                                                                                  |
 
 ## Adding a procedure

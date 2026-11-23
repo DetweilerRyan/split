@@ -10,7 +10,13 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // other `<module>.test.ts`, `<module>.property.test.ts` included, is a unit test. Both run in Node.
 const realTests = ['scripts/**/*.real.test.ts', 'rev-dep.config.real.test.ts'];
 // Branch worktrees live inside the checkout (docs/engineering/workflow/starting-work.md).
-const ignored = [...configDefaults.exclude, '**/.next/**', '**/.claude/worktrees/**'];
+// Stryker's sandbox is a copy of the repository while a mutation run is going.
+const ignored = [
+  ...configDefaults.exclude,
+  '**/.next/**',
+  '**/.claude/worktrees/**',
+  '**/.stryker-tmp/**',
+];
 
 export default defineConfig({
   test: {
