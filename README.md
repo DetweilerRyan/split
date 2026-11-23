@@ -14,10 +14,11 @@ Public-key mode is client-only and does not authenticate users or restrict acces
 npm install
 npm run dev
 npm test
+npm run test:tooling
 npm run build
 ```
 
-Run locally with `npm run dev`, build with `npm run build`, and serve the production build with `npm start`. The tests run with `npm test`, the end-to-end tests with `npm run test:e2e` (it builds the app first), and `npm run typecheck` checks types. Component and hook tests run in headless Chromium, so install it once with `npx playwright install --only-shell chromium`; on Linux, `sudo npx playwright install-deps chromium` adds the system libraries it needs. The Docker Sandbox kit and the dev container do both for you. Agents working on the repository follow [`AGENTS.md`](AGENTS.md).
+Run locally with `npm run dev`, build with `npm run build`, and serve the production build with `npm start`. The app's tests run with `npm test`, the tests of the repository's own tools in `scripts/` with `npm run test:tooling`, the end-to-end tests with `npm run test:e2e` (it builds the app first), and `npm run typecheck` checks types. Component and hook tests run in headless Chromium, so install it once with `npx playwright install --only-shell chromium`; on Linux, `sudo npx playwright install-deps chromium` adds the system libraries it needs. The Docker Sandbox kit and the dev container do both for you. Agents working on the repository follow [`AGENTS.md`](AGENTS.md).
 
 ### Docker Sandbox
 

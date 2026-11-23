@@ -35,7 +35,7 @@
       "Global": [
         // oxCrap's own modules and functions: they can change without changing the contract.
         "\\b(allow|check|complexity|config|coverage|files|functions)\\.ts\\b",
-        "\\b(findAllows|parseConfig|parseReport|coverageOf|crapOf|findFiles|newerThan|merge)\\b",
+        "\\b(findAllows|parseConfig|parseReport|coverageOf|crapOf|findFiles|newerThan)\\b",
         "\\w\\(\\)",
         // How the test runs the check.
         "\\bstd(out|err)\\b",

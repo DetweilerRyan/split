@@ -27,7 +27,7 @@ Feature: Pointing to help
 
   Scenario: A help file is read from the config's folder, and printed from the folder the check runs in
     Given Dana has a function "grade" with complexity 12 in "web/src/grade.ts"
-    And Dana has a file "web/docs/help.md" with no functions
+    And Dana has a help page "web/docs/help.md"
     And Dana has a file "web/crap.json":
       """
       { "files": ["src/**/*.ts"], "coverage": "../coverage.json", "helpUrl": "docs/help.md" }

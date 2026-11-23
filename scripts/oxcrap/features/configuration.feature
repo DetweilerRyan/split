@@ -5,7 +5,7 @@ Feature: Configuring the check
   Scenario: The check reads .oxcraprc.json in the folder it runs in, comments and all
     Given Dana has a function "grade" with complexity 12 in "lib/grade.ts"
     And Dana has a function "ignored" with complexity 12 in "src/ignored.ts"
-    And Dana has a file "HELP.md" with no functions
+    And Dana has a help page "HELP.md"
     And Dana has a file ".oxcraprc.json":
       """
       {
@@ -108,7 +108,7 @@ Feature: Configuring the check
   Scenario: The command line overrides the config: paths replace its files, and options its settings
     Given Dana has a function "grade" with complexity 12 in "src/grade.ts"
     And Dana has a file "lib/fine.ts" with no functions
-    And Dana has a file "B.md" with no functions
+    And Dana has a help page "B.md"
     And Dana has a file ".oxcraprc.json":
       """
       { "files": ["lib/**/*.ts"], "coverage": "old.json", "helpUrl": "A.md" }

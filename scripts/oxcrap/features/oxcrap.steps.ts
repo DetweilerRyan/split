@@ -34,16 +34,19 @@ Given(
 );
 
 Given(
-  '{word} has written {string} above {string}',
-  ({ actorCalled }, name: string, comment: string, fn: string) => {
-    actorCalled(name).attemptsTo(writesCommentAbove(fn, comment));
+  '{word} has written {string} above {string} in {string}',
+  ({ actorCalled }, name: string, comment: string, fn: string, path: string) => {
+    actorCalled(name).attemptsTo(writesCommentAbove(path, fn, comment));
   },
 );
+
+Given('{word} has a help page {string}', ({ actorCalled }, name: string, path: string) => {
+  actorCalled(name).attemptsTo(writesFile(path, '# Help'));
+});
 
 Given(
   "{word}'s tests ran {word} of {string}",
   ({ actorCalled }, name: string, share: string, path: string) => {
-    if (share !== 'all' && share !== 'none') throw new Error(`"${share}" isn't all or none.`);
     actorCalled(name).attemptsTo(runsTests(path, share));
   },
 );

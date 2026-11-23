@@ -1,11 +1,4 @@
-import {
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  symlinkSync,
-  utimesSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, readFileSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { Covered, Task } from './actor.ts';
 
@@ -34,10 +27,11 @@ export const writesFunction = (path: string, name: string, complexity: number, a
  * written now, so it's newer than the code written before it.
  */
 export const runsTests =
-  (path: string, covered: Covered): Task =>
+  (path: string, covered: string): Task =>
   (actor) => {
+    if (covered !== 'all' && covered !== 'none') throw new Error(`"${covered}" isn't all or none.`);
     const runs = actor.has('coverage') ? actor.recall('coverage') : new Map<string, Covered>();
-    runs.set(path, covered);
+    runs.set(path, covered as Covered);
     actor.remember('coverage', runs);
     const report: Record<string, unknown> = {};
     for (const [file, share] of runs) {
@@ -73,29 +67,16 @@ export const changesAfterTheTests =
     utimesSync(join(actor.project, path), later, later);
   };
 
-/**
- * Writes `comment` on its own line directly above the function `fn`, in whichever of the
- * project's files declares it.
- */
+/** Writes `comment` on its own line directly above the function `fn` in `path`. */
 export const writesCommentAbove =
-  (fn: string, comment: string): Task =>
+  (path: string, fn: string, comment: string): Task =>
   (actor) => {
+    const file = join(actor.project, path);
     const declaration = `export function ${fn}(`;
-    for (const path of files(actor.project)) {
-      const source = readFileSync(path, 'utf8');
-      if (source.includes(declaration)) {
-        writeFileSync(path, source.replace(declaration, `${comment}\n${declaration}`));
-        return;
-      }
-    }
-    throw new Error(`${actor.name} has no function ${fn}.`);
+    const source = readFileSync(file, 'utf8');
+    if (!source.includes(declaration)) throw new Error(`${path} has no function ${fn}.`);
+    writeFileSync(file, source.replace(declaration, `${comment}\n${declaration}`));
   };
-
-function files(folder: string): string[] {
-  return readdirSync(folder, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => join(entry.parentPath, entry.name));
-}
 
 /** Writes a coverage report for `path` that has statements but none of the function counts. */
 export const writesReportWithoutFunctions =

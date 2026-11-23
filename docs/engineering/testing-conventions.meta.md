@@ -98,6 +98,43 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 - **The rule:** every step definition is used by some feature, and steps don't call other steps. `scripts/check-unused-steps.ts` enforces the first half, and the second half keeps it free of its usual false positive.
 - **Where the reasons are:** the decision, the research behind it, and how the script works are in [`scripts/check-unused-steps.meta.md`](../../scripts/check-unused-steps.meta.md).
 
+## Tooling tests and feature contracts
+
+Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), which the owner raised while reviewing #64. These are the owner's decisions, from [the issue](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227):
+
+- **The tooling tests run apart from the app's,** with their own command: "One `test:tooling`", which also runs oxCrap's features. That's one row in the definition of done and one CI step.
+- **They have a separate config file,** `vitest.tooling.config.ts`, with no React Compiler, coverage or `@` alias.
+- **The Stop hook watches tooling too:** "Yes, watch scripts/ too".
+- **The pull request proposes the rule,** and merging it adopts the rule: "PRs propose the rules".
+
+**Why apart:**
+
+- Most changes never touch dev-only scripts, yet `npm test` ran their tests. On 2026-11-23 they were 145 of the 224 tests.
+- Taking them out cut `npm test` from 9.8 s to 3.5 s on the sandbox. `npm run test:tooling` takes 12.1 s, 2.8 s of it the features.
+- The CRAP check's coverage run scores only `src/` and `app/`, so it no longer runs tests for code it never scores.
+
+**Why features for a deep module's contract:** the contract (what you write, what the check reports, what it exits with) is the interface that survives a rewrite. Replacing oxlint with oxCrap's own counter in #64 left the end-to-end tests intact apart from their numbers.
+
+**What the pilot measured,** replacing `oxcrap.real.test.ts`:
+
+- **Size:** the 29 tests were one 500-line file. The contract is now 35 scenarios in 419 lines of features, plus 382 lines of steps and screenplay and a 52-line `.gplintrc`. That's about 1.6 times the lines: the features are longer than the test code they replace, and the glue is new.
+- **The steps reuse well:** 16 step definitions serve all 35 scenarios. Porting the last 30 scenarios needed 9 new ones, and most scenarios needed none.
+- **Adding a scenario** usually means editing one feature file and nothing else.
+- **They catch real breaks:** with the CLI's findings made to exit 0 and its help line reworded, 9 scenarios failed, exactly the ones asserting a failing check or a help line.
+- **Gherkin cost two things:**
+  - A `{string}` parameter can't hold double quotes, so messages quoting a name go in DocStrings.
+  - The 110-character step limit sends long messages there too.
+- **Every assertion the old test made is kept,** word for word. A test that made several runs became one scenario per run, since a scenario has one When.
+
+**Options not taken:**
+
+- **Sharing `e2e/screenplay`:** oxCrap imports nothing from outside its folder, and the e2e cast is built around a browser.
+- **Running the features from the root `playwright.config.ts`:** that config starts the app's servers, and `npm run test:e2e` is the app's.
+- **Two commands,** `test:tooling` and `test:contracts`: the owner chose one.
+- **Tooling projects in `vitest.config.ts`:** they would run through the app's React Compiler, coverage and alias.
+
+**What would reopen this:** the features growing slow enough to delay the hook, or a second deep module whose contract doesn't fit a command line.
+
 ## Changed test expectations
 
 The rule that a changed expectation needs a reason in the pull request is owned by [reviewing work](workflow/reviewing-work.md#changed-test-expectations); its source is in that document's sidecar.

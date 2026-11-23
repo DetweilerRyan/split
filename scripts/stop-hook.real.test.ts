@@ -8,11 +8,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 const script = fileURLToPath(new URL('./stop-hook.ts', import.meta.url));
 const directories: string[] = [];
 
-// Fakes of the three npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when
-// a file named tests-fail exists, and `oxcrap` prints crap-output and exits with crap-status.
+// Fakes of the four npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when
+// a file named tests-fail exists, `test:tooling` when tooling-fails exists, and `oxcrap` prints
+// crap-output and exits with crap-status.
 const scripts = {
   lint: 'node -e "if (process.env.LINT_FAILS) { console.log(\'lint: 1 problem\'); process.exit(1) }"',
   test: "node -e \"const fs = require('fs'); if (fs.existsSync('tests-fail')) { console.log('FAIL adds up'); process.exit(1) }\"",
+  'test:tooling':
+    "node -e \"const fs = require('fs'); if (fs.existsSync('tooling-fails')) { console.log('FAIL the tool'); process.exit(1) }\"",
   oxcrap: 'node fake-crap.mjs',
 };
 const fakeCrap = `import { existsSync, readFileSync } from 'node:fs';
@@ -40,7 +43,7 @@ function repository() {
   write(cwd, {
     'package.json': JSON.stringify({ scripts }),
     'fake-crap.mjs': fakeCrap,
-    '.gitignore': 'tests-fail\ncrap-output\ncrap-status\n',
+    '.gitignore': 'tests-fail\ntooling-fails\ncrap-output\ncrap-status\n',
     'src/keep.ts': 'export const keep = 1;\n',
   });
   git(cwd, 'init', '--quiet', '--initial-branch=main');
@@ -153,11 +156,40 @@ describe('stop-hook', () => {
     expect(hook(cwd, { stop_hook_active: true })).toMatchObject({ status: 0, stdout: '' });
   });
 
-  it('says nothing, and runs nothing, when src/ and app/ haven’t changed', () => {
+  it('says nothing, and runs nothing, when neither the app nor tooling has changed', () => {
     const cwd = repository();
-    write(cwd, { 'README.md': 'Changed.\n', 'tests-fail': '' });
+    write(cwd, { 'README.md': 'Changed.\n', 'tests-fail': '', 'tooling-fails': '' });
 
     expect(hook(cwd, { stop_hook_active: false })).toMatchObject({ status: 0, stdout: '' });
+  });
+
+  it('runs the tooling tests, not the app’s, when only scripts/ has changed', () => {
+    const cwd = repository();
+    write(cwd, { 'scripts/tool.ts': 'export {};\n', 'tests-fail': '', 'tooling-fails': '' });
+
+    const { context } = hook(cwd, { stop_hook_active: false });
+
+    expect(context).toContain('`npm run test:tooling` fails:\nFAIL the tool');
+    expect(context).not.toContain('npm test');
+  });
+
+  it('runs both when the app and tooling have changed, and the fingerprint covers both', () => {
+    const cwd = repository();
+    write(cwd, {
+      'src/grade.ts': 'export const grade = 1;\n',
+      'scripts/tool.ts': 'export {};\n',
+      'tests-fail': '',
+      'tooling-fails': '',
+    });
+    const stop = { stop_hook_active: false, session_id: 'session-1' };
+
+    const both = hook(cwd, stop).context;
+    expect(both).toContain('`npm test` fails');
+    expect(both).toContain('`npm run test:tooling` fails');
+    expect(hook(cwd, stop).stdout).toBe('');
+
+    write(cwd, { 'scripts/tool.ts': 'export const tool = 1;\n' });
+    expect(hook(cwd, stop).context).toContain('`npm run test:tooling` fails');
   });
 
   it('puts lint failures first, and gives no CRAP score while the tests fail', () => {

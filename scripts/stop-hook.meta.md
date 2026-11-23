@@ -12,6 +12,11 @@ The hook came with the CRAP check, which the owner decided on [#63](https://gith
   - **Exit code 2 and `"decision": "block"` would block instead.**
 - **It advises once per stop:** it stays quiet when `stop_hook_active` is true, which means Claude is already continuing because of a stop hook. Claude Code also caps continuations in a row at 8 (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`).
 - **It runs nothing when `src/` and `app/` haven't changed,** so a session that only touches docs isn't slowed by a test run.
+- **It watches tooling too, and runs only what a change needs.** When the tooling tests left `npm test` ([#65](https://github.com/DetweilerRyan/split/issues/65)), a session editing `scripts/` would otherwise have had no advice. The owner said "Yes, watch scripts/ too" ([decisions](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227)).
+  - **An app change** runs `npm test` and oxCrap.
+  - **A tooling change** runs `npm run test:tooling`.
+  - **Lint runs once** for either.
+  - **Beyond `scripts/`,** the session added the root files each suite depends on: `vitest.config.ts` for the app; `vitest.tooling.config.ts`, `.oxlintrc.json` and its test for tooling; and `package.json` for both, since scripts and dependencies live there.
 - **It stays quiet when nothing in `src/` or `app/` changed since the session's last stop,** by comparing a fingerprint of the work.
   - **Why:** an [independent review](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7087852542) noted that, comparing only with the merge base, every stop on a branch with changes ran lint and the whole suite, Q&A turns included, and repeated any failure left from earlier. After research, the owner said "add the fingerprint and fix the review findings".
   - **What the research found:** Claude Code's Stop input has no "changed this turn" field, and its docs suggest a Stop hook that scans the working tree ([hooks reference](https://code.claude.com/docs/en/hooks)). Its `FileChanged` event can't watch folders, since its matcher takes literal file names. The common community pattern, a `PostToolUse` hook marking Edit and Write as dirty, misses edits made through Bash ([one test](https://pub.towardsai.net/does-your-claude-code-hook-see-every-edit-an-edit-write-matcher-saw-3-of-7-5ca1defab37e) saw 3 of 7 edits).
@@ -26,7 +31,6 @@ The hook came with the CRAP check, which the owner decided on [#63](https://gith
 ## What would reopen this
 
 - **The suite grows slow enough that the hook delays sessions noticeably:** run only the tests related to the change in the hook, and keep the full run in CI. A partial run's coverage report then needs oxCrap to know which functions it covers, so revisit its stale-report rule too.
-- **[#65](https://github.com/DetweilerRyan/split/issues/65)** pilots running tooling tests apart from the app's, which would change what `npm test` runs here.
 
 ## Options not taken
 
