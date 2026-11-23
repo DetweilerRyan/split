@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run --project unit --project browser && vitest run --project real --coverage.enabled=false --passWithNoTests",
-    "test:tooling": "vitest run -c vitest.tooling.config.ts && bddgen -c scripts/oxcrap/features/playwright.config.ts && playwright test -c scripts/oxcrap/features/playwright.config.ts",
+    "test:tooling": "vitest run -c vitest.tooling.config.ts && vitest run -c vitest.tooling-real.config.ts && bddgen -c scripts/oxcrap/features/playwright.config.ts && playwright test -c scripts/oxcrap/features/playwright.config.ts",
     "test:mutation": "node scripts/mutation.ts",
     "test:mutation:changed": "node scripts/mutation.ts --changed",
     "test:e2e": "bddgen && playwright test",
@@ -16,7 +16,9 @@
     "lint": "oxlint --deny-warnings && gplint e2e/features && gplint -c scripts/oxcrap/features/.gplintrc scripts/oxcrap/features && node scripts/check-unused-steps.ts -c playwright.config.ts -c scripts/oxcrap/features/playwright.config.ts && rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,orphan-module-globs,overlapping-globs && rumdl check .",
     "format": "oxfmt && node scripts/format-features.ts e2e/features scripts/oxcrap/features",
     "format:check": "oxfmt --check && node scripts/format-features.ts --check e2e/features scripts/oxcrap/features",
-    "oxcrap": "node scripts/oxcrap/oxcrap.ts"
+    "oxcrap": "npm run oxcrap:app --silent && npm run oxcrap:tooling --silent",
+    "oxcrap:app": "node scripts/oxcrap/oxcrap.ts",
+    "oxcrap:tooling": "node scripts/oxcrap/oxcrap.ts -c scripts/oxcrap/.oxcraprc.json"
   },
   "dependencies": {
     "@liveblocks/client": "^3.24.5",

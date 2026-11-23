@@ -1,0 +1,11 @@
+{
+  "$schema": "./configuration_schema.json",
+  // oxCrap scoring its own code, against its unit and property tests' coverage, which
+  // vitest.tooling.config.ts writes. `npm run oxcrap` runs this after the app's config.
+  // docs/engineering/crap.md says what to do with a finding.
+  "files": ["**/*.ts"],
+  // The defaults, and features/, which is the feature contract's test code.
+  "ignorePatterns": ["node_modules/", ".*/", "*.test.*", "*.spec.*", "features/"],
+  "coverage": "../../coverage-tooling/coverage-final.json",
+  "helpUrl": "../../docs/engineering/crap.md"
+}
