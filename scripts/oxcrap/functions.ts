@@ -21,8 +21,13 @@ export type Comment = { type: 'Line' | 'Block'; value: string; start: number; en
 export type Parsed = {
   functions: Fn[];
   comments: Comment[];
+  /** The UTF-16 offsets of every statement and declaration, outermost first. */
+  statements: { start: number; end: number }[];
   position: (offset: number) => Position;
 };
+
+/** Statements and declarations: what a line of code usually begins. */
+const isStatement = (node: AstNode) => /(Statement|Declaration)$/.test(node.type);
 
 export class ParseError extends Error {}
 
@@ -93,9 +98,11 @@ export function parse(file: string, source: string): Parsed {
   }
   const position = positions(source);
   const functions: Fn[] = [];
+  const statements: Parsed['statements'] = [];
 
   const visit = (node: AstNode, ancestors: AstNode[], enclosing: Fn[]) => {
     let inside = enclosing;
+    if (isStatement(node)) statements.push({ start: node.start, end: node.end });
     if (FUNCTION_TYPES.has(node.type) && node.body) {
       const parent = ancestors.at(-1);
       const own =
@@ -124,5 +131,5 @@ export function parse(file: string, source: string): Parsed {
     start,
     end,
   }));
-  return { functions, comments, position };
+  return { functions, comments, statements, position };
 }

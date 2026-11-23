@@ -94,6 +94,32 @@ describe('findAllows', () => {
     ]);
   });
 
+  it('matches a callback a formatter wrapped onto the line below its call', () => {
+    const code = `${allow}\nseed.items.forEach(\n  (item) => {\n    if (item) use(item);\n  },\n);\n`;
+    expect(allows(code)).toMatchObject({
+      allowed: [{ name: 'seed.items.forEach callback', line: 1 }],
+      problems: [],
+    });
+  });
+
+  it('matches the outer function in a wrapped statement, not the ones nested in it', () => {
+    const code = `${allow}\nydoc.transact(\n  () => {\n    seed.items.forEach((item) => use(item));\n  },\n);\n`;
+    expect(allows(code).allowed.map((a) => a.name)).toEqual(['ydoc.transact callback']);
+  });
+
+  it('fails a comment above a wrapped statement holding two functions, rather than guessing', () => {
+    const code = `${allow}\npromise.then(\n  (value) => value,\n  (error) => error,\n);\n`;
+    expect(allows(code).problems).toEqual([
+      "1: 2 functions are in the statement starting on line 2 (promise.then callback, promise.then callback), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.",
+    ]);
+  });
+
+  it('fails a comment above a statement with no function in it', () => {
+    expect(allows(`${allow}\nconst total = items\n  .length;\n`).problems).toEqual([
+      '1: This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
+    ]);
+  });
+
   it('matches a function nested on the same line to the outer one', () => {
     expect(
       allows(`${allow}\nconst grade = (n) => [n].map((m) => m);\n`).allowed.map((a) => a.name),
