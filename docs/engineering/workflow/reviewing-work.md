@@ -29,6 +29,15 @@ Check every changed test expectation against what the work is for. Each one need
 
 A changed expectation with no reason, or with a reason the intent doesn't cover, is a finding: report it, and don't approve until it's explained or reverted.
 
+## New and moved modules
+
+For each module the work adds, and each module it moves code into:
+
+- **Check whether the code needs a property test,** as [Property tests](../testing-conventions.md#property-tests) says: a rule you can check without working out the answer the way the code does. If it does, it needs one. A missing one is a finding.
+- **Check the tests that covered the code before still reach it.** A test of the file it came from may have covered only one case of what moved.
+
+When a finding says the tests can't catch a bug, answer it with a test that can, such as a property test, not only with examples of the case the finding names.
+
 ## Changing this document
 
 The reasons for these rules, their sources, and the cases behind them are in [reviewing-work.meta.md](reviewing-work.meta.md). Read it only when changing or questioning a rule here.
