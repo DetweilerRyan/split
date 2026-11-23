@@ -32,8 +32,9 @@ export function useActiveIdentity(
   // The active identity is the one chosen, else the one saved for this room, else the first
   // participant. It is worked out during render from React's own values, so no render goes by
   // without one.
-  const isParticipant = (id: string | null) =>
-    id !== null && participants.some((person) => person.id === id);
+  function isParticipant(id: string | null) {
+    return id !== null && participants.some((person) => person.id === id);
+  }
   let activeId: string | null = null;
   if (isParticipant(chosenId)) {
     activeId = chosenId;

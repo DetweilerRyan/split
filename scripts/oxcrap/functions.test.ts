@@ -6,8 +6,9 @@ import { ParseError, parse, positions } from './functions.ts';
 const SEPARATELY = COUNT_SEPARATELY;
 
 /** The names of the functions in `code`, each scored on its own so nested ones are listed too. */
-const names = (code: string, file = 'example.tsx') =>
-  parse(file, code, SEPARATELY).functions.map((fn) => fn.name);
+function names(code: string, file = 'example.tsx') {
+  return parse(file, code, SEPARATELY).functions.map((fn) => fn.name);
+}
 
 describe('parse', () => {
   it.each([

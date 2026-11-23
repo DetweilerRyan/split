@@ -6,10 +6,13 @@
 /** An oxc-parser AST node: ESTree-shaped, with UTF-16 `start` and `end` offsets. */
 export type AstNode = { type: string; start: number; end: number; [key: string]: unknown };
 
-export const isNode = (value: unknown): value is AstNode =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as { type?: unknown }).type === 'string';
+export function isNode(value: unknown): value is AstNode {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { type?: unknown }).type === 'string'
+  );
+}
 
 /** A function's own node types. A nested one is scored separately only with `own` counting. */
 export const FUNCTION_TYPES = new Set([
@@ -88,51 +91,50 @@ export function children(node: AstNode): AstNode[] {
   return found;
 }
 
-/** How many paths a node of one type adds, beyond the fixed branches, under `counting`. */
-type Rule = (node: AstNode, parent: AstNode | undefined, counting: Counting) => number;
-
-const labelledJump: Rule = (node, _parent, counting) =>
-  node.label && counting.labelledJumps ? 1 : 0;
-// `a?.b` and `f?.()`; a TypeScript optional parameter, `x?: number`, is an Identifier, not these.
-const optionalLink: Rule = (node, _parent, counting) =>
-  node.optional === true && counting.optionalChaining ? 1 : 0;
-
-const RULES = new Map<string, Rule>([
-  // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
-  [
-    'SwitchStatement',
-    (node, _parent, counting) =>
-      counting.switchCases === 'once' &&
-      ((node.cases as AstNode[] | undefined) ?? []).some((c) => c.test !== null)
-        ? 1
-        : 0,
-  ],
-  // Each case but `default:`.
-  [
-    'SwitchCase',
-    (node, _parent, counting) => (counting.switchCases === 'each' && node.test !== null ? 1 : 0),
-  ],
-  // Each operator, or with `sequence`, the outermost operator counts its runs and the rest add 0.
-  [
-    'LogicalExpression',
-    (node, parent, counting) => {
-      if (counting.logicalOperators === 'each') return 1;
-      return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
-    },
-  ],
-  ['BreakStatement', labelledJump],
-  ['ContinueStatement', labelledJump],
-  // `&&=`, `||=` and `??=`.
-  ['AssignmentExpression', (node) => (LOGICAL_ASSIGNMENTS.has(node.operator as string) ? 1 : 0)],
-  // `x = 1` as a parameter, or `{ x = 1 }` and `[x = 1]` in destructuring.
-  ['AssignmentPattern', (_node, _parent, counting) => (counting.defaultValues ? 1 : 0)],
-  ['MemberExpression', optionalLink],
-  ['CallExpression', optionalLink],
-]);
-
+/** How many paths a node adds, under `counting`. */
+// @crap-allow CRAP 21, complexity 21. One dispatch over the node types that add paths, each case a line; splitting it, or moving it into a lookup table, would only hide the branches.
 function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
-  return RULES.get(node.type)?.(node, parent, counting) ?? 0;
+  switch (node.type) {
+    case 'SwitchStatement':
+      // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
+      return counting.switchCases === 'once' && hasCase(node) ? 1 : 0;
+    case 'SwitchCase':
+      // `default:` adds no path.
+      return counting.switchCases === 'each' && node.test !== null ? 1 : 0;
+    case 'LogicalExpression':
+      return logicalAdds(node, parent, counting);
+    case 'BreakStatement':
+    case 'ContinueStatement':
+      return counting.labelledJumps && node.label ? 1 : 0;
+    case 'AssignmentExpression':
+      // `&&=`, `||=` and `??=`.
+      return LOGICAL_ASSIGNMENTS.has(node.operator as string) ? 1 : 0;
+    case 'AssignmentPattern':
+      // `x = 1` as a parameter, or `{ x = 1 }` and `[x = 1]` in destructuring.
+      return counting.defaultValues ? 1 : 0;
+    case 'MemberExpression':
+    case 'CallExpression':
+      // `a?.b` and `f?.()`; a TypeScript optional parameter, `x?: number`, is an Identifier.
+      return counting.optionalChaining && node.optional === true ? 1 : 0;
+    default:
+      return 0;
+  }
+}
+
+/** Whether a switch has a case beyond `default:`. */
+function hasCase(node: AstNode) {
+  const cases = (node.cases as AstNode[] | undefined) ?? [];
+  return cases.some((c) => c.test !== null);
+}
+
+/**
+ * What a logical operator adds: 1 each, or with `sequence`, the outermost operator of an
+ * expression counts its runs, in source order, and the rest add 0.
+ */
+function logicalAdds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
+  if (counting.logicalOperators === 'each') return 1;
+  return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
 }
 
 /**
@@ -141,7 +143,7 @@ function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
  */
 function operatorRuns(node: AstNode) {
   const operators: string[] = [];
-  const walk = (n: unknown) => {
+  function walk(n: unknown) {
     if (!isNode(n)) return;
     if (n.type === 'ParenthesizedExpression') walk(n.expression);
     else if (n.type === 'LogicalExpression') {
@@ -149,7 +151,7 @@ function operatorRuns(node: AstNode) {
       operators.push(n.operator as string);
       walk(n.right);
     }
-  };
+  }
   walk(node);
   return operators.filter((op, i) => i === 0 || operators[i - 1] !== op).length;
 }
@@ -160,14 +162,15 @@ function operatorRuns(node: AstNode) {
  */
 export function complexity(fn: AstNode, counting: Counting = COUNT_ALL) {
   let count = 1;
-  const enters = (child: AstNode) =>
-    counting.nestedFunctions === 'enclosing' || !FUNCTION_TYPES.has(child.type);
-  const visit = (node: AstNode, parent: AstNode | undefined) => {
+  function enters(child: AstNode) {
+    return counting.nestedFunctions === 'enclosing' || !FUNCTION_TYPES.has(child.type);
+  }
+  function visit(node: AstNode, parent: AstNode | undefined) {
     count += adds(node, parent, counting);
     // Parentheses don't break a run of operators, so a child of them sees what's outside them.
     const own = node.type === 'ParenthesizedExpression' ? parent : node;
     for (const child of children(node)) if (enters(child)) visit(child, own);
-  };
+  }
   for (const child of children(fn)) if (enters(child)) visit(child, fn);
   return count;
 }

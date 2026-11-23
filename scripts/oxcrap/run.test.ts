@@ -8,8 +8,9 @@ import { type Host, isUrl, outcome, outside, run, USAGE } from './run.ts';
 const CWD = '/repo';
 
 /** A function with `complexity - 1` if statements. */
-const branchy = (name: string, complexity: number) =>
-  `export function ${name}(n: number) {\n${Array.from({ length: complexity - 1 }, (_, i) => `  if (n === ${i}) return ${i};`).join('\n')}\n  return -1;\n}\n`;
+function branchy(name: string, complexity: number) {
+  return `export function ${name}(n: number) {\n${Array.from({ length: complexity - 1 }, (_, i) => `  if (n === ${i}) return ${i};`).join('\n')}\n  return -1;\n}\n`;
+}
 
 /** A coverage report covering `files` (absolute paths), all or none of each. */
 function report(files: Record<string, string>, covered: string[] = []) {
@@ -71,8 +72,9 @@ function project(extra: Record<string, string> = {}, covered: string[] = []) {
   };
 }
 
-const oxcrap = (args: string[], files: Record<string, string>, times?: Record<string, number>) =>
-  run(args, host(files, times));
+function oxcrap(args: string[], files: Record<string, string>, times?: Record<string, number>) {
+  return run(args, host(files, times));
+}
 
 describe('run', () => {
   it('reports a function over the limits, with the comment that would allow it, and exits 1', () => {

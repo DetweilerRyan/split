@@ -113,6 +113,25 @@ The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap
   - **Nothing in this repository changed:** `src/` and `app/` have no recursion and no labelled jumps.
 - **The fast-check property** checks every combination of the options. Its grammar keeps a function's own branches, its default values, its `?.` links and its nested functions' contents apart.
 
+### oxCrap scores itself
+
+- **The owner's choices ([#70](https://github.com/DetweilerRyan/split/issues/70), session, 2026-11-23):**
+  - the config is `scripts/oxcrap/.oxcraprc.json`;
+  - `npm run oxcrap` scores the app, then oxCrap, so it stays one definition-of-done row and one CI step;
+  - it scores oxCrap only, without its tests or `features/`, and other tooling waits for its own issues;
+  - "Refactor everything": every function over the limits was refactored rather than allowed, except `adds` (below).
+- **The tooling Vitest config split in two,** a unit config with coverage and a real config without, so only unit and property tests count, as [Coverage never comes from end-to-end tests](#coverage-never-comes-from-end-to-end-tests) says. The owner chose this over a third config just for Stryker ("add option 3 to #70"), which then points at the unit config.
+- **`oxcrap:app` and `oxcrap:tooling`** exist so the Stop hook scores only what changed, and a fresh worktree with one report missing isn't refused.
+- **The command line's logic moved to `run.ts`,** behind a `Host` of file-system calls, so unit tests reach it. The feature contract still runs the real program, but counts for none of its coverage.
+- **A report that isn't a JSON object is refused** as "isn't an istanbul JSON coverage report". Before, `null` crashed with a TypeError. An independent review flagged this as the refactor's one change in behaviour, and it was kept as a fix.
+
+### Lookup tables don't lower a score
+
+- **The owner set the rule** on [#81](https://github.com/DetweilerRyan/split/pull/81#discussion_r4671330070), where a refactor had moved `adds`'s cases into a `Map` of functions: "moving a switch statement (static) into a runtime data structure is never the right solution to reducing cyclomatic complexity. this is a cheat to get around the crap thresholds."
+- **Why:** the paths are still there, chosen by a key instead of a `case`. Counting stops seeing them, so the score drops without the code getting any simpler to test.
+- **`adds` is allowed instead.** It's one dispatch over the node types that add paths. The owner chose "Allow it" over splitting it into two switches ([feedback](https://github.com/DetweilerRyan/split/pull/81#issuecomment-7112721212)).
+- **oxCrap doesn't catch it yet.** [#82](https://github.com/DetweilerRyan/split/issues/82) is to count static lookups and `Set.has` as the branches they stand for. Until then the rule is enforced by review.
+
 ### The name
 
 - **The owner renamed it from `crap` to oxCrap** "so that it's more in line with the oxc family of tools. maybe we'd open source it some day."

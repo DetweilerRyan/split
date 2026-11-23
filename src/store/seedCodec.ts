@@ -81,8 +81,11 @@ export const MAX_ROSTER = 50;
 export const MAX_TEXT = 200;
 
 // Every `error` below is a suffix; formatSeedIssues prepends the field path.
-const text = (max = MAX_TEXT) =>
-  z.string({ error: 'must be a string' }).max(max, { error: `must be at most ${max} characters` });
+function text(max = MAX_TEXT) {
+  return z
+    .string({ error: 'must be a string' })
+    .max(max, { error: `must be at most ${max} characters` });
+}
 const amount = z.number({ error: 'must be a finite number' });
 const currencyCode = z
   .string({ error: 'must be an ISO 4217 currency code' })

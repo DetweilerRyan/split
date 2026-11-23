@@ -12,10 +12,10 @@ export type FileCoverage = {
 export type Report = Record<string, FileCoverage>;
 
 /** Whether `file` has every part of an istanbul file entry that the scoring reads. */
-const isFileCoverage = (file: unknown) => {
+function isFileCoverage(file: unknown) {
   const entry = file as Partial<FileCoverage> | null | undefined;
   return Boolean(entry?.statementMap && entry.s && entry.fnMap && entry.f);
-};
+}
 
 /** Reads a report's text, keyed by absolute path as istanbul writes it, or says what's wrong. */
 export function parseReport(text: string, path: string): Report {
@@ -43,10 +43,12 @@ export function newerThan(reportTime: number, files: { file: string; time: numbe
     .map((f) => f.file);
 }
 
-const before = (a: Range['start'], b: Range['start']) =>
-  a.line < b.line || (a.line === b.line && a.column <= b.column);
-const contains = (outer: Range, inner: Range) =>
-  before(outer.start, inner.start) && before(inner.end, outer.end);
+function before(a: Range['start'], b: Range['start']) {
+  return a.line < b.line || (a.line === b.line && a.column <= b.column);
+}
+function contains(outer: Range, inner: Range) {
+  return before(outer.start, inner.start) && before(inner.end, outer.end);
+}
 
 /** The innermost of `functions` whose range holds `range`. */
 function innermost(functions: Fn[], range: Range) {

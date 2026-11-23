@@ -29,9 +29,9 @@ export function saveIdentity(roomId: RoomId, id: string) {
 export function subscribeToSavedIdentity(roomId: RoomId, onChange: () => void) {
   const key = savedIdentityKey(roomId);
   // event.key is null when another tab clears all of localStorage.
-  const onStorage = (event: StorageEvent) => {
+  function onStorage(event: StorageEvent) {
     if (event.key === key || event.key === null) onChange();
-  };
+  }
   listeners.add(onChange);
   window.addEventListener('storage', onStorage);
   return () => {

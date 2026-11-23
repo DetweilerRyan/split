@@ -5,7 +5,9 @@ import { computeReceiptMath } from './math';
 // @crap-allow CRAP 132, complexity 11. Debt from before the CRAP check (#63): no tests yet.
 export function buildExportText(snapshot: RoomSnapshot): string {
   const math = computeReceiptMath(snapshot);
-  const fmt = (amount: number) => formatMoney(amount, math.currency);
+  function fmt(amount: number) {
+    return formatMoney(amount, math.currency);
+  }
   const lines = [`🧾 ${snapshot.title}`, `💱 Currency: ${math.currency}`];
   if (math.displayCurrency && math.effectiveRate !== null) {
     lines.push(

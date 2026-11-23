@@ -68,13 +68,13 @@ function shape(file: string, source: string, counting: Counting) {
 /** The ranges of nodes whose text a new line would change the meaning of: JSX and template literals. */
 function protectedRanges(file: string, source: string) {
   const ranges: [number, number][] = [];
-  const visit = (node: AstNode) => {
+  function visit(node: AstNode) {
     if (/^JSX(Element|Fragment)$/.test(node.type) || node.type === 'TemplateLiteral') {
       ranges.push([node.start, node.end]);
       return;
     }
     for (const child of children(node)) visit(child);
-  };
+  }
   const program = parseSync(file, source).program as unknown;
   if (isNode(program)) visit(program);
   return ranges;
@@ -83,7 +83,9 @@ function protectedRanges(file: string, source: string) {
 /** Inserts `text` as a line of its own before every line that starts outside JSX and templates. */
 function insertLines(file: string, source: string, text: string) {
   const ranges = protectedRanges(file, source);
-  const inside = (offset: number) => ranges.some(([start, end]) => offset > start && offset < end);
+  function inside(offset: number) {
+    return ranges.some(([start, end]) => offset > start && offset < end);
+  }
   let offset = 0;
   return source
     .split('\n')

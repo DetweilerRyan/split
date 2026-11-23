@@ -18,7 +18,7 @@ All three run oxCrap on a fresh report, so they print the same findings.
 
 1. **Fix failing tests and lint first,** then run `npm test` and `npm run test:tooling`, for what you changed, and `npm run oxcrap` again. A test run that fails writes no coverage report, so there's no score until the tests pass, and fixing either can change the scores.
 2. **First add tests for the branches the function doesn't run yet.** This changes no behaviour and is usually enough to bring the score under the limit. Write them as [testing conventions](testing-conventions.md) say, in the project the function belongs in. A `real` test or an end-to-end scenario doesn't count, as [above](#where-findings-come-from) says.
-3. **If its complexity is over the limit, refactor it,** into smaller functions only where the split reads better than the original. Don't extract a helper that exists only to pass the limit.
+3. **If its complexity is over the limit, refactor it,** into smaller functions only where the split reads better than the original. Don't extract a helper that exists only to pass the limit, and **don't move a switch's cases or a chain of conditions into a lookup table,** a `Map`, object or `Set` read at run time: that hides the branches without removing them.
 4. **Never skip, delete or weaken a test, or write numbers in a `@crap-allow` comment other than the function's real ones, to pass.**
 5. **If you leave a function over the limits, allow it** with a reason, as [below](#allowing-a-function-over-the-limits) says. Say so in your final message and in the pull request's verification, as [Submitting work](workflow/submitting-work.md#what-the-description-carries) asks for every check.
 

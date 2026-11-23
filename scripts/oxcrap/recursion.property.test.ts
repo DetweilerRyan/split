@@ -14,7 +14,9 @@ type Form = 'declaration' | 'arrow' | 'method';
 type Call = { to: number; decoy: 'none' | 'shadowed' | 'otherObject' | 'nestedThis' };
 
 const SIZE = 5;
-const name = (i: number) => `f${i}`;
+function name(i: number) {
+  return `f${i}`;
+}
 
 /** A call written so it reaches function `to`, or so it looks like it does but mustn't. */
 function callCode(form: Form, { to, decoy }: Call) {

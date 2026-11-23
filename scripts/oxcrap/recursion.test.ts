@@ -3,10 +3,11 @@ import { COUNT_SEPARATELY, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
 /** Each scored function's complexity, so 1 more than its branches means it's recursive. */
-const complexities = (code: string, counting?: Counting) =>
-  Object.fromEntries(
+function complexities(code: string, counting?: Counting) {
+  return Object.fromEntries(
     parse('example.ts', code, counting).functions.map((fn) => [fn.name, fn.complexity]),
   );
+}
 
 describe('recursion', () => {
   it.each([

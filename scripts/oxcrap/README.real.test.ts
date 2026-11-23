@@ -9,8 +9,9 @@ import { DEFAULTS } from './config.ts';
 describe('README.md', () => {
   it('shows the defaults the code uses', () => {
     const readme = readFileSync(fileURLToPath(new URL('./README.md', import.meta.url)), 'utf8');
-    const json = (value: unknown) =>
-      JSON.stringify(value).replaceAll(',', ', ').replaceAll(':', ': ');
+    function json(value: unknown) {
+      return JSON.stringify(value).replaceAll(',', ', ').replaceAll(':', ': ');
+    }
     expect(readme).toContain(`\`${JSON.stringify(DEFAULTS.files)}\``);
     expect(readme).toContain(
       `\`${JSON.stringify(DEFAULTS.ignorePatterns).replaceAll(',', ', ')}\``,

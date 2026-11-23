@@ -7,16 +7,23 @@ import type { Fn } from './functions.ts';
 export type Scored = { fn: Fn; file: string; coverage: number; crap: number };
 
 /** CRAP: complexity² × (1 − coverage)³ + complexity, with coverage from 0 to 1. */
-export const crapOf = (complexity: number, coverage: number) =>
-  complexity ** 2 * (1 - coverage) ** 3 + complexity;
+export function crapOf(complexity: number, coverage: number) {
+  return complexity ** 2 * (1 - coverage) ** 3 + complexity;
+}
 
-const round = (n: number) => Math.round(n * 10) / 10;
-const numbers = (s: Scored) => `CRAP ${round(s.crap)}, complexity ${s.fn.complexity}`;
-const describe = (s: Scored) =>
-  `${s.fn.name}: ${numbers(s)}, coverage ${Math.round(s.coverage * 100)}%`;
+function round(n: number) {
+  return Math.round(n * 10) / 10;
+}
+function numbers(s: Scored) {
+  return `CRAP ${round(s.crap)}, complexity ${s.fn.complexity}`;
+}
+function describe(s: Scored) {
+  return `${s.fn.name}: ${numbers(s)}, coverage ${Math.round(s.coverage * 100)}%`;
+}
 
-const order = (a: Finding, b: Finding) =>
-  a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1;
+function order(a: Finding, b: Finding) {
+  return a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1;
+}
 
 /**
  * Every function is checked: one over the limits fails unless a @crap-allow comment gives its
@@ -25,8 +32,9 @@ const order = (a: Finding, b: Finding) =>
  */
 export function check(scored: Scored[], allowed: Map<Fn, Allow>, limits: Limits) {
   // The score is compared as it's printed and written in @crap-allow comments: to one decimal place.
-  const overLimit = (s: Scored) =>
-    round(s.crap) > limits.crap || s.fn.complexity > limits.complexity;
+  function overLimit(s: Scored) {
+    return round(s.crap) > limits.crap || s.fn.complexity > limits.complexity;
+  }
   const problems: Finding[] = [];
   for (const s of scored) {
     const allow = allowed.get(s.fn);

@@ -19,16 +19,20 @@ function scored(name: string, complexity: number, coverage: number, line = 1): S
   return { fn, file: 'src/a.ts', coverage, crap: crapOf(complexity, coverage) };
 }
 
-const allowFor = (crap: number, complexity: number, line = 1): Allow => ({
-  file: 'src/a.ts',
-  line,
-  lastLine: line,
-  crap,
-  complexity,
-  reason: 'A reason.',
-});
+function allowFor(crap: number, complexity: number, line = 1): Allow {
+  return {
+    file: 'src/a.ts',
+    line,
+    lastLine: line,
+    crap,
+    complexity,
+    reason: 'A reason.',
+  };
+}
 
-const messages = (findings: ReturnType<typeof check>) => findings.map((f) => f.message);
+function messages(findings: ReturnType<typeof check>) {
+  return findings.map((f) => f.message);
+}
 
 describe('crapOf', () => {
   it('is complexity² × (1 − coverage)³ + complexity', () => {

@@ -37,17 +37,24 @@ export type Outcome = { status: number; stdout: string[]; stderr: string[] };
 export const USAGE =
   'Usage: node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--help-url <url>] [<path>...]';
 
-const toPosix = (path: string) => path.split(sep).join('/');
+function toPosix(path: string) {
+  return path.split(sep).join('/');
+}
 
 /**
  * Whether a path or glob, from the scored folder, reaches outside it. A config covers the folder
  * it's in, as oxlint's does.
  */
-export const outside = (path: string) =>
-  /(^|[/{,])\.\.(?=[/},]|$)/.test(path) || posixPath.isAbsolute(path) || /^[a-z]:/i.test(path);
+export function outside(path: string) {
+  return (
+    /(^|[/{,])\.\.(?=[/},]|$)/.test(path) || posixPath.isAbsolute(path) || /^[a-z]:/i.test(path)
+  );
+}
 
 /** Whether a help value is a URL, such as https://…, rather than a path. */
-export const isUrl = (value: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
+export function isUrl(value: string) {
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
+}
 
 /** One run of oxCrap, over a host. */
 class Run {
@@ -240,7 +247,9 @@ class Run {
         `No files to score: nothing matches ${where} that "ignorePatterns" leaves in.`,
       );
     }
-    const absolute = (file: string) => (isAbsolute(file) ? file : join(root, file));
+    function absolute(file: string) {
+      return isAbsolute(file) ? file : join(root, file);
+    }
     const report = this.readReport(coverage, files.matched.map(absolute));
     const problems = this.findings(files.scored.map(absolute), report, coverage, config);
     return outcome(problems, help);

@@ -27,7 +27,9 @@ export function ItemRow({
   onDelete,
 }: ItemRowProps) {
   const claimedBy = participants.filter((person) => item.claims[person.id]);
-  const formatAmount = (value: number) => formatMoney(value, currency);
+  function formatAmount(value: number) {
+    return formatMoney(value, currency);
+  }
 
   if (editing) {
     return (
