@@ -8,6 +8,7 @@ import { ParticipantCards } from './components/ParticipantCards';
 import { SeedModal } from './components/SeedModal';
 import { RestaurantModal } from './components/RestaurantModal';
 import { ShareModal } from './components/ShareModal';
+import { Toast, ToastContext } from './components/Toast';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
 import { useActiveIdentity } from './hooks/useActiveIdentity';
 import { useRoomProvider } from './hooks/useRoomProvider';
@@ -258,42 +259,37 @@ export default function RoomView({ roomId }: { roomId: RoomId }) {
           </section>
         </aside>
       </main>
-      <IdentityModal
-        open={identityOpen}
-        participants={snapshot.participants}
-        activeId={activeId}
-        onClose={() => setIdentityOpen(false)}
-        onSelect={chooseIdentity}
-        onAdd={addParticipant}
-        onRemove={removeParticipant}
-      />
-      <RestaurantModal
-        open={detailsOpen}
-        snapshot={snapshot}
-        roomId={roomId}
-        onClose={() => setDetailsOpen(false)}
-      />
-      <ShareModal
-        open={shareOpen}
-        url={roomUrl}
-        onClose={() => setShareOpen(false)}
-        onCopy={copyRoomLink}
-      />
-      <SeedModal
-        open={seedOpen}
-        onClose={() => setSeedOpen(false)}
-        onImport={importSeed}
-        onPreset={loadPreset}
-        onBlankRoom={newBlankRoom}
-      />
-      {toast && (
-        <div
-          role="status"
-          className="fixed bottom-4 right-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-lg"
-        >
-          {toast}
-        </div>
-      )}
+      <ToastContext value={toast}>
+        <IdentityModal
+          open={identityOpen}
+          participants={snapshot.participants}
+          activeId={activeId}
+          onClose={() => setIdentityOpen(false)}
+          onSelect={chooseIdentity}
+          onAdd={addParticipant}
+          onRemove={removeParticipant}
+        />
+        <RestaurantModal
+          open={detailsOpen}
+          snapshot={snapshot}
+          roomId={roomId}
+          onClose={() => setDetailsOpen(false)}
+        />
+        <ShareModal
+          open={shareOpen}
+          url={roomUrl}
+          onClose={() => setShareOpen(false)}
+          onCopy={copyRoomLink}
+        />
+        <SeedModal
+          open={seedOpen}
+          onClose={() => setSeedOpen(false)}
+          onImport={importSeed}
+          onPreset={loadPreset}
+          onBlankRoom={newBlankRoom}
+        />
+        {[identityOpen, detailsOpen, shareOpen, seedOpen].every((open) => !open) && <Toast />}
+      </ToastContext>
       {Object.keys(totals).length === 0 && <div className="sr-only">No participants yet.</div>}
     </div>
   );

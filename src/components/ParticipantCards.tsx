@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { RoomSnapshot } from '../store/useReceiptStore';
 import { formatMoney } from '../utils/currency';
 import { computeReceiptMath } from '../utils/math';
@@ -9,9 +10,12 @@ interface ParticipantCardsProps {
 // @crap-allow CRAP 72, complexity 8. Debt from before nested functions, default values and ?. counted (#74): no tests yet.
 export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
   const math = computeReceiptMath(snapshot);
+  const headingId = useId();
   return (
-    <section className="card p-4">
-      <h2 className="mb-3 font-extrabold text-slate-900">Per-person totals</h2>
+    <section className="card p-4" aria-labelledby={headingId}>
+      <h2 id={headingId} className="mb-3 font-extrabold text-slate-900">
+        Per-person totals
+      </h2>
       <div className="space-y-3">
         {snapshot.participants.map((participant) => {
           const totals = math.perPerson[participant.id];

@@ -34,8 +34,7 @@ export function ConnectionStatus({ page }: Actor): Locator {
 export function ItemRow(item: string): Question<Locator> {
   return ({ page }) =>
     page
-      .locator('section')
-      .filter({ has: page.getByRole('heading', { name: 'Receipt items' }) })
+      .getByRole('region', { name: 'Receipt items' })
       .getByRole('article')
       .filter({ has: page.getByText(item, { exact: true }) });
 }
@@ -44,8 +43,7 @@ export function ItemRow(item: string): Question<Locator> {
 export function TotalsFor(person: string): Question<Locator> {
   return ({ page }) =>
     page
-      .locator('section')
-      .filter({ has: page.getByRole('heading', { name: 'Per-person totals' }) })
+      .getByRole('region', { name: 'Per-person totals' })
       .getByRole('article')
       .filter({ has: page.getByRole('heading', { name: person, exact: true }) });
 }

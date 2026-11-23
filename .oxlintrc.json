@@ -1,6 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import"],
+  // jsx-a11y is oxlint's own port of eslint-plugin-jsx-a11y's rules, chosen over adding ESLint
+  // and that plugin in https://github.com/DetweilerRyan/split/issues/67.
+  "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import", "jsx-a11y"],
   "rules": {
     // The owner's rule (#81): "always use the function syntax for named functions. only use
     // lambdas when passing a function as data."
