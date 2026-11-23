@@ -206,166 +206,108 @@ export function recursive<Fn>(
   callerOf: (node: AstNode) => Fn | undefined,
   scoredAt: (node: AstNode) => Fn | undefined,
 ) {
-  const graph = new CallGraph(callerOf, scoredAt);
-  graph.visit(program, null);
-  return inCycles(graph.edges);
+  const calls = callsIn(program, { scopes: [], fn: undefined, self: null }, null);
+  return inCycles(graphOf(calls, callerOf, scoredAt));
 }
 
-/** Walks a program, resolving each call it can to the function called, as edges between scored ones. */
-class CallGraph<Fn> {
-  /** For each scored function, the scored functions it calls. */
-  readonly edges = new Map<Fn, Set<Fn>>();
-  readonly callerOf: (node: AstNode) => Fn | undefined;
-  readonly scoredAt: (node: AstNode) => Fn | undefined;
-  /** The scopes around the node being visited, innermost last. */
-  readonly scopes: Scope[] = [];
-  /** The functions around the node being visited, innermost last. */
-  readonly functions: AstNode[] = [];
-  /** For each function on the way in, the class members its `this` reaches, or null. */
-  readonly thisMembers: (Members | null)[] = [];
+/**
+ * Where a node sits: the scopes around it, innermost last; the function it's in; and the class
+ * members that function's `this` reaches, or null.
+ */
+type Context = { scopes: readonly Scope[]; fn: AstNode | undefined; self: Members | null };
+/** A call from the function it's written in to the function it resolves to, if any. */
+type Call = { from: AstNode | undefined; to: AstNode | null | undefined };
 
-  constructor(
-    callerOf: (node: AstNode) => Fn | undefined,
-    scoredAt: (node: AstNode) => Fn | undefined,
-  ) {
-    this.callerOf = callerOf;
-    this.scoredAt = scoredAt;
+/** The calls in `node` and below it. `members` is what `this` reaches in a class member's function. */
+function callsIn(node: AstNode, context: Context, members: Members | null): Call[] {
+  const own = node.type === 'CallExpression' ? callsOf(node, context) : [];
+  return [...own, ...callsBelow(node, context, members)];
+}
+
+/** The calls below `node`, in the scope and `this` each kind of node gives its children. */
+function callsBelow(node: AstNode, context: Context, members: Members | null): Call[] {
+  if (node.type === 'ClassBody') return callsInClass(node, context);
+  if (FUNCTION_TYPES.has(node.type)) return callsInFunction(node, context, members);
+  if (opensScope(node)) {
+    const scopes = [...context.scopes, blockScope(node)];
+    return childCalls(node, { ...context, scopes }, members);
   }
+  return childCalls(node, context, members);
+}
 
-  /** Visits `node`; `members` is what `this` reaches in a class member's function, or null. */
-  visit(node: AstNode, members: Members | null) {
-    if (node.type === 'CallExpression') this.visitCall(node);
-    if (node.type === 'ClassBody') this.visitClassBody(node);
-    else if (FUNCTION_TYPES.has(node.type)) this.visitFunction(node, members);
-    else if (opensScope(node)) this.visitScope(node, members);
-    else this.visitChildren(node, members);
-  }
+function childCalls(node: AstNode, context: Context, members: Members | null): Call[] {
+  return children(node).flatMap((child) => callsIn(child, context, members));
+}
 
-  visitChildren(node: AstNode, members: Members | null) {
-    for (const child of children(node)) this.visit(child, members);
-  }
+/** A bare `f()` or a `this.f()`, resolved to the function it calls. */
+function callsOf(call: AstNode, context: Context): Call[] {
+  if (!isNode(call.callee)) return [];
+  const { callee } = call;
+  const named = callee.type === 'Identifier' ? [lookup(context.scopes, callee.name as string)] : [];
+  const method = thisMethod(callee);
+  const viaThis = method === undefined ? [] : [context.self?.get(method)];
+  return [...named, ...viaThis].map((to) => ({ from: context.fn, to }));
+}
 
-  /** Adds an edge for a bare `f()` or a `this.f()`, to the function it resolves to. */
-  visitCall(call: AstNode) {
-    if (!isNode(call.callee)) return;
-    const from = this.functions.at(-1);
-    if (call.callee.type === 'Identifier')
-      this.addEdge(from, this.lookup(call.callee.name as string));
-    const method = thisMethod(call.callee);
-    if (method !== undefined) this.addEdge(from, this.thisMembers.at(-1)?.get(method));
-  }
-
-  /** Visits each member of a class, with the class's methods and fields as its `this`. */
-  visitClassBody(body: AstNode) {
-    const own = classMembers(body);
-    for (const member of (body.body as AstNode[]) ?? []) this.visitMember(member, own);
-  }
-
-  /** A class member: a method's or field's function gets the class as its `this`. */
-  visitMember(member: AstNode, own: Members) {
-    for (const child of children(member)) {
+/** The calls in a class's members, each with the class's methods and fields as its `this`. */
+function callsInClass(body: AstNode, context: Context): Call[] {
+  const own = classMembers(body);
+  return ((body.body as AstNode[]) ?? []).flatMap((member) =>
+    children(member).flatMap((child) => {
+      // A method's or field's function gets the class as its `this`.
       const value = functionValue(child);
-      if (value && child === member.value) this.visit(value, own);
-      else this.visit(child, own);
-    }
-  }
-
-  visitFunction(fn: AstNode, members: Members | null) {
-    this.scopes.push(functionScope(fn));
-    this.functions.push(fn);
-    // An arrow keeps the `this` around it; any other function has its own.
-    // A class field's arrow has the instance as its `this`, which `members` then gives.
-    this.thisMembers.push(
-      fn.type === 'ArrowFunctionExpression'
-        ? (members ?? this.thisMembers.at(-1) ?? null)
-        : members,
-    );
-    this.visitChildren(fn, null);
-    this.thisMembers.pop();
-    this.functions.pop();
-    this.scopes.pop();
-  }
-
-  visitScope(node: AstNode, members: Members | null) {
-    this.scopes.push(blockScope(node));
-    this.visitChildren(node, members);
-    this.scopes.pop();
-  }
-
-  /** What `name` is bound to in the nearest scope that declares it, or undefined if none does. */
-  lookup(name: string) {
-    for (let i = this.scopes.length - 1; i >= 0; i--) {
-      if (this.scopes[i].has(name)) return this.scopes[i].get(name);
-    }
-    return undefined;
-  }
-
-  /** Records that the scored function `from` counts towards calls the one `to` is, if both are. */
-  addEdge(from: AstNode | undefined, to: AstNode | null | undefined) {
-    const source = from ? this.callerOf(from) : undefined;
-    const target = to ? this.scoredAt(to) : undefined;
-    if (source === undefined || target === undefined) return;
-    let targets = this.edges.get(source);
-    if (!targets) this.edges.set(source, (targets = new Set()));
-    targets.add(target);
-  }
+      return callsIn(value && child === member.value ? value : child, context, own);
+    }),
+  );
 }
 
-/** The nodes in a cycle of `edges`: a component of more than one, or one with an edge to itself. */
+/** The calls in a function, in its own scope. */
+function callsInFunction(fn: AstNode, context: Context, members: Members | null): Call[] {
+  // An arrow keeps the `this` around it; any other function has its own.
+  // A class field's arrow has the instance as its `this`, which `members` then gives.
+  const self = fn.type === 'ArrowFunctionExpression' ? (members ?? context.self) : members;
+  const scopes = [...context.scopes, functionScope(fn)];
+  return childCalls(fn, { scopes, fn, self }, null);
+}
+
+/** What `name` is bound to in the nearest scope that declares it, or undefined if none does. */
+function lookup(scopes: readonly Scope[], name: string) {
+  return scopes.findLast((scope) => scope.has(name))?.get(name);
+}
+
+/**
+ * For each scored function, the scored functions it calls: a call counts towards the scored
+ * function `callerOf` gives, and reaches one only if `scoredAt` gives one.
+ */
+function graphOf<Fn>(
+  calls: Call[],
+  callerOf: (node: AstNode) => Fn | undefined,
+  scoredAt: (node: AstNode) => Fn | undefined,
+) {
+  const edges = new Map<Fn, Set<Fn>>();
+  for (const { from, to } of calls) {
+    const source = from ? callerOf(from) : undefined;
+    const target = to ? scoredAt(to) : undefined;
+    if (source === undefined || target === undefined) continue;
+    edges.set(source, (edges.get(source) ?? new Set<Fn>()).add(target));
+  }
+  return edges;
+}
+
+/** The nodes in a cycle of `edges`: those that lead back to themselves. */
 function inCycles<Fn>(edges: Map<Fn, Set<Fn>>) {
-  const components = new StronglyConnected(edges);
-  for (const fn of edges.keys()) if (!components.index.has(fn)) components.connect(fn);
-  return components.inCycles;
+  return new Set([...edges.keys()].filter((fn) => reachable(edges, fn).has(fn)));
 }
 
-/** Tarjan's strongly-connected-components algorithm, keeping the components that are cycles. */
-class StronglyConnected<Fn> {
-  readonly edges: Map<Fn, Set<Fn>>;
-  /** The order each node was reached in. */
-  readonly index = new Map<Fn, number>();
-  /** The earliest-reached node on the stack each node leads back to. */
-  readonly low = new Map<Fn, number>();
-  readonly stack: Fn[] = [];
-  readonly onStack = new Set<Fn>();
-  readonly inCycles = new Set<Fn>();
-
-  constructor(edges: Map<Fn, Set<Fn>>) {
-    this.edges = edges;
+/** The nodes `start` leads to by one edge or more. */
+function reachable<Fn>(edges: Map<Fn, Set<Fn>>, start: Fn) {
+  const seen = new Set<Fn>();
+  const next = [...(edges.get(start) ?? [])];
+  while (next.length > 0) {
+    const fn = next.pop() as Fn;
+    if (seen.has(fn)) continue;
+    seen.add(fn);
+    next.push(...(edges.get(fn) ?? []));
   }
-
-  /** Searches from `fn`, closing each component the search finishes. */
-  connect(fn: Fn) {
-    const reached = this.index.size;
-    this.index.set(fn, reached);
-    this.low.set(fn, reached);
-    this.stack.push(fn);
-    this.onStack.add(fn);
-    for (const next of this.edges.get(fn) ?? []) {
-      if (!this.index.has(next)) {
-        this.connect(next);
-        this.lower(fn, this.low.get(next) as number);
-      } else if (this.onStack.has(next)) {
-        this.lower(fn, this.index.get(next) as number);
-      }
-    }
-    if (this.low.get(fn) === reached) this.close(fn);
-  }
-
-  lower(fn: Fn, to: number) {
-    this.low.set(fn, Math.min(this.low.get(fn) as number, to));
-  }
-
-  /** Pops `fn`'s component off the stack, keeping it if it's a cycle. */
-  close(fn: Fn) {
-    const component: Fn[] = [];
-    let member: Fn;
-    do {
-      member = this.stack.pop() as Fn;
-      this.onStack.delete(member);
-      component.push(member);
-    } while (member !== fn);
-    if (component.length > 1 || this.edges.get(fn)?.has(fn)) {
-      for (const m of component) this.inCycles.add(m);
-    }
-  }
+  return seen;
 }
