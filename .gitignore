@@ -8,6 +8,8 @@ next-env.d.ts
 .vitest/
 # The coverage report every `npm test` writes, which `npm run oxcrap` reads
 coverage/
+# The tooling's coverage report, which scripts/oxcrap/.oxcraprc.json scores
+coverage-tooling/
 # Branch worktrees (docs/engineering/workflow/starting-work.md)
 .claude/worktrees/
 # Playwright e2e output: the tests playwright-bdd generates from e2e/features, and run results

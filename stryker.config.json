@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "vitest",
   "vitest": {
-    "configFile": "vitest.mutation.config.ts",
+    "configFile": "vitest.tooling.config.ts",
     "related": true
   },
   "tsconfigFile": "stryker-has-no-tsconfig.json",
@@ -21,5 +21,12 @@
     "fileName": "reports/mutation/mutation.json"
   },
   "tempDirName": ".stryker-tmp",
-  "ignorePatterns": ["/.claude", "/coverage", "/test-results", "/.features-gen", "/reports"]
+  "ignorePatterns": [
+    "/.claude",
+    "/.features-gen",
+    "/coverage",
+    "/coverage-tooling",
+    "/reports",
+    "/test-results"
+  ]
 }
