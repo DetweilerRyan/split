@@ -92,18 +92,24 @@ export function children(node: AstNode): AstNode[] {
 }
 
 /** How many paths a node adds, under `counting`. */
-// @crap-allow CRAP 21, complexity 21. One dispatch over the node types that add paths, each case a line; splitting it, or moving it into a lookup table, would only hide the branches.
+// @crap-allow CRAP 25, complexity 25. One dispatch over the node types that add paths, each case a line; splitting it, or moving it into a lookup table, would only hide the branches.
 function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
   switch (node.type) {
     case 'SwitchStatement':
       // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
-      return counting.switchCases === 'once' && hasCase(node) ? 1 : 0;
+      return counting.switchCases === 'once' &&
+        ((node.cases as AstNode[] | undefined) ?? []).some((c) => c.test !== null)
+        ? 1
+        : 0;
     case 'SwitchCase':
       // `default:` adds no path.
       return counting.switchCases === 'each' && node.test !== null ? 1 : 0;
     case 'LogicalExpression':
-      return logicalAdds(node, parent, counting);
+      // 1 each, or with `sequence`, the outermost operator of an expression counts its runs, in
+      // source order, and the rest add 0.
+      if (counting.logicalOperators === 'each') return 1;
+      return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
     case 'BreakStatement':
     case 'ContinueStatement':
       return counting.labelledJumps && node.label ? 1 : 0;
@@ -120,21 +126,6 @@ function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
     default:
       return 0;
   }
-}
-
-/** Whether a switch has a case beyond `default:`. */
-function hasCase(node: AstNode) {
-  const cases = (node.cases as AstNode[] | undefined) ?? [];
-  return cases.some((c) => c.test !== null);
-}
-
-/**
- * What a logical operator adds: 1 each, or with `sequence`, the outermost operator of an
- * expression counts its runs, in source order, and the rest add 0.
- */
-function logicalAdds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
-  if (counting.logicalOperators === 'each') return 1;
-  return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
 }
 
 /**

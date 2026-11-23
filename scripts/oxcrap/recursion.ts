@@ -28,6 +28,7 @@ function opensScope(node: AstNode) {
       return false;
   }
 }
+
 /** The names a binding pattern, such as a parameter or a destructuring, declares. */
 function boundNames(pattern: unknown, into: string[] = []): string[] {
   if (!isNode(pattern)) return into;
@@ -145,7 +146,7 @@ function functionScope(fn: AstNode): Scope {
   return scope;
 }
 
-/** The scope a node `opensScope` says opens, with what it declares directly. */
+/** The scope a node opens, for a node `opensScope` accepts, with what it declares directly. */
 function blockScope(node: AstNode): Scope {
   const scope: Scope = new Map();
   switch (node.type) {
