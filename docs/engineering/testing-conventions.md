@@ -47,6 +47,9 @@ A property test checks a rule that should hold for every input, against many inp
 - **Keep the example tests too.** A property test adds inputs nobody thought of; it doesn't replace the cases a reader needs to see.
 - **Put it in its own sidecar,** `<module>.property.test.ts`, beside the module. It runs with the module's other unit tests, and counts towards the coverage report like them.
 - **Build inputs from fast-check's arbitraries,** and assert with `expect` inside `fc.property`. Return nothing from the property.
+- **Build constraints into the arbitraries,** such as `fc.integer({ min: 1 })`, rather than filtering inputs out with `fc.pre` or `.filter`. Filtering wastes runs and can leave few inputs that test anything.
+- **Don't write a property that only restates what the generator guarantees,** such as checking that a generated positive number is positive. It passes whatever the code does.
+- **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.
 - **Keep it fast.** fast-check runs 100 inputs by default. Raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is.
 - **When one fails, its output gives a seed and a path.** Pass them to `fc.assert` as `{ seed, path }` to run the same input again. Once it's fixed, add the shrunk input as an example test.
 
