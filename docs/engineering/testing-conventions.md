@@ -46,10 +46,20 @@ A property test checks a rule that should hold for every input, against many inp
 - **Don't write one** for components, or for code whose right answer you'd have to work out the same way the code does. Example tests say those more clearly.
 - **Keep the example tests too.** A property test adds inputs nobody thought of; it doesn't replace the cases a reader needs to see.
 - **Put it in its own sidecar,** `<module>.property.test.ts`, beside the module. It runs with the module's other unit tests, and counts towards the coverage report like them.
+- **Generate every way the input can be written, not just its plainest form.** List the rules the code decides, from its issue's decisions or its README, and give the arbitrary a dimension for each:
+  - **where the thing lives,** such as in the file or imported from another;
+  - **the forms it can take,** such as wrappers, casts or aliases;
+  - **code nearby that must, or must not, change the answer.**
+
+  A generator of the plainest shape checks the headline claim and none of the decisions around it.
+
+- **For code that recognises a pattern, generate the dodges and the look-alikes:** rewrites that get around it, and code it must leave alone. Each should give the answer the plain version gives, or the answer for no pattern at all, such as the same code reading a name that isn't a table.
 - **Build inputs from fast-check's arbitraries,** and assert with `expect` inside `fc.property`. Return nothing from the property.
 - **Build constraints into the arbitraries,** such as `fc.integer({ min: 1 })`, rather than filtering inputs out with `fc.pre` or `.filter`. Filtering wastes runs and can leave few inputs that test anything.
 - **Don't write a property that only restates what the generator guarantees,** such as checking that a generated positive number is positive. It passes whatever the code does.
 - **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.
+  - **Break each rule the generator varies, one at a time,** not only the central one. A property that catches a broken core rule can still miss every edge.
+- **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it, and confirm the property fails with the fix undone.
 - **Keep it fast.** fast-check runs 100 inputs by default. Raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is.
 - **When one fails, its output gives a seed and a path.** Pass them to `fc.assert` as `{ seed, path }` to run the same input again. Once it's fixed, add the shrunk input as an example test.
 
