@@ -93,15 +93,16 @@ A deep module is any module whose small interface hides much more logic than the
 - **Keep unit tests for the modules inside it,** for their edge cases.
 - **Don't keep a second test of the same contract,** such as a `real` test of the program, beside the features.
 
-#### When a script is a deep module
+#### Deciding a module is deep
 
-A script in `scripts/` is a deep module when:
+What makes a module deep is how much its internals outweigh its interface, and that isn't measured. So whether a module is deep is the owner's call.
 
-- it has its own folder;
-- it has a README describing its interface;
-- its modules have their own unit tests.
+- **An agent that thinks a module is deep proposes it** in the issue or pull request. It says what the interface is, and what it hides.
+- **Until the owner agrees, test it as any other module.** A script keeps its `real` test.
 
-oxCrap, in `scripts/oxcrap/`, is one. A single-file script keeps its `real` test instead.
+| Deep module               | Decided on                                              |
+| :------------------------ | :------------------------------------------------------ |
+| oxCrap, `scripts/oxcrap/` | [#65](https://github.com/DetweilerRyan/split/issues/65) |
 
 #### A deep module that's a program
 
