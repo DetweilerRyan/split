@@ -54,6 +54,29 @@ function targetLine(code: string[], comment: Comment, parsed: Parsed) {
   return undefined;
 }
 
+/** The outermost of `functions`: those not nested in another of them. */
+const outermost = (functions: Fn[]) =>
+  functions.filter((fn) => !functions.some((other) => fn.parents.includes(other)));
+
+/**
+ * The functions a comment above `line` could mean: those starting on it, outermost first. Failing
+ * that, the outermost functions in the statement starting on it, so a call a formatter wrapped,
+ * with its callback on the line below, still counts.
+ */
+function functionsAt(line: number | undefined, parsed: Parsed) {
+  if (line === undefined) return { candidates: [], where: '' };
+  const starting = outermost(parsed.functions.filter((fn) => fn.start.line === line));
+  if (starting.length > 0) return { candidates: starting, where: `start on line ${line}` };
+  // Statements are listed outermost first, so this is the widest one starting on the line.
+  const statement = parsed.statements.find((s) => parsed.position(s.start).line === line);
+  const inside = statement
+    ? parsed.functions.filter(
+        (fn) => fn.offset.start >= statement.start && fn.offset.end <= statement.end,
+      )
+    : [];
+  return { candidates: outermost(inside), where: `are in the statement starting on line ${line}` };
+}
+
 export function findAllows(file: string, source: string, parsed: Parsed) {
   const problems: Finding[] = [];
   const allowed = new Map<Fn, Allow>();
@@ -71,11 +94,7 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
     }
 
     const target = targetLine(code, comment, parsed);
-    const starting = parsed.functions.filter((fn) => fn.start.line === target);
-    // A function nested in another that starts on the same line belongs to the outer one.
-    const candidates = starting.filter(
-      (fn) => !starting.some((other) => fn.parents.includes(other)),
-    );
+    const { candidates, where } = functionsAt(target, parsed);
     if (candidates.length === 0) {
       problems.push({
         ...at,
@@ -87,7 +106,7 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
     if (candidates.length > 1) {
       problems.push({
         ...at,
-        message: `${candidates.length} functions start on line ${target} (${candidates.map((fn) => fn.name).join(', ')}), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.`,
+        message: `${candidates.length} functions ${where} (${candidates.map((fn) => fn.name).join(', ')}), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.`,
       });
       continue;
     }

@@ -136,7 +136,7 @@ export function RestaurantModal() {
 - **The numbers must be the function's current CRAP score and complexity,** exactly as a finding prints them. oxCrap checks every comment against its function, and fails on one whose numbers don't match, whether the function got worse or better, and even when its code didn't change. The comment is a ratchet: any change to the function's risk shows up as an edit to it.
 - **Update the comment by hand when the numbers change,** and check the reason still holds.
 - **Give a reason after the numbers.** A comment with no reason fails.
-- **Put the function on the line below the comment, on a line of its own.** Other comments, such as a lint directive or a doc comment, can sit between them. A comment that isn't directly above a function fails, and so does one above a line where two functions start.
+- **Put the function on the line below the comment, on a line of its own.** Other comments, such as a lint directive or a doc comment, can sit between them. If no function starts on the line below, the comment applies to the one outermost function in the statement that starts there, such as a callback a formatter wrapped onto the next line. A comment that isn't directly above a function fails. So does one above a line where two functions start, or above a statement holding two.
 - **Delete the comment when the function is within the limits again.** A comment on a function within the limits fails.
 
 A comment that mentions `@crap-allow` without starting with it is ignored, so prose can talk about one.

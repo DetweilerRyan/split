@@ -200,6 +200,51 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 - **The owner asked for the rule** "that oxcrap must not import anything from outside it's own folder" ([choice](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085786799)), so oxCrap can be lifted out into a project of its own.
 - **[Dependency direction](../../docs/engineering/dependency-direction.md) says how it's checked,** and [its sidecar](../../docs/engineering/dependency-direction.meta.md) why rev-dep checks it, what it doesn't catch, and the options not taken.
 
+### Reliability tests
+
+[#65](https://github.com/DetweilerRyan/split/issues/65) asked whether property testing would make oxCrap more reliable. Its riskiest parts are where it meets outside tools: oxc's positions, real TSX syntax and comment handling. So the tests that reach them use real code, or a generator with a known answer.
+
+- **Sanity checks on real code were dropped** ([decision](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227)). The owner said "yes, drop item 1 and keep 2 and 3". Its four invariants hold by construction:
+  - coverage is a ratio of covered statements;
+  - the innermost function is a single answer;
+  - function ranges come from the parser's offsets;
+  - `npm run oxcrap` already checks every `@crap-allow` comment in CI.
+
+#### Reformatting checks
+
+[`functions.real.test.ts`](functions.real.test.ts) takes each file oxCrap scores in `src/` and `app/` and changes only its layout:
+
+- a blank line before every line;
+- an unrelated comment before every line;
+- oxfmt at 40 columns with tabs, far from the repository's settings, so it reflows.
+
+It checks that each function's complexity, which functions a `@crap-allow` matches, and any problems stay the same.
+
+- **Inserted lines skip JSX and template literals,** where a new line would change the code's text rather than its layout. The test finds those ranges with oxc-parser.
+- **Names aren't compared.** A function's name comes from its source text, such as `seed.items.forEach callback`, so a reflow can change it. It only labels a finding. Two callbacks became `(anonymous)` under the 40-column reflow, which this accepts.
+- **The files are read by path, as data.** The test imports nothing from outside oxCrap's folder, but it does depend on this repository's code. A copy of oxCrap lifted out would point it at other code, or drop it.
+- **It found a real limitation.**
+  - **The case:** a `@crap-allow` comment applied only to a function starting on the next code line. When oxfmt wrapped a call so its callback started a line later, the comment in `src/store/seedCodec.ts` detached.
+  - **The decision:** the owner chose to widen the match ([decision](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7107043936)): "option 1". When no function starts on that line, the comment applies to the one outermost function in the statement that does. Two such functions stay an error.
+  - **The alternative:** keep the rule, and document that a wrapped call can detach a comment.
+
+#### A generator-checked complexity count
+
+[`complexity.test.ts`](complexity.test.ts) has a [fast-check](https://github.com/dubzzz/fast-check) property. It builds random functions from a small grammar that records how many branches it writes, and asserts the complexity is 1 plus that number. The grammar includes:
+
+- ifs, else-ifs and loops;
+- switches with and without `default`;
+- catch and finally;
+- `?:`, `&&` chains and logical assignments;
+- optional chaining;
+- nested functions, whose branches must not count.
+
+- **The owner approved fast-check:** "Approve fast-check now" ([decisions](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227)).
+  - **Version:** pinned at 4.10.2, published 2026-09-19. 4.11.0 and 4.10.3 were under two weeks old when it was added, against [the dependency rule](../../docs/engineering/dependencies.md#after-approval).
+  - **What it brings:** one dependency, `pure-rand`, and no install scripts. It's used by this one test.
+- **Why fast-check rather than a seeded generator:** shrinking. With catch clauses no longer counted, it reduced a failure to `try {} catch {}`. Counting a switch's `default:` failed too.
+- **Cost:** 300 runs in about 0.1 s. The reformatting checks' 100 cases take about 1.9 s, so `npm run test:tooling` went from about 12 s to 12.9 s.
+
 ## How it works
 
 - **`oxc-parser` gives functions, their places and the file's comments in one parse.** Offsets are UTF-16, as JavaScript strings are, and lines and columns come from them in `positions`.
