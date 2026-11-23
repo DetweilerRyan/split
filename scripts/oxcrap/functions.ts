@@ -126,19 +126,27 @@ type Source = { text: string; counting: Counting; position: (offset: number) => 
 /** What a walk finds: each function with the node it came from, and the simple statements. */
 type Found = { functions: { fn: Fn; node: AstNode }[]; statements: Parsed['statements'] };
 
-/** The functions and simple statements in `node` and below it, in source order. */
-function walk(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: Source): Found {
-  const statements = SIMPLE_STATEMENTS.has(node.type) ? [{ start: node.start, end: node.end }] : [];
-  const own =
-    FUNCTION_TYPES.has(node.type) && node.body
-      ? [{ fn: describe(node, ancestors, enclosing, source), node }]
-      : [];
-  const inside = own.length > 0 ? [...enclosing, own[0].fn] : enclosing;
-  const below = children(node).map((child) => walk(child, [...ancestors, node], inside, source));
-  return {
-    functions: [...own, ...below.flatMap((found) => found.functions)],
-    statements: [...statements, ...below.flatMap((found) => found.statements)],
-  };
+/**
+ * Adds the functions and simple statements in `node` and below it to `into`, in source order, and
+ * returns it. Adding to one list, rather than joining each child's, keeps each level of the tree
+ * to one small stack frame, as deeply nested code needs.
+ */
+function walk(
+  node: AstNode,
+  ancestors: AstNode[],
+  enclosing: Fn[],
+  source: Source,
+  into: Found = { functions: [], statements: [] },
+): Found {
+  if (SIMPLE_STATEMENTS.has(node.type)) into.statements.push({ start: node.start, end: node.end });
+  let inside = enclosing;
+  if (FUNCTION_TYPES.has(node.type) && node.body) {
+    const fn = describe(node, ancestors, enclosing, source);
+    into.functions.push({ fn, node });
+    inside = [...enclosing, fn];
+  }
+  for (const child of children(node)) walk(child, [...ancestors, node], inside, source, into);
+  return into;
 }
 
 /** A function node as a scored `Fn`: its name, complexity and place. */
@@ -184,6 +192,7 @@ function countRecursion(
       return fn && scoredSet.has(fn) ? fn : undefined;
     },
   );
+  // In place: a nested function's `parents` holds its outer `Fn` itself, so a copy would break it.
   for (const fn of cycles) fn.complexity += 1;
 }
 
