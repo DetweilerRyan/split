@@ -157,7 +157,7 @@ oxCrap imports nothing from outside this folder, so it can be lifted out into a 
 
 ## In this repository
 
-- **`npm test` writes the app's coverage report,** and **`npm run oxcrap`** runs oxCrap with the repository's [`.oxcraprc.json`](../../.oxcraprc.json), as a [definition-of-done check](../../AGENTS.md#definition-of-done). CI runs both, and so does the Claude Code [Stop hook](../stop-hook.md).
+- **`npm test` writes the app's coverage report,** and **`npm run oxcrap`** runs oxCrap first with the repository's [`.oxcraprc.json`](../../.oxcraprc.json), as a [definition-of-done check](../../AGENTS.md#definition-of-done). CI runs both, and so does the Claude Code [Stop hook](../stop-hook.md).
 - **oxCrap scores itself too:** `npm run test:tooling` writes `coverage-tooling/`, and `npm run oxcrap` then runs [`.oxcraprc.json`](.oxcraprc.json) in this folder, which scores this folder's code but not its tests or `features/`.
 - **[The CRAP score procedure](../../docs/engineering/crap.md)** says how to respond to a finding here.
 - **[`oxcrap.meta.md`](oxcrap.meta.md)** holds the reasons behind oxCrap's design and the options not taken.

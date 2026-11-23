@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The Claude Code Stop hook in .claude/settings.json. When a session stops with changes in the app
 // (APP below), it runs lint, the tests (which write the coverage report) and the CRAP check; with
-// changes in tooling (TOOLING below), lint and the tooling tests. It gives
+// changes in tooling (TOOLING below), lint, the tooling tests and oxCrap's own CRAP check. It gives
 // Claude what fails as advice: `hookSpecificOutput.additionalContext`, which lets the session carry
 // on and act on it. It never blocks, and always exits 0. CI runs the same checks and fails on them.
 // Its README is stop-hook.md beside it; why it works this way is in stop-hook.meta.md, to read

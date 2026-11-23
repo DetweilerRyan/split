@@ -97,10 +97,10 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
 
 Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. They run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't.
 
-| Project        | Config                                                                 | File name                                       | Runs in |
-| :------------- | :--------------------------------------------------------------------- | :---------------------------------------------- | :------ |
-| `tooling-unit` | [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts)           | every other `<module>.test.ts` under `scripts/` | Node    |
-| `tooling-real` | [`vitest.tooling-real.config.ts`](../../vitest.tooling-real.config.ts) | `<module>.real.test.ts`                         | Node    |
+| Project        | Config                                                                 | File name                                                     | Runs in |
+| :------------- | :--------------------------------------------------------------------- | :------------------------------------------------------------ | :------ |
+| `tooling-unit` | [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts)           | every `<module>.test.ts` under `scripts/` that isn't `.real.` | Node    |
+| `tooling-real` | [`vitest.tooling-real.config.ts`](../../vitest.tooling-real.config.ts) | `<module>.real.test.ts`                                       | Node    |
 
 - **Name and place them as the app's tests are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
 - **They get no React Compiler and no `@` alias,** so a tooling test can't import app code.

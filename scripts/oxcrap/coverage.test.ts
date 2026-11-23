@@ -99,6 +99,12 @@ describe('parseReport', () => {
       "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
     );
   });
+
+  it.each(['null', '5', '"x"', 'true', '[]'])('refuses %s, which isn’t a report at all', (text) => {
+    expect(() => parseReport(text, 'c.json')).toThrow(
+      "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
+    );
+  });
 });
 
 describe('newerThan', () => {

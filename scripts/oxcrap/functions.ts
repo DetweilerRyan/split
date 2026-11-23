@@ -79,7 +79,6 @@ function text(source: string, node: unknown) {
   return value.length <= 40 && !value.includes('\n') ? value : undefined;
 }
 
-/** A label for a function, from its own name or what it's assigned or passed to. */
 /** How each kind of parent names the function it holds, or nothing if it can't. */
 const NAMERS = new Map<string, (source: string, parent: AstNode) => string | undefined>([
   ['VariableDeclarator', (source, parent) => text(source, parent.id)],
@@ -94,6 +93,7 @@ const NAMERS = new Map<string, (source: string, parent: AstNode) => string | und
 
 const callback = (callee: string | undefined) => (callee ? `${callee} callback` : undefined);
 
+/** A label for a function, from its own name or what it's assigned or passed to. */
 export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
   const own = fn.id;
   if (isNode(own) && typeof own.name === 'string') return own.name;

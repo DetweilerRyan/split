@@ -166,7 +166,13 @@ describe('stop-hook', () => {
 
   it('runs the tooling tests, not the app’s, when only scripts/ has changed', () => {
     const cwd = repository();
-    write(cwd, { 'scripts/tool.ts': 'export {};\n', 'tests-fail': '', 'tooling-fails': '' });
+    write(cwd, {
+      'scripts/tool.ts': 'export {};\n',
+      'tests-fail': '',
+      'tooling-fails': '',
+      'crap-output': 'CRAP findings: run is over the limits.',
+      'crap-status': '1',
+    });
 
     const { context } = hook(cwd, { stop_hook_active: false });
 
@@ -174,6 +180,7 @@ describe('stop-hook', () => {
       '`npm run test:tooling` fails, so no CRAP score was calculated for oxCrap. Fix the tests first:\nFAIL the tool',
     );
     expect(context).not.toContain('npm test');
+    expect(context).not.toContain('npm run oxcrap:tooling');
   });
 
   it('counts a change to the CRAP config as an app change, running the app’s tests', () => {
