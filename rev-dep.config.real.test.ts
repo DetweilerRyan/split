@@ -18,7 +18,12 @@ function check(files: Record<string, string>) {
   directories.push(cwd);
   copyFileSync(config, join(cwd, '.rev-dep.config.jsonc'));
   const project = {
-    'package.json': JSON.stringify({ name: 'project', type: 'module' }),
+    // rev-dep resolves an npm package only when package.json declares it, as the real one does.
+    'package.json': JSON.stringify({
+      name: 'project',
+      type: 'module',
+      devDependencies: { 'oxc-parser': '0.157.0' },
+    }),
     'tsconfig.json': JSON.stringify({ compilerOptions: { paths: { '@/*': ['./src/*'] } } }),
     ...files,
   };
@@ -78,6 +83,21 @@ describe('.rev-dep.config.jsonc', () => {
     expect(output).toContain('Module Boundary Issues (6)');
   });
 
+  it('fails an import it can’t resolve, which the rule couldn’t check', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-rev-dep-outside-'));
+    directories.push(cwd);
+    writeFileSync(join(cwd, 'x.ts'), 'export const x = 1;\n');
+    const { status, output } = check({
+      'scripts/oxcrap/absolute.ts': `import { x } from '${join(cwd, 'x.ts')}';\nexport const a = x;\n`,
+      'scripts/oxcrap/computed.ts': 'export const load = (path: string) => import(path);\n',
+    });
+
+    expect(status).toBe(1);
+    expect(output).toContain('Unresolved Imports (2)');
+    expect(output).toContain('scripts/oxcrap/absolute.ts');
+    expect(output).toContain('scripts/oxcrap/computed.ts');
+  });
+
   it('lets scripts/oxcrap/ import its own files, from any of its folders, and Node and npm', () => {
     const { status, output } = check({
       'node_modules/oxc-parser/package.json': JSON.stringify({ name: 'oxc-parser', main: 'x.js' }),
@@ -93,9 +113,10 @@ describe('.rev-dep.config.jsonc', () => {
   });
 
   it('fails when the rule matches no files, so it can’t quietly stop applying', () => {
-    const { status } = check({ 'scripts/other.ts': 'export const o = 1;\n' });
+    const { status, output } = check({ 'scripts/other.ts': 'export const o = 1;\n' });
 
-    expect(status).not.toBe(0);
+    expect(status).toBe(1);
+    expect(output).toContain('Config lint: 2 error(s)');
   });
 
   it('leaves files outside scripts/oxcrap/ free to import from anywhere', () => {
