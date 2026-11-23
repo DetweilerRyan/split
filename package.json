@@ -8,12 +8,12 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "test:tooling": "vitest run -c vitest.tooling.config.ts",
+    "test:tooling": "vitest run -c vitest.tooling.config.ts && bddgen -c scripts/oxcrap/features/playwright.config.ts && playwright test -c scripts/oxcrap/features/playwright.config.ts",
     "test:e2e": "bddgen && playwright test",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint --deny-warnings && gplint e2e/features && node scripts/check-unused-steps.ts && rumdl check .",
-    "format": "oxfmt && node scripts/format-features.ts",
-    "format:check": "oxfmt --check && node scripts/format-features.ts --check",
+    "lint": "oxlint --deny-warnings && gplint e2e/features && gplint -c scripts/oxcrap/features/.gplintrc scripts/oxcrap/features && node scripts/check-unused-steps.ts -c playwright.config.ts -c scripts/oxcrap/features/playwright.config.ts && rumdl check .",
+    "format": "oxfmt && node scripts/format-features.ts e2e/features scripts/oxcrap/features",
+    "format:check": "oxfmt --check && node scripts/format-features.ts --check e2e/features scripts/oxcrap/features",
     "oxcrap": "node scripts/oxcrap/oxcrap.ts"
   },
   "dependencies": {

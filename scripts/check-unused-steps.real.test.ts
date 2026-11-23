@@ -38,8 +38,8 @@ function project(steps: string[]) {
   return cwd;
 }
 
-function run(cwd: string, env: Record<string, string> = {}) {
-  return spawnSync(process.execPath, [script], {
+function run(cwd: string, env: Record<string, string> = {}, args: string[] = []) {
+  return spawnSync(process.execPath, [script, ...args], {
     cwd,
     encoding: 'utf8',
     env: { ...process.env, ...env },
@@ -63,6 +63,25 @@ describe('check-unused-steps', () => {
     expect(result.stderr).toContain('Unused steps (1):');
     expect(result.stderr).toContain('nobody writes this step');
     expect(result.stderr).toContain('steps/split.steps.ts:4');
+  });
+
+  it('checks each config -c names, and names the config with unused steps', () => {
+    const cwd = project([claimStep]);
+    mkdirSync(join(cwd, 'tool/features'), { recursive: true });
+    mkdirSync(join(cwd, 'tool/steps'));
+    writeFileSync(join(cwd, 'tool/playwright.config.ts'), config);
+    writeFileSync(join(cwd, 'tool/features/split.feature'), feature);
+    writeFileSync(
+      join(cwd, 'tool/steps/split.steps.ts'),
+      `import { createBdd } from 'playwright-bdd';\nconst { Given, When } = createBdd();\n${claimStep}\nGiven('only the tool has this step', async () => {});\n`,
+    );
+
+    const both = run(cwd, {}, ['-c', 'playwright.config.ts', '-c', 'tool/playwright.config.ts']);
+    expect(both.status).toBe(1);
+    expect(both.stderr).toContain('tool/playwright.config.ts:');
+    expect(both.stderr).toContain('Unused steps (1):');
+    expect(both.stderr).toContain('only the tool has this step');
+    expect(run(cwd, {}, ['-c', 'playwright.config.ts']).status).toBe(0);
   });
 
   it("fails with bddgen's error when bddgen itself fails", () => {

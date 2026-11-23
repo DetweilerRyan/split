@@ -1,0 +1,52 @@
+// gplint rules for oxCrap's contract features, scripts/oxcrap/features/*.feature, run by
+// `npm run lint`. gplint can't extend another config, so the structural rules below are copied
+// from the root .gplintrc and must change with it; .gplintrc.meta.md lists them. Only the
+// vocabulary differs: these features are about a developer tool, so they say function,
+// complexity, coverage report, config and @crap-allow, and ban how oxCrap is built instead.
+// docs/engineering/testing-conventions.md says how to write them.
+//
+// Layout is left to the formatter, scripts/format-features.ts.
+{
+  "file-name": ["error", { "style": "kebab-case" }],
+  "no-empty-file": "error",
+  "no-files-without-scenarios": "error",
+  "no-unnamed-features": "error",
+  "no-unnamed-scenarios": "error",
+  "no-dupe-feature-names": "error",
+  "no-dupe-scenario-names": ["error", "in-feature"],
+  "no-empty-background": "error",
+  "no-background-only-scenario": "error",
+  "no-examples-in-scenarios": "error",
+  "no-scenario-outlines-without-examples": "error",
+  "no-unused-variables": "error",
+  "keywords-in-logical-order": "error",
+  "use-and": "error",
+  // One action per scenario: a second When means a second scenario. `And` after `When` doesn't
+  // count, matching gherkin-lint's only-one-when.
+  "max-keywords": ["error", { "when": 1, "ignoreConjunctions": true }],
+  "scenario-size": "error",
+  "max-scenarios-per-file": ["error", { "maxScenarios": 12, "countOutlineExamples": false }],
+  "name-length": ["error", { "Feature": 70, "Scenario": 100, "Step": 110 }],
+  // Scenarios say what a developer writes, runs and reads, not how oxCrap or the test is built.
+  // Matching ignores case and skips Examples cells and DocStrings.
+  "no-restricted-patterns": [
+    "error",
+    {
+      "Global": [
+        // oxCrap's own modules and functions: they can change without changing the contract.
+        "\\b(allow|check|complexity|config|coverage|files|functions)\\.ts\\b",
+        "\\b(findAllows|parseConfig|parseReport|coverageOf|crapOf|findFiles|newerThan|merge)\\b",
+        "\\w\\(\\)",
+        // How the test runs the check.
+        "\\bstd(out|err)\\b",
+        "\\bspawn(s|ed)?\\b",
+        "\\bexit ?code\\b",
+        "\\bmock(s|ed)?\\b",
+        "\\bstub(s|bed)?\\b",
+        "\\bfixtures?\\b",
+        "\\btemp(orary)? ?(dir|folder)\\b",
+        "\\bshould return\\b"
+      ]
+    }
+  ]
+}
