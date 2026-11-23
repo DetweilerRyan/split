@@ -24,7 +24,14 @@ afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 function sourceFiles() {
   const listed = spawnSync(
     'git',
-    ['ls-files', '--', 'src/**/*.ts', 'src/**/*.tsx', 'app/**/*.ts', 'app/**/*.tsx'],
+    [
+      'ls-files',
+      '--',
+      ':(glob)src/**/*.ts',
+      ':(glob)src/**/*.tsx',
+      ':(glob)app/**/*.ts',
+      ':(glob)app/**/*.tsx',
+    ],
     {
       cwd: root,
       encoding: 'utf8',
@@ -109,7 +116,9 @@ const files = sourceFiles();
 
 describe('reformatting this repository’s code', () => {
   it('finds the code to check', () => {
-    expect(files.length).toBeGreaterThan(20);
+    // Files directly in src/ and app/ too, which a plain pathspec's ** would miss.
+    expect(files).toContain('src/RoomView.tsx');
+    expect(files.length).toBeGreaterThan(30);
   });
 
   describe.each(transforms)('%s', (_, transform) => {

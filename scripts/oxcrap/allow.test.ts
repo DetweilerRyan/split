@@ -110,7 +110,19 @@ describe('findAllows', () => {
   it('fails a comment above a wrapped statement holding two functions, rather than guessing', () => {
     const code = `${allow}\npromise.then(\n  (value) => value,\n  (error) => error,\n);\n`;
     expect(allows(code).problems).toEqual([
-      "1: 2 functions are in the statement starting on line 2 (promise.then callback, promise.then callback), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.",
+      "1: 2 functions are passed to calls in the statement on line 2 (promise.then callback, promise.then callback), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.",
+    ]);
+  });
+
+  it.each([
+    ['a class', 'class Grade {\n  rate() {\n    return 1;\n  }\n}'],
+    ['an object', 'const grade = {\n  rate() {\n    return 1;\n  },\n};'],
+    ['an if', 'if (ready) {\n  items.forEach((item) => use(item));\n}'],
+    ['a JSX return', 'return (\n  <button onClick={() => go()} />\n);'],
+  ])('fails a comment above %s whose one function starts lower down', (_, body) => {
+    const code = `function outer() {\n${allow}\n${body}\n}\n`;
+    expect(allows(code).problems).toEqual([
+      '2: This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
     ]);
   });
 

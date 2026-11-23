@@ -16,18 +16,29 @@ export type Fn = Range & {
   offset: { start: number; end: number };
   /** The functions it sits inside, outermost first. */
   parents: Fn[];
+  /** Whether it's passed straight to a call, as `items.forEach(() => …)` passes its callback. */
+  passedToCall: boolean;
 };
 export type Comment = { type: 'Line' | 'Block'; value: string; start: number; end: number };
 export type Parsed = {
   functions: Fn[];
   comments: Comment[];
-  /** The UTF-16 offsets of every statement and declaration, outermost first. */
+  /**
+   * The UTF-16 offsets of every simple statement, outermost first: an expression, a variable
+   * declaration, a `return` or an export. Not a block, a loop, an `if`, a class or a function.
+   */
   statements: { start: number; end: number }[];
   position: (offset: number) => Position;
 };
 
-/** Statements and declarations: what a line of code usually begins. */
-const isStatement = (node: AstNode) => /(Statement|Declaration)$/.test(node.type);
+/** The statements a formatter might wrap a call in, which a @crap-allow comment can sit above. */
+const SIMPLE_STATEMENTS = new Set([
+  'ExpressionStatement',
+  'VariableDeclaration',
+  'ReturnStatement',
+  'ExportNamedDeclaration',
+  'ExportDefaultDeclaration',
+]);
 
 export class ParseError extends Error {}
 
@@ -102,7 +113,7 @@ export function parse(file: string, source: string): Parsed {
 
   const visit = (node: AstNode, ancestors: AstNode[], enclosing: Fn[]) => {
     let inside = enclosing;
-    if (isStatement(node)) statements.push({ start: node.start, end: node.end });
+    if (SIMPLE_STATEMENTS.has(node.type)) statements.push({ start: node.start, end: node.end });
     if (FUNCTION_TYPES.has(node.type) && node.body) {
       const parent = ancestors.at(-1);
       const own =
@@ -117,6 +128,10 @@ export function parse(file: string, source: string): Parsed {
         start: position(node.start),
         end: position(node.end),
         parents: enclosing,
+        passedToCall:
+          (parent?.type === 'CallExpression' || parent?.type === 'NewExpression') &&
+          Array.isArray(parent.arguments) &&
+          parent.arguments.includes(node),
       };
       functions.push(fn);
       inside = [...enclosing, fn];

@@ -60,8 +60,8 @@ const outermost = (functions: Fn[]) =>
 
 /**
  * The functions a comment above `line` could mean: those starting on it, outermost first. Failing
- * that, the outermost functions in the statement starting on it, so a call a formatter wrapped,
- * with its callback on the line below, still counts.
+ * that, the outermost functions passed straight to a call in the simple statement starting on it,
+ * so a call a formatter wrapped, with its callback on the line below, still counts.
  */
 function functionsAt(line: number | undefined, parsed: Parsed) {
   if (line === undefined) return { candidates: [], where: '' };
@@ -74,7 +74,8 @@ function functionsAt(line: number | undefined, parsed: Parsed) {
         (fn) => fn.offset.start >= statement.start && fn.offset.end <= statement.end,
       )
     : [];
-  return { candidates: outermost(inside), where: `are in the statement starting on line ${line}` };
+  const callbacks = outermost(inside).filter((fn) => fn.passedToCall);
+  return { candidates: callbacks, where: `are passed to calls in the statement on line ${line}` };
 }
 
 export function findAllows(file: string, source: string, parsed: Parsed) {
