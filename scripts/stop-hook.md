@@ -6,7 +6,7 @@ It never blocks a session and always exits 0. CI runs the same checks and fails 
 
 ## What it does
 
-The app is `src/`, `app/`, `vitest.config.ts`, `vitest.config.browser.test.ts`, `.oxcraprc.json` and `package.json`. Tooling is `scripts/`, `vitest.tooling.config.ts`, `.oxlintrc.json`, `oxlintrc.real.test.ts` and `package.json`. Changes count in either.
+The app is `src/`, `app/`, `vitest.config.ts`, `vitest.config.browser.test.ts`, `.oxcraprc.json` and `package.json`. Tooling is `scripts/`, `vitest.tooling.config.ts`, `.oxlintrc.json`, `.rev-dep.config.jsonc`, `rev-dep.config.real.test.ts` and `package.json`. Changes count in either.
 
 1. **Stays quiet if Claude is already continuing because of a stop hook,** so it advises at most once per stop.
 2. **Stays quiet, and runs nothing, if neither the app nor tooling has changed** since the merge base with `origin/main`, or `main` if there's no `origin/main`. New, untracked files count as changes.

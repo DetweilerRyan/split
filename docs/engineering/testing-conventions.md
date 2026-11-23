@@ -73,7 +73,7 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
 
 ## Tooling tests
 
-Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.oxlintrc.json`, whose sidecar is `oxlintrc.real.test.ts`. They run apart from the app's, from [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts), and `npm run test:tooling` runs them. `npm test` doesn't.
+Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. They run apart from the app's, from [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts), and `npm run test:tooling` runs them. `npm test` doesn't.
 
 | Project        | File name                                       | Runs in |
 | :------------- | :---------------------------------------------- | :------ |
@@ -90,18 +90,18 @@ A deep module is a dev tool whose small interface hides much more logic: the fil
 
 A deep module's contract is tested by Gherkin features beside it, run end to end against the program. Its modules keep their unit tests, and there's no separate `real` test of the program.
 
-| Path                                           | Holds                                                 |
-| :--------------------------------------------- | :---------------------------------------------------- |
-| `scripts/<tool>/features/<topic>.feature`      | Scenarios, in the words of a developer using the tool |
-| `scripts/<tool>/features/<tool>.steps.ts`      | Step definitions, beside the features                 |
-| `scripts/<tool>/features/screenplay/`          | The tool's own cast, actor, tasks and questions       |
-| `scripts/<tool>/features/playwright.config.ts` | Its playwright-bdd config, with no browser            |
-| `scripts/<tool>/features/.gplintrc`            | Its gplint rules                                      |
+| Path                                            | Holds                                                 |
+| :---------------------------------------------- | :---------------------------------------------------- |
+| `scripts/<tool>/features/<topic>.feature`       | Scenarios, in the words of a developer using the tool |
+| `scripts/<tool>/features/steps/<tool>.steps.ts` | Step definitions                                      |
+| `scripts/<tool>/features/screenplay/`           | The tool's own cast, actor, tasks and questions       |
+| `scripts/<tool>/features/playwright.config.ts`  | Its playwright-bdd config, with no browser            |
+| `scripts/<tool>/features/.gplintrc`             | Its gplint rules                                      |
 
 - **Follow the [end-to-end tests' Screenplay rules](#end-to-end-tests),** with these differences:
   - **The actor's abilities** are a throwaway project folder and running the program, not a browser or an MCP session.
   - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
-  - **The screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it.
+  - **The screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it. A rule in [`.rev-dep.config.jsonc`](../../.rev-dep.config.jsonc) can enforce that, as it does for oxCrap.
   - **Steps import `test`, `Given`, `When` and `Then`** from the tool's own `screenplay/fixtures.ts`.
 - **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
 - **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words. Its structural rules are copied from the root `.gplintrc`: change a rule in both.
