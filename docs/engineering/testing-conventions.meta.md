@@ -98,6 +98,20 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 - **The rule:** every step definition is used by some feature, and steps don't call other steps. `scripts/check-unused-steps.ts` enforces the first half, and the second half keeps it free of its usual false positive.
 - **Where the reasons are:** the decision, the research behind it, and how the script works are in [`scripts/check-unused-steps.meta.md`](../../scripts/check-unused-steps.meta.md).
 
+## Property tests
+
+Asked for by the owner in [review on #71](https://github.com/DetweilerRyan/split/pull/71#discussion_r4668997580), where the first property test, oxCrap's complexity count, sat in `complexity.test.ts`:
+
+- "i'm thinking that the property tests should be in their own test sidecar: *.property.test.ts";
+- "also, let's make sure that property tests contribute to code coverage";
+- "and, do we need a property testing doc with some basic guidance on when to write property tests?"
+
+- **Their own sidecar,** so a reader can tell generated-input tests from examples. The name keeps them in the module's unit project, since both configs' patterns already match `*.test.ts`. No new project is needed.
+- **Coverage:** checked on 2026-11-23 with a throwaway `src/` module tested only by a `.property.test.ts`. The test ran in the `unit` project, and the module's statement showed as covered in `coverage/coverage-final.json`.
+- **Guidance in this file, not a doc of its own:** this file holds everything needed to follow the testing conventions, and property tests are one more kind of Vitest test.
+- **When to write one:** the cases where a property test earns its place are the ones a rule can be checked without repeating the code's own working. Round trips, invariants, a generator that knows the answer, and a simpler version to compare with are four such rules; the first two have candidates here in the seed codec and the receipt math.
+- **Their cost:** a property test runs its check once per input. oxCrap's complexity property runs 300 inputs in about 0.1 s, since each is one parse of a small function.
+
 ## Tooling tests and feature contracts
 
 Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), which the owner raised while reviewing #64. These are the owner's decisions, from [the issue](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227):
