@@ -173,6 +173,16 @@ describe('stop-hook', () => {
     expect(context).not.toContain('npm test');
   });
 
+  it('counts a change to the CRAP config as an app change, running the app’s tests', () => {
+    const cwd = repository();
+    write(cwd, { '.oxcraprc.json': '{}\n', 'tests-fail': '', 'tooling-fails': '' });
+
+    const { context } = hook(cwd, { stop_hook_active: false });
+
+    expect(context).toContain('`npm test` fails');
+    expect(context).not.toContain('npm run test:tooling');
+  });
+
   it('runs both when the app and tooling have changed, and the fingerprint covers both', () => {
     const cwd = repository();
     write(cwd, {

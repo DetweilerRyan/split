@@ -157,5 +157,4 @@ oxCrap imports nothing from outside this folder, and lint fails if it does, so i
 - **`npm test` writes the coverage report,** and **`npm run oxcrap`** runs oxCrap with the repository's [`.oxcraprc.json`](../../.oxcraprc.json), as a [definition-of-done check](../../AGENTS.md#definition-of-done). CI runs both, and so does the Claude Code [Stop hook](../stop-hook.md).
 - **[The CRAP score procedure](../../docs/engineering/crap.md)** says how to respond to a finding here.
 - **[`oxcrap.meta.md`](oxcrap.meta.md)** holds the reasons behind oxCrap's design and the options not taken.
-
 - **oxCrap's own tests** are tooling tests, run by `npm run test:tooling`. Its modules have unit tests beside them. Its contract, what it reads, prints and exits with, is tested end to end by the Gherkin features in [`features/`](features/), as [testing conventions](../../docs/engineering/testing-conventions.md#feature-contracts-for-deep-modules) describes.
