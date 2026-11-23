@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run",
+    "test": "vitest run --project unit --project browser && vitest run --project real --coverage.enabled=false --passWithNoTests",
     "test:tooling": "vitest run -c vitest.tooling.config.ts && bddgen -c scripts/oxcrap/features/playwright.config.ts && playwright test -c scripts/oxcrap/features/playwright.config.ts",
     "test:e2e": "bddgen && playwright test",
     "typecheck": "tsc --noEmit",

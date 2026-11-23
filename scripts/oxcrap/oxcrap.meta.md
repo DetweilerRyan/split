@@ -58,7 +58,12 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
   - **A run of the whole program executes far more than it checks.** A scenario that asserts one line of output counts every line it passed through as covered. Coverage then overstates how well a function is tested, so its CRAP score comes out lower than it should.
   - **It would let a function pass by being run rather than tested,** instead of by being split up or unit tested. That's the pressure CRAP exists to apply.
 - **It was already so:** the app's coverage came from Vitest's projects (`npm test`), and never from `npm run test:e2e`.
-- **Where the line falls:** Vitest's `real` and `browser` projects count, though they're broader than unit tests. Playwright scenarios against the app, and a deep module's feature contract against its CLI, don't.
+- **Where the line falls:** the `unit` and `browser` projects count, property tests included. `browser` holds the component and hook tests, which run in a browser only because jsdom does no layout. Playwright scenarios against the app, and a deep module's feature contract against its CLI, don't count.
+- **`real` tests don't count either,** the owner decided after first leaving them in (session, 2026-11-23): "i'm not so sure that real tests should be covered by crap", then "yes and make the change now".
+  - **Why:** a real test runs real programs and files, and tends to run far more code than it checks, as an end-to-end test does. oxCrap's reformatting check runs every function of its parser on 40 files, but asserts only that layout changes nothing.
+  - **The same rule as mutation testing:** [#77](https://github.com/DetweilerRyan/split/issues/77) uses only unit and property tests, so both scores mean "tested" the same way.
+  - **What it costs:** `.real.` names a test's size, not its scope, and a narrow real test, such as `prepare-sandbox.real.test.ts`, does check closely. Its coverage is lost. That's accepted, since logic worth checking closely belongs in a unit-tested module.
+  - **How:** Vitest collects coverage across every project in a run, so `npm test` runs the `real` project in a second pass with coverage off. When the change was made, the app had no real tests, so no score changed.
 
 ### The Stop hook
 

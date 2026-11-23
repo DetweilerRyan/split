@@ -20,7 +20,7 @@ How to write tests in this repository: what they check, which project they belon
 
 ## Which project a test belongs in
 
-The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../vitest.config.ts). The file name decides the project. `npm test` runs all three. A journey through the whole running app is an [end-to-end test](#end-to-end-tests) instead, and a test of the repository's own dev tools is a [tooling test](#tooling-tests).
+The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../vitest.config.ts). The file name decides the project. `npm test` runs all three; only `unit` and `browser` count towards [CRAP's coverage](crap.md#where-findings-come-from). A journey through the whole running app is an [end-to-end test](#end-to-end-tests) instead, and a test of the repository's own dev tools is a [tooling test](#tooling-tests).
 
 | Project   | File name                                               | Runs in                               | Put here                                                                                |
 | :-------- | :------------------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------------------------------- |

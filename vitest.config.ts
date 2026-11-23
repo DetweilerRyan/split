@@ -7,9 +7,10 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // docs/engineering/testing-conventions.md says which a test belongs in.
 // `<module>.browser.test.ts(x)` runs in headless Chromium through Playwright,
 // `<module>.real.test.ts` runs in Node with real programs and files, and every other
-// `<module>.test.ts(x)` runs in jsdom, `<module>.property.test.ts` included. Every project's tests
-// count towards the coverage report oxCrap reads. The tooling tests, in scripts/ and of root tooling config,
-// are vitest.tooling.config.ts's, which `npm run test:tooling` runs.
+// `<module>.test.ts(x)` runs in jsdom, `<module>.property.test.ts` included. Only the unit and
+// browser projects count towards the coverage report oxCrap reads: `npm test` runs `real` in a
+// second pass with coverage off, as docs/engineering/crap.md says. The tooling tests, in scripts/
+// and of root tooling config, are vitest.tooling.config.ts's, which `npm run test:tooling` runs.
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'];
 const realTests = ['**/*.real.test.ts'];
 // Branch worktrees live inside the checkout (docs/engineering/workflow/starting-work.md). Without this, a
@@ -35,8 +36,8 @@ export default defineConfig({
     dedupe: ['yjs'],
   },
   test: {
-    // Every run writes coverage/coverage-final.json, which `npm run oxcrap` reads to score each
-    // function in src/ and app/. A run whose tests fail writes no report, and the folder is
+    // A run with coverage writes coverage/coverage-final.json, which `npm run oxcrap` reads to score
+    // each function in src/ and app/. A run whose tests fail writes no report, and the folder is
     // emptied at the start of each run, so a report never outlives the run that made it.
     coverage: {
       enabled: true,
