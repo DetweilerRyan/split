@@ -64,6 +64,26 @@
           "description": "Whether each optional link, ?., adds a path.",
           "type": "boolean",
           "default": true
+        },
+        "switchCases": {
+          "description": "each: every non-default case adds a path. once: a whole switch adds one, as ESLint's \"modified\" variant counts it.",
+          "enum": ["each", "once"],
+          "default": "each"
+        },
+        "logicalOperators": {
+          "description": "each: every &&, || and ?? adds a path. sequence: each run of the same operator adds one, as Cognitive Complexity counts it.",
+          "enum": ["each", "sequence"],
+          "default": "each"
+        },
+        "recursion": {
+          "description": "Whether a function in a recursion cycle, calling itself or through others in the same file, adds a path.",
+          "type": "boolean",
+          "default": true
+        },
+        "labelledJumps": {
+          "description": "Whether each break or continue to a label adds a path.",
+          "type": "boolean",
+          "default": true
         }
       }
     },

@@ -87,6 +87,14 @@ The project's Claude Code Stop hook runs `npm run oxcrap` and passes its finding
 - **What it changed here:** 10 `@crap-allow` comments got new numbers, and 4 comments on nested functions moved up into 3 on the functions around them.
   - **The biggest changes:** `hydrateFromSeed` went to complexity 30, `createSnapshot` from 13 to 27, `createProvider` from 12 to 24, and `RoomView` from 10 to 22.
   - **Newly over the limits,** with stand-in comments citing #74: `ParticipantCards` and `useReceiptStore`.
+- **Four more options, from precedent** ([feedback](https://github.com/DetweilerRyan/split/pull/75#issuecomment-7109114547)). Asked whether counting rules from before #74 should be options too, the owner said "let's add the new options to this pr. also, elts add the counts that sonar has and we don't".
+  - **`switchCases`:** `"once"` counts a whole `switch` once. That's ESLint's `variant: "modified"`, and Sonar's rule that "a switch and all its cases combined incurs a single structural increment".
+  - **`logicalOperators`:** `"sequence"` counts each run of the same operator once, as Sonar's "fundamental increment for each sequence of binary logical operators" does. `a && b && c` is one run; `a && b || c` is two.
+  - **`recursion`:** Sonar counts "each method in a recursion cycle". oxCrap adds 1 to each scored function that calls itself, or calls one that leads back to it. It matches calls by name within the file, `f()` or `this.f()`, and doesn't follow calls through variables or other files.
+  - **`labelledJumps`:** Sonar counts a `break` or `continue` to a label. A plain `break` adds nothing, since the loop it leaves is already counted.
+  - **Defaults:** all count, except that a `switch` and a logical run count per case and per operator, as before. That's consistent with counting everything by default.
+  - **Not added: `else`, and nesting increments.** Both are on Sonar's list, but they belong to Cognitive Complexity's readability score, not to paths through the code. An `if` already has two outcomes, so counting its `else` too would score every `if`/`else` 2. CRAP's formula is built on cyclomatic complexity. Raised with the owner on #75.
+  - **Nothing in this repository changed:** `src/` and `app/` have no recursion and no labelled jumps.
 - **The fast-check property** checks every combination of the options. Its grammar keeps a function's own branches, its default values, its `?.` links and its nested functions' contents apart.
 
 ### The name
