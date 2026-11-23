@@ -212,7 +212,7 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 
 #### Reformatting checks
 
-[`functions.real.test.ts`](functions.real.test.ts) takes each file oxCrap scores in `src/` and `app/` and changes only its layout:
+[`functions.real.test.ts`](functions.real.test.ts) takes each of the 40 files oxCrap scores in `src/` and `app/` and changes only its layout:
 
 - a blank line before every line;
 - an unrelated comment before every line;
@@ -227,6 +227,8 @@ It checks that each function's complexity, which functions a `@crap-allow` match
   - **The case:** a `@crap-allow` comment applied only to a function starting on the next code line. When oxfmt wrapped a call so its callback started a line later, the comment in `src/store/seedCodec.ts` detached.
   - **The decision:** the owner chose to widen the match ([decision](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7107043936)): "option 1". When no function starts on that line, the comment applies to the one outermost function in the statement that does. Two such functions stay an error.
   - **The alternative:** keep the rule, and document that a wrapped call can detach a comment.
+  - **Narrowed, from an independent review:** at first "statement" meant any statement or declaration. So a comment above `class C {`, an object literal, or `if (x) {` holding one callback matched a function several lines down. Now the fallback applies only to an expression, a variable declaration, a `return` or an export, and only to a function passed straight to a call. That's the case the decision was for.
+  - **Still detached by a wrap:** a class or object property whose function a formatter moves to the next line, and a JSX attribute. This repository has none today.
 
 #### A generator-checked complexity count
 
@@ -243,7 +245,7 @@ It checks that each function's complexity, which functions a `@crap-allow` match
   - **Version:** pinned at 4.10.2, published 2026-09-19. 4.11.0 and 4.10.3 were under two weeks old when it was added, against [the dependency rule](../../docs/engineering/dependencies.md#after-approval).
   - **What it brings:** one dependency, `pure-rand`, and no install scripts. It's used by this one test.
 - **Why fast-check rather than a seeded generator:** shrinking. With catch clauses no longer counted, it reduced a failure to `try {} catch {}`. Counting a switch's `default:` failed too.
-- **Cost:** 300 runs in about 0.1 s. The reformatting checks' 100 cases take about 1.9 s, so `npm run test:tooling` went from about 12 s to 12.9 s.
+- **Cost:** 300 runs in about 0.1 s. The reformatting checks' 121 cases take about 2 s, so `npm run test:tooling` went from about 12 s to 12.9 s.
 
 ## How it works
 

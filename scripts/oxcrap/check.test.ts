@@ -14,6 +14,7 @@ function scored(name: string, complexity: number, coverage: number, line = 1): S
     start: { line, column: 0 },
     end: { line: line + 8, column: 1 },
     parents: [],
+    passedToCall: false,
   } satisfies Fn;
   return { fn, file: 'src/a.ts', coverage, crap: crapOf(complexity, coverage) };
 }

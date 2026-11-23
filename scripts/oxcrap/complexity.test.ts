@@ -133,6 +133,11 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
         .map(([s, t]) => wrap(`try {\n${s.code}\n} catch {\n${t.code}\n}`, 1, s, t)),
       body.map((s) => wrap(`try {\n${s.code}\n} finally {\n}`, 0, s)),
       fc
+        .tuple(body, body, body)
+        .map(([s, t, u]) =>
+          wrap(`try {\n${s.code}\n} catch {\n${t.code}\n} finally {\n${u.code}\n}`, 1, s, t, u),
+        ),
+      fc
         .tuple(fc.array(body, { minLength: 1, maxLength: 3 }), fc.boolean())
         .map(([cases, withDefault]) =>
           wrap(
@@ -142,7 +147,9 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
           ),
         ),
       // A nested function is scored on its own, so its branches don't count here.
-      body.map((s) => ({ code: `const inner = () => {\n${s.code}\n};`, branches: 0 })),
+      fc
+        .tuple(body, fc.nat({ max: 999 }))
+        .map(([s, id]) => ({ code: `const inner${id} = () => {\n${s.code}\n};`, branches: 0 })),
     ),
   };
 });
