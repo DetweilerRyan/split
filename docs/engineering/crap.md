@@ -4,12 +4,12 @@ oxCrap scores each function in `src/` and `app/` by its complexity and how much 
 
 ## Where findings come from
 
-oxCrap reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them.
+`npm run oxcrap` scores the app, then oxCrap itself. The app's coverage report is the one every `npm test` writes to `coverage/coverage-final.json`; oxCrap's is the one `npm run test:tooling` writes to `coverage-tooling/coverage-final.json`. So **run `npm test` and `npm run test:tooling` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them. `npm run oxcrap:app` and `npm run oxcrap:tooling` score one each.
 
-**The coverage a CRAP score uses comes from unit tests only:** the `unit` and `browser` projects, property tests included. It never comes from `real` tests, which run real programs and files, nor from tests that run the whole program: `npm run test:e2e`, or a [feature contract](testing-conventions.md#feature-contracts-for-deep-modules) that runs a deep module's program. `npm test` runs the `real` project in a second pass with coverage off. Don't add any of their coverage to the report oxCrap reads. [`.oxcraprc.json`](../../.oxcraprc.json), at the root, sets what it scores here and the limits.
+**The coverage a CRAP score uses comes from unit tests only:** the `unit` and `browser` projects, property tests included. It never comes from `real` tests, which run real programs and files, nor from tests that run the whole program: `npm run test:e2e`, or a [feature contract](testing-conventions.md#feature-contracts-for-deep-modules) that runs a deep module's program. `npm test` runs the `real` project in a second pass with coverage off. Don't add any of their coverage to the report oxCrap reads. For oxCrap, the unit tests are [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts)'s; its real tests and feature contract count for none of it. [`.oxcraprc.json`](../../.oxcraprc.json), at the root, sets what it scores in the app and the limits; [`scripts/oxcrap/.oxcraprc.json`](../../scripts/oxcrap/.oxcraprc.json) does the same for oxCrap. Other tooling isn't scored yet.
 
-- **The Stop hook** gives a Claude Code session its findings as advice when it stops with changes to the app. [Its README](../../scripts/stop-hook.md) says what it runs and when.
-- **CI** runs `npm test`, then `npm run oxcrap`, and fails on any finding.
+- **The Stop hook** gives a Claude Code session its findings as advice when it stops with changes to the app or tooling. [Its README](../../scripts/stop-hook.md) says what it runs and when.
+- **CI** runs `npm test` and `npm run test:tooling`, then `npm run oxcrap`, and fails on any finding.
 - **`npm run oxcrap`** is one of the definition-of-done checks.
 
 All three run oxCrap on a fresh report, so they print the same findings.

@@ -95,16 +95,17 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
 
 ## Tooling tests
 
-Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. They run apart from the app's, from [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts), and `npm run test:tooling` runs them. `npm test` doesn't.
+Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. They run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't.
 
-| Project        | File name                                       | Runs in |
-| :------------- | :---------------------------------------------- | :------ |
-| `tooling-real` | `<module>.real.test.ts`                         | Node    |
-| `tooling-unit` | every other `<module>.test.ts` under `scripts/` | Node    |
+| Project        | Config                                                                 | File name                                       | Runs in |
+| :------------- | :--------------------------------------------------------------------- | :---------------------------------------------- | :------ |
+| `tooling-unit` | [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts)           | every other `<module>.test.ts` under `scripts/` | Node    |
+| `tooling-real` | [`vitest.tooling-real.config.ts`](../../vitest.tooling-real.config.ts) | `<module>.real.test.ts`                         | Node    |
 
 - **Name and place them as the app's tests are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
-- **They get no React Compiler, no coverage and no `@` alias.** So a tooling test can't import app code, and oxCrap's coverage stays the app's.
-- **A root file's test is tooling when it tests tooling config.** List it in `realTests` in `vitest.tooling.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
+- **They get no React Compiler and no `@` alias,** so a tooling test can't import app code.
+- **Only `tooling-unit` collects coverage,** of oxCrap's code, into `coverage-tooling/`, for [its CRAP score](crap.md). `tooling-real` collects none.
+- **A root file's test is tooling when it tests tooling config.** List it in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
 
 ### Feature contracts for deep modules
 

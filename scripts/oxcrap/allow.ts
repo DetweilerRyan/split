@@ -76,6 +76,36 @@ function functionsAt(line: number | undefined, parsed: Parsed, among = parsed.fu
   return { candidates: callbacks, where: `are passed to calls in the statement on line ${line}` };
 }
 
+/** The one function a comment is for, or the problem that stops it being matched to one. */
+function functionFor(
+  comment: Comment,
+  code: string[],
+  parsed: Parsed,
+): { fn: Fn } | { problem: string } {
+  const target = targetLine(code, comment, parsed);
+  const { candidates, where } = functionsAt(target, parsed);
+  const [inner] =
+    candidates.length === 0 ? functionsAt(target, parsed, parsed.nested).candidates : [];
+  if (inner) {
+    const outer = inner.parents[0];
+    return {
+      problem: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
+    };
+  }
+  if (candidates.length === 0) {
+    return {
+      problem:
+        'This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
+    };
+  }
+  if (candidates.length > 1) {
+    return {
+      problem: `${candidates.length} functions ${where} (${candidates.map((fn) => fn.name).join(', ')}), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.`,
+    };
+  }
+  return { fn: candidates[0] };
+}
+
 export function findAllows(file: string, source: string, parsed: Parsed) {
   const problems: Finding[] = [];
   const allowed = new Map<Fn, Allow>();
@@ -91,36 +121,12 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
       problems.push({ ...at, message: `This @crap-allow comment isn’t in the form ${FORM}.` });
       continue;
     }
-
-    const target = targetLine(code, comment, parsed);
-    const { candidates, where } = functionsAt(target, parsed);
-    const [inner] =
-      candidates.length === 0 ? functionsAt(target, parsed, parsed.nested).candidates : [];
-    if (inner) {
-      const outer = inner.parents[0];
-      problems.push({
-        ...at,
-        message: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
-      });
+    const found = functionFor(comment, code, parsed);
+    if ('problem' in found) {
+      problems.push({ ...at, message: found.problem });
       continue;
     }
-    if (candidates.length === 0) {
-      problems.push({
-        ...at,
-        message:
-          'This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
-      });
-      continue;
-    }
-    if (candidates.length > 1) {
-      problems.push({
-        ...at,
-        message: `${candidates.length} functions ${where} (${candidates.map((fn) => fn.name).join(', ')}), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.`,
-      });
-      continue;
-    }
-
-    const [fn] = candidates;
+    const { fn } = found;
     if (allowed.has(fn)) {
       problems.push({ ...at, message: `${fn.name} already has a @crap-allow comment.` });
       continue;

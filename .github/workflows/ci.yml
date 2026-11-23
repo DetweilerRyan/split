@@ -41,11 +41,12 @@ jobs:
         run: npm run typecheck
       - name: Tests
         run: npm test
-      - name: CRAP score
-        # Reads the coverage report the Tests step wrote, so it must come after it.
-        run: npm run oxcrap
       - name: Tooling tests
         run: npm run test:tooling
+      - name: CRAP score
+        # Reads the coverage reports the Tests and Tooling tests steps wrote, so it must come after
+        # them.
+        run: npm run oxcrap
       - name: Production build
         run: npm run build
       - name: End-to-end tests

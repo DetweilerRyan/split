@@ -7,22 +7,49 @@
 // Calls through other objects, variables or files aren't followed. Why is in oxcrap.meta.md.
 import { type AstNode, children, FUNCTION_TYPES, isNode } from './complexity.ts';
 
+/** A scope's names, each bound to the function it names, or to null for anything else. */
 type Scope = Map<string, AstNode | null>;
+/** A class's methods and function-valued fields, by name. */
+type Members = Map<string, AstNode>;
+
+/** The nodes besides functions that open a scope of their own. */
+const SCOPE_TYPES = new Set([
+  'Program',
+  'BlockStatement',
+  'StaticBlock',
+  'SwitchStatement',
+  'CatchClause',
+  'ForStatement',
+  'ForInStatement',
+  'ForOfStatement',
+]);
 
 /** The names a binding pattern, such as a parameter or a destructuring, declares. */
 function boundNames(pattern: unknown, into: string[] = []): string[] {
   if (!isNode(pattern)) return into;
   if (pattern.type === 'Identifier') into.push(pattern.name as string);
-  else if (pattern.type === 'AssignmentPattern') boundNames(pattern.left, into);
-  else if (pattern.type === 'RestElement') boundNames(pattern.argument, into);
-  else if (pattern.type === 'ArrayPattern') {
-    for (const element of (pattern.elements as unknown[]) ?? []) boundNames(element, into);
-  } else if (pattern.type === 'ObjectPattern') {
-    for (const property of (pattern.properties as AstNode[]) ?? []) {
-      boundNames(property.type === 'RestElement' ? property : property.value, into);
-    }
-  } else if (pattern.type === 'TSParameterProperty') boundNames(pattern.parameter, into);
+  for (const part of patternParts(pattern)) boundNames(part, into);
   return into;
+}
+
+/** The patterns directly inside a binding pattern: an array's elements, an object's values. */
+function patternParts(pattern: AstNode): unknown[] {
+  switch (pattern.type) {
+    case 'AssignmentPattern':
+      return [pattern.left];
+    case 'RestElement':
+      return [pattern.argument];
+    case 'TSParameterProperty':
+      return [pattern.parameter];
+    case 'ArrayPattern':
+      return (pattern.elements as unknown[]) ?? [];
+    case 'ObjectPattern':
+      return ((pattern.properties as AstNode[]) ?? []).map((property) =>
+        property.type === 'RestElement' ? property : property.value,
+      );
+    default:
+      return [];
+  }
 }
 
 /** A declarator's function, for `const f = () => …` and `const f = function () {}`. */
@@ -32,28 +59,52 @@ function functionValue(node: unknown): AstNode | null {
   return FUNCTION_TYPES.has(node.type) ? node : null;
 }
 
+/** Declares `id`, if there is one, as naming `fn`. */
+function declareId(scope: Scope, id: unknown, fn: AstNode | null) {
+  if (isNode(id)) scope.set(id.name as string, fn);
+}
+
+/** Declares every name `pattern` binds, as naming no function. */
+function declarePattern(scope: Scope, pattern: unknown) {
+  for (const name of boundNames(pattern)) scope.set(name, null);
+}
+
 /** Declares into `scope` what `statements` declare directly: functions, classes, let and const. */
 function declareBlock(scope: Scope, statements: unknown[]) {
-  for (let statement of statements) {
-    if (!isNode(statement)) continue;
-    if (
-      /^Export(Named|Default)Declaration$/.test(statement.type) &&
-      isNode(statement.declaration)
-    ) {
-      statement = statement.declaration;
-    }
-    if (!isNode(statement)) continue;
-    if (statement.type === 'FunctionDeclaration' && isNode(statement.id)) {
-      scope.set(statement.id.name as string, statement);
-    } else if (statement.type === 'ClassDeclaration' && isNode(statement.id)) {
-      scope.set(statement.id.name as string, null);
-    } else if (statement.type === 'VariableDeclaration' && statement.kind !== 'var') {
-      declareVariables(scope, statement);
-    } else if (statement.type === 'ImportDeclaration') {
+  for (const statement of statements) {
+    if (isNode(statement)) declareStatement(scope, exported(statement));
+  }
+}
+
+/** What an export statement declares, or the statement itself if it isn't one. */
+function exported(statement: AstNode): AstNode {
+  const isExport = /^Export(Named|Default)Declaration$/.test(statement.type);
+  return isExport && isNode(statement.declaration) ? statement.declaration : statement;
+}
+
+/** Declares into `scope` what one statement declares, other than `var`. */
+function declareStatement(scope: Scope, statement: AstNode) {
+  switch (statement.type) {
+    case 'FunctionDeclaration':
+      declareId(scope, statement.id, statement);
+      break;
+    case 'ClassDeclaration':
+      declareId(scope, statement.id, null);
+      break;
+    case 'VariableDeclaration':
+      declareLexical(scope, statement);
+      break;
+    case 'ImportDeclaration':
       for (const specifier of (statement.specifiers as AstNode[]) ?? []) {
-        if (isNode(specifier.local)) scope.set(specifier.local.name as string, null);
+        declareId(scope, specifier.local, null);
       }
-    }
+  }
+}
+
+/** Declares into `scope` what `node` declares if it's a `let` or `const` declaration. */
+function declareLexical(scope: Scope, node: unknown) {
+  if (isNode(node) && node.type === 'VariableDeclaration' && node.kind !== 'var') {
+    declareVariables(scope, node);
   }
 }
 
@@ -77,15 +128,65 @@ function declareVars(scope: Scope, node: AstNode) {
   }
 }
 
+/** The scope a function opens: its own name if it's a named expression, its parameters, its body's. */
+function functionScope(fn: AstNode): Scope {
+  const scope: Scope = new Map();
+  // A named function expression can call itself by its own name.
+  if (fn.type === 'FunctionExpression') declareId(scope, fn.id, fn);
+  for (const param of (fn.params as unknown[]) ?? []) declarePattern(scope, param);
+  if (isNode(fn.body)) {
+    declareVars(scope, fn.body);
+    if (fn.body.type === 'BlockStatement') declareBlock(scope, fn.body.body as unknown[]);
+  }
+  return scope;
+}
+
+/** The scope one of SCOPE_TYPES opens, with what it declares directly. */
+function blockScope(node: AstNode): Scope {
+  const scope: Scope = new Map();
+  switch (node.type) {
+    case 'Program':
+      declareVars(scope, node);
+      declareBlock(scope, node.body as unknown[]);
+      break;
+    case 'BlockStatement':
+    case 'StaticBlock':
+      declareBlock(scope, node.body as unknown[]);
+      break;
+    case 'SwitchStatement':
+      for (const switchCase of (node.cases as AstNode[]) ?? []) {
+        declareBlock(scope, switchCase.consequent as unknown[]);
+      }
+      break;
+    case 'CatchClause':
+      declarePattern(scope, node.param);
+      break;
+    default:
+      // A loop: what its head declares, as in `for (const x of xs)`.
+      declareLexical(scope, node.init ?? node.left);
+  }
+  return scope;
+}
+
 /** A class body's methods and function-valued fields, by name. */
-function classMembers(body: AstNode) {
-  const members = new Map<string, AstNode>();
+function classMembers(body: AstNode): Members {
+  const members: Members = new Map();
   for (const member of (body.body as AstNode[]) ?? []) {
     if (member.computed || !isNode(member.key) || member.key.type !== 'Identifier') continue;
     const value = functionValue(member.value);
     if (value) members.set(member.key.name as string, value);
   }
   return members;
+}
+
+/** The name `f` a `this.f()` call is to, or undefined for any other callee. */
+function thisMethod(callee: AstNode): string | undefined {
+  const isThis =
+    callee.type === 'MemberExpression' &&
+    !callee.computed &&
+    isNode(callee.object) &&
+    callee.object.type === 'ThisExpression';
+  return isThis && isNode(callee.property) ? (callee.property.name as string) : undefined;
 }
 
 /**
@@ -100,147 +201,166 @@ export function recursive<Fn>(
   callerOf: (node: AstNode) => Fn | undefined,
   scoredAt: (node: AstNode) => Fn | undefined,
 ) {
-  const edges = new Map<Fn, Set<Fn>>();
-  const addEdge = (from: AstNode | undefined, to: AstNode | null | undefined) => {
-    const source = from ? callerOf(from) : undefined;
-    const target = to ? scoredAt(to) : undefined;
-    if (source === undefined || target === undefined) return;
-    if (!edges.has(source)) edges.set(source, new Set());
-    edges.get(source)?.add(target);
-  };
+  const graph = new CallGraph(callerOf, scoredAt);
+  graph.visit(program, null);
+  return inCycles(graph.edges);
+}
 
-  const scopes: Scope[] = [];
-  const functions: AstNode[] = [];
+/** Walks a program, resolving each call it can to the function called, as edges between scored ones. */
+class CallGraph<Fn> {
+  /** For each scored function, the scored functions it calls. */
+  readonly edges = new Map<Fn, Set<Fn>>();
+  readonly callerOf: (node: AstNode) => Fn | undefined;
+  readonly scoredAt: (node: AstNode) => Fn | undefined;
+  /** The scopes around the node being visited, innermost last. */
+  readonly scopes: Scope[] = [];
+  /** The functions around the node being visited, innermost last. */
+  readonly functions: AstNode[] = [];
   /** For each function on the way in, the class members its `this` reaches, or null. */
-  const thisMembers: (Map<string, AstNode> | null)[] = [];
-  const lookup = (name: string) => {
-    for (let i = scopes.length - 1; i >= 0; i--) {
-      if (scopes[i].has(name)) return scopes[i].get(name);
-    }
-    return undefined;
-  };
+  readonly thisMembers: (Members | null)[] = [];
 
-  const visit = (node: AstNode, members: Map<string, AstNode> | null) => {
-    if (node.type === 'CallExpression' && isNode(node.callee)) {
-      const callee = node.callee;
-      const from = functions.at(-1);
-      if (callee.type === 'Identifier') addEdge(from, lookup(callee.name as string));
-      if (
-        callee.type === 'MemberExpression' &&
-        !callee.computed &&
-        isNode(callee.object) &&
-        callee.object.type === 'ThisExpression' &&
-        isNode(callee.property)
-      ) {
-        addEdge(from, thisMembers.at(-1)?.get(callee.property.name as string));
-      }
-    }
+  constructor(
+    callerOf: (node: AstNode) => Fn | undefined,
+    scoredAt: (node: AstNode) => Fn | undefined,
+  ) {
+    this.callerOf = callerOf;
+    this.scoredAt = scoredAt;
+  }
 
-    if (node.type === 'ClassBody') {
-      const own = classMembers(node);
-      for (const member of (node.body as AstNode[]) ?? []) visitMember(member, own);
-      return;
-    }
+  /** Visits `node`; `members` is what `this` reaches in a class member's function, or null. */
+  visit(node: AstNode, members: Members | null) {
+    if (node.type === 'CallExpression') this.visitCall(node);
+    if (node.type === 'ClassBody') this.visitClassBody(node);
+    else if (FUNCTION_TYPES.has(node.type)) this.visitFunction(node, members);
+    else if (SCOPE_TYPES.has(node.type)) this.visitScope(node, members);
+    else this.visitChildren(node, members);
+  }
 
-    if (FUNCTION_TYPES.has(node.type)) {
-      const scope: Scope = new Map();
-      // A named function expression can call itself by its own name.
-      if (node.type === 'FunctionExpression' && isNode(node.id))
-        scope.set(node.id.name as string, node);
-      for (const param of (node.params as unknown[]) ?? []) {
-        for (const name of boundNames(param)) scope.set(name, null);
-      }
-      if (isNode(node.body)) {
-        declareVars(scope, node.body);
-        if (node.body.type === 'BlockStatement') declareBlock(scope, node.body.body as unknown[]);
-      }
-      scopes.push(scope);
-      functions.push(node);
-      // An arrow keeps the `this` around it; any other function has its own.
-      // A class field's arrow has the instance as its `this`, which `members` then gives.
-      thisMembers.push(
-        node.type === 'ArrowFunctionExpression' ? (members ?? thisMembers.at(-1) ?? null) : members,
-      );
-      for (const child of children(node)) visit(child, null);
-      thisMembers.pop();
-      functions.pop();
-      scopes.pop();
-      return;
-    }
+  visitChildren(node: AstNode, members: Members | null) {
+    for (const child of children(node)) this.visit(child, members);
+  }
 
-    const block =
-      node.type === 'BlockStatement' || node.type === 'StaticBlock' || node.type === 'Program';
-    const loop = /^For(In|Of)?Statement$/.test(node.type);
-    if (block || loop || node.type === 'CatchClause' || node.type === 'SwitchStatement') {
-      const scope: Scope = new Map();
-      if (node.type === 'Program') declareVars(scope, node);
-      if (Array.isArray(node.body)) declareBlock(scope, node.body as unknown[]);
-      if (node.type === 'SwitchStatement') {
-        for (const switchCase of (node.cases as AstNode[]) ?? []) {
-          declareBlock(scope, switchCase.consequent as unknown[]);
-        }
-      }
-      if (node.type === 'CatchClause')
-        for (const name of boundNames(node.param)) scope.set(name, null);
-      const init = loop ? (node.init ?? node.left) : undefined;
-      if (isNode(init) && init.type === 'VariableDeclaration' && init.kind !== 'var') {
-        declareVariables(scope, init);
-      }
-      scopes.push(scope);
-      for (const child of children(node)) visit(child, members);
-      scopes.pop();
-      return;
-    }
+  /** Adds an edge for a bare `f()` or a `this.f()`, to the function it resolves to. */
+  visitCall(call: AstNode) {
+    if (!isNode(call.callee)) return;
+    const from = this.functions.at(-1);
+    if (call.callee.type === 'Identifier')
+      this.addEdge(from, this.lookup(call.callee.name as string));
+    const method = thisMethod(call.callee);
+    if (method !== undefined) this.addEdge(from, this.thisMembers.at(-1)?.get(method));
+  }
 
-    for (const child of children(node)) visit(child, members);
-  };
+  /** Visits each member of a class, with the class's methods and fields as its `this`. */
+  visitClassBody(body: AstNode) {
+    const own = classMembers(body);
+    for (const member of (body.body as AstNode[]) ?? []) this.visitMember(member, own);
+  }
 
   /** A class member: a method's or field's function gets the class as its `this`. */
-  const visitMember = (member: AstNode, own: Map<string, AstNode>) => {
+  visitMember(member: AstNode, own: Members) {
     for (const child of children(member)) {
       const value = functionValue(child);
-      if (value && child === member.value) visit(value, own);
-      else visit(child, own);
+      if (value && child === member.value) this.visit(value, own);
+      else this.visit(child, own);
     }
-  };
+  }
 
-  visit(program, null);
-  return inCycles(edges);
+  visitFunction(fn: AstNode, members: Members | null) {
+    this.scopes.push(functionScope(fn));
+    this.functions.push(fn);
+    // An arrow keeps the `this` around it; any other function has its own.
+    // A class field's arrow has the instance as its `this`, which `members` then gives.
+    this.thisMembers.push(
+      fn.type === 'ArrowFunctionExpression'
+        ? (members ?? this.thisMembers.at(-1) ?? null)
+        : members,
+    );
+    this.visitChildren(fn, null);
+    this.thisMembers.pop();
+    this.functions.pop();
+    this.scopes.pop();
+  }
+
+  visitScope(node: AstNode, members: Members | null) {
+    this.scopes.push(blockScope(node));
+    this.visitChildren(node, members);
+    this.scopes.pop();
+  }
+
+  /** What `name` is bound to in the nearest scope that declares it, or undefined if none does. */
+  lookup(name: string) {
+    for (let i = this.scopes.length - 1; i >= 0; i--) {
+      if (this.scopes[i].has(name)) return this.scopes[i].get(name);
+    }
+    return undefined;
+  }
+
+  /** Records that the scored function `from` counts towards calls the one `to` is, if both are. */
+  addEdge(from: AstNode | undefined, to: AstNode | null | undefined) {
+    const source = from ? this.callerOf(from) : undefined;
+    const target = to ? this.scoredAt(to) : undefined;
+    if (source === undefined || target === undefined) return;
+    let targets = this.edges.get(source);
+    if (!targets) this.edges.set(source, (targets = new Set()));
+    targets.add(target);
+  }
 }
 
 /** The nodes in a cycle of `edges`: a component of more than one, or one with an edge to itself. */
 function inCycles<Fn>(edges: Map<Fn, Set<Fn>>) {
-  const index = new Map<Fn, number>();
-  const low = new Map<Fn, number>();
-  const stack: Fn[] = [];
-  const onStack = new Set<Fn>();
-  const found = new Set<Fn>();
-  let counter = 0;
-  const connect = (fn: Fn) => {
-    index.set(fn, counter);
-    low.set(fn, counter);
-    counter++;
-    stack.push(fn);
-    onStack.add(fn);
-    for (const next of edges.get(fn) ?? []) {
-      if (!index.has(next)) {
-        connect(next);
-        low.set(fn, Math.min(low.get(fn) as number, low.get(next) as number));
-      } else if (onStack.has(next)) {
-        low.set(fn, Math.min(low.get(fn) as number, index.get(next) as number));
+  const components = new StronglyConnected(edges);
+  for (const fn of edges.keys()) if (!components.index.has(fn)) components.connect(fn);
+  return components.inCycles;
+}
+
+/** Tarjan's strongly-connected-components algorithm, keeping the components that are cycles. */
+class StronglyConnected<Fn> {
+  readonly edges: Map<Fn, Set<Fn>>;
+  /** The order each node was reached in. */
+  readonly index = new Map<Fn, number>();
+  /** The earliest-reached node on the stack each node leads back to. */
+  readonly low = new Map<Fn, number>();
+  readonly stack: Fn[] = [];
+  readonly onStack = new Set<Fn>();
+  readonly inCycles = new Set<Fn>();
+
+  constructor(edges: Map<Fn, Set<Fn>>) {
+    this.edges = edges;
+  }
+
+  /** Searches from `fn`, closing each component the search finishes. */
+  connect(fn: Fn) {
+    const reached = this.index.size;
+    this.index.set(fn, reached);
+    this.low.set(fn, reached);
+    this.stack.push(fn);
+    this.onStack.add(fn);
+    for (const next of this.edges.get(fn) ?? []) {
+      if (!this.index.has(next)) {
+        this.connect(next);
+        this.lower(fn, this.low.get(next) as number);
+      } else if (this.onStack.has(next)) {
+        this.lower(fn, this.index.get(next) as number);
       }
     }
-    if (low.get(fn) === index.get(fn)) {
-      const component: Fn[] = [];
-      let member: Fn;
-      do {
-        member = stack.pop() as Fn;
-        onStack.delete(member);
-        component.push(member);
-      } while (member !== fn);
-      if (component.length > 1 || edges.get(fn)?.has(fn)) for (const m of component) found.add(m);
+    if (this.low.get(fn) === reached) this.close(fn);
+  }
+
+  lower(fn: Fn, to: number) {
+    this.low.set(fn, Math.min(this.low.get(fn) as number, to));
+  }
+
+  /** Pops `fn`'s component off the stack, keeping it if it's a cycle. */
+  close(fn: Fn) {
+    const component: Fn[] = [];
+    let member: Fn;
+    do {
+      member = this.stack.pop() as Fn;
+      this.onStack.delete(member);
+      component.push(member);
+    } while (member !== fn);
+    if (component.length > 1 || this.edges.get(fn)?.has(fn)) {
+      for (const m of component) this.inCycles.add(m);
     }
-  };
-  for (const fn of edges.keys()) if (!index.has(fn)) connect(fn);
-  return found;
+  }
 }

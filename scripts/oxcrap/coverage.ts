@@ -11,6 +11,12 @@ export type FileCoverage = {
 };
 export type Report = Record<string, FileCoverage>;
 
+/** Whether `file` has every part of an istanbul file entry that the scoring reads. */
+const isFileCoverage = (file: unknown) => {
+  const entry = file as Partial<FileCoverage> | null | undefined;
+  return Boolean(entry?.statementMap && entry.s && entry.fnMap && entry.f);
+};
+
 /** Reads a report's text, keyed by absolute path as istanbul writes it, or says what's wrong. */
 export function parseReport(text: string, path: string): Report {
   let report: unknown;
@@ -19,11 +25,8 @@ export function parseReport(text: string, path: string): Report {
   } catch (error) {
     throw new Error(`${path} isn't a JSON coverage report: ${(error as Error).message}`);
   }
-  const files = report && typeof report === 'object' ? Object.values(report) : [];
-  if (
-    Array.isArray(report) ||
-    files.some((file) => !file?.statementMap || !file?.s || !file?.fnMap || !file?.f)
-  ) {
+  const isObject = report !== null && typeof report === 'object' && !Array.isArray(report);
+  if (!isObject || !Object.values(report as object).every(isFileCoverage)) {
     throw new Error(`${path} isn't an istanbul JSON coverage report, such as coverage-final.json.`);
   }
   return report as Report;
@@ -59,6 +62,30 @@ function innermost(functions: Fn[], range: Range) {
   return best;
 }
 
+/** For each function, how many statements it holds, and how many of them ran. */
+function statementCounts(functions: Fn[], file: FileCoverage) {
+  const counts = new Map<Fn, { total: number; run: number }>();
+  for (const [id, range] of Object.entries(file.statementMap)) {
+    const owner = innermost(functions, range);
+    if (!owner) continue;
+    const count = counts.get(owner) ?? { total: 0, run: 0 };
+    count.total++;
+    if (file.s[id] > 0) count.run++;
+    counts.set(owner, count);
+  }
+  return counts;
+}
+
+/** The functions the report shows were called, for those with no statements of their own. */
+function calledFunctions(functions: Fn[], file: FileCoverage) {
+  const called = new Set<Fn>();
+  for (const [id, fn] of Object.entries(file.fnMap)) {
+    const owner = innermost(functions, fn.loc);
+    if (owner && file.f[id] > 0) called.add(owner);
+  }
+  return called;
+}
+
 /**
  * The share of each function's statements the tests ran, from 0 to 1. A statement counts toward
  * the innermost of `functions` holding it: with `enclosing` counting only outermost functions are
@@ -67,29 +94,13 @@ function innermost(functions: Fn[], range: Range) {
  * report shows it was called. A file the report doesn't have scores 0 throughout.
  */
 export function coverageOf(functions: Fn[], file: FileCoverage | undefined) {
-  const statements = new Map<Fn, { total: number; run: number }>();
-  const called = new Map<Fn, boolean>();
-  if (file) {
-    for (const [id, range] of Object.entries(file.statementMap)) {
-      const owner = innermost(functions, range);
-      if (!owner) continue;
-      const counts = statements.get(owner) ?? { total: 0, run: 0 };
-      counts.total++;
-      if (file.s[id] > 0) counts.run++;
-      statements.set(owner, counts);
-    }
-    for (const [id, fn] of Object.entries(file.fnMap)) {
-      const owner = innermost(functions, fn.loc);
-      if (owner) called.set(owner, (called.get(owner) ?? false) || file.f[id] > 0);
-    }
-  }
+  const counts = file ? statementCounts(functions, file) : new Map();
+  const called = file ? calledFunctions(functions, file) : new Set<Fn>();
   const covered = new Map<Fn, number>();
   for (const fn of functions) {
-    const counts = statements.get(fn);
-    covered.set(
-      fn,
-      counts && counts.total > 0 ? counts.run / counts.total : called.get(fn) ? 1 : 0,
-    );
+    const count = counts.get(fn);
+    if (count && count.total > 0) covered.set(fn, count.run / count.total);
+    else covered.set(fn, called.has(fn) ? 1 : 0);
   }
   return covered;
 }

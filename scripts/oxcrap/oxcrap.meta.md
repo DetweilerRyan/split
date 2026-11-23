@@ -67,7 +67,7 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
 
 ### The Stop hook
 
-The project's Claude Code Stop hook runs `npm run oxcrap` and passes its findings to Claude. It's the project's own script, not part of oxCrap: its README is [`../stop-hook.md`](../stop-hook.md), and its reasons are in [`../stop-hook.meta.md`](../stop-hook.meta.md).
+The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap:tooling`, for what changed, and passes their findings to Claude. It's the project's own script, not part of oxCrap: its README is [`../stop-hook.md`](../stop-hook.md), and its reasons are in [`../stop-hook.meta.md`](../stop-hook.meta.md).
 
 ### Our own complexity count
 
