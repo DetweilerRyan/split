@@ -122,6 +122,10 @@ The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap
   - "Refactor everything": every function over the limits was refactored rather than allowed, except `adds` (below).
 - **The tooling Vitest config split in two,** a unit config with coverage and a real config without, so only unit and property tests count, as [Coverage never comes from end-to-end tests](#coverage-never-comes-from-end-to-end-tests) says. The owner chose this over a third config just for Stryker ("add option 3 to #70"), which then points at the unit config.
 - **`oxcrap:app` and `oxcrap:tooling`** exist so the Stop hook scores only what changed, and a fresh worktree with one report missing isn't refused.
+- **Functions, not stateful classes.** The owner, on [#81](https://github.com/DetweilerRyan/split/pull/81#discussion_r4671675741): "i'm not a big fan of using stateful OOP when largely pure functional approaches result in simpler and less dynamic and therefore less error prone runtime execution."
+  - **The call graph** is found by functions that pass an immutable context down (the scopes, the function and what `this` reaches) and return the calls they find, rather than a class pushing and popping stacks. Functions walk a file's tree the same way.
+  - **A function is in a cycle when it leads back to itself.** That replaced Tarjan's algorithm, whose index, low-link and stack are the most state of all. Tarjan finds every component in linear time; checking each function's reach is quadratic at worst. A file's call graph has at most a few hundred functions, so it doesn't matter.
+  - **`run.ts`'s `Run` class stays:** it holds only the `Host` it's given, which never changes.
 - **The command line's logic moved to `run.ts`,** behind a `Host` of file-system calls, so unit tests reach it. The feature contract still runs the real program, but counts for none of its coverage.
 - **A report that isn't a JSON object is refused** as "isn't an istanbul JSON coverage report". Before, `null` crashed with a TypeError. An independent review flagged this as the refactor's one change in behaviour, and it was kept as a fix.
 

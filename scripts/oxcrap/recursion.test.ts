@@ -17,6 +17,16 @@ describe('recursion', () => {
     ['a method through this', 'class A { m(n) { return this.m(n - 1); } }', { m: 2 }],
     ['a class field arrow through this', 'class A { m = (n) => this.m(n - 1); }', { m: 2 }],
     [
+      'an arrow in a method, keeping its this',
+      'class A { m(xs) { return xs.map(() => this.m([])); } }',
+      { m: 2 },
+    ],
+    [
+      'a class field function expression through this',
+      'class A { m = function (n) { return this.m(n - 1); }; }',
+      { m: 2 },
+    ],
+    [
       'two functions calling each other',
       'function a(n) { return b(n); }\nfunction b(n) { return a(n); }',
       { a: 2, b: 2 },

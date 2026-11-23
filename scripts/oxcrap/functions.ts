@@ -121,73 +121,70 @@ function jsxAttribute(source: string, ancestors: AstNode[]) {
   return text(source, attribute.name);
 }
 
-/** One file's walk: its functions, the nodes they came from, and its simple statements. */
-class Parser {
-  constructor(source: string, counting: Counting) {
-    this.source = source;
-    this.counting = counting;
-    this.position = positions(source);
-  }
+/** What one file's walk needs throughout: its text, how to count, and where each offset is. */
+type Source = { text: string; counting: Counting; position: (offset: number) => Position };
+/** What a walk finds: each function with the node it came from, and the simple statements. */
+type Found = { functions: { fn: Fn; node: AstNode }[]; statements: Parsed['statements'] };
 
-  readonly source: string;
-  readonly counting: Counting;
-  readonly position: (offset: number) => Position;
-  readonly functions: Fn[] = [];
-  readonly nodes = new Map<AstNode, Fn>();
-  readonly statements: Parsed['statements'] = [];
+/** The functions and simple statements in `node` and below it, in source order. */
+function walk(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: Source): Found {
+  const statements = SIMPLE_STATEMENTS.has(node.type) ? [{ start: node.start, end: node.end }] : [];
+  const own =
+    FUNCTION_TYPES.has(node.type) && node.body
+      ? [{ fn: describe(node, ancestors, enclosing, source), node }]
+      : [];
+  const inside = own.length > 0 ? [...enclosing, own[0].fn] : enclosing;
+  const below = children(node).map((child) => walk(child, [...ancestors, node], inside, source));
+  return {
+    functions: [...own, ...below.flatMap((found) => found.functions)],
+    statements: [...statements, ...below.flatMap((found) => found.statements)],
+  };
+}
 
-  visit(node: AstNode, ancestors: AstNode[], enclosing: Fn[]) {
-    if (SIMPLE_STATEMENTS.has(node.type))
-      this.statements.push({ start: node.start, end: node.end });
-    let inside = enclosing;
-    if (FUNCTION_TYPES.has(node.type) && node.body) {
-      const fn = this.describe(node, ancestors, enclosing);
-      this.functions.push(fn);
-      this.nodes.set(node, fn);
-      inside = [...enclosing, fn];
-    }
-    for (const child of children(node)) this.visit(child, [...ancestors, node], inside);
-  }
+/** A function node as a scored `Fn`: its name, complexity and place. */
+function describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: Source): Fn {
+  const parent = ancestors.at(-1);
+  const own =
+    parent?.type === 'JSXExpressionContainer'
+      ? (jsxAttribute(source.text, ancestors) ?? '(anonymous)')
+      : label(source.text, node, parent);
+  return {
+    label: own,
+    name: [...enclosing.map((outer) => outer.label), own].join(' > '),
+    complexity: complexity(node, source.counting),
+    offset: { start: node.start, end: node.end },
+    start: source.position(node.start),
+    end: source.position(node.end),
+    parents: enclosing,
+    passedToCall: passedToCall(node, parent),
+  };
+}
 
-  /** A function node as a scored `Fn`: its name, complexity and place. */
-  describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[]): Fn {
-    const parent = ancestors.at(-1);
-    const own =
-      parent?.type === 'JSXExpressionContainer'
-        ? (jsxAttribute(this.source, ancestors) ?? '(anonymous)')
-        : label(this.source, node, parent);
-    return {
-      label: own,
-      name: [...enclosing.map((outer) => outer.label), own].join(' > '),
-      complexity: complexity(node, this.counting),
-      offset: { start: node.start, end: node.end },
-      start: this.position(node.start),
-      end: this.position(node.end),
-      parents: enclosing,
-      passedToCall: passedToCall(node, parent),
-    };
-  }
-
-  /**
-   * Adds 1 to each scored function in a recursion cycle. A call counts towards the scored function
-   * it's written in; it reaches a function only if that function is scored itself.
-   */
-  countRecursion(program: AstNode, scored: Fn[]) {
-    const enclosing = this.counting.nestedFunctions === 'enclosing';
-    const scoredSet = new Set(scored);
-    const cycles = recursive(
-      program,
-      (node) => {
-        const fn = this.nodes.get(node);
-        return fn && enclosing ? (fn.parents[0] ?? fn) : fn;
-      },
-      (node) => {
-        const fn = this.nodes.get(node);
-        return fn && scoredSet.has(fn) ? fn : undefined;
-      },
-    );
-    for (const fn of cycles) fn.complexity += 1;
-  }
+/**
+ * Adds 1 to each scored function in a recursion cycle. A call counts towards the scored function
+ * it's written in; it reaches a function only if that function is scored itself.
+ */
+function countRecursion(
+  program: AstNode,
+  found: Found['functions'],
+  scored: Fn[],
+  counting: Counting,
+) {
+  const enclosing = counting.nestedFunctions === 'enclosing';
+  const byNode = new Map(found.map(({ fn, node }) => [node, fn]));
+  const scoredSet = new Set(scored);
+  const cycles = recursive(
+    program,
+    (node) => {
+      const fn = byNode.get(node);
+      return fn && enclosing ? (fn.parents[0] ?? fn) : fn;
+    },
+    (node) => {
+      const fn = byNode.get(node);
+      return fn && scoredSet.has(fn) ? fn : undefined;
+    },
+  );
+  for (const fn of cycles) fn.complexity += 1;
 }
 
 /** Whether `node` is passed straight to a call, as `items.forEach(() => …)` passes its callback. */
@@ -202,12 +199,12 @@ export function parse(file: string, source: string, counting: Counting = COUNT_A
     throw new ParseError(`Couldn't parse ${file}: ${result.errors[0].message}`);
   }
   const program = result.program as unknown as AstNode;
-  const parser = new Parser(source, counting);
-  parser.visit(program, [], []);
+  const position = positions(source);
+  const found = walk(program, [], [], { text: source, counting, position });
   const enclosing = counting.nestedFunctions === 'enclosing';
-  const all = parser.functions;
+  const all = found.functions.map(({ fn }) => fn);
   const scored = enclosing ? all.filter((fn) => fn.parents.length === 0) : all;
-  if (counting.recursion) parser.countRecursion(program, scored);
+  if (counting.recursion) countRecursion(program, found.functions, scored, counting);
   const comments = (result.comments as Comment[]).map(({ type, value, start, end }) => ({
     type,
     value,
@@ -218,7 +215,7 @@ export function parse(file: string, source: string, counting: Counting = COUNT_A
     functions: scored,
     nested: enclosing ? all.filter((fn) => fn.parents.length > 0) : [],
     comments,
-    statements: parser.statements,
-    position: parser.position,
+    statements: found.statements,
+    position,
   };
 }
