@@ -4,6 +4,7 @@
 // `.includes` or `in`, counts like an `||` chain. A table of plain values only decides which value
 // comes back, so reading it counts nothing. Why is in oxcrap.meta.md, "Lookup tables count".
 import { type AstNode, children, type Counting, isFunctionType, isNode } from './complexity.ts';
+import { shadowedUses } from './recursion.ts';
 
 /** A static table: what holds it, how many entries, and whether any entry holds a function. */
 export type Table = {
@@ -22,12 +23,18 @@ export type Exports = { tables: Tables; functions: Set<string> };
 export type Imported = (from: string) => Exports | undefined;
 
 /**
+ * The tables a module's functions can read, by name, and the uses of those names that a local
+ * binding hides, which don't read the table.
+ */
+export type Readable = { tables: Tables; shadowed: Set<AstNode> };
+
+/**
  * What a module's top level holds: its own tables by local name, the tables it can read (its own
  * and those it imports), what it exports, and its imports.
  */
 export type ModuleTables = {
   own: Tables;
-  readable: Tables;
+  readable: Readable;
   exported: Exports;
   imports: Import[];
 };
@@ -276,14 +283,24 @@ export function tablesIn(program: AstNode, imported: Imported = () => undefined)
   const ownFunctions = functionNames(program);
   const functions = new Set([...ownFunctions, ...importedFunctions(imports, imported)]);
   const own = staticTables(program, functions);
-  for (const name of mutatedInFunctions(program, new Set())) own.delete(name);
-  const readable: Tables = new Map();
+  const tables: Tables = new Map();
   for (const { local, imported: name, from } of imports) {
     const table = imported(from)?.tables.get(name);
-    if (table) readable.set(local, table);
+    if (table) tables.set(local, table);
   }
-  for (const [name, table] of own) readable.set(name, table);
-  return { own, readable, exported: exportsOf(program, own, ownFunctions), imports };
+  for (const [name, table] of own) tables.set(name, table);
+  const shadowed = shadowedUses(program, new Set(tables.keys()));
+  // A table a function here changes is state, whether it's this module's or imported.
+  for (const name of mutatedInFunctions(program, shadowed, new Set())) {
+    own.delete(name);
+    tables.delete(name);
+  }
+  return {
+    own,
+    readable: { tables, shadowed },
+    exported: exportsOf(program, own, ownFunctions),
+    imports,
+  };
 }
 
 /** The local names of the functions a module imports from modules that export them. */
@@ -321,16 +338,22 @@ function staticTables(program: AstNode, functions: Set<string>): Tables {
  * `delete T[k]`, or a method that changes a Set, Map or array. Such a table is state, not a
  * table, so it isn't counted.
  */
-function mutatedInFunctions(node: AstNode, into: Set<string>, inFunction = false): Set<string> {
+function mutatedInFunctions(
+  node: AstNode,
+  shadowed: Set<AstNode>,
+  into: Set<string>,
+  inFunction = false,
+): Set<string> {
   const inside = inFunction || isFunctionType(node.type);
-  const name = inside ? mutatedName(node) : undefined;
-  if (name) into.add(name);
-  for (const child of children(node)) mutatedInFunctions(child, into, inside);
+  const changed = inside ? mutatedName(node) : undefined;
+  // A local of the same name is another object.
+  if (changed && !shadowed.has(changed)) into.add(changed.name as string);
+  for (const child of children(node)) mutatedInFunctions(child, shadowed, into, inside);
   return into;
 }
 
-/** The name of the object `node` changes an entry of, if it does. */
-function mutatedName(node: AstNode): string | undefined {
+/** The name, as written, of the object `node` changes an entry of, if it does. */
+function mutatedName(node: AstNode): AstNode | undefined {
   switch (node.type) {
     case 'AssignmentExpression':
       return objectName(node.left);
@@ -345,16 +368,16 @@ function mutatedName(node: AstNode): string | undefined {
   }
 }
 
-/** The name of the object a member expression reads from, through casts: `T` in `(T as X)[k]`. */
-function objectName(node: unknown): string | undefined {
+/** The name a member expression reads from, through casts: `T` in `(T as X)[k]`. */
+function objectName(node: unknown): AstNode | undefined {
   const member = unwrap(node);
   if (!isNode(member) || member.type !== 'MemberExpression') return undefined;
   const object = unwrap(member.object);
-  return isNode(object) && object.type === 'Identifier' ? (object.name as string) : undefined;
+  return isNode(object) && object.type === 'Identifier' ? object : undefined;
 }
 
 /** The object a call changes through one of its methods, as `T` in `T.set(k, v)`. */
-function mutatorCallee(callee: unknown): string | undefined {
+function mutatorCallee(callee: unknown): AstNode | undefined {
   if (!isNode(callee) || callee.type !== 'MemberExpression' || !isNode(callee.property)) {
     return undefined;
   }
@@ -403,17 +426,17 @@ function dispatch(entries: number, counting: Counting) {
 }
 
 /** The table an expression names, if it's one of `tables`. */
-function tableNamed(node: unknown, tables: Tables): Table | undefined {
+function tableNamed(node: unknown, readable: Readable): Table | undefined {
   const value = unwrap(node);
-  return isNode(value) && value.type === 'Identifier'
-    ? tables.get(value.name as string)
-    : undefined;
+  if (!isNode(value) || value.type !== 'Identifier' || readable.shadowed.has(value))
+    return undefined;
+  return readable.tables.get(value.name as string);
 }
 
 /** What a method call on a table adds: `.has` and `.includes` as membership, `.get` as dispatch. */
-function methodAdds(call: AstNode, tables: Tables, counting: Counting) {
+function methodAdds(call: AstNode, readable: Readable, counting: Counting) {
   const callee = call.callee as AstNode;
-  const table = tableNamed(callee.object, tables);
+  const table = tableNamed(callee.object, readable);
   if (!table || !isNode(callee.property)) return 0;
   switch (callee.property.name) {
     case 'has':
@@ -438,40 +461,40 @@ function getAdds(call: AstNode, table: Table, counting: Counting) {
  * What a call adds: a method on a table, or 1 for a call through a computed member with a runtime
  * key, `x[k]()` or `this[name]()`, unless `x` is a dispatch table, whose read counts already.
  */
-function callAdds(call: AstNode, tables: Tables, counting: Counting) {
+function callAdds(call: AstNode, readable: Readable, counting: Counting) {
   const callee = call.callee;
   if (!isNode(callee) || callee.type !== 'MemberExpression') return 0;
-  if (!callee.computed) return methodAdds(call, tables, counting);
+  if (!callee.computed) return methodAdds(call, readable, counting);
   if (staticKey(callee.property)) return 0;
-  return tableNamed(callee.object, tables)?.dispatch ? 0 : 1;
+  return tableNamed(callee.object, readable)?.dispatch ? 0 : 1;
 }
 
 /**
  * How many paths `node` adds by reading one of `tables`, as the switch or `||` chain it stands for
  * would. 0 for any other node.
  */
-export function lookupAdds(node: AstNode, tables: Tables, counting: Counting) {
+export function lookupAdds(node: AstNode, readable: Readable, counting: Counting) {
   switch (node.type) {
     case 'CallExpression':
-      return callAdds(node, tables, counting);
+      return callAdds(node, readable, counting);
     case 'MemberExpression':
-      return indexAdds(node, tables, counting);
+      return indexAdds(node, readable, counting);
     case 'BinaryExpression':
-      return inAdds(node, tables, counting);
+      return inAdds(node, readable, counting);
     default:
       return 0;
   }
 }
 
 /** `T[k]`: a dispatch object or array read with a runtime key, as the switch it stands for. */
-function indexAdds(member: AstNode, tables: Tables, counting: Counting) {
-  const table = tableNamed(member.object, tables);
+function indexAdds(member: AstNode, readable: Readable, counting: Counting) {
+  const table = tableNamed(member.object, readable);
   if (!member.computed || !table?.dispatch || staticKey(member.property)) return 0;
   return table.kind === 'object' || table.kind === 'array' ? dispatch(table.entries, counting) : 0;
 }
 
 /** `k in T`: membership of an object's keys, as the `||` chain it stands for. */
-function inAdds(binary: AstNode, tables: Tables, counting: Counting) {
-  const table = binary.operator === 'in' ? tableNamed(binary.right, tables) : undefined;
+function inAdds(binary: AstNode, readable: Readable, counting: Counting) {
+  const table = binary.operator === 'in' ? tableNamed(binary.right, readable) : undefined;
   return table?.kind === 'object' ? membership(table.entries, counting) : 0;
 }

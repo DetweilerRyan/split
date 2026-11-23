@@ -11,7 +11,7 @@ import {
   isNode,
 } from './complexity.ts';
 import { recursive } from './recursion.ts';
-import { type Exports, type Imported, lookupAdds, type Tables, tablesIn } from './tables.ts';
+import { type Exports, type Imported, lookupAdds, type Readable, tablesIn } from './tables.ts';
 
 /** A 1-based line and a 0-based column in UTF-16 units, as istanbul coverage reports use. */
 export type Position = { line: number; column: number };
@@ -127,8 +127,8 @@ type Source = {
   text: string;
   counting: Counting;
   position: (offset: number) => Position;
-  /** The lookup tables the module can read, own and imported. */
-  tables: Tables;
+  /** The lookup tables the module can read, own and imported, and the uses a local hides. */
+  tables: Readable;
 };
 /** What a walk finds: each function with the node it came from, and the simple statements. */
 type Found = { functions: { fn: Fn; node: AstNode }[]; statements: Parsed['statements'] };

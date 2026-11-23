@@ -195,6 +195,33 @@ function thisMethod(callee: AstNode): string | undefined {
 }
 
 /**
+ * The uses of `names` that a binding inside a function or block hides from the module's top level:
+ * a parameter, a local, or a catch or loop variable of the same name. tables.ts reads a table only
+ * through a use this doesn't list.
+ */
+export function shadowedUses(program: AstNode, names: Set<string>): Set<AstNode> {
+  return hidden(program, [], names, new Set());
+}
+
+/** Adds the uses of `names` in `node` and below that an inner scope hides, to `into`. */
+function hidden(node: AstNode, scopes: Scope[], names: Set<string>, into: Set<AstNode>) {
+  if (node.type === 'Identifier' && names.has(node.name as string)) {
+    const name = node.name as string;
+    // Scope 0 is the program's own: a binding found further in hides the top-level one.
+    if (scopes.findLastIndex((scope) => scope.has(name)) > 0) into.add(node);
+  }
+  const inner = scopesInside(node, scopes);
+  for (const child of children(node)) hidden(child, inner, names, into);
+  return into;
+}
+
+/** The scopes around `node`'s children: `scopes`, and the one `node` opens, if any. */
+function scopesInside(node: AstNode, scopes: Scope[]): Scope[] {
+  if (isFunctionType(node.type)) return [...scopes, functionScope(node)];
+  return opensScope(node) ? [...scopes, blockScope(node)] : scopes;
+}
+
+/**
  * The scored functions in a recursion cycle.
  * - `callerOf` maps the function a call is written in to the scored function it counts towards:
  *   itself, or with nested functions counting towards the outermost, that one.
