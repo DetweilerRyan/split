@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
+    "test:tooling": "vitest run -c vitest.tooling.config.ts",
     "test:e2e": "bddgen && playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --deny-warnings && gplint e2e/features && node scripts/check-unused-steps.ts && rumdl check .",
