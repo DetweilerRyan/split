@@ -38,7 +38,8 @@ const TOOLING = [
   'scripts',
   'vitest.tooling.config.ts',
   '.oxlintrc.json',
-  'oxlintrc.real.test.ts',
+  '.rev-dep.config.jsonc',
+  'rev-dep.config.real.test.ts',
   'package.json',
 ];
 const WATCHED = [...new Set([...APP, ...TOOLING])];

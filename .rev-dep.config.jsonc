@@ -1,0 +1,25 @@
+// rev-dep's import rules. `npm run lint` runs `rev-dep config run --list-all-issues
+// --lint-config-rules orphan-file-globs,orphan-module-globs,overlapping-globs`: it lists every issue,
+// and fails on a pattern that matches nothing or overlaps another. (Its trailing-comma rule is left
+// out; oxfmt formats this file.) rev-dep resolves each import, through `../`, `.ts` extensions and
+// tsconfig aliases such as `@/`, and checks where it lands. Node built-ins and npm packages aren't
+// files in the repository, so the rules leave them alone. rev-dep.config.real.test.ts checks the
+// rules catch what they should.
+{
+  "configVersion": "2.2",
+  "$schema": "https://github.com/jayu/rev-dep/blob/master/config-schema/2.2.schema.json?raw=true",
+  "workspaces": [
+    {
+      "path": ".",
+      "moduleBoundaries": [
+        {
+          // oxCrap imports nothing from outside its folder, so it can be lifted out into a
+          // project of its own. Why is in scripts/oxcrap/oxcrap.meta.md.
+          "name": "oxcrap-self-contained",
+          "pattern": "scripts/oxcrap/**/*",
+          "allow": ["scripts/oxcrap/**/*"],
+        },
+      ],
+    },
+  ],
+}

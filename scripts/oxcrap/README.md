@@ -150,7 +150,7 @@ A comment that mentions `@crap-allow` without starting with it is ignored, so pr
   - [`ajv`](https://ajv.js.org/) checks the config against its schema;
   - [`ignore`](https://www.npmjs.com/package/ignore) matches `ignorePatterns`.
 
-oxCrap imports nothing from outside this folder, and lint fails if it does, so it can be lifted out into a project of its own.
+oxCrap imports nothing from outside this folder, so it can be lifted out into a project of its own. In this repository, [rev-dep](https://github.com/jayu/rev-dep) checks that, through `npm run lint`.
 
 ## In this repository
 

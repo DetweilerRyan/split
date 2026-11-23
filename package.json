@@ -11,7 +11,7 @@
     "test:tooling": "vitest run -c vitest.tooling.config.ts && bddgen -c scripts/oxcrap/features/playwright.config.ts && playwright test -c scripts/oxcrap/features/playwright.config.ts",
     "test:e2e": "bddgen && playwright test",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint --deny-warnings && gplint e2e/features && gplint -c scripts/oxcrap/features/.gplintrc scripts/oxcrap/features && node scripts/check-unused-steps.ts -c playwright.config.ts -c scripts/oxcrap/features/playwright.config.ts && rumdl check .",
+    "lint": "oxlint --deny-warnings && gplint e2e/features && gplint -c scripts/oxcrap/features/.gplintrc scripts/oxcrap/features && node scripts/check-unused-steps.ts -c playwright.config.ts -c scripts/oxcrap/features/playwright.config.ts && rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,orphan-module-globs,overlapping-globs && rumdl check .",
     "format": "oxfmt && node scripts/format-features.ts e2e/features scripts/oxcrap/features",
     "format:check": "oxfmt --check && node scripts/format-features.ts --check e2e/features scripts/oxcrap/features",
     "oxcrap": "node scripts/oxcrap/oxcrap.ts"
@@ -57,6 +57,7 @@
     "playwright": "1.65.0",
     "playwright-bdd": "9.2.1",
     "postcss": "^8.5.32",
+    "rev-dep": "3.3.0",
     "rumdl": "0.3.2",
     "tailwindcss": "^3.4.19",
     "typescript": "^7.0.2",

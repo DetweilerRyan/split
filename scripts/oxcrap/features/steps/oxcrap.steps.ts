@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
-import { Given, Then, When } from './screenplay/fixtures.ts';
-import { theExitCode, theOutput } from './screenplay/questions.ts';
+import { Given, Then, When } from '../screenplay/fixtures.ts';
+import { theExitCode, theOutput } from '../screenplay/questions.ts';
 import {
   changesAfterTheTests,
   linksTheProject,
@@ -10,7 +10,7 @@ import {
   writesFile,
   writesFunction,
   writesReportWithoutFunctions,
-} from './screenplay/tasks.ts';
+} from '../screenplay/tasks.ts';
 
 Given(
   '{word} has a function {string} with complexity {int} in {string}',

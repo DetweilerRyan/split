@@ -19,7 +19,7 @@ const ignored = [
   '**/.claude/worktrees/**',
   // vitest.tooling.config.ts's.
   'scripts/**',
-  'oxlintrc.real.test.ts',
+  'rev-dep.config.real.test.ts',
 ];
 
 export default defineConfig({
