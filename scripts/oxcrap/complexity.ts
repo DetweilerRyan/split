@@ -104,7 +104,7 @@ export function children(node: AstNode): AstNode[] {
 }
 
 /** How many paths a node adds, under `counting`. */
-// @crap-allow CRAP 34, complexity 34. One dispatch over the node types that add paths, each case a line: splitting it would scatter one idea, and a lookup table would count the same (#82).
+// @crap-allow CRAP 34, complexity 34. One dispatch over the node types that add paths, each case a line: splitting it would scatter one idea, and a lookup table would count its cases the same (#82).
 function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
   switch (node.type) {

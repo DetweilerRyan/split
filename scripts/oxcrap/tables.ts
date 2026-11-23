@@ -3,7 +3,7 @@
 // function, read with a runtime key, counts like a switch; and a membership test, `.has`,
 // `.includes` or `in`, counts like an `||` chain. A table of plain values only decides which value
 // comes back, so reading it counts nothing. Why is in oxcrap.meta.md, "Lookup tables count".
-import { type AstNode, type Counting, isNode } from './complexity.ts';
+import { type AstNode, children, type Counting, isFunctionType, isNode } from './complexity.ts';
 
 /** A static table: what holds it, how many entries, and whether any entry holds a function. */
 export type Table = {
@@ -16,8 +16,21 @@ export type Tables = Map<string, Table>;
 /** A name a module imports from a relative path: `import { imported as local } from from`. */
 export type Import = { local: string; imported: string; from: string };
 
-/** What a module's top level holds: its own tables by local name, what it exports, and imports. */
-export type ModuleTables = { own: Tables; exported: Tables; imports: Import[] };
+/** What a module exports that another's tables can use: its tables, and its functions' names. */
+export type Exports = { tables: Tables; functions: Set<string> };
+/** The exports of the module a relative import names, `from` as the file writes it, if it's found. */
+export type Imported = (from: string) => Exports | undefined;
+
+/**
+ * What a module's top level holds: its own tables by local name, the tables it can read (its own
+ * and those it imports), what it exports, and its imports.
+ */
+export type ModuleTables = {
+  own: Tables;
+  readable: Tables;
+  exported: Exports;
+  imports: Import[];
+};
 
 /** `node` without the wrappers that don't change its value: parentheses, `as`, `satisfies`, `!`. */
 function unwrap(node: unknown): unknown {
@@ -208,7 +221,7 @@ function importsOf(program: AstNode): Import[] {
   return (program.body as AstNode[]).flatMap((statement) => {
     if (statement.type !== 'ImportDeclaration' || !isNode(statement.source)) return [];
     const from = statement.source.value as string;
-    if (!from.startsWith('./') && !from.startsWith('../')) return [];
+    if (!/^\.\.?(\/|$)/.test(from)) return [];
     return (statement.specifiers as AstNode[]).flatMap((specifier) =>
       specifier.type === 'ImportSpecifier' && isNode(specifier.imported) && isNode(specifier.local)
         ? [
@@ -224,30 +237,64 @@ function importsOf(program: AstNode): Import[] {
 }
 
 /** The tables a module exports, by the name another module imports them as. */
-function exportsOf(program: AstNode, own: Tables): Tables {
-  return new Map((program.body as AstNode[]).flatMap((statement) => exportedFrom(statement, own)));
+function exportsOf(program: AstNode, own: Tables, functions: Set<string>): Exports {
+  const names = (program.body as AstNode[]).flatMap(exportedNames);
+  const tables: Tables = new Map();
+  const exportedFunctions = new Set<string>();
+  for (const [local, name] of names) {
+    const table = own.get(local);
+    if (table) tables.set(name, table);
+    if (functions.has(local)) exportedFunctions.add(name);
+  }
+  return { tables, functions: exportedFunctions };
 }
-
-/** The tables one statement exports: `export const T = …`, or `export { T as U }`. */
-function exportedFrom(statement: AstNode, own: Tables): [string, Table][] {
+/** The names one statement exports, local then exported: `export const T`, `export { T as U }`. */
+function exportedNames(statement: AstNode): [string, string][] {
   if (statement.type !== 'ExportNamedDeclaration' || statement.source) return [];
-  const declared = isNode(statement.declaration)
-    ? constants(statement.declaration).map(([name]) => [name, name])
+  const declaration = statement.declaration;
+  const declared: [string, string][] = isNode(declaration)
+    ? declaredNames(declaration).map((name) => [name, name])
     : [];
   const specified = ((statement.specifiers as AstNode[]) ?? []).flatMap((specifier) =>
     isNode(specifier.local) && isNode(specifier.exported)
-      ? [[specifier.local.name as string, specifier.exported.name as string]]
+      ? [[specifier.local.name as string, specifier.exported.name as string] as [string, string]]
       : [],
   );
-  return [...declared, ...specified].flatMap(([local, name]) => {
-    const table = own.get(local);
-    return table ? [[name, table] as [string, Table]] : [];
-  });
+  return [...declared, ...specified];
 }
 
+/** The names an exported declaration declares: a function's, or its `const`s. */
+function declaredNames(declaration: AstNode): string[] {
+  if (declaration.type === 'FunctionDeclaration' && isNode(declaration.id)) {
+    return [declaration.id.name as string];
+  }
+  return constants(declaration).map(([name]) => name);
+}
 /** A module's static tables: `const`s built from literals, with what its top level adds to them. */
-export function tablesIn(program: AstNode): ModuleTables {
-  const functions = functionNames(program);
+export function tablesIn(program: AstNode, imported: Imported = () => undefined): ModuleTables {
+  const imports = importsOf(program);
+  const ownFunctions = functionNames(program);
+  const functions = new Set([...ownFunctions, ...importedFunctions(imports, imported)]);
+  const own = staticTables(program, functions);
+  for (const name of mutatedInFunctions(program, new Set())) own.delete(name);
+  const readable: Tables = new Map();
+  for (const { local, imported: name, from } of imports) {
+    const table = imported(from)?.tables.get(name);
+    if (table) readable.set(local, table);
+  }
+  for (const [name, table] of own) readable.set(name, table);
+  return { own, readable, exported: exportsOf(program, own, ownFunctions), imports };
+}
+
+/** The local names of the functions a module imports from modules that export them. */
+function importedFunctions(imports: Import[], imported: Imported): string[] {
+  return imports
+    .filter(({ imported: name, from }) => imported(from)?.functions.has(name))
+    .map(({ local }) => local);
+}
+
+/** The module's `const` tables built from literals, with what its top level adds to them. */
+function staticTables(program: AstNode, functions: Set<string>): Tables {
   const own: Tables = new Map();
   const statements = topLevel(program);
   for (const statement of statements) {
@@ -266,9 +313,76 @@ export function tablesIn(program: AstNode): ModuleTables {
       dispatch: table.dispatch || holdsFunction(added.value, functions),
     });
   }
-  return { own, exported: exportsOf(program, own), imports: importsOf(program) };
+  return own;
 }
 
+/**
+ * The names whose entries code inside a function changes: `T.k = v`, `T[k] = v`, `T.k++`,
+ * `delete T[k]`, or a method that changes a Set, Map or array. Such a table is state, not a
+ * table, so it isn't counted.
+ */
+function mutatedInFunctions(node: AstNode, into: Set<string>, inFunction = false): Set<string> {
+  const inside = inFunction || isFunctionType(node.type);
+  const name = inside ? mutatedName(node) : undefined;
+  if (name) into.add(name);
+  for (const child of children(node)) mutatedInFunctions(child, into, inside);
+  return into;
+}
+
+/** The name of the object `node` changes an entry of, if it does. */
+function mutatedName(node: AstNode): string | undefined {
+  switch (node.type) {
+    case 'AssignmentExpression':
+      return objectName(node.left);
+    case 'UpdateExpression':
+      return objectName(node.argument);
+    case 'UnaryExpression':
+      return node.operator === 'delete' ? objectName(node.argument) : undefined;
+    case 'CallExpression':
+      return mutatorCallee(node.callee);
+    default:
+      return undefined;
+  }
+}
+
+/** The name of the object a member expression reads from, through casts: `T` in `(T as X)[k]`. */
+function objectName(node: unknown): string | undefined {
+  const member = unwrap(node);
+  if (!isNode(member) || member.type !== 'MemberExpression') return undefined;
+  const object = unwrap(member.object);
+  return isNode(object) && object.type === 'Identifier' ? (object.name as string) : undefined;
+}
+
+/** The object a call changes through one of its methods, as `T` in `T.set(k, v)`. */
+function mutatorCallee(callee: unknown): string | undefined {
+  if (!isNode(callee) || callee.type !== 'MemberExpression' || !isNode(callee.property)) {
+    return undefined;
+  }
+  return isMutator(callee.property.name as string) ? objectName(callee) : undefined;
+}
+
+/** Whether a method changes the Set, Map or array it's called on. */
+// @crap-allow CRAP 14, complexity 14. One list of the methods that change a collection: splitting it would scatter one idea, and a Set of them would count the same (#82).
+function isMutator(method: string) {
+  switch (method) {
+    case 'set':
+    case 'add':
+    case 'delete':
+    case 'clear':
+    case 'push':
+    case 'pop':
+    case 'shift':
+    case 'unshift':
+    case 'splice':
+    case 'sort':
+    case 'reverse':
+    case 'fill':
+    case 'copyWithin':
+      return true;
+    default:
+      return false;
+  }
+}
 /** Whether `node` is a key known before the program runs: a literal, or a template with no `${}`. */
 function staticKey(node: unknown): boolean {
   if (!isNode(node)) return false;
@@ -290,7 +404,10 @@ function dispatch(entries: number, counting: Counting) {
 
 /** The table an expression names, if it's one of `tables`. */
 function tableNamed(node: unknown, tables: Tables): Table | undefined {
-  return isNode(node) && node.type === 'Identifier' ? tables.get(node.name as string) : undefined;
+  const value = unwrap(node);
+  return isNode(value) && value.type === 'Identifier'
+    ? tables.get(value.name as string)
+    : undefined;
 }
 
 /** What a method call on a table adds: `.has` and `.includes` as membership, `.get` as dispatch. */
@@ -357,22 +474,4 @@ function indexAdds(member: AstNode, tables: Tables, counting: Counting) {
 function inAdds(binary: AstNode, tables: Tables, counting: Counting) {
   const table = binary.operator === 'in' ? tableNamed(binary.right, tables) : undefined;
   return table?.kind === 'object' ? membership(table.entries, counting) : 0;
-}
-
-/**
- * The tables a module can read: its own, and those it imports from relative paths, which
- * `imported(from, name)` looks up in the module `from`. Its own come first, as a local name hides
- * an import of the same name only by being an error.
- */
-export function readableTables(
-  module: ModuleTables,
-  imported: (from: string, name: string) => Table | undefined,
-): Tables {
-  const tables: Tables = new Map();
-  for (const { local, imported: name, from } of module.imports) {
-    const table = imported(from, name);
-    if (table) tables.set(local, table);
-  }
-  for (const [name, table] of module.own) tables.set(name, table);
-  return tables;
 }

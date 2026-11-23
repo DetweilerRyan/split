@@ -11,7 +11,7 @@ import {
   isNode,
 } from './complexity.ts';
 import { recursive } from './recursion.ts';
-import { lookupAdds, readableTables, type Table, type Tables, tablesIn } from './tables.ts';
+import { type Exports, type Imported, lookupAdds, type Tables, tablesIn } from './tables.ts';
 
 /** A 1-based line and a 0-based column in UTF-16 units, as istanbul coverage reports use. */
 export type Position = { line: number; column: number };
@@ -224,15 +224,15 @@ function passedToCall(node: AstNode, parent: AstNode | undefined) {
 }
 
 /**
- * A file's functions, comments and simple statements. `imported(from, name)` gives the lookup table
- * a relative import names, `from` as the file writes it, so reads of it count; with none given,
- * only the file's own tables do.
+ * A file's functions, comments and simple statements. `imported(from)` gives what the module a
+ * relative import names exports, `from` as the file writes it, so the tables and functions it
+ * imports count as they do in their own module; with none given, only the file's own do.
  */
 export function parse(
   file: string,
   source: string,
   counting: Counting = COUNT_ALL,
-  imported: (from: string, name: string) => Table | undefined = () => undefined,
+  imported: Imported = () => undefined,
 ): Parsed {
   const result = parseSync(file, source);
   if (result.errors.length > 0) {
@@ -240,7 +240,7 @@ export function parse(
   }
   const program = result.program as unknown as AstNode;
   const position = positions(source);
-  const tables = readableTables(tablesIn(program), imported);
+  const tables = tablesIn(program, imported).readable;
   const found = walk(program, [], [], { text: source, counting, position, tables });
   const enclosing = counting.nestedFunctions === 'enclosing';
   const all = found.functions.map(({ fn }) => fn);
@@ -262,11 +262,11 @@ export function parse(
 }
 
 /**
- * The lookup tables a module exports, for a file that imports them. A module that doesn't parse
- * exports none here; it's reported when it's scored itself.
+ * The lookup tables and functions a module exports, for a file that imports them. A module that
+ * doesn't parse exports none here; it's reported when it's scored itself.
  */
-export function exportedTables(file: string, source: string): Tables {
+export function moduleExports(file: string, source: string): Exports {
   const result = parseSync(file, source);
-  if (result.errors.length > 0) return new Map();
+  if (result.errors.length > 0) return { tables: new Map(), functions: new Set() };
   return tablesIn(result.program as unknown as AstNode).exported;
 }
