@@ -136,7 +136,26 @@ The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap
 - **It covers lookups and `Set.has` too,** not only switches: the owner's answer on what the guard should count was "Lookups and Set.has" ([feedback](https://github.com/DetweilerRyan/split/pull/81#issuecomment-7112721212)), so a chain of conditions moved into a `Set`, or cases into an object, is the same move.
 - **Why:** the paths are still there, chosen by a key instead of a `case`. Counting stops seeing them, so the score drops without the code getting any simpler to test.
 - **`adds` is allowed instead.** It's one dispatch over the node types that add paths. The owner chose "Allow it" ([feedback](https://github.com/DetweilerRyan/split/pull/81#issuecomment-7112721212)).
-- **oxCrap doesn't catch it yet.** [#82](https://github.com/DetweilerRyan/split/issues/82) is to count static lookups and `Set.has` as the branches they stand for. Until then the rule is enforced by review.
+- **oxCrap now counts the move,** as [Lookup tables count](#lookup-tables-count) says, so review no longer has to catch it alone.
+
+### Lookup tables count
+
+- **What counts was the owner's choice, in [#82](https://github.com/DetweilerRyan/split/issues/82#issuecomment-7114376828).** Asked whether oxCrap could tell "objects/maps that are used to control the flow of logic vs objects/maps/sets that are simply there to hold data", the owner chose "Yes, split them":
+  - **a dispatch table,** one with a function among its entries, read with a runtime key, counts one per entry, as a switch does;
+  - **a membership test,** `.has`, `.includes` or `in`, counts as an `||` chain does;
+  - **a table of plain values** counts nothing.
+- **Why the split falls there:** a table controls flow when a read decides which code runs, and holds data when it decides only which value comes back. Every key of a data table goes down the same path, so no entry needs a test of its own. The same mapping written as a switch of `case 'US': return 'USD'` lines would count each case, but there the switch is the poorer way to write it.
+- **Why membership counts wherever it's written,** even in `return S.has(x)`: the `x === a || x === b` chain it stands for counts there too. A named predicate, such as `isFunctionType`, pays for it once, as a helper wrapping that chain would. That's how `FUNCTION_TYPES` became `isFunctionType` when this landed.
+- **Judging by what the entries hold** is sturdier than judging by how a read is used. `const handler = T[k]; handler()` still counts, and so does passing the looked-up function on.
+- **The owner's other choices** ([decisions](https://github.com/DetweilerRyan/split/issues/82#issuecomment-7114376828)):
+  - "Yes, count it": a call through a computed member, `x[k]()` or `this[name]()`, adds 1. It catches behaviour named indirectly, such as a table of method names.
+  - "Follow relative imports": otherwise moving the table into another module would dodge the count. Package imports aren't followed.
+  - "Literal plus top-level adds": a table built empty and filled at the top level still counts. Additions inside a function make it state, not a table.
+- **It counts under `switchCases` and `logicalOperators`,** so that with `once` or `sequence` a dispatch or a membership test adds 1, as the switch or chain it stands for would. A property test checks that a switch moved into a table, or a chain moved into a `Set`, `.includes` or `in`, scores as it did under every combination of counting options.
+- **When it landed,** the app's code had no dispatch tables and one data table, `REGION_CURRENCIES`, so no app score changed. In oxCrap:
+  - `adds` rose from 25 to 34, through its `BRANCHES` and `LOGICAL_ASSIGNMENTS` lookups, and its allow was updated;
+  - `complexity` and `walk` went over through `FUNCTION_TYPES.has`, which became the `isFunctionType` predicate;
+  - `walk` split its per-node recording into `record`.
 
 ### The name
 
@@ -352,3 +371,5 @@ It checks that each function's complexity, which functions a `@crap-allow` match
 - **The project runs only part of its suite before oxCrap,** such as the Stop hook running only related tests ([`../stop-hook.meta.md`](../stop-hook.meta.md#what-would-reopen-this)): a partial run's report needs oxCrap to know which functions it covers, so revisit the stale-report rule.
 - **Coverage on every `npm test` costs too much:** move it to a separate script, such as `test:coverage`, and run that before `npm run oxcrap`.
 - **oxCrap scores generated code or very large files,** where the cycle check's O(V·(V+E)) shows, as it does at about half a second for 2,000 functions in one chain: replace `reachable` with a linear strongly-connected-components algorithm, Tarjan or Kosaraju, written as one function whose index, stack and visited set are local to it. Don't go back to a class; the walks cost about the same either way ([feedback](https://github.com/DetweilerRyan/split/pull/81#issuecomment-7113779869)).
+- **A local name shadows a table's,** such as a parameter called `RULES` in a module with a `RULES` table: oxCrap counts the read as the table's. No file here does this. If one does, resolve names by scope, as `recursion.ts` does for calls.
+- **A table arrives by another route:** a namespace import (`import * as t`), a re-export (`export { T } from './t'`), a default export, or a table built by a function. None is followed today; follow the one that turns up.

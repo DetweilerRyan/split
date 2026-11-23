@@ -207,6 +207,7 @@ const countings: fc.Arbitrary<Counting> = fc.record({
   logicalOperators: fc.constantFrom('each' as const, 'sequence' as const),
   recursion: fc.boolean(),
   labelledJumps: fc.boolean(),
+  lookupTables: fc.boolean(),
 });
 
 describe('complexity of generated functions', () => {
