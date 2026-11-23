@@ -48,7 +48,8 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 - **Asset imports, such as JSON.** rev-dep 3.3.0 treats assets as resolvable and doesn't check where they land, and no setting changes that.
   - **This is a regression:** the oxlint override caught `import p from '../../package.json' with { type: 'json' }`.
   - **Today it doesn't matter in practice:** oxCrap's only JSON import is its own `./configuration_schema.json`.
-  - **It's recorded under "Decisions made" on #66,** with two alternatives: a narrow oxlint pattern for `../**/*.json`, which brings back string matching, or asking rev-dep upstream for asset boundaries.
+  - **It holds for every asset import form, re-tested on 3.3.0:** JSON with and without `with { type: 'json' }`, `require`, a dynamic `import()`, and CSS. `rev-dep debug get-tree-for-cwd` resolves them to the right file but labels them `AssetModule`, and the boundary check skips them. Its README doesn't say so. No one had reported it upstream.
+  - **The owner accepted the gap:** "i accept the gap. don't report the issue" ([decision](https://github.com/DetweilerRyan/split/pull/66#issuecomment-7105283194)). Two alternatives had been offered: a narrow oxlint pattern for `../**/*.json`, which brings back string matching, or asking rev-dep upstream for asset boundaries.
 - **`import.meta.resolve()`, `/// <reference path>`, and a symlink to a single file,** found by the same review. None is a normal import.
 - **An npm package that's declared but isn't meant to be used.** rev-dep checks that a package resolves, not which packages a folder may use.
 - **No binary for Windows on ARM,** so `npm run lint` can't run there.
@@ -65,6 +66,6 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 
 ## What would reopen this
 
-- **A rule that must cover JSON or other assets:** revisit the gap above.
+- **A rule that must cover JSON or other assets,** or rev-dep starting to check them: revisit the gap above.
 - **A second boundary, such as layers in `src/`:** rev-dep's `moduleBoundaries` and its restricted-imports checks are where to start.
 - **rev-dep stalling,** or a platform it has no binary for becoming one the repository needs: dependency-cruiser is the fallback.
