@@ -175,15 +175,18 @@ class Parser {
   countRecursion(program: AstNode, scored: Fn[]) {
     const enclosing = this.counting.nestedFunctions === 'enclosing';
     const scoredSet = new Set(scored);
-    const callerOf = (node: AstNode) => {
-      const fn = this.nodes.get(node);
-      return fn && enclosing ? (fn.parents[0] ?? fn) : fn;
-    };
-    const scoredAt = (node: AstNode) => {
-      const fn = this.nodes.get(node);
-      return fn && scoredSet.has(fn) ? fn : undefined;
-    };
-    for (const fn of recursive(program, callerOf, scoredAt)) fn.complexity += 1;
+    const cycles = recursive(
+      program,
+      (node) => {
+        const fn = this.nodes.get(node);
+        return fn && enclosing ? (fn.parents[0] ?? fn) : fn;
+      },
+      (node) => {
+        const fn = this.nodes.get(node);
+        return fn && scoredSet.has(fn) ? fn : undefined;
+      },
+    );
+    for (const fn of cycles) fn.complexity += 1;
   }
 }
 

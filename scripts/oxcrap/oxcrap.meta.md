@@ -128,8 +128,9 @@ The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap
 ### Lookup tables don't lower a score
 
 - **The owner set the rule** on [#81](https://github.com/DetweilerRyan/split/pull/81#discussion_r4671330070), where a refactor had moved `adds`'s cases into a `Map` of functions: "moving a switch statement (static) into a runtime data structure is never the right solution to reducing cyclomatic complexity. this is a cheat to get around the crap thresholds."
+- **It covers lookups and `Set.has` too,** not only switches: the owner's answer on what the guard should count was "Lookups and Set.has" ([feedback](https://github.com/DetweilerRyan/split/pull/81#issuecomment-7112721212)), so a chain of conditions moved into a `Set`, or cases into an object, is the same move.
 - **Why:** the paths are still there, chosen by a key instead of a `case`. Counting stops seeing them, so the score drops without the code getting any simpler to test.
-- **`adds` is allowed instead.** It's one dispatch over the node types that add paths. The owner chose "Allow it" over splitting it into two switches ([feedback](https://github.com/DetweilerRyan/split/pull/81#issuecomment-7112721212)).
+- **`adds` is allowed instead.** It's one dispatch over the node types that add paths. The owner chose "Allow it" ([feedback](https://github.com/DetweilerRyan/split/pull/81#issuecomment-7112721212)).
 - **oxCrap doesn't catch it yet.** [#82](https://github.com/DetweilerRyan/split/issues/82) is to count static lookups and `Set.has` as the branches they stand for. Until then the rule is enforced by review.
 
 ### The name
