@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { Participant, ReceiptItem } from '../store/useReceiptStore';
 import { formatMoney } from '../utils/currency';
 import { ItemRow } from './ItemRow';
@@ -16,6 +17,7 @@ interface ItemListProps {
 }
 
 export function ItemList(props: ItemListProps) {
+  const headingId = useId();
   const visible = props.items.filter((item) => {
     if (props.filter === 'unclaimed') return !Object.values(item.claims).some(Boolean);
     if (props.filter === 'mine') return props.activeId ? item.claims[props.activeId] : false;
@@ -23,10 +25,12 @@ export function ItemList(props: ItemListProps) {
   });
 
   return (
-    <section className="card overflow-hidden">
+    <section className="card overflow-hidden" aria-labelledby={headingId}>
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
         <div>
-          <h2 className="font-extrabold text-slate-900">Receipt items</h2>
+          <h2 id={headingId} className="font-extrabold text-slate-900">
+            Receipt items
+          </h2>
           <p className="text-xs text-slate-500">{props.items.length} line items · tap to claim</p>
         </div>
         <span className="rounded-lg bg-indigo-50 px-2.5 py-1 font-mono text-sm font-bold text-indigo-800">

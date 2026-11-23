@@ -99,6 +99,7 @@ export function Header({
         <div
           className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2"
           aria-label={`${connection.provider} ${statusLabel.toLowerCase()}, ${peers.length} connections online`}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- <output> is for the result of a calculation; this is the connection's state.
           role="status"
         >
           <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">

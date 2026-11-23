@@ -71,7 +71,8 @@ describe('IdentityModal', () => {
     expect(onClose).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Close identity picker' }));
     expect(onClose).toHaveBeenCalledTimes(1);
-    await userEvent.click(screen.getByRole('presentation'), { position: { x: 5, y: 5 } });
+    // Outside the dialog is its backdrop, which Playwright sees as the page; `force` taps it anyway.
+    await userEvent.click(screen.getByRole('dialog'), { position: { x: -8, y: -8 }, force: true });
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 

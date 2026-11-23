@@ -41,11 +41,13 @@ body {
     @apply block space-y-1 text-xs font-semibold text-slate-600;
   }
 
-  .modal-backdrop {
-    @apply fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm;
+  /* A modal <dialog>, which the browser centres and scrolls when it's taller than the screen. Its
+     width keeps a 1rem gutter on a phone, so there is always an outside to tap. */
+  .modal-card {
+    @apply w-[calc(100%-2rem)] max-w-lg rounded-3xl border border-slate-200 bg-white p-5 text-inherit shadow-2xl;
   }
 
-  .modal-card {
-    @apply w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl;
+  .modal-card::backdrop {
+    @apply bg-slate-900/60 backdrop-blur-sm;
   }
 }
