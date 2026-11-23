@@ -180,16 +180,16 @@ A review by a subagent with none of the building session's context ([findings](h
 
 The owner asked to "nest it into it's own folder scripts/crap/ and decompose the script itself so that non real tests can be written for it's constituint parts."
 
-| Module                           | Does                                                                                            | Tested by                                           |
-| :------------------------------- | :---------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
-| [`oxcrap.ts`](oxcrap.ts)         | Command line: reads the report, refuses a stale one, prints findings                            | [the features](features/): the contract, end to end |
-| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                                                   | [`functions.test.ts`](functions.test.ts)            |
-| [`complexity.ts`](complexity.ts) | The counting rules                                                                              | [`complexity.test.ts`](complexity.test.ts)          |
-| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                                      | [`allow.test.ts`](allow.test.ts)                    |
-| [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions                   | [`coverage.test.ts`](coverage.test.ts)              |
-| [`config.ts`](config.ts)         | Reads a config with `jsonc-parser`, checks it against the schema with `ajv`; holds the defaults | [`config.test.ts`](config.test.ts)                  |
-| [`files.ts`](files.ts)           | Finds the files a config's globs pick out, with `fs.globSync`                                   | [the features](features/)                           |
-| [`check.ts`](check.ts)           | The rules, on plain data                                                                        | [`check.test.ts`](check.test.ts)                    |
+| Module                           | Does                                                                                            | Tested by                                                                                                |
+| :------------------------------- | :---------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------- |
+| [`oxcrap.ts`](oxcrap.ts)         | Command line: reads the report, refuses a stale one, prints findings                            | [the features](features/): the contract, end to end                                                      |
+| [`functions.ts`](functions.ts)   | Parses a file into its functions and comments                                                   | [`functions.test.ts`](functions.test.ts)                                                                 |
+| [`complexity.ts`](complexity.ts) | The counting rules                                                                              | [`complexity.test.ts`](complexity.test.ts), [`complexity.property.test.ts`](complexity.property.test.ts) |
+| [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                                      | [`allow.test.ts`](allow.test.ts)                                                                         |
+| [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions                   | [`coverage.test.ts`](coverage.test.ts)                                                                   |
+| [`config.ts`](config.ts)         | Reads a config with `jsonc-parser`, checks it against the schema with `ajv`; holds the defaults | [`config.test.ts`](config.test.ts)                                                                       |
+| [`files.ts`](files.ts)           | Finds the files a config's globs pick out, with `fs.globSync`                                   | [the features](features/)                                                                                |
+| [`check.ts`](check.ts)           | The rules, on plain data                                                                        | [`check.test.ts`](check.test.ts)                                                                         |
 
 - **Every module but `oxcrap.ts` takes plain values,** such as source text, a config's text or a coverage report's text. Only `oxcrap.ts` and `files.ts` read the file system, and nothing runs a program.
 - **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
@@ -232,7 +232,7 @@ It checks that each function's complexity, which functions a `@crap-allow` match
 
 #### A generator-checked complexity count
 
-[`complexity.test.ts`](complexity.test.ts) has a [fast-check](https://github.com/dubzzz/fast-check) property. It builds random functions from a small grammar that records how many branches it writes, and asserts the complexity is 1 plus that number. The grammar includes:
+[`complexity.property.test.ts`](complexity.property.test.ts) has a [fast-check](https://github.com/dubzzz/fast-check) property. It builds random functions from a small grammar that records how many branches it writes, and asserts the complexity is 1 plus that number. The grammar includes:
 
 - ifs, else-ifs and loops;
 - switches with and without `default`;

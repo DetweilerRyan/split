@@ -7,7 +7,8 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // docs/engineering/testing-conventions.md says which a test belongs in.
 // `<module>.browser.test.ts(x)` runs in headless Chromium through Playwright,
 // `<module>.real.test.ts` runs in Node with real programs and files, and every other
-// `<module>.test.ts(x)` runs in jsdom. The tooling tests, in scripts/ and of root tooling config,
+// `<module>.test.ts(x)` runs in jsdom, `<module>.property.test.ts` included. Every project's tests
+// count towards the coverage report oxCrap reads. The tooling tests, in scripts/ and of root tooling config,
 // are vitest.tooling.config.ts's, which `npm run test:tooling` runs.
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'];
 const realTests = ['**/*.real.test.ts'];
