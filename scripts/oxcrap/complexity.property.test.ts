@@ -1,20 +1,46 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import type { Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
-// Random functions from a small grammar that knows how many branches it writes, so the expected
-// complexity comes from the generator, not from running the counter. fast-check shrinks a failure
-// to the smallest function that breaks the count. The code is only parsed, never run, so its names
-// needn't exist.
-type Code = { code: string; branches: number };
+// Random functions from a small grammar that knows what it writes, so the expected complexity comes
+// from the generator, not from running the counter. It keeps apart the kinds of branch each
+// counting option decides on, so one property checks every combination of the options. fast-check
+// shrinks a failure to the smallest function that breaks the count. The code is only parsed, never
+// run, so its names needn't exist.
+
+/** What a piece of code adds, by kind. */
+type Tally = { branches: number; defaults: number; optional: number };
+/** A piece of code, what it adds itself, and what the functions nested in it hold. */
+type Code = { code: string; own: Tally; nested: Tally };
+
+const NONE: Tally = { branches: 0, defaults: 0, optional: 0 };
+const add = (...tallies: Tally[]): Tally => ({
+  branches: tallies.reduce((sum, t) => sum + t.branches, 0),
+  defaults: tallies.reduce((sum, t) => sum + t.defaults, 0),
+  optional: tallies.reduce((sum, t) => sum + t.optional, 0),
+});
+const leaf = (code: string, tally: Partial<Tally> = {}): Code => ({
+  code,
+  own: { ...NONE, ...tally },
+  nested: NONE,
+});
 const join = (parts: Code[]): Code => ({
   code: parts.map((part) => part.code).join('\n'),
-  branches: parts.reduce((sum, part) => sum + part.branches, 0),
+  own: add(...parts.map((part) => part.own)),
+  nested: add(...parts.map((part) => part.nested)),
 });
-/** `code` wrapped around `inner`, adding `added` branches of its own. */
-const wrap = (code: string, added: number, ...inner: Code[]): Code => ({
+/** `code` wrapped around `inner`, adding `branches` of its own. */
+const wrap = (code: string, branches: number, ...inner: Code[]): Code => ({
   code,
-  branches: added + inner.reduce((sum, part) => sum + part.branches, 0),
+  own: add({ ...NONE, branches }, ...inner.map((part) => part.own)),
+  nested: add(...inner.map((part) => part.nested)),
+});
+/** A function nested in the code around it: everything in it, and its own defaults, is nested. */
+const nest = (code: string, inner: Code, defaults = 0): Code => ({
+  code,
+  own: NONE,
+  nested: add(inner.own, inner.nested, { ...NONE, defaults }),
 });
 
 const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) => {
@@ -24,21 +50,33 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
     statement: fc.oneof(
       { depthSize: 'small', withCrossShrink: true },
       // No branch.
-      fc.constantFrom<Code>(
-        { code: 'n++;', branches: 0 },
-        { code: 'void obj?.a?.b;', branches: 0 },
-        { code: 'n = n + 1;', branches: 0 },
-      ),
+      fc.constantFrom(leaf('n++;'), leaf('n = n + 1;')),
+      // Optional links and default values, which the options count or not.
+      fc
+        .integer({ min: 1, max: 3 })
+        .map((links) => leaf(`void obj${'?.a'.repeat(links)};`, { optional: links })),
+      fc.constant(leaf('void obj.f?.();', { optional: 1 })),
+      fc
+        .integer({ min: 1, max: 3 })
+        .map((count) =>
+          leaf(
+            `const { ${Array.from({ length: count }, (_, i) => `d${i} = ${i}`).join(', ')} } = obj;`,
+            { defaults: count },
+          ),
+        ),
       // Expressions: a ?: over a chain of && adds one per operator, and one for the ?:.
-      fc.integer({ min: 1, max: 4 }).map((operators) => ({
-        code: `n = ${Array.from({ length: operators + 1 }, (_, i) => `x${i}`).join(' && ')} ? 1 : 0;`,
-        branches: operators + 1,
-      })),
-      fc.constantFrom('||=', '&&=', '??=').map((operator) => ({
-        code: `n ${operator} 1;`,
-        branches: 1,
-      })),
-      fc.constant<Code>({ code: 'n = obj?.x ?? 0;', branches: 1 }),
+      fc
+        .integer({ min: 1, max: 4 })
+        .map((operators) =>
+          leaf(
+            `n = ${Array.from({ length: operators + 1 }, (_, i) => `x${i}`).join(' && ')} ? 1 : 0;`,
+            { branches: operators + 1 },
+          ),
+        ),
+      fc
+        .constantFrom('||=', '&&=', '??=')
+        .map((operator) => leaf(`n ${operator} 1;`, { branches: 1 })),
+      fc.constant(leaf('n = obj.x ?? 0;', { branches: 1 })),
       // Statements that branch, around bodies of their own.
       body.map((s) => wrap(`if (a) {\n${s.code}\n}`, 1, s)),
       fc
@@ -78,23 +116,48 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
             ...cases,
           ),
         ),
-      // A nested function is scored on its own, so its branches don't count here.
+      // Nested functions: assigned, passed to a call, and with default parameters.
       fc
         .tuple(body, fc.nat({ max: 999 }))
-        .map(([s, id]) => ({ code: `const inner${id} = () => {\n${s.code}\n};`, branches: 0 })),
+        .map(([s, id]) => nest(`const inner${id} = () => {\n${s.code}\n};`, s)),
+      body.map((s) => nest(`items.forEach((item) => {\n${s.code}\n});`, s)),
+      fc
+        .tuple(body, fc.integer({ min: 1, max: 2 }))
+        .map(([s, count]) =>
+          nest(
+            `run(function (${Array.from({ length: count }, (_, i) => `p${i} = ${i}`).join(', ')}) {\n${s.code}\n});`,
+            s,
+            count,
+          ),
+        ),
     ),
   };
 });
 
+/** What `tally` adds under `counting`. */
+const counted = (tally: Tally, counting: Counting) =>
+  tally.branches +
+  (counting.defaultValues ? tally.defaults : 0) +
+  (counting.optionalChaining ? tally.optional : 0);
+
+const countings = fc.record<Counting>({
+  nestedFunctions: fc.constantFrom('enclosing', 'own'),
+  defaultValues: fc.boolean(),
+  optionalChaining: fc.boolean(),
+});
+
 describe('complexity of generated functions', () => {
-  it('is 1 plus the branches in the function’s own body', () => {
+  it('is 1 plus the branches each counting option counts', () => {
     fc.assert(
-      fc.property(statements, ({ code, branches }) => {
+      fc.property(statements, countings, ({ code, own, nested }, counting) => {
         const source = `export function subject() {\n${code}\n}\n`;
-        const subject = parse('generated.ts', source).functions.find((fn) => fn.name === 'subject');
-        expect(subject?.complexity).toBe(1 + branches);
+        const subject = parse('generated.ts', source, counting).functions.find(
+          (fn) => fn.name === 'subject',
+        );
+        const inside = counting.nestedFunctions === 'enclosing' ? counted(nested, counting) : 0;
+        expect(subject?.complexity).toBe(1 + counted(own, counting) + inside);
       }),
-      { numRuns: 300 },
+      { numRuns: 500 },
     );
   });
 });

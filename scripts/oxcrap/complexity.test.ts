@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import type { Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
-/** The complexity of the first function in `code`. */
-const complexityOf = (code: string, file = 'example.ts') =>
-  parse(file, code).functions[0].complexity;
+/** Counting as before #74: each function on its own, with no default values or `?.`. */
+const SEPARATELY: Counting = {
+  nestedFunctions: 'own',
+  defaultValues: false,
+  optionalChaining: false,
+};
+
+/** The complexity of the first function in `code`, counted as `counting` says: everything by default. */
+const complexityOf = (code: string, counting?: Counting, file = 'example.ts') =>
+  parse(file, code, counting).functions[0].complexity;
 
 describe('complexity', () => {
   it('is 1 for a function with no branches', () => {
@@ -39,22 +47,46 @@ describe('complexity', () => {
     ).toBe(3);
   });
 
-  it('adds nothing for else, finally, optional chaining or a default parameter value', () => {
+  it('adds nothing for else or finally, nor for ?. and default values when those counts are off', () => {
     expect(
       complexityOf(
         'function f(a = 1) { try { if (a) x(); else y(); } finally { z(); } return a?.b; }',
+        SEPARATELY,
       ),
     ).toBe(2);
   });
 
-  it('counts branches in parameters, such as a default value that is a conditional', () => {
-    expect(complexityOf('function f(a = b ? 1 : 2) { return a; }')).toBe(2);
+  it('counts each default value and each ?. by default', () => {
+    expect(
+      complexityOf(
+        'function f(a = 1) { try { if (a) x(); else y(); } finally { z(); } return a?.b; }',
+      ),
+    ).toBe(4);
   });
 
-  it('leaves out the branches of a nested function, which is counted on its own', () => {
+  it.each([
+    ['a parameter', 'function f(a = 1) {}', 2],
+    ['destructuring in a parameter', 'function f({ a = 1, b = 2 }) {}', 3],
+    ['destructuring in the body', 'function f(o) { const [a = 1] = o; }', 2],
+    ['each link of a chain', 'function f(o) { return o?.a?.b; }', 3],
+    ['an optional call', 'function f(o) { return o.g?.(); }', 2],
+  ])('counts a default value or ?. in %s', (_, code, expected) => {
+    expect(complexityOf(code)).toBe(expected);
+  });
+
+  it('doesn’t count a TypeScript optional parameter as ?.', () => {
+    expect(complexityOf('function f(a?: number) { return a; }')).toBe(1);
+  });
+
+  it('counts branches in parameters, such as a default value that is a conditional', () => {
+    expect(complexityOf('function f(a = b ? 1 : 2) { return a; }', SEPARATELY)).toBe(2);
+  });
+
+  it('leaves out the branches of a nested function when each is scored on its own', () => {
     const { functions } = parse(
       'example.ts',
       'function outer(a) { if (a) x(); return [1].map((n) => (n ? 1 : 2)); }',
+      SEPARATELY,
     );
     expect(functions.map((fn) => [fn.name, fn.complexity])).toEqual([
       ['outer', 2],
@@ -62,9 +94,22 @@ describe('complexity', () => {
     ]);
   });
 
+  it('counts a nested function’s branches towards the outermost function by default', () => {
+    const { functions, nested } = parse(
+      'example.ts',
+      'function outer(a) { if (a) x(); const f = () => [1].map((n) => (n ? 1 : 2)); }',
+    );
+    expect(functions.map((fn) => [fn.name, fn.complexity])).toEqual([['outer', 3]]);
+    expect(nested.map((fn) => fn.name)).toEqual(['outer > f', 'outer > f > [1].map callback']);
+  });
+
   it('counts a JSX condition, such as `open && <Modal />`, as a branch', () => {
     expect(
-      complexityOf('function View({ open }) { return <div>{open && <span />}</div>; }', 'view.tsx'),
+      complexityOf(
+        'function View({ open }) { return <div>{open && <span />}</div>; }',
+        undefined,
+        'view.tsx',
+      ),
     ).toBe(2);
   });
 });

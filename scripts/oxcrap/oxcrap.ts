@@ -137,7 +137,7 @@ function findings(sources: string[], report: Report, reportPath: string, config:
   for (const path of sources) {
     const file = shown(path);
     const source = readFileSync(path, 'utf8');
-    const parsed = parse(file, source);
+    const parsed = parse(file, source, config.counting);
     const coverage = coverageOf(parsed.functions, byPath.get(pathKey(path)));
     for (const fn of parsed.functions) {
       const covered = coverage.get(fn) ?? 0;

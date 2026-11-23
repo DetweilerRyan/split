@@ -11,6 +11,7 @@ interface SeedModalProps {
   onBlankRoom: () => void;
 }
 
+// @crap-allow CRAP 56, complexity 7. Debt from before the CRAP check (#63): no tests yet.
 export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: SeedModalProps) {
   const [text, setText] = useState('');
   const [forceReset, setForceReset] = useState(true);
@@ -21,7 +22,6 @@ export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: Se
     onImportText();
   }
 
-  // @crap-allow CRAP 42, complexity 6. Debt from before the CRAP check (#63): no tests yet.
   function onImportText() {
     try {
       const input = text.trim();

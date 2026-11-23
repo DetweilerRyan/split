@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import type { Counting } from './complexity.ts';
 import { ParseError, parse, positions } from './functions.ts';
 
+/** Counting as before #74: each function on its own, with no default values or `?.`. */
+const SEPARATELY: Counting = {
+  nestedFunctions: 'own',
+  defaultValues: false,
+  optionalChaining: false,
+};
+
+/** The names of the functions in `code`, each scored on its own so nested ones are listed too. */
 const names = (code: string, file = 'example.tsx') =>
-  parse(file, code).functions.map((fn) => fn.name);
+  parse(file, code, SEPARATELY).functions.map((fn) => fn.name);
 
 describe('parse', () => {
   it.each([

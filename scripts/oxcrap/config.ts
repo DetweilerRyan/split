@@ -4,6 +4,7 @@
 // owns their defaults and how they combine with the command line.
 import Ajv, { type ErrorObject } from 'ajv';
 import { type ParseError, parse, printParseErrorCode, visit } from 'jsonc-parser';
+import { COUNT_ALL, type Counting } from './complexity.ts';
 import schema from './configuration_schema.json' with { type: 'json' };
 
 export type Limits = { crap: number; complexity: number };
@@ -13,13 +14,19 @@ export type Config = {
   /** gitignore-style patterns left out of scoring. A folder that matches isn't searched at all. */
   ignorePatterns: string[];
   limits: Limits;
+  /** What counts towards complexity beyond the fixed branches. Everything, by default. */
+  counting: Counting;
   /** The istanbul JSON coverage report, from the config's folder. */
   coverage?: string;
   /** Where to get help when there are findings: a URL, or a path from the config's folder. */
   helpUrl?: string;
 };
 /** What a config file holds, once the schema has checked it. */
-type File = Partial<Omit<Config, 'limits'>> & { limits?: Partial<Limits>; $schema?: string };
+type File = Partial<Omit<Config, 'limits' | 'counting'>> & {
+  limits?: Partial<Limits>;
+  counting?: Partial<Counting>;
+  $schema?: string;
+};
 
 /** The names oxCrap looks for in the current directory when no config is given, in order. */
 export const CONFIG_NAMES = ['.oxcraprc.json', '.oxcraprc.jsonc'];
@@ -30,6 +37,7 @@ export const DEFAULTS: Config = {
   files: [CODE_FILES],
   ignorePatterns: ['node_modules/', '.*/', '*.test.*', '*.spec.*'],
   limits: { crap: 30, complexity: 10 },
+  counting: COUNT_ALL,
 };
 
 /** The options a config may set, as the schema lists them, leaving out `$schema`. */
@@ -81,8 +89,12 @@ export function parseConfig(text: string, path: string): Partial<Config> {
   if (!validate(data)) {
     throw new ConfigError((validate.errors ?? []).map((error) => describe(error, path)).join('\n'));
   }
-  const { $schema: _, limits, ...rest } = data;
-  return limits ? { ...rest, limits: { ...DEFAULTS.limits, ...limits } } : rest;
+  const { $schema: _, limits, counting, ...rest } = data;
+  return {
+    ...rest,
+    ...(limits && { limits: { ...DEFAULTS.limits, ...limits } }),
+    ...(counting && { counting: { ...DEFAULTS.counting, ...counting } }),
+  };
 }
 
 /** A config's options over the defaults, and then the command line's over both. */

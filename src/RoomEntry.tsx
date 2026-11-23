@@ -21,11 +21,11 @@ function stashSeed(roomId: RoomId, seed: ReceiptSeed | null) {
   } catch {}
 }
 
+// @crap-allow CRAP 110, complexity 10. Debt from before the CRAP check (#63): no tests yet.
 export default function RoomEntry({ mode = 'root' }: { mode?: 'root' | 'ingest' }) {
   const router = useRouter();
   const [error, setError] = useState('');
 
-  // @crap-allow CRAP 72, complexity 8. Debt from before the CRAP check (#63): no tests yet.
   useEffect(() => {
     const ingest = parseIngestUrl(window.location.href);
     if (mode === 'root') {

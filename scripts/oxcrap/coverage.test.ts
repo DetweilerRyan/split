@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coverageOf, type FileCoverage, newerThan, parseReport } from './coverage.ts';
+import { COUNT_ALL, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
 /** An istanbul file entry with one statement per listed line, run or not. */
@@ -31,9 +32,20 @@ const code = `function outer(a) {
 const one = () => 1;
 `;
 
-const covered = (file: FileCoverage | undefined) =>
+/** Counting as before #74: each function on its own, with no default values or `?.`. */
+const SEPARATELY: Counting = {
+  nestedFunctions: 'own',
+  defaultValues: false,
+  optionalChaining: false,
+};
+
+/** Each function's share of coverage, with functions scored as `counting` says. */
+const covered = (file: FileCoverage | undefined, counting: Counting = SEPARATELY) =>
   Object.fromEntries(
-    [...coverageOf(parse('example.ts', code).functions, file)].map(([fn, c]) => [fn.name, c]),
+    [...coverageOf(parse('example.ts', code, counting).functions, file)].map(([fn, c]) => [
+      fn.name,
+      c,
+    ]),
   );
 
 describe('coverageOf', () => {
@@ -51,6 +63,20 @@ describe('coverageOf', () => {
       outer: 2 / 3,
       'outer > inner': 0,
     });
+  });
+
+  it('gives a nested function’s statements to the outermost function by default', () => {
+    expect(
+      covered(
+        report([
+          [2, true],
+          [3, true],
+          [5, false],
+          [7, false],
+        ]),
+        COUNT_ALL,
+      ),
+    ).toEqual({ outer: 2 / 4, one: 0 });
   });
 
   it('counts a function with no statements of its own as covered when it was called', () => {

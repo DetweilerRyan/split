@@ -1,7 +1,15 @@
 // Parses a source file with oxc-parser into its functions, each with its place, a label for
 // findings and its complexity, and its comments.
 import { parseSync } from 'oxc-parser';
-import { type AstNode, children, complexity, FUNCTION_TYPES, isNode } from './complexity.ts';
+import {
+  type AstNode,
+  children,
+  complexity,
+  COUNT_ALL,
+  type Counting,
+  FUNCTION_TYPES,
+  isNode,
+} from './complexity.ts';
 
 /** A 1-based line and a 0-based column in UTF-16 units, as istanbul coverage reports use. */
 export type Position = { line: number; column: number };
@@ -21,7 +29,10 @@ export type Fn = Range & {
 };
 export type Comment = { type: 'Line' | 'Block'; value: string; start: number; end: number };
 export type Parsed = {
+  /** The functions scored: all of them, or with `enclosing` counting only the outermost. */
   functions: Fn[];
+  /** With `enclosing` counting, the functions inside a scored one, which count towards it. */
+  nested: Fn[];
   comments: Comment[];
   /**
    * The UTF-16 offsets of every simple statement, outermost first: an expression, a variable
@@ -102,7 +113,7 @@ function jsxAttribute(source: string, ancestors: AstNode[]) {
   return text(source, attribute.name);
 }
 
-export function parse(file: string, source: string): Parsed {
+export function parse(file: string, source: string, counting: Counting = COUNT_ALL): Parsed {
   const result = parseSync(file, source);
   if (result.errors.length > 0) {
     throw new ParseError(`Couldn't parse ${file}: ${result.errors[0].message}`);
@@ -123,7 +134,7 @@ export function parse(file: string, source: string): Parsed {
       const fn: Fn = {
         label: own,
         name: [...enclosing.map((outer) => outer.label), own].join(' > '),
-        complexity: complexity(node),
+        complexity: complexity(node, counting),
         offset: { start: node.start, end: node.end },
         start: position(node.start),
         end: position(node.end),
@@ -146,5 +157,14 @@ export function parse(file: string, source: string): Parsed {
     start,
     end,
   }));
-  return { functions, comments, statements, position };
+  if (counting.nestedFunctions === 'enclosing') {
+    return {
+      functions: functions.filter((fn) => fn.parents.length === 0),
+      nested: functions.filter((fn) => fn.parents.length > 0),
+      comments,
+      statements,
+      position,
+    };
+  }
+  return { functions, nested: [], comments, statements, position };
 }

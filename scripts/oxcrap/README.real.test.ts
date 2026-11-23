@@ -16,5 +16,6 @@ describe('README.md', () => {
       `\`${JSON.stringify(DEFAULTS.ignorePatterns).replaceAll(',', ', ')}\``,
     );
     expect(readme).toContain(`\`{ ${json(DEFAULTS.limits).slice(1, -1)} }\``);
+    expect(readme).toContain(`\`{ ${json(DEFAULTS.counting).slice(1, -1)} }\``);
   });
 });

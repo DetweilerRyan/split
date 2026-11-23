@@ -42,7 +42,7 @@ export function allocateMinor(total: number, weights: number[]): number[] {
   return shares;
 }
 
-// @crap-allow CRAP 14, complexity 14. Debt from before the CRAP check (#63): too complex.
+// @crap-allow CRAP 16, complexity 16. Debt from before the CRAP check (#63): too complex.
 export function computeReceiptMath(snapshot: RoomSnapshot) {
   const currency = normalizeCurrency(snapshot.currency ?? DEFAULT_CURRENCY);
   const exp = currencyExponent(currency);

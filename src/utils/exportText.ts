@@ -2,7 +2,7 @@ import type { RoomSnapshot } from '../store/useReceiptStore';
 import { formatMoney } from './currency';
 import { computeReceiptMath } from './math';
 
-// @crap-allow CRAP 56, complexity 7. Debt from before the CRAP check (#63): no tests yet.
+// @crap-allow CRAP 132, complexity 11. Debt from before the CRAP check (#63): no tests yet.
 export function buildExportText(snapshot: RoomSnapshot): string {
   const math = computeReceiptMath(snapshot);
   const fmt = (amount: number) => formatMoney(amount, math.currency);
