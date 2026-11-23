@@ -101,6 +101,9 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
         ),
       // `&&` inside `||`: two operators, and two sequences, since they differ.
       fc.constant(leaf('n = x0 && x1 || x2;', { operators: 2, sequences: 2 })),
+      // Runs are counted in source order, through parentheses.
+      fc.constant(leaf('n = x0 || x1 && x2 || x3;', { operators: 3, sequences: 3 })),
+      fc.constant(leaf('n = (x0 && x1) && x2;', { operators: 2, sequences: 1 })),
       // A run of ?? is one sequence.
       fc.constant(leaf('n = x0 ?? x1 ?? x2;', { operators: 2, sequences: 1 })),
       fc

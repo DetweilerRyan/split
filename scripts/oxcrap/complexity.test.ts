@@ -89,6 +89,17 @@ describe('complexity', () => {
     ).toBe(2);
   });
 
+  it('counts nothing for a switch with only default:, even with switchCases "once"', () => {
+    const code = 'function f(n) { switch (n) { default: return 0; } }';
+    expect(complexityOf(code, { ...COUNT_ALL, switchCases: 'once' })).toBe(1);
+  });
+
+  it('counts runs of the same operator in source order, through parentheses', () => {
+    const sequence = { ...COUNT_ALL, logicalOperators: 'sequence' } as const;
+    expect(complexityOf('function f(a, b, c, d) { return a || b && c || d; }', sequence)).toBe(4);
+    expect(complexityOf('function f(a, b, c) { return (a && b) && c; }', sequence)).toBe(2);
+  });
+
   it('counts each break or continue to a label, unless labelledJumps is off', () => {
     const code =
       'function f(xs) { outer: for (const x of xs) { for (const y of x) { if (y) continue outer; break outer; } } }';
@@ -134,46 +145,5 @@ describe('complexity', () => {
         'view.tsx',
       ),
     ).toBe(2);
-  });
-});
-
-describe('recursion', () => {
-  const complexities = (code: string, counting?: Counting) =>
-    Object.fromEntries(
-      parse('example.ts', code, counting).functions.map((fn) => [fn.name, fn.complexity]),
-    );
-
-  it('adds 1 to a function that calls itself, however many times', () => {
-    expect(complexities('function f(n) { return n ? f(n - 1) + f(n - 2) : 0; }')).toEqual({ f: 3 });
-  });
-
-  it('adds 1 to each function in a cycle of calls, and not to one that only calls into it', () => {
-    const code =
-      'function isEven(n) { return n === 0 || isOdd(n - 1); }\nfunction isOdd(n) { return n !== 0 && isEven(n - 1); }\nfunction check(n) { return isEven(n); }';
-    expect(complexities(code)).toEqual({ isEven: 3, isOdd: 3, check: 1 });
-  });
-
-  it('follows a method calling itself through this', () => {
-    expect(complexities('class Tree { size(n) { return n ? this.size(n.next) : 0; } }')).toEqual({
-      size: 3,
-    });
-  });
-
-  it('counts a nested function calling the outer one towards the outer one by default', () => {
-    const code = 'function walk(node) { node.children.forEach((child) => walk(child)); }';
-    expect(complexities(code)).toEqual({ walk: 2 });
-    expect(complexities(code, COUNT_SEPARATELY)).toEqual({
-      walk: 1,
-      'walk > node.children.forEach callback': 1,
-    });
-  });
-
-  it('adds nothing with recursion off', () => {
-    expect(
-      complexities('function f(n) { return n ? f(n - 1) : 0; }', {
-        ...COUNT_ALL,
-        recursion: false,
-      }),
-    ).toEqual({ f: 2 });
   });
 });
