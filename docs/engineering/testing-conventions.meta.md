@@ -120,7 +120,9 @@ Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), wh
 - the section should describe "when to treat a script as a deep module", and that "deep modules in general will leverage bdd";
 - "in the future some deep modules may be a simplified abstraction of encapsulated complex code who's bdd tests can't necessary be run e2e".
 
-So the convention defines a deep module in general, and gives when a script is one. It sets up only the program kind, as oxCrap is the only one yet.
+So the convention defines a deep module in general. It sets up only the program kind, as oxCrap is the only one yet.
+
+**Whether a module is deep is the owner's call.** A second draft listed checks for when a script is deep: its own folder, a README describing its interface, and modules with unit tests. The owner said in [review](https://github.com/DetweilerRyan/split/pull/66#discussion_r4668423016) that "a script may check all three of them but still not be a deep module", and "really, the only definition is that the complexity ratio from a modules interface to it's internals exceeds a certain threshold". They went on: "in lieu of measuring the complexity ratio we'll just have to leave the deep module distinction to a judgment call made by the owner with input from an agent." So an agent proposes, and the owner decides. The table of deep modules records each decision.
 
 **Why features for a deep module's contract:** the contract (what you write, what the check reports, what it exits with) is the interface that survives a rewrite. Replacing oxlint with oxCrap's own counter in #64 left the end-to-end tests intact apart from their numbers.
 
