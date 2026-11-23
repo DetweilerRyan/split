@@ -75,7 +75,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
 
   const store = new ReceiptStore(doc);
   const connectionProvider = liveblocksRoom ? 'Liveblocks' : 'WebRTC';
-  const updateLiveblocksStatus = (status: string) => {
+  function updateLiveblocksStatus(status: string) {
     store.setConnection({
       provider: 'Liveblocks',
       status:
@@ -87,7 +87,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
               ? 'disconnected'
               : 'connecting',
     });
-  };
+  }
   if (liveblocksRoom) {
     updateLiveblocksStatus(liveblocksRoom.getStatus());
     liveblocksRoom.subscribe('status', updateLiveblocksStatus);
@@ -101,7 +101,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
       });
   const awareness = liveblocks?.awareness ?? webrtc!.awareness;
 
-  const updatePeers = () => {
+  function updatePeers() {
     const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().entries()).map(
       ([clientId, state]) => {
         const user = (state as { user?: { name?: string; color?: string } }).user;
@@ -113,7 +113,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
       },
     );
     store.setPeers(peers);
-  };
+  }
 
   awareness.on('change', updatePeers);
   updatePeers();

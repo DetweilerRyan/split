@@ -28,15 +28,20 @@ async function setup(participants: readonly Person[]) {
     },
     { initialProps: participants },
   );
-  const choose = (id: string | null) => hook.act(() => hook.result.current[1](id));
+  function choose(id: string | null) {
+    return hook.act(() => hook.result.current[1](id));
+  }
   // Another tab's write: the browser updates localStorage and fires a storage event in every
   // other tab with the same origin, never in the tab that wrote.
-  const saveInAnotherTab = (id: string) =>
-    hook.act(() => {
+  function saveInAnotherTab(id: string) {
+    return hook.act(() => {
       window.localStorage.setItem(storageKey, id);
       window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: id }));
     });
-  const current = () => hook.result.current[0];
+  }
+  function current() {
+    return hook.result.current[0];
+  }
   return { identities, renders, choose, saveInAnotherTab, current, rerender: hook.rerender };
 }
 

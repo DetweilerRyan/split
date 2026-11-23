@@ -1,4 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import"]
+  "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import"],
+  "rules": {
+    // The owner's rule (#81): "always use the function syntax for named functions. only use
+    // lambdas when passing a function as data."
+    "func-style": ["error", "declaration", { "allowArrowFunctions": false }]
+  }
 }

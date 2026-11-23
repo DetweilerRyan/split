@@ -6,8 +6,9 @@ import { parse } from './functions.ts';
 const SEPARATELY = COUNT_SEPARATELY;
 
 /** The complexity of the first function in `code`, counted as `counting` says: everything by default. */
-const complexityOf = (code: string, counting?: Counting, file = 'example.ts') =>
-  parse(file, code, counting).functions[0].complexity;
+function complexityOf(code: string, counting?: Counting, file = 'example.ts') {
+  return parse(file, code, counting).functions[0].complexity;
+}
 
 describe('complexity', () => {
   it('is 1 for a function with no branches', () => {

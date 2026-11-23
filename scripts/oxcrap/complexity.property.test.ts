@@ -39,35 +39,44 @@ const NONE: Tally = {
   jumps: 0,
   recursion: 0,
 };
-const add = (...tallies: Tally[]): Tally =>
-  Object.fromEntries(
+function add(...tallies: Tally[]): Tally {
+  return Object.fromEntries(
     Object.keys(NONE).map((kind) => [
       kind,
       tallies.reduce((sum, t) => sum + t[kind as keyof Tally], 0),
     ]),
   ) as Tally;
-const leaf = (code: string, tally: Partial<Tally> = {}): Code => ({
-  code,
-  own: { ...NONE, ...tally },
-  nested: NONE,
-});
-const join = (parts: Code[]): Code => ({
-  code: parts.map((part) => part.code).join('\n'),
-  own: add(...parts.map((part) => part.own)),
-  nested: add(...parts.map((part) => part.nested)),
-});
+}
+function leaf(code: string, tally: Partial<Tally> = {}): Code {
+  return {
+    code,
+    own: { ...NONE, ...tally },
+    nested: NONE,
+  };
+}
+function join(parts: Code[]): Code {
+  return {
+    code: parts.map((part) => part.code).join('\n'),
+    own: add(...parts.map((part) => part.own)),
+    nested: add(...parts.map((part) => part.nested)),
+  };
+}
 /** `code` wrapped around `inner`, adding `branches` of its own. */
-const wrap = (code: string, branches: number, ...inner: Code[]): Code => ({
-  code,
-  own: add({ ...NONE, branches }, ...inner.map((part) => part.own)),
-  nested: add(...inner.map((part) => part.nested)),
-});
+function wrap(code: string, branches: number, ...inner: Code[]): Code {
+  return {
+    code,
+    own: add({ ...NONE, branches }, ...inner.map((part) => part.own)),
+    nested: add(...inner.map((part) => part.nested)),
+  };
+}
 /** A function nested in the code around it: everything in it, and its own defaults, is nested. */
-const nest = (code: string, inner: Code, defaults = 0): Code => ({
-  code,
-  own: NONE,
-  nested: add(inner.own, inner.nested, { ...NONE, defaults }),
-});
+function nest(code: string, inner: Code, defaults = 0): Code {
+  return {
+    code,
+    own: NONE,
+    nested: add(inner.own, inner.nested, { ...NONE, defaults }),
+  };
+}
 
 const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) => {
   const body = tie('statements');
@@ -179,13 +188,16 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
 });
 
 /** What `tally` adds under `counting`, leaving recursion to the function as a whole. */
-const counted = (tally: Tally, counting: Counting) =>
-  tally.branches +
-  (counting.defaultValues ? tally.defaults : 0) +
-  (counting.optionalChaining ? tally.optional : 0) +
-  (counting.switchCases === 'each' ? tally.cases : tally.switches) +
-  (counting.logicalOperators === 'each' ? tally.operators : tally.sequences) +
-  (counting.labelledJumps ? tally.jumps : 0);
+function counted(tally: Tally, counting: Counting) {
+  return (
+    tally.branches +
+    (counting.defaultValues ? tally.defaults : 0) +
+    (counting.optionalChaining ? tally.optional : 0) +
+    (counting.switchCases === 'each' ? tally.cases : tally.switches) +
+    (counting.logicalOperators === 'each' ? tally.operators : tally.sequences) +
+    (counting.labelledJumps ? tally.jumps : 0)
+  );
+}
 
 const countings: fc.Arbitrary<Counting> = fc.record({
   nestedFunctions: fc.constantFrom('enclosing' as const, 'own' as const),

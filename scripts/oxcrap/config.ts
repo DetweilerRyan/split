@@ -98,11 +98,12 @@ export function parseConfig(text: string, path: string): Partial<Config> {
 }
 
 /** A config's options over the defaults, and then the command line's over both. */
-export const merge = (...layers: Partial<Config>[]): Config =>
-  Object.assign(
+export function merge(...layers: Partial<Config>[]): Config {
+  return Object.assign(
     {},
     DEFAULTS,
     ...layers.map((layer) =>
       Object.fromEntries(Object.entries(layer).filter(([, value]) => value !== undefined)),
     ),
   );
+}

@@ -79,26 +79,37 @@ function text(source: string, node: unknown) {
   return value.length <= 40 && !value.includes('\n') ? value : undefined;
 }
 
-/** How each kind of parent names the function it holds, or nothing if it can't. */
-const NAMERS = new Map<string, (source: string, parent: AstNode) => string | undefined>([
-  ['VariableDeclarator', (source, parent) => text(source, parent.id)],
-  ['Property', (source, parent) => text(source, parent.key)],
-  ['MethodDefinition', (source, parent) => text(source, parent.key)],
-  ['PropertyDefinition', (source, parent) => text(source, parent.key)],
-  ['AssignmentExpression', (source, parent) => text(source, parent.left)],
-  ['CallExpression', (source, parent) => callback(text(source, parent.callee))],
-  ['NewExpression', (source, parent) => callback(text(source, parent.callee))],
-  ['ExportDefaultDeclaration', () => 'default export'],
-]);
-
-const callback = (callee: string | undefined) => (callee ? `${callee} callback` : undefined);
-
 /** A label for a function, from its own name or what it's assigned or passed to. */
 export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
   const own = fn.id;
   if (isNode(own) && typeof own.name === 'string') return own.name;
-  const named = parent && NAMERS.get(parent.type)?.(source, parent);
-  return named ?? '(anonymous)';
+  return (parent && nameFromParent(source, parent)) ?? '(anonymous)';
+}
+
+/** The name a function's parent gives it, as `const f = …` names `f`, or nothing if it can't. */
+function nameFromParent(source: string, parent: AstNode) {
+  switch (parent.type) {
+    case 'VariableDeclarator':
+      return text(source, parent.id);
+    case 'Property':
+    case 'MethodDefinition':
+    case 'PropertyDefinition':
+      return text(source, parent.key);
+    case 'AssignmentExpression':
+      return text(source, parent.left);
+    case 'CallExpression':
+    case 'NewExpression':
+      return callback(text(source, parent.callee));
+    case 'ExportDefaultDeclaration':
+      return 'default export';
+    default:
+      return undefined;
+  }
+}
+
+/** A callback's label, from the call it's passed to. */
+function callback(callee: string | undefined) {
+  return callee ? `${callee} callback` : undefined;
 }
 
 /** The JSX attribute a handler is the value of, as in `onClick={() => …}`. */

@@ -55,8 +55,9 @@ function targetLine(code: string[], comment: Comment, parsed: Parsed) {
 }
 
 /** The outermost of `functions`: those not nested in another of them. */
-const outermost = (functions: Fn[]) =>
-  functions.filter((fn) => !functions.some((other) => fn.parents.includes(other)));
+function outermost(functions: Fn[]) {
+  return functions.filter((fn) => !functions.some((other) => fn.parents.includes(other)));
+}
 
 /**
  * The functions a comment above `line` could mean: those starting on it, outermost first. Failing

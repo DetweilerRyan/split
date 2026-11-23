@@ -14,11 +14,14 @@ import { dirname, join, resolve } from 'node:path';
 
 /** The code mutation testing covers; tests and the feature contract aren't mutated. */
 const SCOPE = 'scripts/oxcrap';
-const mutated = (file: string) =>
-  file.startsWith(`${SCOPE}/`) &&
-  file.endsWith('.ts') &&
-  !file.endsWith('.test.ts') &&
-  !file.startsWith(`${SCOPE}/features/`);
+function mutated(file: string) {
+  return (
+    file.startsWith(`${SCOPE}/`) &&
+    file.endsWith('.ts') &&
+    !file.endsWith('.test.ts') &&
+    !file.startsWith(`${SCOPE}/features/`)
+  );
+}
 
 /**
  * The line ranges `git diff --unified=0` reports as added or changed, by file, as Stryker's
@@ -51,20 +54,22 @@ export function changedRanges(diff: string): string[] {
 }
 
 /** `git diff` with the output `changedRanges` reads, whatever the user's git settings. */
-export const diffArgs = (base: string) => [
-  '-c',
-  'core.quotePath=false',
-  'diff',
-  '--unified=0',
-  '--no-color',
-  '--no-ext-diff',
-  '--no-relative',
-  '--src-prefix=a/',
-  '--dst-prefix=b/',
-  base,
-  '--',
-  SCOPE,
-];
+export function diffArgs(base: string) {
+  return [
+    '-c',
+    'core.quotePath=false',
+    'diff',
+    '--unified=0',
+    '--no-color',
+    '--no-ext-diff',
+    '--no-relative',
+    '--src-prefix=a/',
+    '--dst-prefix=b/',
+    base,
+    '--',
+    SCOPE,
+  ];
+}
 
 function git(args: string[], cwd: string) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { changedRanges } from './mutation.ts';
 
-const diff = (file: string, hunks: string[]) =>
-  [`diff --git a/${file} b/${file}`, `--- a/${file}`, `+++ b/${file}`, ...hunks].join('\n');
+function diff(file: string, hunks: string[]) {
+  return [`diff --git a/${file} b/${file}`, `--- a/${file}`, `+++ b/${file}`, ...hunks].join('\n');
+}
 
 describe('changedRanges', () => {
   it('gives each added or changed run of lines as file:start-end', () => {

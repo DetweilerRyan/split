@@ -5,14 +5,18 @@ import { type Dirent, existsSync, globSync, readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import ignore from 'ignore';
 
-const posix = (path: string) => path.split(sep).join('/');
-const unique = (paths: string[]) => [...new Set(paths)].sort();
+function posix(path: string) {
+  return path.split(sep).join('/');
+}
+function unique(paths: string[]) {
+  return [...new Set(paths)].sort();
+}
 
 /** The .gitignore in `root`, if there is one, as text the `ignore` package takes. */
-export const gitignoreIn = (root: string) => {
+export function gitignoreIn(root: string) {
   const path = join(root, '.gitignore');
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
-};
+}
 
 /**
  * The files under `root` that `files` match, with paths from `root` and `/` between folders, and
@@ -35,8 +39,9 @@ export function findFiles(
   // Kept apart, so a `!` in ignorePatterns can't bring back what the .gitignore lists.
   const ignored = { ignores: (path: string) => untracked.ignores(path) || patterns.ignores(path) };
   // A Dirent's parentPath is relative to the search's cwd, which is `root`, not this process's.
-  const from = (entry: Dirent) =>
-    posix(relative(root, resolve(root, entry.parentPath, entry.name)));
+  function from(entry: Dirent) {
+    return posix(relative(root, resolve(root, entry.parentPath, entry.name)));
+  }
   const found = globSync(files, {
     cwd: root,
     withFileTypes: true,

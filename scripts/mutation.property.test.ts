@@ -11,13 +11,14 @@ type Hunk = { start: number; count: number };
 type File = { path: string; kind: 'mutated' | 'test' | 'feature' | 'outside'; hunks: Hunk[] };
 
 const segment = fc.stringMatching(/^[a-z][a-z0-9 _-]{0,8}$/).map((s) => s.trimEnd() || 'x');
-const pathOf = (kind: File['kind'], name: string) =>
-  ({
+function pathOf(kind: File['kind'], name: string) {
+  return {
     mutated: `scripts/oxcrap/${name}.ts`,
     test: `scripts/oxcrap/${name}.test.ts`,
     feature: `scripts/oxcrap/features/steps/${name}.ts`,
     outside: `src/${name}.ts`,
-  })[kind];
+  }[kind];
+}
 
 const file: fc.Arbitrary<File> = fc
   .record({

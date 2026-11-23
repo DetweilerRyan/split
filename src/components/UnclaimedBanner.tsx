@@ -21,7 +21,9 @@ export function UnclaimedBanner({
   }, 0);
   const percent = total > 0 ? Math.min(100, Math.round((claimed / total) * 100)) : 100;
   const unclaimed = items.filter((item) => !Object.values(item.claims).some(Boolean));
-  const formatAmount = (amount: number) => formatMoney(amount, currency);
+  function formatAmount(amount: number) {
+    return formatMoney(amount, currency);
+  }
 
   return (
     <section className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">

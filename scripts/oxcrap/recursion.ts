@@ -12,18 +12,22 @@ type Scope = Map<string, AstNode | null>;
 /** A class's methods and function-valued fields, by name. */
 type Members = Map<string, AstNode>;
 
-/** The nodes besides functions that open a scope of their own. */
-const SCOPE_TYPES = new Set([
-  'Program',
-  'BlockStatement',
-  'StaticBlock',
-  'SwitchStatement',
-  'CatchClause',
-  'ForStatement',
-  'ForInStatement',
-  'ForOfStatement',
-]);
-
+/** Whether a node besides a function opens a scope of its own. */
+function opensScope(node: AstNode) {
+  switch (node.type) {
+    case 'Program':
+    case 'BlockStatement':
+    case 'StaticBlock':
+    case 'SwitchStatement':
+    case 'CatchClause':
+    case 'ForStatement':
+    case 'ForInStatement':
+    case 'ForOfStatement':
+      return true;
+    default:
+      return false;
+  }
+}
 /** The names a binding pattern, such as a parameter or a destructuring, declares. */
 function boundNames(pattern: unknown, into: string[] = []): string[] {
   if (!isNode(pattern)) return into;
@@ -141,7 +145,7 @@ function functionScope(fn: AstNode): Scope {
   return scope;
 }
 
-/** The scope one of SCOPE_TYPES opens, with what it declares directly. */
+/** The scope a node `opensScope` says opens, with what it declares directly. */
 function blockScope(node: AstNode): Scope {
   const scope: Scope = new Map();
   switch (node.type) {
@@ -232,7 +236,7 @@ class CallGraph<Fn> {
     if (node.type === 'CallExpression') this.visitCall(node);
     if (node.type === 'ClassBody') this.visitClassBody(node);
     else if (FUNCTION_TYPES.has(node.type)) this.visitFunction(node, members);
-    else if (SCOPE_TYPES.has(node.type)) this.visitScope(node, members);
+    else if (opensScope(node)) this.visitScope(node, members);
     else this.visitChildren(node, members);
   }
 

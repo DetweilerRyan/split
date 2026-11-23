@@ -36,13 +36,14 @@ const one = () => 1;
 const SEPARATELY = COUNT_SEPARATELY;
 
 /** Each function's share of coverage, with functions scored as `counting` says. */
-const covered = (file: FileCoverage | undefined, counting: Counting = SEPARATELY) =>
-  Object.fromEntries(
+function covered(file: FileCoverage | undefined, counting: Counting = SEPARATELY) {
+  return Object.fromEntries(
     [...coverageOf(parse('example.ts', code, counting).functions, file)].map(([fn, c]) => [
       fn.name,
       c,
     ]),
   );
+}
 
 describe('coverageOf', () => {
   it('gives each function the share of its own statements that ran, not its nested functions’', () => {

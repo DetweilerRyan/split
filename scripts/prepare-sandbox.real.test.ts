@@ -71,8 +71,12 @@ console.log('Headless Chromium launched and rendered a page.');
     PATH: `${join(cwd, 'bin')}:${process.env.PATH}`,
     PLAYWRIGHT_BROWSERS_PATH: join(cwd, 'browsers'),
   };
-  const run = () => spawnSync('sh', [script], { cwd, env, encoding: 'utf8' });
-  const runAsync = () => runCommand('sh', [script], { cwd, env });
+  function run() {
+    return spawnSync('sh', [script], { cwd, env, encoding: 'utf8' });
+  }
+  function runAsync() {
+    return runCommand('sh', [script], { cwd, env });
+  }
   return { cwd, run, runAsync };
 }
 

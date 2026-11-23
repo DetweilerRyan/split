@@ -65,7 +65,9 @@ function run(command: string, args: string[], cwd: string) {
   return { status: result.status, output: `${result.stdout}${result.stderr}`.trim() };
 }
 
-const tail = (text: string, lines: number) => text.split('\n').slice(-lines).join('\n');
+function tail(text: string, lines: number) {
+  return text.split('\n').slice(-lines).join('\n');
+}
 
 /**
  * A hash of the work in WATCHED: the commit, every change git sees there since it, and the
@@ -118,9 +120,12 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean; session_id?: 
   );
   if (!base) return `The Stop hook couldn't find origin/main or main to compare with.`;
   const mergeBase = run('git', ['merge-base', base, 'HEAD'], root).output;
-  const changedIn = (paths: string[]) =>
-    run('git', ['diff', '--quiet', mergeBase, '--', ...paths], root).status !== 0 ||
-    run('git', ['ls-files', '--others', '--exclude-standard', '--', ...paths], root).output !== '';
+  function changedIn(paths: string[]) {
+    return (
+      run('git', ['diff', '--quiet', mergeBase, '--', ...paths], root).status !== 0 ||
+      run('git', ['ls-files', '--others', '--exclude-standard', '--', ...paths], root).output !== ''
+    );
+  }
   const app = changedIn(APP);
   const tooling = changedIn(TOOLING);
   if (!app && !tooling) return undefined;

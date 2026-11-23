@@ -1,7 +1,11 @@
-import type { Question } from './actor.ts';
+import type { Actor } from './actor.ts';
 
 /** Everything the last run printed, with no colour codes. */
-export const theOutput: Question<string> = (actor) => actor.recall('run').output;
+export function theOutput(actor: Actor): string {
+  return actor.recall('run').output;
+}
 
 /** What the last run exited with. */
-export const theExitCode: Question<number | null> = (actor) => actor.recall('run').status;
+export function theExitCode(actor: Actor): number | null {
+  return actor.recall('run').status;
+}
