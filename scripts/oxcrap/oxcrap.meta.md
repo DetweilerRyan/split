@@ -101,7 +101,10 @@ The project's Claude Code Stop hook runs `npm run oxcrap` and passes its finding
   - **`switchCases`' `"once"` mode counts a `switch` only if it has a case beyond `default:`,** so it never adds a path `"each"` wouldn't. ESLint's `"modified"` variant counts every `switch`.
   - **`labelledJumps`:** Sonar counts a `break` or `continue` to a label. A plain `break` adds nothing, since the loop it leaves is already counted.
   - **Defaults:** all count, except that a `switch` and a logical run count per case and per operator, as before. That's consistent with counting everything by default.
-  - **Not added: `else`, and nesting increments.** Both are on Sonar's list, but they belong to Cognitive Complexity's readability score, not to paths through the code. An `if` already has two outcomes, so counting its `else` too would score every `if`/`else` 2. CRAP's formula is built on cyclomatic complexity. Raised with the owner on #75.
+  - **Not added: `else`, and nesting increments.** Both are on Sonar's list, but they belong to Cognitive Complexity's readability score, not to paths through the code. An `if` already has two outcomes, so counting its `else` too would score every `if`/`else` 2. CRAP's formula is built on cyclomatic complexity.
+    - **The owner decided:** "leave them out, open an issue for max-depth" ([decision](https://github.com/DetweilerRyan/split/pull/75#issuecomment-7109938912)).
+    - **Why nesting gets its own limit:** research finds models understand deeply nested code worse ([arXiv 2609.37405](https://arxiv.org/abs/2609.37405)). Classical metrics, though, don't predict how models do on whole tasks once code length is controlled ([arXiv 2602.07882](https://arxiv.org/html/2602.07882v2)).
+    - **Where it's limited:** nesting is a risk of its own, so [#76](https://github.com/DetweilerRyan/split/issues/76) limits it through oxlint's `max-depth` and `max-nested-callbacks`, as ESLint separates `complexity` from `max-depth`.
   - **Nothing in this repository changed:** `src/` and `app/` have no recursion and no labelled jumps.
 - **The fast-check property** checks every combination of the options. Its grammar keeps a function's own branches, its default values, its `?.` links and its nested functions' contents apart.
 
