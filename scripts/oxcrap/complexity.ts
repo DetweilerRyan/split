@@ -1,6 +1,6 @@
 // Counts a function's cyclomatic complexity from its oxc-parser AST node. These rules are oxCrap's
 // own, so they change only when this file does; they're close to ESLint's `complexity` rule but not
-// the same. Three of them are options, all on by default: `Counting` below. Why is in
+// the same. Several are options, all counting by default: `Counting` below. Why is in
 // oxcrap.meta.md beside this file.
 
 /** An oxc-parser AST node: ESTree-shaped, with UTF-16 `start` and `end` offsets. */
@@ -28,7 +28,6 @@ const BRANCHES = new Set([
   'WhileStatement',
   'DoWhileStatement',
   'CatchClause',
-  'LogicalExpression', // &&, || and ??
 ]);
 const LOGICAL_ASSIGNMENTS = new Set(['&&=', '||=', '??=']);
 /** Node types an optional link, `?.`, can mark. */
@@ -42,6 +41,14 @@ export type Counting = {
   defaultValues: boolean;
   /** Whether each optional link, `?.`, adds a path. */
   optionalChaining: boolean;
+  /** `each`: every non-default `case` adds a path. `once`: a whole `switch` adds one. */
+  switchCases: 'each' | 'once';
+  /** `each`: every `&&`, `||` and `??` adds a path. `sequence`: each run of the same one adds one. */
+  logicalOperators: 'each' | 'sequence';
+  /** Whether a function in a recursion cycle, calling itself or through others, adds a path. */
+  recursion: boolean;
+  /** Whether each `break` or `continue` to a label adds a path. */
+  labelledJumps: boolean;
 };
 
 /** Every kind of branching counted: oxCrap's default. */
@@ -49,13 +56,24 @@ export const COUNT_ALL: Counting = {
   nestedFunctions: 'enclosing',
   defaultValues: true,
   optionalChaining: true,
+  switchCases: 'each',
+  logicalOperators: 'each',
+  recursion: true,
+  labelledJumps: true,
 };
 
-/** Each function on its own, with no default values or `?.`: the counting before #74. */
+/**
+ * Each function on its own, with no default values, `?.`, recursion or labelled jumps, and every
+ * case and logical operator counted: the counting before #74.
+ */
 export const COUNT_SEPARATELY: Counting = {
   nestedFunctions: 'own',
   defaultValues: false,
   optionalChaining: false,
+  switchCases: 'each',
+  logicalOperators: 'each',
+  recursion: false,
+  labelledJumps: false,
 };
 
 /** The child nodes of `node`, in source order. */
@@ -72,9 +90,21 @@ export function children(node: AstNode): AstNode[] {
   return found;
 }
 
-function adds(node: AstNode, counting: Counting) {
+function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
-  if (node.type === 'SwitchCase') return node.test === null ? 0 : 1; // `default:` adds no path
+  if (node.type === 'SwitchStatement') return counting.switchCases === 'once' ? 1 : 0;
+  if (node.type === 'SwitchCase') {
+    // `default:` adds no path.
+    return counting.switchCases === 'each' && node.test !== null ? 1 : 0;
+  }
+  if (node.type === 'LogicalExpression') {
+    // In `a && b && c` the inner `a && b` continues the outer's run, so a sequence counts once.
+    const continues = parent?.type === 'LogicalExpression' && parent.operator === node.operator;
+    return counting.logicalOperators === 'each' || !continues ? 1 : 0;
+  }
+  if ((node.type === 'BreakStatement' || node.type === 'ContinueStatement') && node.label) {
+    return counting.labelledJumps ? 1 : 0;
+  }
   if (node.type === 'AssignmentExpression') {
     return LOGICAL_ASSIGNMENTS.has(node.operator as string) ? 1 : 0;
   }
@@ -95,10 +125,38 @@ export function complexity(fn: AstNode, counting: Counting = COUNT_ALL) {
   let count = 1;
   const enters = (child: AstNode) =>
     counting.nestedFunctions === 'enclosing' || !FUNCTION_TYPES.has(child.type);
+  const visit = (node: AstNode, parent: AstNode | undefined) => {
+    count += adds(node, parent, counting);
+    for (const child of children(node)) if (enters(child)) visit(child, node);
+  };
+  for (const child of children(fn)) if (enters(child)) visit(child, fn);
+  return count;
+}
+
+/**
+ * The names a function calls, in the code its complexity counts: `f()` gives `f`, and
+ * `this.f()` gives `f`, for a method calling another of its class's.
+ */
+export function calls(fn: AstNode, counting: Counting = COUNT_ALL) {
+  const names = new Set<string>();
+  const enters = (child: AstNode) =>
+    counting.nestedFunctions === 'enclosing' || !FUNCTION_TYPES.has(child.type);
   const visit = (node: AstNode) => {
-    count += adds(node, counting);
+    if (node.type === 'CallExpression' && isNode(node.callee)) {
+      const callee = node.callee;
+      if (callee.type === 'Identifier') names.add(callee.name as string);
+      if (
+        callee.type === 'MemberExpression' &&
+        isNode(callee.object) &&
+        callee.object.type === 'ThisExpression' &&
+        isNode(callee.property) &&
+        callee.property.type === 'Identifier'
+      ) {
+        names.add(callee.property.name as string);
+      }
+    }
     for (const child of children(node)) if (enters(child)) visit(child);
   };
   for (const child of children(fn)) if (enters(child)) visit(child);
-  return count;
+  return names;
 }

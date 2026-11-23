@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COUNT_SEPARATELY, type Counting } from './complexity.ts';
+import { COUNT_ALL, COUNT_SEPARATELY, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
 
 /** Counting as before #74, for the tests that pin it. */
@@ -70,6 +70,33 @@ describe('complexity', () => {
     expect(complexityOf(code)).toBe(expected);
   });
 
+  it('counts each non-default case by default, and a whole switch once with switchCases "once"', () => {
+    const code =
+      'function f(n) { switch (n) { case 1: return 1; case 2: return 2; default: return 0; } }';
+    expect(complexityOf(code)).toBe(3);
+    expect(complexityOf(code, { ...COUNT_ALL, switchCases: 'once' })).toBe(2);
+  });
+
+  it('counts each logical operator by default, and each run of the same one with logicalOperators "sequence"', () => {
+    const code = 'function f(a, b, c, d) { return (a && b && c) || d; }';
+    expect(complexityOf(code)).toBe(4);
+    expect(complexityOf(code, { ...COUNT_ALL, logicalOperators: 'sequence' })).toBe(3);
+    expect(
+      complexityOf('function f(a, b, c) { return a ?? b ?? c; }', {
+        ...COUNT_ALL,
+        logicalOperators: 'sequence',
+      }),
+    ).toBe(2);
+  });
+
+  it('counts each break or continue to a label, unless labelledJumps is off', () => {
+    const code =
+      'function f(xs) { outer: for (const x of xs) { for (const y of x) { if (y) continue outer; break outer; } } }';
+    expect(complexityOf(code)).toBe(6);
+    expect(complexityOf(code, { ...COUNT_ALL, labelledJumps: false })).toBe(4);
+    expect(complexityOf('function f(xs) { for (const x of xs) { break; } }')).toBe(2);
+  });
+
   it('doesn’t count a TypeScript optional parameter as ?.', () => {
     expect(complexityOf('function f(a?: number) { return a; }')).toBe(1);
   });
@@ -107,5 +134,46 @@ describe('complexity', () => {
         'view.tsx',
       ),
     ).toBe(2);
+  });
+});
+
+describe('recursion', () => {
+  const complexities = (code: string, counting?: Counting) =>
+    Object.fromEntries(
+      parse('example.ts', code, counting).functions.map((fn) => [fn.name, fn.complexity]),
+    );
+
+  it('adds 1 to a function that calls itself, however many times', () => {
+    expect(complexities('function f(n) { return n ? f(n - 1) + f(n - 2) : 0; }')).toEqual({ f: 3 });
+  });
+
+  it('adds 1 to each function in a cycle of calls, and not to one that only calls into it', () => {
+    const code =
+      'function isEven(n) { return n === 0 || isOdd(n - 1); }\nfunction isOdd(n) { return n !== 0 && isEven(n - 1); }\nfunction check(n) { return isEven(n); }';
+    expect(complexities(code)).toEqual({ isEven: 3, isOdd: 3, check: 1 });
+  });
+
+  it('follows a method calling itself through this', () => {
+    expect(complexities('class Tree { size(n) { return n ? this.size(n.next) : 0; } }')).toEqual({
+      size: 3,
+    });
+  });
+
+  it('counts a nested function calling the outer one towards the outer one by default', () => {
+    const code = 'function walk(node) { node.children.forEach((child) => walk(child)); }';
+    expect(complexities(code)).toEqual({ walk: 2 });
+    expect(complexities(code, COUNT_SEPARATELY)).toEqual({
+      walk: 1,
+      'walk > node.children.forEach callback': 1,
+    });
+  });
+
+  it('adds nothing with recursion off', () => {
+    expect(
+      complexities('function f(n) { return n ? f(n - 1) : 0; }', {
+        ...COUNT_ALL,
+        recursion: false,
+      }),
+    ).toEqual({ f: 2 });
   });
 });

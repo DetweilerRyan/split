@@ -9,17 +9,43 @@ import { parse } from './functions.ts';
 // shrinks a failure to the smallest function that breaks the count. The code is only parsed, never
 // run, so its names needn't exist.
 
-/** What a piece of code adds, by kind. */
-type Tally = { branches: number; defaults: number; optional: number };
+/** What a piece of code adds, by kind: each kind is counted, or not, as an option says. */
+type Tally = {
+  branches: number;
+  defaults: number;
+  optional: number;
+  /** Non-default `case`s, and the `switch`es they're in. */
+  cases: number;
+  switches: number;
+  /** `&&`, `||` and `??` operators, and the runs of the same operator they form. */
+  operators: number;
+  sequences: number;
+  /** `break` and `continue` to a label. */
+  jumps: number;
+  /** Calls of the function being scored, `subject()`. */
+  recursion: number;
+};
 /** A piece of code, what it adds itself, and what the functions nested in it hold. */
 type Code = { code: string; own: Tally; nested: Tally };
 
-const NONE: Tally = { branches: 0, defaults: 0, optional: 0 };
-const add = (...tallies: Tally[]): Tally => ({
-  branches: tallies.reduce((sum, t) => sum + t.branches, 0),
-  defaults: tallies.reduce((sum, t) => sum + t.defaults, 0),
-  optional: tallies.reduce((sum, t) => sum + t.optional, 0),
-});
+const NONE: Tally = {
+  branches: 0,
+  defaults: 0,
+  optional: 0,
+  cases: 0,
+  switches: 0,
+  operators: 0,
+  sequences: 0,
+  jumps: 0,
+  recursion: 0,
+};
+const add = (...tallies: Tally[]): Tally =>
+  Object.fromEntries(
+    Object.keys(NONE).map((kind) => [
+      kind,
+      tallies.reduce((sum, t) => sum + t[kind as keyof Tally], 0),
+    ]),
+  ) as Tally;
 const leaf = (code: string, tally: Partial<Tally> = {}): Code => ({
   code,
   own: { ...NONE, ...tally },
@@ -64,19 +90,25 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
             { defaults: count },
           ),
         ),
-      // Expressions: a ?: over a chain of && adds one per operator, and one for the ?:.
+      // Expressions: a ?: over a run of &&, one sequence of its operators.
       fc
         .integer({ min: 1, max: 4 })
         .map((operators) =>
           leaf(
             `n = ${Array.from({ length: operators + 1 }, (_, i) => `x${i}`).join(' && ')} ? 1 : 0;`,
-            { branches: operators + 1 },
+            { branches: 1, operators, sequences: 1 },
           ),
         ),
+      // `&&` inside `||`: two operators, and two sequences, since they differ.
+      fc.constant(leaf('n = x0 && x1 || x2;', { operators: 2, sequences: 2 })),
+      // A run of ?? is one sequence.
+      fc.constant(leaf('n = x0 ?? x1 ?? x2;', { operators: 2, sequences: 1 })),
       fc
         .constantFrom('||=', '&&=', '??=')
         .map((operator) => leaf(`n ${operator} 1;`, { branches: 1 })),
-      fc.constant(leaf('n = obj.x ?? 0;', { branches: 1 })),
+      fc.constant(leaf('n = obj.x ?? 0;', { operators: 1, sequences: 1 })),
+      // A call of the function being scored.
+      fc.constant(leaf('subject();', { recursion: 1 })),
       // Statements that branch, around bodies of their own.
       body.map((s) => wrap(`if (a) {\n${s.code}\n}`, 1, s)),
       fc
@@ -109,13 +141,22 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
         ),
       fc
         .tuple(fc.array(body, { minLength: 1, maxLength: 3 }), fc.boolean())
-        .map(([cases, withDefault]) =>
-          wrap(
-            `switch (n) {\n${cases.map((c, i) => `case ${i}: {\n${c.code}\nbreak;\n}`).join('\n')}${withDefault ? '\ndefault:\nbreak;' : ''}\n}`,
-            cases.length,
-            ...cases,
-          ),
-        ),
+        .map(([cases, withDefault]) => {
+          const code = `switch (n) {\n${cases.map((c, i) => `case ${i}: {\n${c.code}\nbreak;\n}`).join('\n')}${withDefault ? '\ndefault:\nbreak;' : ''}\n}`;
+          const inner = join(cases);
+          return {
+            code,
+            own: add(inner.own, { ...NONE, cases: cases.length, switches: 1 }),
+            nested: inner.nested,
+          };
+        }),
+      // A labelled loop, with a jump to its label.
+      fc
+        .tuple(body, fc.nat({ max: 999 }))
+        .map(([s, id]) =>
+          wrap(`L${id}: for (const x of xs) {\n${s.code}\nif (a) continue L${id};\n}`, 2, s),
+        )
+        .map((code) => ({ ...code, own: add(code.own, { ...NONE, jumps: 1 }) })),
       // Nested functions: assigned, passed to a call, and with default parameters.
       fc
         .tuple(body, fc.nat({ max: 999 }))
@@ -134,16 +175,23 @@ const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) =>
   };
 });
 
-/** What `tally` adds under `counting`. */
+/** What `tally` adds under `counting`, leaving recursion to the function as a whole. */
 const counted = (tally: Tally, counting: Counting) =>
   tally.branches +
   (counting.defaultValues ? tally.defaults : 0) +
-  (counting.optionalChaining ? tally.optional : 0);
+  (counting.optionalChaining ? tally.optional : 0) +
+  (counting.switchCases === 'each' ? tally.cases : tally.switches) +
+  (counting.logicalOperators === 'each' ? tally.operators : tally.sequences) +
+  (counting.labelledJumps ? tally.jumps : 0);
 
-const countings = fc.record<Counting>({
-  nestedFunctions: fc.constantFrom('enclosing', 'own'),
+const countings: fc.Arbitrary<Counting> = fc.record({
+  nestedFunctions: fc.constantFrom('enclosing' as const, 'own' as const),
   defaultValues: fc.boolean(),
   optionalChaining: fc.boolean(),
+  switchCases: fc.constantFrom('each' as const, 'once' as const),
+  logicalOperators: fc.constantFrom('each' as const, 'sequence' as const),
+  recursion: fc.boolean(),
+  labelledJumps: fc.boolean(),
 });
 
 describe('complexity of generated functions', () => {
@@ -154,10 +202,15 @@ describe('complexity of generated functions', () => {
         const subject = parse('generated.ts', source, counting).functions.find(
           (fn) => fn.name === 'subject',
         );
-        const inside = counting.nestedFunctions === 'enclosing' ? counted(nested, counting) : 0;
-        expect(subject?.complexity).toBe(1 + counted(own, counting) + inside);
+        const enclosing = counting.nestedFunctions === 'enclosing';
+        const inside = enclosing ? counted(nested, counting) : 0;
+        // Calling itself puts it in a recursion cycle once, however many calls; a nested
+        // function's call counts only when that function is part of it.
+        const calls = own.recursion + (enclosing ? nested.recursion : 0);
+        const recursive = counting.recursion && calls > 0 ? 1 : 0;
+        expect(subject?.complexity).toBe(1 + counted(own, counting) + inside + recursive);
       }),
-      { numRuns: 500 },
+      { numRuns: 1000 },
     );
   });
 });

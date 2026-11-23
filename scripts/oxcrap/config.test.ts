@@ -130,10 +130,8 @@ describe('configuration_schema.json', () => {
       DEFAULTS.limits.complexity,
     );
     const counting = schema.properties.counting.properties!;
-    expect({
-      nestedFunctions: counting.nestedFunctions.default,
-      defaultValues: counting.defaultValues.default,
-      optionalChaining: counting.optionalChaining.default,
-    }).toEqual(DEFAULTS.counting);
+    expect(
+      Object.fromEntries(Object.entries(counting).map(([name, option]) => [name, option.default])),
+    ).toEqual(DEFAULTS.counting);
   });
 });

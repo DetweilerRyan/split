@@ -3,6 +3,7 @@
 import { parseSync } from 'oxc-parser';
 import {
   type AstNode,
+  calls,
   children,
   complexity,
   COUNT_ALL,
@@ -120,6 +121,7 @@ export function parse(file: string, source: string, counting: Counting = COUNT_A
   }
   const position = positions(source);
   const functions: Fn[] = [];
+  const nodes = new Map<Fn, AstNode>();
   const statements: Parsed['statements'] = [];
 
   const visit = (node: AstNode, ancestors: AstNode[], enclosing: Fn[]) => {
@@ -145,6 +147,7 @@ export function parse(file: string, source: string, counting: Counting = COUNT_A
           parent.arguments.includes(node),
       };
       functions.push(fn);
+      nodes.set(fn, node);
       inside = [...enclosing, fn];
     }
     for (const child of children(node)) visit(child, [...ancestors, node], inside);
@@ -157,14 +160,43 @@ export function parse(file: string, source: string, counting: Counting = COUNT_A
     start,
     end,
   }));
-  if (counting.nestedFunctions === 'enclosing') {
-    return {
-      functions: functions.filter((fn) => fn.parents.length === 0),
-      nested: functions.filter((fn) => fn.parents.length > 0),
-      comments,
-      statements,
-      position,
-    };
+  const enclosing = counting.nestedFunctions === 'enclosing';
+  const scored = enclosing ? functions.filter((fn) => fn.parents.length === 0) : functions;
+  if (counting.recursion) countRecursion(scored, nodes, counting);
+  return {
+    functions: scored,
+    nested: enclosing ? functions.filter((fn) => fn.parents.length > 0) : [],
+    comments,
+    statements,
+    position,
+  };
+}
+
+/**
+ * Adds 1 to each scored function in a recursion cycle: one that calls itself, or calls one that
+ * leads back to it. Calls are matched by name within the file, as `f()` or `this.f()`.
+ */
+function countRecursion(scored: Fn[], nodes: Map<Fn, AstNode>, counting: Counting) {
+  const byName = new Map<string, Fn[]>();
+  for (const fn of scored) byName.set(fn.label, [...(byName.get(fn.label) ?? []), fn]);
+  const callees = new Map<Fn, Fn[]>(
+    scored.map((fn) => [
+      fn,
+      [...calls(nodes.get(fn) as AstNode, counting)].flatMap((name) => byName.get(name) ?? []),
+    ]),
+  );
+  for (const fn of scored) {
+    const seen = new Set<Fn>();
+    const queue = [...(callees.get(fn) ?? [])];
+    while (queue.length > 0) {
+      const next = queue.shift() as Fn;
+      if (next === fn) {
+        fn.complexity += 1;
+        break;
+      }
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(...(callees.get(next) ?? []));
+    }
   }
-  return { functions, nested: [], comments, statements, position };
 }
