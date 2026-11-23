@@ -51,6 +51,15 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
   - **A failed test run can't leave a stale report behind:** Vitest empties `coverage/` at the start of a run, and writes no report when a test fails.
   - **A partial run is the one gap:** a run of some test files writes a fresh report with only their coverage. That can only lower coverage, so it makes false findings, never a false pass.
 
+### Coverage never comes from end-to-end tests
+
+- **The owner set the rule:** "crap testing should never include e2e tests" ([feedback](https://github.com/DetweilerRyan/split/pull/66#issuecomment-7106226667)). It came up when oxCrap was tried on itself: its CLI, tested only by its features, showed 0% coverage. Collecting coverage from the processes the features start was offered, and turned down.
+- **Why:**
+  - **A run of the whole program executes far more than it checks.** A scenario that asserts one line of output counts every line it passed through as covered. Coverage then overstates how well a function is tested, so its CRAP score comes out lower than it should.
+  - **It would let a function pass by being run rather than tested,** instead of by being split up or unit tested. That's the pressure CRAP exists to apply.
+- **It was already so:** the app's coverage came from Vitest's projects (`npm test`), and never from `npm run test:e2e`.
+- **Where the line falls:** Vitest's `real` and `browser` projects count, though they're broader than unit tests. Playwright scenarios against the app, and a deep module's feature contract against its CLI, don't.
+
 ### The Stop hook
 
 The project's Claude Code Stop hook runs `npm run oxcrap` and passes its findings to Claude. It's the project's own script, not part of oxCrap: its README is [`../stop-hook.md`](../stop-hook.md), and its reasons are in [`../stop-hook.meta.md`](../stop-hook.meta.md).
