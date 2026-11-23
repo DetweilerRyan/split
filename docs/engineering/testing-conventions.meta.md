@@ -114,6 +114,14 @@ Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), wh
 - Taking them out cut `npm test` from 9.8 s to 3.5 s on the sandbox. `npm run test:tooling` takes 12.1 s, 2.8 s of it the features.
 - The CRAP check's coverage run scores only `src/` and `app/`, so it no longer runs tests for code it never scores.
 
+**Deep modules aren't only dev tools.** The first draft defined a deep module as a dev tool. The owner asked in [review](https://github.com/DetweilerRyan/split/pull/66#discussion_r4668015827) for a wider definition:
+
+- "make it clear that not all deep modules are dev tools";
+- the section should describe "when to treat a script as a deep module", and that "deep modules in general will leverage bdd";
+- "in the future some deep modules may be a simplified abstraction of encapsulated complex code who's bdd tests can't necessary be run e2e".
+
+So the convention defines a deep module in general, and gives when a script is one. It sets up only the program kind, as oxCrap is the only one yet.
+
 **Why features for a deep module's contract:** the contract (what you write, what the check reports, what it exits with) is the interface that survives a rewrite. Replacing oxlint with oxCrap's own counter in #64 left the end-to-end tests intact apart from their numbers.
 
 **What the pilot measured,** replacing `oxcrap.real.test.ts`:
@@ -135,7 +143,7 @@ Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), wh
 - **Two commands,** `test:tooling` and `test:contracts`: the owner chose one.
 - **Tooling projects in `vitest.config.ts`:** they would run through the app's React Compiler, coverage and alias.
 
-**What would reopen this:** the features growing slow enough to delay the hook, or a second deep module whose contract doesn't fit a command line.
+**What would reopen this:** the features growing slow enough to delay the hook, or the first deep module used through code, which needs its own layout and runner.
 
 ## Changed test expectations
 

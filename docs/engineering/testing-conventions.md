@@ -86,9 +86,26 @@ Tooling tests check the repository's own dev tools: everything in `scripts/`, an
 
 ### Feature contracts for deep modules
 
-A deep module is a dev tool whose small interface hides much more logic: the files it reads, its command line, and what it prints and exits with. A tool counts as one when it has its own folder in `scripts/`, a README that describes that interface, and modules with their own unit tests. oxCrap, in `scripts/oxcrap/`, is one. A single-file script keeps its `real` test instead.
+A deep module is any module whose small interface hides much more logic than the interface shows. It might be a program with a command line, or a simplified abstraction over complex code that callers use through a few functions. Its contract is what its callers give it and get back, which is the part that survives rewriting its internals.
 
-A deep module's contract is tested by Gherkin features beside it, run end to end against the program. Its modules keep their unit tests, and there's no separate `real` test of the program.
+- **Test a deep module's contract with Gherkin features,** written in its callers' words and kept beside it.
+- **Drive the features through the module's own interface.** Run a program end to end, as a process. A module used through code is driven through its functions, which needn't be end to end.
+- **Keep unit tests for the modules inside it,** for their edge cases.
+- **Don't keep a second test of the same contract,** such as a `real` test of the program, beside the features.
+
+#### When a script is a deep module
+
+A script in `scripts/` is a deep module when:
+
+- it has its own folder;
+- it has a README describing its interface;
+- its modules have their own unit tests.
+
+oxCrap, in `scripts/oxcrap/`, is one. A single-file script keeps its `real` test instead.
+
+#### A deep module that's a program
+
+These rules cover a deep module whose interface is a program, the only kind set up so far. The first deep module used through code sets up its own layout and runner, and adds its rules here.
 
 | Path                                            | Holds                                                 |
 | :---------------------------------------------- | :---------------------------------------------------- |
