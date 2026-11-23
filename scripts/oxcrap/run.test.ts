@@ -1,6 +1,6 @@
 import { posix } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type Host, isUrl, outcome, outside, run, USAGE } from './run.ts';
+import { type Host, isUrl, outcome, outside, resolveImport, run, USAGE } from './run.ts';
 
 // run.ts over files in memory. The feature contract in features/ checks the real program end to
 // end; these check the same rules from the inside, so they count towards oxCrap's own coverage.
@@ -261,6 +261,29 @@ describe('run', () => {
       },
     };
     expect(run([], broken)).toEqual({ status: 1, stdout: [], stderr: ['disk gone'] });
+  });
+});
+
+describe('resolveImport', () => {
+  const files = host({
+    '/repo/src/kinds.ts': '',
+    '/repo/src/lib/index.ts': '',
+    '/repo/src/both.ts': '',
+    '/repo/src/both/index.ts': '',
+    '/repo/src/view.tsx': '',
+  });
+
+  it.each([
+    ['./kinds', '/repo/src/kinds.ts'],
+    ['./kinds.ts', '/repo/src/kinds.ts'],
+    ['./kinds.js', '/repo/src/kinds.ts'],
+    ['./view.jsx', '/repo/src/view.tsx'],
+    ['./lib', '/repo/src/lib/index.ts'],
+    ['./both', '/repo/src/both.ts'],
+    ['../src/kinds', '/repo/src/kinds.ts'],
+    ['./missing', undefined],
+  ])('%s from src/grade.ts is %s', (from, expected) => {
+    expect(resolveImport(files, '/repo/src/grade.ts', from)).toBe(expected);
   });
 });
 

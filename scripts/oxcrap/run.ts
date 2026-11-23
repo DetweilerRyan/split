@@ -8,8 +8,8 @@ import { type Allow, type Finding, findAllows } from './allow.ts';
 import { check, crapOf, type Scored } from './check.ts';
 import { CODE_FILES, CONFIG_NAMES, type Config, merge, parseConfig } from './config.ts';
 import { coverageOf, newerThan, parseReport, type Report } from './coverage.ts';
-import { exportedTables, type Fn, parse } from './functions.ts';
-import type { Tables } from './tables.ts';
+import { type Fn, moduleExports, parse } from './functions.ts';
+import type { Exports } from './tables.ts';
 
 /** What oxCrap needs from the world outside it. Paths it's given are absolute. */
 export type Host = {
@@ -200,13 +200,13 @@ class Run {
     const scored: Scored[] = [];
     const allowed = new Map<Fn, Allow>();
     const problems: Finding[] = [];
-    // Each imported module's tables, read once however many files import it.
-    const modules = new Map<string, Tables>();
+    // Each imported module's exports, read once however many files import it.
+    const modules = new Map<string, Exports>();
     for (const path of sources) {
       const file = this.shown(path);
       const source = this.host.read(path);
-      const parsed = parse(file, source, config.counting, (from, name) =>
-        tablesAt(this.host, resolveImport(this.host, path, from), modules)?.get(name),
+      const parsed = parse(file, source, config.counting, (from) =>
+        exportsAt(this.host, resolveImport(this.host, path, from), modules),
       );
       const coverage = coverageOf(parsed.functions, byPath.get(this.pathKey(path)));
       for (const fn of parsed.functions) {
@@ -264,18 +264,22 @@ class Run {
 /** The extensions and index files a relative import may leave off, in the order tried. */
 const IMPORT_ENDINGS = ['', '.ts', '.tsx', '.mts', '.js', '.mjs', '/index.ts', '/index.tsx'];
 
-/** The file a relative import in `importer` names, or nothing if there's none. */
+/**
+ * The file a relative import in `importer` names, or nothing if there's none. A `.js` name also
+ * finds the `.ts` file it compiles from, as TypeScript resolves it.
+ */
 export function resolveImport(host: Host, importer: string, from: string) {
   const base = resolve(dirname(importer), from);
-  return IMPORT_ENDINGS.map((ending) => base + ending).find(
-    (path) => host.exists(path) && !host.isDirectory(path),
-  );
+  const stems = [base, base.replace(/\.(m?)js(x?)$/, '.$1ts$2')];
+  return stems
+    .flatMap((stem) => IMPORT_ENDINGS.map((ending) => stem + ending))
+    .find((path) => host.exists(path) && !host.isDirectory(path));
 }
 
-/** The tables the module at `path` exports, read once into `modules`. */
-function tablesAt(host: Host, path: string | undefined, modules: Map<string, Tables>) {
+/** What the module at `path` exports, read once into `modules`. */
+function exportsAt(host: Host, path: string | undefined, modules: Map<string, Exports>) {
   if (!path) return undefined;
-  if (!modules.has(path)) modules.set(path, exportedTables(path, host.read(path)));
+  if (!modules.has(path)) modules.set(path, moduleExports(path, host.read(path)));
   return modules.get(path);
 }
 

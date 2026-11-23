@@ -2,22 +2,18 @@ import { parseSync } from 'oxc-parser';
 import { describe, expect, it } from 'vitest';
 import { type AstNode, COUNT_ALL, COUNT_SEPARATELY, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
-import { type Table, tablesIn } from './tables.ts';
+import { type Exports, type Imported, tablesIn } from './tables.ts';
 
 /** Each scored function's complexity. */
-function complexities(
-  code: string,
-  counting: Counting = COUNT_ALL,
-  imported?: (from: string, name: string) => Table | undefined,
-) {
+function complexities(code: string, counting: Counting = COUNT_ALL, imported?: Imported) {
   return Object.fromEntries(
     parse('example.ts', code, counting, imported).functions.map((fn) => [fn.name, fn.complexity]),
   );
 }
 
 /** The complexity of the file's last function, the one each case exports; its tables' arrows come first. */
-function last(code: string, counting: Counting = COUNT_ALL) {
-  return parse('example.ts', code, counting).functions.at(-1)?.complexity;
+function last(code: string, counting: Counting = COUNT_ALL, imported?: Imported) {
+  return parse('example.ts', code, counting, imported).functions.at(-1)?.complexity;
 }
 
 /** A module's tables, as tablesIn finds them. */
@@ -151,7 +147,7 @@ describe('which tables count', () => {
 
   it('counts what the top level adds, and not what a function adds', () => {
     const found = tables(
-      "const M = new Map([['a', 1]]);\nM.set('b', () => 2);\nconst S = new Set(['a']);\nS.add('b');\nconst O = { a: 1 };\nO.b = 2;\nfunction later() { S.add('c'); }",
+      "const M = new Map([['a', 1]]);\nM.set('b', () => 2);\nconst S = new Set(['a']);\nS.add('b');\nconst O = { a: 1 };\nO.b = 2;",
     ).own;
     expect(Object.fromEntries(found)).toEqual({
       M: { kind: 'map', entries: 2, dispatch: true },
@@ -160,12 +156,47 @@ describe('which tables count', () => {
     });
   });
 
+  it.each([
+    ['adds to a Set', 'S.add(x)'],
+    ['deletes from a Set', 'S.delete(x)'],
+    ['sets a key', 'S[x] = 1'],
+    ['sets a key through a cast', '(S as any)[x] = 1'],
+    ['bumps a key', 'S[x]++'],
+    ['deletes a key', 'delete S[x]'],
+    ['pushes', 'S.push(x)'],
+  ])('makes a table state, not a table, when a function %s', (_, change) => {
+    const code = `const S = new Set(['a', 'b', 'c']);\nfunction change(x: any) { ${change}; }\nexport function is(x: string) { return S.has(x); }`;
+    expect(tables(code).own.size).toBe(0);
+    expect(last(code)).toBe(1);
+  });
+
+  it('leaves a table static when a function only reads it, or changes another', () => {
+    const code =
+      "const S = new Set(['a', 'b', 'c']);\nfunction other(o: any) { o.add(1); S.forEach(log); }\nexport function is(x: string) { return S.has(x); }";
+    expect(last(code)).toBe(3);
+  });
+
   it('follows only named imports and its own exports', () => {
     const found = tables(
       "import * as all from './a.ts';\nimport type { T } from './t.ts';\nexport { S } from './s.ts';\nexport function f() {}\nexport const n = 1;",
     );
     expect(found.imports).toEqual([{ local: 'T', imported: 'T', from: './t.ts' }]);
-    expect(found.exported.size).toBe(0);
+    expect(found.exported.tables.size).toBe(0);
+    expect([...found.exported.functions]).toEqual(['f']);
+  });
+
+  it('follows imports from . and .., and not from packages', () => {
+    const found = tables(
+      "import { A } from '..';\nimport { B } from '.';\nimport { C } from '.config';",
+    );
+    expect(found.imports.map((i) => i.local)).toEqual(['A', 'B']);
+  });
+
+  it('lists the functions a module exports, however it exports them', () => {
+    const found = tables(
+      'function a() {}\nconst b = () => 1;\nconst c = 1;\nexport { a, b as bee, c };\nexport const d = function () {};\nexport function e() {}',
+    );
+    expect([...found.exported.functions].sort()).toEqual(['a', 'bee', 'd', 'e']);
   });
 
   it('lists what a module exports and imports', () => {
@@ -176,7 +207,7 @@ describe('which tables count', () => {
       { local: 'A', imported: 'A', from: './a.ts' },
       { local: 'C', imported: 'B', from: './a.ts' },
     ]);
-    expect([...found.exported.keys()]).toEqual(['T', 'U']);
+    expect([...found.exported.tables.keys()]).toEqual(['T', 'U']);
   });
 });
 
@@ -287,16 +318,36 @@ describe('reading a table', () => {
   });
 
   it('counts a table a relative import names, as its own module would', () => {
-    function imported(from: string, name: string): Table | undefined {
-      return from === './types.ts' && name === 'KINDS'
-        ? { kind: 'set', entries: 4, dispatch: false }
-        : undefined;
+    function imported(from: string): Exports | undefined {
+      if (from !== './types.ts') return undefined;
+      return {
+        tables: new Map([['KINDS', { kind: 'set', entries: 4, dispatch: false }]]),
+        functions: new Set(),
+      };
     }
     const code =
       "import { KINDS as K } from './types.ts';\nexport function is(x: string) { return K.has(x); }";
     expect(complexities(code, COUNT_ALL, imported)).toEqual({ is: 4 });
     expect(complexities(code)).toEqual({ is: 1 });
     expect(complexities(code, COUNT_ALL, () => undefined)).toEqual({ is: 1 });
+  });
+
+  it('counts a table of functions another module exports as a dispatch table', () => {
+    function imported(from: string): Exports | undefined {
+      return from === './handlers.ts'
+        ? { tables: new Map(), functions: new Set(['one', 'two', 'three']) }
+        : undefined;
+    }
+    const code =
+      "import { one, two, three as third, value } from './handlers.ts';\nconst T = { a: one, b: two, c: third, d: value };\nexport function run(k: string) { const handle = T[k]; return handle(); }";
+    expect(last(code, COUNT_ALL, imported)).toBe(1 + 4);
+    expect(last(code)).toBe(1);
+  });
+
+  it('counts a read through a cast on the table', () => {
+    const code =
+      'const O = { a: () => 1, b: () => 2, c: () => 3 };\nexport function run(k: string) { const h = (O as Record<string, () => number>)[k]; return h(); }';
+    expect(last(code)).toBe(1 + 3);
   });
 
   it('follows switchCases and logicalOperators, and lookupTables turns it off', () => {
