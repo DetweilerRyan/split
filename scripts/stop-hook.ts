@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The Claude Code Stop hook in .claude/settings.json. When a session stops with changes in the app
-// (src/ or app/), it runs lint, the tests (which write the coverage report) and the CRAP check; with
-// changes in tooling (scripts/), lint and the tooling tests. It gives
+// (APP below), it runs lint, the tests (which write the coverage report) and the CRAP check; with
+// changes in tooling (TOOLING below), lint and the tooling tests. It gives
 // Claude what fails as advice: `hookSpecificOutput.additionalContext`, which lets the session carry
 // on and act on it. It never blocks, and always exits 0. CI runs the same checks and fails on them.
 // Its README is stop-hook.md beside it; why it works this way is in stop-hook.meta.md, to read
@@ -25,7 +25,14 @@ import { dirname, join, resolve } from 'node:path';
 
 // What counts as a change, and what each kind runs. A path in both runs both.
 /** The app's code and its test setup: lint, `npm test` and `npm run oxcrap`. */
-const APP = ['src', 'app', 'vitest.config.ts', 'package.json'];
+const APP = [
+  'src',
+  'app',
+  'vitest.config.ts',
+  'vitest.config.browser.test.ts',
+  '.oxcraprc.json',
+  'package.json',
+];
 /** Tooling and its tests (vitest.tooling.config.ts says which): lint and `npm run test:tooling`. */
 const TOOLING = [
   'scripts',

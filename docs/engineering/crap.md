@@ -6,7 +6,7 @@ oxCrap scores each function in `src/` and `app/` by its complexity and how much 
 
 oxCrap reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them. [`.oxcraprc.json`](../../.oxcraprc.json), at the root, sets what it scores here and the limits.
 
-- **The Stop hook** gives a Claude Code session its findings as advice when it stops with changes in `src/` or `app/`. [Its README](../../scripts/stop-hook.md) says what it runs and when.
+- **The Stop hook** gives a Claude Code session its findings as advice when it stops with changes to the app. [Its README](../../scripts/stop-hook.md) says what it runs and when.
 - **CI** runs `npm test`, then `npm run oxcrap`, and fails on any finding.
 - **`npm run oxcrap`** is one of the definition-of-done checks.
 

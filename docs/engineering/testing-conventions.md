@@ -22,13 +22,13 @@ How to write tests in this repository: what they check, which project they belon
 
 The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../vitest.config.ts). The file name decides the project. `npm test` runs all three. A journey through the whole running app is an [end-to-end test](#end-to-end-tests) instead, and a test of the repository's own dev tools is a [tooling test](#tooling-tests).
 
-| Project   | File name                                               | Runs in                               | Put here                                                                                 |
-| :-------- | :------------------------------------------------------ | :------------------------------------ | :--------------------------------------------------------------------------------------- |
-| `browser` | `<module>.browser.test.ts`, `<module>.browser.test.tsx` | headless Chromium, through Playwright | every test of a React component or hook                                                  |
-| `real`    | `<module>.real.test.ts`                                 | Node                                  | a test that runs real programs or touches the file system, such as a shell script's test |
-| `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code  |
+| Project   | File name                                               | Runs in                               | Put here                                                                                |
+| :-------- | :------------------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------------------------------- |
+| `browser` | `<module>.browser.test.ts`, `<module>.browser.test.tsx` | headless Chromium, through Playwright | every test of a React component or hook                                                 |
+| `real`    | `<module>.real.test.ts`                                 | Node                                  | a test that runs real programs or touches the file system                               |
+| `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code |
 
-- **Each test file is a sidecar.** It sits beside the one module it covers and is named after it: `src/utils/math.ts` → `src/utils/math.test.ts`, `src/components/IdentityModal.tsx` → `src/components/IdentityModal.browser.test.tsx`, `scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`. When tests for a second module creep into a file, move them to that module's sidecar.
+- **Each test file is a sidecar.** It sits beside the one module it covers and is named after it: `src/utils/math.ts` → `src/utils/math.test.ts`, `src/components/IdentityModal.tsx` → `src/components/IdentityModal.browser.test.tsx`. When tests for a second module creep into a file, move them to that module's sidecar.
 - **Don't assert on layout or visibility in the `unit` project.** jsdom does no layout, so `toBeVisible` there doesn't reflect what a user would see. Write that test in the `browser` project.
 - **Tests run through the React Compiler,** as the app build does. Don't remove the compiler from `vitest.config.ts`; `vitest.config.browser.test.ts` fails if a component stops being compiled.
 - **The browser is installed by setup.** [`scripts/prepare-sandbox.sh`](../../scripts/prepare-sandbox.sh) installs it in a sandbox or the dev container. On another machine, run `npx playwright install --only-shell chromium` once before `npm test`.
@@ -80,7 +80,7 @@ Tooling tests check the repository's own dev tools: everything in `scripts/`, an
 | `tooling-real` | `<module>.real.test.ts`                         | Node    |
 | `tooling-unit` | every other `<module>.test.ts` under `scripts/` | Node    |
 
-- **Name and place them as the app's tests are:** a sidecar beside its module, `.real.` when it runs programs or touches the file system.
+- **Name and place them as the app's tests are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
 - **They get no React Compiler, no coverage and no `@` alias.** So a tooling test can't import app code, and oxCrap's coverage stays the app's.
 - **A root file's test is tooling when it tests tooling config.** List it in `realTests` in `vitest.tooling.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
 
@@ -104,7 +104,7 @@ A deep module's contract is tested by Gherkin features beside it, run end to end
   - **The screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it.
   - **Steps import `test`, `Given`, `When` and `Then`** from the tool's own `screenplay/fixtures.ts`.
 - **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
-- **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words. Its structural rules are copied from the root `.gplintrc` and change with it.
+- **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words. Its structural rules are copied from the root `.gplintrc`: change a rule in both.
 - **Keep edge cases in the modules' unit tests.** A scenario covers what the program as a whole does with its arguments and files.
 - **Wire a new tool's features into `package.json`:** its config in `test:tooling`; `gplint -c <its .gplintrc> <its folder>` and `-c <its config>` for `check-unused-steps.ts` in `lint`; its folder in `format` and `format:check`.
 

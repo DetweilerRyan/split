@@ -6,13 +6,14 @@ It never blocks a session and always exits 0. CI runs the same checks and fails 
 
 ## What it does
 
+The app is `src/`, `app/`, `vitest.config.ts`, `vitest.config.browser.test.ts`, `.oxcraprc.json` and `package.json`. Tooling is `scripts/`, `vitest.tooling.config.ts`, `.oxlintrc.json`, `oxlintrc.real.test.ts` and `package.json`. Changes count in either.
+
 1. **Stays quiet if Claude is already continuing because of a stop hook,** so it advises at most once per stop.
 2. **Stays quiet, and runs nothing, if neither the app nor tooling has changed** since the merge base with `origin/main`, or `main` if there's no `origin/main`. New, untracked files count as changes.
 3. **Stays quiet if neither has changed since this session's last stop.** It compares a fingerprint: the commit, every change git sees there, and new files' contents, so an edit made any way counts, through a tool, a shell command or a commit. The fingerprint is saved per session in the repository's git folder before the checks run, so what they find is reported once, and again only after the next change.
-   The app is `src/`, `app/`, `vitest.config.ts` and `package.json`. Tooling is `scripts/`, `vitest.tooling.config.ts`, `.oxlintrc.json`, `oxlintrc.real.test.ts` and `package.json`.
 
 4. **Runs `npm run lint`.** Failures come first in the advice.
-5. **If the app changed, runs `npm test`,** which writes the coverage report. If a test fails, it says so and stops there: a failing run writes no report, so there's nothing to score.
+5. **If the app changed, runs `npm test`,** which writes the coverage report. If a test fails, it says so and skips oxCrap: a failing run writes no report, so there's nothing to score.
 6. **Runs `npm run oxcrap`** if those tests passed, and passes on its findings. They end with oxCrap's `Get help:` line.
 7. **If tooling changed, runs `npm run test:tooling`.**
 8. **Sends what failed to Claude** as `hookSpecificOutput.additionalContext`, ending with "This is advice; CI fails on each of these." If everything passed, it sends nothing.

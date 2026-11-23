@@ -45,6 +45,5 @@ Decided by the owner in the session on 2026-11-22 ("i want the gate"), on [#59](
 
 ## More than one config
 
-- **`-c <config>` names each playwright-bdd config to check;** with none, it reads `playwright.config.ts`.
 - **`npm run lint` passes both of the repository's configs:** the app's and oxCrap's features ([#65](https://github.com/DetweilerRyan/split/issues/65)).
 - **The list lives in `package.json`,** not in the script, so the script's tests can run it on a throwaway project with one config.

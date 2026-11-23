@@ -102,10 +102,11 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 
 Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), which the owner raised while reviewing #64. These are the owner's decisions, from [the issue](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227):
 
-- **The tooling tests run apart from the app's,** with their own command: "One `test:tooling`", which also runs oxCrap's features. That's one row in the definition of done and one CI step.
+- **The tooling tests run apart from the app's,** with one command, `npm run test:tooling`, which also runs oxCrap's features. That's one row in the definition of done and one CI step.
 - **They have a separate config file,** `vitest.tooling.config.ts`, with no React Compiler, coverage or `@` alias.
 - **The Stop hook watches tooling too:** "Yes, watch scripts/ too".
-- **The pull request proposes the rule,** and merging it adopts the rule: "PRs propose the rules".
+- **The tooling `.gplintrc` copies the root's structural rules** because gplint 2.6.1 can't extend another config.
+- **The pull request proposes the rule,** and merging it adopts the rule: "each pull request writes the convention it pilots into `testing-conventions.md`".
 
 **Why apart:**
 
@@ -117,8 +118,8 @@ Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), wh
 
 **What the pilot measured,** replacing `oxcrap.real.test.ts`:
 
-- **Size:** the 29 tests were one 500-line file. The contract is now 35 scenarios in 419 lines of features, plus 382 lines of steps and screenplay and a 52-line `.gplintrc`. That's about 1.6 times the lines: the features are longer than the test code they replace, and the glue is new.
-- **The steps reuse well:** 16 step definitions serve all 35 scenarios. Porting the last 30 scenarios needed 9 new ones, and most scenarios needed none.
+- **Size:** the 29 tests were one 500-line file. The contract is now 35 scenarios in 419 lines of features, plus 366 lines of steps, screenplay and config and a 52-line `.gplintrc`. That's about 1.6 times the lines: the features are longer than the test code they replace, and the glue is new.
+- **The steps reuse well:** 17 step definitions serve all 35 scenarios. The first 2 scenarios needed 7; the other 33 needed 10 more, and most needed none.
 - **Adding a scenario** usually means editing one feature file and nothing else.
 - **They catch real breaks:** with the CLI's findings made to exit 0 and its help line reworded, 9 scenarios failed, exactly the ones asserting a failing check or a help line.
 - **Gherkin cost two things:**
