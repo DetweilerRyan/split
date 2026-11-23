@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// The Claude Code Stop hook in .claude/settings.json. When a session stops with changes in src/ or
-// app/, it runs lint, the tests (which write the coverage report) and the CRAP check, and gives
+// The Claude Code Stop hook in .claude/settings.json. When a session stops with changes in the app
+// (src/ or app/), it runs lint, the tests (which write the coverage report) and the CRAP check; with
+// changes in tooling (scripts/), lint and the tooling tests. It gives
 // Claude what fails as advice: `hookSpecificOutput.additionalContext`, which lets the session carry
 // on and act on it. It never blocks, and always exits 0. CI runs the same checks and fails on them.
 // Its README is stop-hook.md beside it; why it works this way is in stop-hook.meta.md, to read
@@ -22,7 +23,18 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-const WATCHED = ['src', 'app'];
+// What counts as a change, and what each kind runs. A path in both runs both.
+/** The app's code and its test setup: lint, `npm test` and `npm run oxcrap`. */
+const APP = ['src', 'app', 'vitest.config.ts', 'package.json'];
+/** Tooling and its tests (vitest.tooling.config.ts says which): lint and `npm run test:tooling`. */
+const TOOLING = [
+  'scripts',
+  'vitest.tooling.config.ts',
+  '.oxlintrc.json',
+  'oxlintrc.real.test.ts',
+  'package.json',
+];
+const WATCHED = [...new Set([...APP, ...TOOLING])];
 /** How long a session's fingerprint is kept after its last stop. */
 const KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -93,11 +105,12 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean; session_id?: 
   );
   if (!base) return `The Stop hook couldn't find origin/main or main to compare with.`;
   const mergeBase = run('git', ['merge-base', base, 'HEAD'], root).output;
-  const changed =
-    run('git', ['diff', '--quiet', mergeBase, '--', ...WATCHED], root).status !== 0 ||
-    run('git', ['ls-files', '--others', '--exclude-standard', '--', ...WATCHED], root).output !==
-      '';
-  if (!changed) return undefined;
+  const changedIn = (paths: string[]) =>
+    run('git', ['diff', '--quiet', mergeBase, '--', ...paths], root).status !== 0 ||
+    run('git', ['ls-files', '--others', '--exclude-standard', '--', ...paths], root).output !== '';
+  const app = changedIn(APP);
+  const tooling = changedIn(TOOLING);
+  if (!app && !tooling) return undefined;
 
   // Stay quiet when nothing in WATCHED changed since this session's last stop. It's saved before
   // the checks run, so whatever they report is reported once, not on every stop after.
@@ -113,15 +126,23 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean; session_id?: 
   const lint = run('npm', ['run', 'lint', '--silent'], root);
   if (lint.status !== 0)
     sections.push(`\`npm run lint\` fails. Fix it first:\n${tail(lint.output, 40)}`);
-  const tests = run('npm', ['test', '--silent'], root);
-  if (tests.status !== 0) {
-    sections.push(
-      `\`npm test\` fails, so it wrote no coverage report and no CRAP score was calculated. Fix the tests first:\n${tail(tests.output, 60)}`,
-    );
-  } else {
-    const crap = run('npm', ['run', 'oxcrap', '--silent'], root);
-    if (crap.status !== 0) {
-      sections.push(`\`npm run oxcrap\` reports:\n${tail(crap.output, 80)}`);
+  if (app) {
+    const tests = run('npm', ['test', '--silent'], root);
+    if (tests.status !== 0) {
+      sections.push(
+        `\`npm test\` fails, so it wrote no coverage report and no CRAP score was calculated. Fix the tests first:\n${tail(tests.output, 60)}`,
+      );
+    } else {
+      const crap = run('npm', ['run', 'oxcrap', '--silent'], root);
+      if (crap.status !== 0) {
+        sections.push(`\`npm run oxcrap\` reports:\n${tail(crap.output, 80)}`);
+      }
+    }
+  }
+  if (tooling) {
+    const tools = run('npm', ['run', 'test:tooling', '--silent'], root);
+    if (tools.status !== 0) {
+      sections.push(`\`npm run test:tooling\` fails:\n${tail(tools.output, 60)}`);
     }
   }
   if (sections.length === 0) return undefined;

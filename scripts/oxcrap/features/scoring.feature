@@ -4,7 +4,7 @@ Feature: Scoring functions
 
   Scenario: A function over the limits fails, with the comment that would allow it and where to get help
     Given Dana has a function "grade" with complexity 12 in "src/grade.ts"
-    And Dana has a file "HELP.md" with no functions
+    And Dana has a help page "HELP.md"
     And Dana's tests ran none of "src/grade.ts"
     When Dana runs "oxcrap --coverage coverage.json --help-url HELP.md src"
     Then Dana's check fails
@@ -15,7 +15,7 @@ Feature: Scoring functions
     And Dana sees "Get help: HELP.md"
 
   Scenario: A function the tests run all of passes
-    Given Dana has a function "grade" with complexity 5 in "src/grade.ts"
+    Given Dana has a function "grade" with complexity 6 in "src/grade.ts"
     And Dana's tests ran all of "src/grade.ts"
     When Dana runs "oxcrap --coverage coverage.json src"
     Then Dana's check passes

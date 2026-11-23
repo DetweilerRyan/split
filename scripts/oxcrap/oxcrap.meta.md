@@ -90,7 +90,7 @@ The project's Claude Code Stop hook runs `npm run oxcrap` and passes its finding
   - the command line, its options and output;
   - the `@crap-allow` rules.
 - **The `@crap-allow` rules moved there from the [CRAP score procedure](../../docs/engineering/crap.md), and the usage from `oxcrap.ts`'s header,** so each is written once ([single source of truth](../../docs/prose/single-source-of-truth.md)). The procedure keeps what's particular to this repository: where findings come from, how to respond, when to allow a function, and replacing the stand-in reasons.
-- **The README links to the counting rules** in `complexity.ts` rather than restating them, since the code owns them. It does list the config's options and defaults, for people to read; `config.ts` owns them, `config.test.ts` checks the schema against it, and `oxcrap.real.test.ts` checks the README. Its output example is real output, from a run on a small throwaway project.
+- **The README links to the counting rules** in `complexity.ts` rather than restating them, since the code owns them. It does list the config's options and defaults, for people to read; `config.ts` owns them, `config.test.ts` checks the schema against it, and [`README.real.test.ts`](README.real.test.ts) checks the README. Its output example is real output, from a run on a small throwaway project.
 - **It's written to stand alone,** with only a short "In this repository" section at the end, so it could serve as the README of a published package.
 
 ### The config file

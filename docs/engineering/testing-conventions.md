@@ -20,7 +20,7 @@ How to write tests in this repository: what they check, which project they belon
 
 ## Which project a test belongs in
 
-Tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../vitest.config.ts). The file name decides the project. `npm test` runs all three. A journey through the whole running app is an [end-to-end test](#end-to-end-tests) instead.
+The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../vitest.config.ts). The file name decides the project. `npm test` runs all three. A journey through the whole running app is an [end-to-end test](#end-to-end-tests) instead, and a test of the repository's own dev tools is a [tooling test](#tooling-tests).
 
 | Project   | File name                                               | Runs in                               | Put here                                                                                 |
 | :-------- | :------------------------------------------------------ | :------------------------------------ | :--------------------------------------------------------------------------------------- |
@@ -70,6 +70,43 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
 - **Leave a feature's layout to `npm run format`,** table alignment included, and fix what `npm run lint` reports in it. The rules are in [`.gplintrc`](../../.gplintrc).
 - **When a feature names how the app is built, reword it in the words of the person doing it.** `.gplintrc`'s `no-restricted-patterns` list fails on such words, like a tool's name, `button` or `seed`. When a scenario uses a new one, add it to the list rather than to the scenario.
 - **Don't edit `.features-gen/`.** `bddgen` writes the Playwright tests there from the features, and git ignores it.
+
+## Tooling tests
+
+Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.oxlintrc.json`, whose sidecar is `oxlintrc.real.test.ts`. They run apart from the app's, from [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts), and `npm run test:tooling` runs them. `npm test` doesn't.
+
+| Project        | File name                                       | Runs in |
+| :------------- | :---------------------------------------------- | :------ |
+| `tooling-real` | `<module>.real.test.ts`                         | Node    |
+| `tooling-unit` | every other `<module>.test.ts` under `scripts/` | Node    |
+
+- **Name and place them as the app's tests are:** a sidecar beside its module, `.real.` when it runs programs or touches the file system.
+- **They get no React Compiler, no coverage and no `@` alias.** So a tooling test can't import app code, and oxCrap's coverage stays the app's.
+- **A root file's test is tooling when it tests tooling config.** List it in `realTests` in `vitest.tooling.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
+
+### Feature contracts for deep modules
+
+A deep module is a dev tool whose small interface hides much more logic: the files it reads, its command line, and what it prints and exits with. A tool counts as one when it has its own folder in `scripts/`, a README that describes that interface, and modules with their own unit tests. oxCrap, in `scripts/oxcrap/`, is one. A single-file script keeps its `real` test instead.
+
+A deep module's contract is tested by Gherkin features beside it, run end to end against the program. Its modules keep their unit tests, and there's no separate `real` test of the program.
+
+| Path                                           | Holds                                                 |
+| :--------------------------------------------- | :---------------------------------------------------- |
+| `scripts/<tool>/features/<topic>.feature`      | Scenarios, in the words of a developer using the tool |
+| `scripts/<tool>/features/<tool>.steps.ts`      | Step definitions, beside the features                 |
+| `scripts/<tool>/features/screenplay/`          | The tool's own cast, actor, tasks and questions       |
+| `scripts/<tool>/features/playwright.config.ts` | Its playwright-bdd config, with no browser            |
+| `scripts/<tool>/features/.gplintrc`            | Its gplint rules                                      |
+
+- **Follow the [end-to-end tests' Screenplay rules](#end-to-end-tests),** with these differences:
+  - **The actor's abilities** are a throwaway project folder and running the program, not a browser or an MCP session.
+  - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
+  - **The screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it.
+  - **Steps import `test`, `Given`, `When` and `Then`** from the tool's own `screenplay/fixtures.ts`.
+- **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
+- **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words. Its structural rules are copied from the root `.gplintrc` and change with it.
+- **Keep edge cases in the modules' unit tests.** A scenario covers what the program as a whole does with its arguments and files.
+- **Wire a new tool's features into `package.json`:** its config in `test:tooling`; `gplint -c <its .gplintrc> <its folder>` and `-c <its config>` for `check-unused-steps.ts` in `lint`; its folder in `format` and `format:check`.
 
 ## Tests stay offline
 

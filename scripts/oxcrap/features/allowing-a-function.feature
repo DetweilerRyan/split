@@ -4,14 +4,14 @@ Feature: Allowing a function over the limits
 
   Scenario: A function whose comment gives its current numbers passes
     Given Dana has a function "grade" with complexity 12 in "src/grade.ts"
-    And Dana has written "// @crap-allow CRAP 156, complexity 12. One per rate." above "grade"
+    And Dana has written "// @crap-allow CRAP 156, complexity 12. One per rate." above "grade" in "src/grade.ts"
     And Dana's tests ran none of "src/grade.ts"
     When Dana runs "oxcrap --coverage coverage.json src"
     Then Dana's check passes
 
   Scenario: A function that has grown past its comment's numbers fails
     Given Dana has a function "grade" with complexity 13 in "src/grade.ts"
-    And Dana has written "// @crap-allow CRAP 156, complexity 12. One per rate." above "grade"
+    And Dana has written "// @crap-allow CRAP 156, complexity 12. One per rate." above "grade" in "src/grade.ts"
     And Dana's tests ran none of "src/grade.ts"
     When Dana runs "oxcrap --coverage coverage.json src"
     Then Dana's check fails

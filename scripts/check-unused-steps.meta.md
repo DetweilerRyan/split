@@ -42,3 +42,9 @@ Decided by the owner in the session on 2026-11-22 ("i want the gate"), on [#59](
 - <a id="reqnroll-scoped-bindings"></a>Reqnroll, [Scoped bindings](https://docs.reqnroll.net/latest/automation/scoped-bindings.html): ambiguous step definitions.
 - <a id="makandra-unused-steps"></a>makandra, [Cucumber: How to find unused step definitions](https://makandracards.com/makandra/59552-cucumber-how-to-find-unused-step-definitions).
 - <a id="jdriven-plugin"></a>JDriven, [Cucumber JVM plugin](https://jdriven.com/blog/2019/01/cucumber-jvm-plugin), 2019-01.
+
+## More than one config
+
+- **`-c <config>` names each playwright-bdd config to check;** with none, it reads `playwright.config.ts`.
+- **`npm run lint` passes both of the repository's configs:** the app's and oxCrap's features ([#65](https://github.com/DetweilerRyan/split/issues/65)).
+- **The list lives in `package.json`,** not in the script, so the script's tests can run it on a throwaway project with one config.

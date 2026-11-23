@@ -47,7 +47,7 @@ Feature: Reading the coverage report
     Then Dana sees "coverage.json isn't an istanbul JSON coverage report, such as coverage-final.json."
 
   Scenario: Coverage is matched to files reached through a symlink, as the test run saw them
-    Given Dana has a function "grade" with complexity 5 in "src/grade.ts"
+    Given Dana has a function "grade" with complexity 6 in "src/grade.ts"
     And Dana has a file ".oxcraprc.json":
       """
       { "coverage": "coverage.json" }
