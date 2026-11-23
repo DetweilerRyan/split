@@ -3,7 +3,8 @@
 // and fails on a pattern that matches nothing or overlaps another. (Its trailing-comma rule is left
 // out; oxfmt formats this file.) rev-dep resolves each import, through `../`, `.ts` extensions and
 // tsconfig aliases such as `@/`, and checks where it lands. Node built-ins and npm packages aren't
-// files in the repository, so the rules leave them alone. rev-dep.config.real.test.ts checks the
+// files in the repository, so the rules leave them alone; nor does it check where a JSON or other
+// asset import lands (scripts/oxcrap/oxcrap.meta.md says more). rev-dep.config.real.test.ts checks the
 // rules catch what they should.
 {
   "configVersion": "2.2",
@@ -20,6 +21,9 @@
           "allow": ["scripts/oxcrap/**/*"],
         },
       ],
+      // An import rev-dep can't resolve, such as an absolute path or `import(variable)`, can't be
+      // checked against the rule above, so it fails too.
+      "unresolvedImportsDetection": { "enabled": true, "reportNonLiteralImports": true },
     },
   ],
 }

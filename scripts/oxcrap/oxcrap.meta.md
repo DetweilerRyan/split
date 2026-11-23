@@ -190,7 +190,7 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 
 - **The owner asked for the rule** "that oxcrap must not import anything from outside it's own folder", and chose to add it to #64 ([choice](https://github.com/DetweilerRyan/split/pull/64#issuecomment-7085786799)).
 - **[rev-dep](https://github.com/jayu/rev-dep) enforces it.** One `moduleBoundaries` entry in [`.rev-dep.config.jsonc`](../../.rev-dep.config.jsonc) allows files under `scripts/oxcrap/` to import only files under `scripts/oxcrap/`. `npm run lint` runs it.
-  - **It resolves each import and checks where it lands,** through `../`, `.ts` extensions and the app's `@/` alias. So the features' `steps/` can import `../screenplay/`, and anything leaving the folder fails: a value or type-only import, a re-export, a dynamic `import()`, or a path that goes back up through a folder.
+  - **It resolves each import and checks where it lands,** through `../`, `.ts` extensions and the app's `@/` alias. So the features' `steps/` can import `../screenplay/`, and a code import leaving the folder fails: a value or type-only import, a re-export, a dynamic `import()`, `require`, or a path that goes back up through a folder. Asset imports, such as JSON, are the exception below.
   - **Node built-ins and npm packages aren't repository files,** so the rule leaves them alone. That covers `node:fs` and `oxc-parser`.
   - **`--lint-config-rules` fails the run if the rule's pattern matches nothing,** so moving the folder can't quietly switch it off. It runs only the pattern rules, since rev-dep's trailing-comma rule disagrees with oxfmt. **`--list-all-issues`** lists every issue, not only the first five.
 - **[`rev-dep.config.real.test.ts`](../../rev-dep.config.real.test.ts) runs the real rev-dep with the real config** on throwaway files laid out like the repository. So dropping the rule, or a pattern that stops matching, fails a test.
@@ -201,11 +201,14 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
     - **dependency-cruiser 18.9.0:** it needed a second rule for unresolvable imports, and took 0.39 s. It reports an aliased and a relative import of the same file once, and brings about 18 dependencies.
     - **fallow:** its README documents no boundary rule syntax.
   - **The owner approved it:** "approved, add rev-dep on #66 with the steps layout".
+- **Imports rev-dep can't resolve fail too,** through its `unresolvedImportsDetection`: an absolute path, a `file://` URL, an import through a symlinked folder, or `import(variable)`. That check covers the whole repository, which has none today.
+- **An npm package must be declared in `package.json`,** or rev-dep can't resolve it, and the import fails.
 - **What the rule doesn't catch:**
-  - loading a file with `new URL('../…', import.meta.url)`, which isn't an import (the features reach the CLI this way, inside the folder);
-  - an npm package that isn't meant to be used.
-
-  An import by absolute path wasn't tested.
+  - **A JSON or other asset import from outside the folder,** such as `import p from '../../package.json' with { type: 'json' }`. rev-dep treats assets as resolvable and doesn't check where they land; no setting changes that in 3.3.0. The oxlint override caught it, so this is a gap the change opened. oxCrap's only JSON import is its own schema, `./configuration_schema.json`.
+  - **Loading a file with `new URL('../…', import.meta.url)`,** which isn't an import. The features reach the CLI this way, inside the folder.
+  - **`import.meta.resolve()`, a `/// <reference path>` and a symlinked single file,** which rev-dep sees as inside the folder.
+  - **An npm package that's declared but isn't meant to be used.**
+- **rev-dep publishes no binary for Windows on ARM,** so `npm run lint` can't run there.
 
 ## How it works
 
