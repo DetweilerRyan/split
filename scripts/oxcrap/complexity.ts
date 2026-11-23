@@ -14,12 +14,17 @@ export function isNode(value: unknown): value is AstNode {
   );
 }
 
-/** A function's own node types. A nested one is scored separately only with `own` counting. */
-export const FUNCTION_TYPES = new Set([
-  'FunctionDeclaration',
-  'FunctionExpression',
-  'ArrowFunctionExpression',
-]);
+/** Whether a node type is a function's. A nested one is scored separately only with `own` counting. */
+export function isFunctionType(type: string) {
+  switch (type) {
+    case 'FunctionDeclaration':
+    case 'FunctionExpression':
+    case 'ArrowFunctionExpression':
+      return true;
+    default:
+      return false;
+  }
+}
 
 /** Node types that each add one path through a function, beyond the one it starts with. */
 const BRANCHES = new Set([
@@ -50,6 +55,11 @@ export type Counting = {
   recursion: boolean;
   /** Whether each `break` or `continue` to a label adds a path. */
   labelledJumps: boolean;
+  /**
+   * Whether reading a static lookup table adds the paths it stands for: a dispatch table, holding
+   * functions, as a switch; `.has`, `.includes` and `in` as an `||` chain. tables.ts says how.
+   */
+  lookupTables: boolean;
 };
 
 /** Every kind of branching counted: oxCrap's default. */
@@ -61,11 +71,12 @@ export const COUNT_ALL: Counting = {
   logicalOperators: 'each',
   recursion: true,
   labelledJumps: true,
+  lookupTables: true,
 };
 
 /**
- * Each function on its own, with no default values, `?.`, recursion or labelled jumps, and every
- * case and logical operator counted: the counting before #74.
+ * Each function on its own, with no default values, `?.`, recursion, labelled jumps or lookup
+ * tables, and every case and logical operator counted: the counting before #74.
  */
 export const COUNT_SEPARATELY: Counting = {
   nestedFunctions: 'own',
@@ -75,6 +86,7 @@ export const COUNT_SEPARATELY: Counting = {
   logicalOperators: 'each',
   recursion: false,
   labelledJumps: false,
+  lookupTables: false,
 };
 
 /** The child nodes of `node`, in source order. */
@@ -92,7 +104,7 @@ export function children(node: AstNode): AstNode[] {
 }
 
 /** How many paths a node adds, under `counting`. */
-// @crap-allow CRAP 25, complexity 25. One dispatch over the node types that add paths, each case a line; splitting it, or moving it into a lookup table, would only hide the branches.
+// @crap-allow CRAP 34, complexity 34. One dispatch over the node types that add paths, each case a line: splitting it would scatter one idea, and a lookup table would count the same (#82).
 function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
   switch (node.type) {
@@ -149,15 +161,20 @@ function operatorRuns(node: AstNode) {
 
 /**
  * 1, plus one for each branch in the function's body and parameters. A nested function's branches
- * count too when `counting.nestedFunctions` is `enclosing`, and not when it's `own`.
+ * count too when `counting.nestedFunctions` is `enclosing`, and not when it's `own`. `also` counts
+ * what this file can't see on its own, such as reads of the module's lookup tables.
  */
-export function complexity(fn: AstNode, counting: Counting = COUNT_ALL) {
+export function complexity(
+  fn: AstNode,
+  counting: Counting = COUNT_ALL,
+  also: (node: AstNode) => number = () => 0,
+) {
   let count = 1;
   function enters(child: AstNode) {
-    return counting.nestedFunctions === 'enclosing' || !FUNCTION_TYPES.has(child.type);
+    return counting.nestedFunctions === 'enclosing' || !isFunctionType(child.type);
   }
   function visit(node: AstNode, parent: AstNode | undefined) {
-    count += adds(node, parent, counting);
+    count += adds(node, parent, counting) + also(node);
     // Parentheses don't break a run of operators, so a child of them sees what's outside them.
     const own = node.type === 'ParenthesizedExpression' ? parent : node;
     for (const child of children(node)) if (enters(child)) visit(child, own);

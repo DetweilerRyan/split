@@ -213,6 +213,20 @@ describe('run', () => {
     );
   });
 
+  it('counts a lookup table a file imports from a relative path, without its extension', () => {
+    const kinds = `export const KINDS = new Set([${Array.from({ length: 11 }, (_, i) => `'k${i}'`).join(', ')}]);\n`;
+    const grade =
+      "import { KINDS } from './kinds';\nexport function grade(k: string) {\n  return KINDS.has(k);\n}\n";
+    const code = { '/repo/src/kinds.ts': kinds, '/repo/src/grade.ts': grade };
+    const files = { ...code, '/repo/coverage.json': report(code) };
+    const scored = oxcrap(['--coverage', 'coverage.json', 'src'], files, {
+      '/repo/coverage.json': 2,
+    });
+    expect(scored.stderr[0]).toContain(
+      '- src/grade.ts:2 grade: CRAP 132, complexity 11, coverage 0%',
+    );
+  });
+
   it('refuses files that match nothing', () => {
     const files = {
       '/repo/.oxcraprc.json': '{ "coverage": "coverage.json" }',

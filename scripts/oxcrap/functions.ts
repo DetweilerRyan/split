@@ -7,10 +7,11 @@ import {
   complexity,
   COUNT_ALL,
   type Counting,
-  FUNCTION_TYPES,
+  isFunctionType,
   isNode,
 } from './complexity.ts';
 import { recursive } from './recursion.ts';
+import { lookupAdds, readableTables, type Table, type Tables, tablesIn } from './tables.ts';
 
 /** A 1-based line and a 0-based column in UTF-16 units, as istanbul coverage reports use. */
 export type Position = { line: number; column: number };
@@ -122,7 +123,13 @@ function jsxAttribute(source: string, ancestors: AstNode[]) {
 }
 
 /** What one file's walk needs throughout: its text, how to count, and where each offset is. */
-type Source = { text: string; counting: Counting; position: (offset: number) => Position };
+type Source = {
+  text: string;
+  counting: Counting;
+  position: (offset: number) => Position;
+  /** The lookup tables the module can read, own and imported. */
+  tables: Tables;
+};
 /** What a walk finds: each function with the node it came from, and the simple statements. */
 type Found = { functions: { fn: Fn; node: AstNode }[]; statements: Parsed['statements'] };
 
@@ -138,15 +145,27 @@ function walk(
   source: Source,
   into: Found = { functions: [], statements: [] },
 ): Found {
-  if (SIMPLE_STATEMENTS.has(node.type)) into.statements.push({ start: node.start, end: node.end });
-  let inside = enclosing;
-  if (FUNCTION_TYPES.has(node.type) && node.body) {
-    const fn = describe(node, ancestors, enclosing, source);
-    into.functions.push({ fn, node });
-    inside = [...enclosing, fn];
-  }
+  const inside = record(node, ancestors, enclosing, source, into);
   for (const child of children(node)) walk(child, [...ancestors, node], inside, source, into);
   return into;
+}
+
+/**
+ * Adds `node` to `into` if it's a simple statement or a function, and returns the functions
+ * around its children: `enclosing`, and `node` too if it's a function.
+ */
+function record(
+  node: AstNode,
+  ancestors: AstNode[],
+  enclosing: Fn[],
+  source: Source,
+  into: Found,
+): Fn[] {
+  if (SIMPLE_STATEMENTS.has(node.type)) into.statements.push({ start: node.start, end: node.end });
+  if (!isFunctionType(node.type) || !node.body) return enclosing;
+  const fn = describe(node, ancestors, enclosing, source);
+  into.functions.push({ fn, node });
+  return [...enclosing, fn];
 }
 
 /** A function node as a scored `Fn`: its name, complexity and place. */
@@ -159,7 +178,9 @@ function describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: 
   return {
     label: own,
     name: [...enclosing.map((outer) => outer.label), own].join(' > '),
-    complexity: complexity(node, source.counting),
+    complexity: complexity(node, source.counting, (child) =>
+      source.counting.lookupTables ? lookupAdds(child, source.tables, source.counting) : 0,
+    ),
     offset: { start: node.start, end: node.end },
     start: source.position(node.start),
     end: source.position(node.end),
@@ -202,14 +223,25 @@ function passedToCall(node: AstNode, parent: AstNode | undefined) {
   return call && Array.isArray(parent.arguments) && parent.arguments.includes(node);
 }
 
-export function parse(file: string, source: string, counting: Counting = COUNT_ALL): Parsed {
+/**
+ * A file's functions, comments and simple statements. `imported(from, name)` gives the lookup table
+ * a relative import names, `from` as the file writes it, so reads of it count; with none given,
+ * only the file's own tables do.
+ */
+export function parse(
+  file: string,
+  source: string,
+  counting: Counting = COUNT_ALL,
+  imported: (from: string, name: string) => Table | undefined = () => undefined,
+): Parsed {
   const result = parseSync(file, source);
   if (result.errors.length > 0) {
     throw new ParseError(`Couldn't parse ${file}: ${result.errors[0].message}`);
   }
   const program = result.program as unknown as AstNode;
   const position = positions(source);
-  const found = walk(program, [], [], { text: source, counting, position });
+  const tables = readableTables(tablesIn(program), imported);
+  const found = walk(program, [], [], { text: source, counting, position, tables });
   const enclosing = counting.nestedFunctions === 'enclosing';
   const all = found.functions.map(({ fn }) => fn);
   const scored = enclosing ? all.filter((fn) => fn.parents.length === 0) : all;
@@ -227,4 +259,14 @@ export function parse(file: string, source: string, counting: Counting = COUNT_A
     statements: found.statements,
     position,
   };
+}
+
+/**
+ * The lookup tables a module exports, for a file that imports them. A module that doesn't parse
+ * exports none here; it's reported when it's scored itself.
+ */
+export function exportedTables(file: string, source: string): Tables {
+  const result = parseSync(file, source);
+  if (result.errors.length > 0) return new Map();
+  return tablesIn(result.program as unknown as AstNode).exported;
 }

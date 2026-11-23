@@ -8,7 +8,8 @@ import { type Allow, type Finding, findAllows } from './allow.ts';
 import { check, crapOf, type Scored } from './check.ts';
 import { CODE_FILES, CONFIG_NAMES, type Config, merge, parseConfig } from './config.ts';
 import { coverageOf, newerThan, parseReport, type Report } from './coverage.ts';
-import { type Fn, parse } from './functions.ts';
+import { exportedTables, type Fn, parse } from './functions.ts';
+import type { Tables } from './tables.ts';
 
 /** What oxCrap needs from the world outside it. Paths it's given are absolute. */
 export type Host = {
@@ -199,10 +200,14 @@ class Run {
     const scored: Scored[] = [];
     const allowed = new Map<Fn, Allow>();
     const problems: Finding[] = [];
+    // Each imported module's tables, read once however many files import it.
+    const modules = new Map<string, Tables>();
     for (const path of sources) {
       const file = this.shown(path);
       const source = this.host.read(path);
-      const parsed = parse(file, source, config.counting);
+      const parsed = parse(file, source, config.counting, (from, name) =>
+        tablesAt(this.host, resolveImport(this.host, path, from), modules)?.get(name),
+      );
       const coverage = coverageOf(parsed.functions, byPath.get(this.pathKey(path)));
       for (const fn of parsed.functions) {
         const share = coverage.get(fn) ?? 0;
@@ -254,6 +259,24 @@ class Run {
     const problems = this.findings(files.scored.map(absolute), report, coverage, config);
     return outcome(problems, help);
   }
+}
+
+/** The extensions and index files a relative import may leave off, in the order tried. */
+const IMPORT_ENDINGS = ['', '.ts', '.tsx', '.mts', '.js', '.mjs', '/index.ts', '/index.tsx'];
+
+/** The file a relative import in `importer` names, or nothing if there's none. */
+export function resolveImport(host: Host, importer: string, from: string) {
+  const base = resolve(dirname(importer), from);
+  return IMPORT_ENDINGS.map((ending) => base + ending).find(
+    (path) => host.exists(path) && !host.isDirectory(path),
+  );
+}
+
+/** The tables the module at `path` exports, read once into `modules`. */
+function tablesAt(host: Host, path: string | undefined, modules: Map<string, Tables>) {
+  if (!path) return undefined;
+  if (!modules.has(path)) modules.set(path, exportedTables(path, host.read(path)));
+  return modules.get(path);
 }
 
 /** What to print for `problems`, and the status: 1 with findings, 0 without. */

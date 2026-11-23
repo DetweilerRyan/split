@@ -5,7 +5,7 @@
 // - `this.f()` to a method or function-valued field of the class around the call, unless a
 //   non-arrow function in between rebinds `this`.
 // Calls through other objects, variables or files aren't followed. Why is in oxcrap.meta.md.
-import { type AstNode, children, FUNCTION_TYPES, isNode } from './complexity.ts';
+import { type AstNode, children, isFunctionType, isNode } from './complexity.ts';
 
 /** A scope's names, each bound to the function it names, or to null for anything else. */
 type Scope = Map<string, AstNode | null>;
@@ -61,7 +61,7 @@ function patternParts(pattern: AstNode): unknown[] {
 function functionValue(node: unknown): AstNode | null {
   if (!isNode(node)) return null;
   if (node.type === 'ParenthesizedExpression') return functionValue(node.expression);
-  return FUNCTION_TYPES.has(node.type) ? node : null;
+  return isFunctionType(node.type) ? node : null;
 }
 
 /** Declares `id`, if there is one, as naming `fn`. */
@@ -126,7 +126,7 @@ function declareVariables(scope: Scope, declaration: AstNode) {
 /** Declares into `scope` every `var` in `node`, not looking inside nested functions. */
 function declareVars(scope: Scope, node: AstNode) {
   for (const child of children(node)) {
-    if (FUNCTION_TYPES.has(child.type)) continue;
+    if (isFunctionType(child.type)) continue;
     if (child.type === 'VariableDeclaration' && child.kind === 'var')
       declareVariables(scope, child);
     declareVars(scope, child);
@@ -231,7 +231,7 @@ function callsIn(
   into: Call[] = [],
 ): Call[] {
   if (node.type === 'ClassBody') return callsInClass(node, context, into);
-  if (FUNCTION_TYPES.has(node.type)) return callsInFunction(node, context, members, into);
+  if (isFunctionType(node.type)) return callsInFunction(node, context, members, into);
   if (node.type === 'CallExpression') into.push(...callsOf(node, context));
   const inner = opensScope(node)
     ? { ...context, scopes: [...context.scopes, blockScope(node)] }

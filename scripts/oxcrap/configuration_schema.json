@@ -84,6 +84,11 @@
           "description": "Whether each break or continue to a label adds a path.",
           "type": "boolean",
           "default": true
+        },
+        "lookupTables": {
+          "description": "Whether reading a static lookup table adds the paths it stands for: one per entry for a table holding functions, read with a runtime key, as a switch; .has, .includes and in as an || chain; and 1 for a call through a computed member, x[k](). A table of plain values adds nothing.",
+          "type": "boolean",
+          "default": true
         }
       }
     },

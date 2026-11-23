@@ -1,7 +1,8 @@
 Feature: Counting what branches
   By default every kind of branching counts towards a function's complexity: a nested function's
   branches count towards the function around it, and so do default values, each ?. link, labelled
-  jumps and recursion. The config's counting option turns any of them off.
+  jumps, recursion and reading a lookup table that stands for a switch or a chain of conditions.
+  The config's counting option turns any of them off.
 
   Scenario: A callback's branches count towards the function it's written in
     Given Dana has a file "src/grade.ts":
@@ -191,3 +192,46 @@ Feature: Counting what branches
       """
       This @crap-allow comment is above grade > items.map callback, which is inside grade and counts towards it. Move the comment above grade, with its numbers.
       """
+
+  Scenario: A switch moved into a table of functions still counts its cases
+    Given Dana has a file "src/grade.ts":
+      """
+      const RULES = { k0: () => 0, k1: () => 1, k2: () => 2, k3: () => 3, k4: () => 4, k5: () => 5, k6: () => 6, k7: () => 7, k8: () => 8, k9: () => 9 };
+      export function grade(k: string) {
+        return RULES[k]();
+      }
+      """
+    And Dana's tests ran none of "src/grade.ts"
+    When Dana runs "oxcrap --coverage coverage.json src"
+    Then Dana's check fails
+    And Dana sees "- src/grade.ts:2 grade: CRAP 132, complexity 11, coverage 0%."
+
+  Scenario: Reading a table of plain values adds nothing
+    Given Dana has a file "src/grade.ts":
+      """
+      const CODES = { k0: 'C0', k1: 'C1', k2: 'C2', k3: 'C3', k4: 'C4', k5: 'C5', k6: 'C6', k7: 'C7', k8: 'C8', k9: 'C9', k10: 'C10' };
+      export function grade(k: string) {
+        return CODES[k];
+      }
+      """
+    And Dana's tests ran none of "src/grade.ts"
+    When Dana runs "oxcrap --coverage coverage.json src"
+    Then Dana's check passes
+    And Dana sees "No CRAP findings."
+
+  Scenario: The config can turn off counting lookup tables
+    Given Dana has a file "src/grade.ts":
+      """
+      const RULES = { k0: () => 0, k1: () => 1, k2: () => 2, k3: () => 3, k4: () => 4, k5: () => 5, k6: () => 6, k7: () => 7, k8: () => 8, k9: () => 9 };
+      export function grade(k: string) {
+        return RULES[k]();
+      }
+      """
+    And Dana has a file ".oxcraprc.json":
+      """
+      { "coverage": "coverage.json", "counting": { "lookupTables": false } }
+      """
+    And Dana's tests ran none of "src/grade.ts"
+    When Dana runs "oxcrap"
+    Then Dana's check passes
+    And Dana sees "No CRAP findings."
