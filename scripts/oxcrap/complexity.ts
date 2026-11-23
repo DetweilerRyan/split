@@ -92,15 +92,19 @@ export function children(node: AstNode): AstNode[] {
 
 function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
-  if (node.type === 'SwitchStatement') return counting.switchCases === 'once' ? 1 : 0;
+  if (node.type === 'SwitchStatement') {
+    // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
+    const cases = (node.cases as AstNode[] | undefined) ?? [];
+    return counting.switchCases === 'once' && cases.some((c) => c.test !== null) ? 1 : 0;
+  }
   if (node.type === 'SwitchCase') {
     // `default:` adds no path.
     return counting.switchCases === 'each' && node.test !== null ? 1 : 0;
   }
   if (node.type === 'LogicalExpression') {
-    // In `a && b && c` the inner `a && b` continues the outer's run, so a sequence counts once.
-    const continues = parent?.type === 'LogicalExpression' && parent.operator === node.operator;
-    return counting.logicalOperators === 'each' || !continues ? 1 : 0;
+    if (counting.logicalOperators === 'each') return 1;
+    // The outermost operator of an expression counts its runs, in source order; the rest add 0.
+    return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
   }
   if ((node.type === 'BreakStatement' || node.type === 'ContinueStatement') && node.label) {
     return counting.labelledJumps ? 1 : 0;
@@ -118,6 +122,25 @@ function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
 }
 
 /**
+ * The runs of the same operator in a logical expression, in source order, looking through
+ * parentheses: `a && b && c` is one, `a && b || c` two, and `a || b && c || d` three.
+ */
+function operatorRuns(node: AstNode) {
+  const operators: string[] = [];
+  const walk = (n: unknown) => {
+    if (!isNode(n)) return;
+    if (n.type === 'ParenthesizedExpression') walk(n.expression);
+    else if (n.type === 'LogicalExpression') {
+      walk(n.left);
+      operators.push(n.operator as string);
+      walk(n.right);
+    }
+  };
+  walk(node);
+  return operators.filter((op, i) => i === 0 || operators[i - 1] !== op).length;
+}
+
+/**
  * 1, plus one for each branch in the function's body and parameters. A nested function's branches
  * count too when `counting.nestedFunctions` is `enclosing`, and not when it's `own`.
  */
@@ -127,36 +150,10 @@ export function complexity(fn: AstNode, counting: Counting = COUNT_ALL) {
     counting.nestedFunctions === 'enclosing' || !FUNCTION_TYPES.has(child.type);
   const visit = (node: AstNode, parent: AstNode | undefined) => {
     count += adds(node, parent, counting);
-    for (const child of children(node)) if (enters(child)) visit(child, node);
+    // Parentheses don't break a run of operators, so a child of them sees what's outside them.
+    const own = node.type === 'ParenthesizedExpression' ? parent : node;
+    for (const child of children(node)) if (enters(child)) visit(child, own);
   };
   for (const child of children(fn)) if (enters(child)) visit(child, fn);
   return count;
-}
-
-/**
- * The names a function calls, in the code its complexity counts: `f()` gives `f`, and
- * `this.f()` gives `f`, for a method calling another of its class's.
- */
-export function calls(fn: AstNode, counting: Counting = COUNT_ALL) {
-  const names = new Set<string>();
-  const enters = (child: AstNode) =>
-    counting.nestedFunctions === 'enclosing' || !FUNCTION_TYPES.has(child.type);
-  const visit = (node: AstNode) => {
-    if (node.type === 'CallExpression' && isNode(node.callee)) {
-      const callee = node.callee;
-      if (callee.type === 'Identifier') names.add(callee.name as string);
-      if (
-        callee.type === 'MemberExpression' &&
-        isNode(callee.object) &&
-        callee.object.type === 'ThisExpression' &&
-        isNode(callee.property) &&
-        callee.property.type === 'Identifier'
-      ) {
-        names.add(callee.property.name as string);
-      }
-    }
-    for (const child of children(node)) if (enters(child)) visit(child);
-  };
-  for (const child of children(fn)) if (enters(child)) visit(child);
-  return names;
 }
