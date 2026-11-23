@@ -25,7 +25,7 @@ The hook came with the CRAP check, which the owner decided on [#63](https://gith
   - **It also guards against a reported bug,** where `stop_hook_active` stays false on repeated fires ([issue #54360](https://github.com/anthropics/claude-code/issues/54360), closed without a fix): unchanged work stays quiet whatever that flag says.
 - **On Windows, npm runs through a shell,** because it's `npm.cmd` there, which Node won't start without one.
 - **It runs lint first and the tests second, and oxCrap only when the tests pass,** since a failing test run writes no coverage report.
-- **It doesn't add its own pointer to the CRAP procedure.** `npm run oxcrap` already ends its findings with `Get help:`, from `helpUrl` in [`.oxcraprc.json`](../.oxcraprc.json).
+- **It doesn't add its own pointer to the CRAP procedure.** oxCrap already ends its findings with `Get help:`, from `helpUrl` in [`.oxcraprc.json`](../.oxcraprc.json) and [`oxcrap/.oxcraprc.json`](oxcrap/.oxcraprc.json).
 - **No skill.** A hook defined in a skill runs only after the skill is invoked, a hook can't invoke a skill, and [`AGENTS.md`](../AGENTS.md) sends every agent to `docs/engineering/` for procedures.
 
 ## What would reopen this

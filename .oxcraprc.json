@@ -1,6 +1,7 @@
 {
   "$schema": "./scripts/oxcrap/configuration_schema.json",
-  // What `npm run oxcrap` scores in this repository, and against what. The options are in
+  // What `npm run oxcrap` scores in the app, and against what; scripts/oxcrap/.oxcraprc.json
+  // scores oxCrap itself. The options are in
   // scripts/oxcrap/README.md; how to respond to a finding is in docs/engineering/crap.md.
   "files": ["src/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"],
   "limits": { "crap": 30, "complexity": 10 },

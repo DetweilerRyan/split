@@ -50,12 +50,13 @@ function host(files: Record<string, string>, times: Record<string, number> = {})
     },
     modified: (path) => times[path] ?? 1,
     realpath: (path) => path,
-    findFiles: (root, _globs, _ignore, named) => {
+    findFiles: (root, globs, _ignore, named) => {
       const found = Object.keys(files)
-        .filter((path) => path.startsWith(`${root}/`) && path.endsWith('.ts'))
-        .map((path) => posix.relative(root, path));
-      const code = found.filter((path) => !path.includes('.test.'));
-      return { matched: [...found, ...named], scored: [...code, ...named] };
+        .filter((path) => path.startsWith(`${root}/`))
+        .map((path) => posix.relative(root, path))
+        .filter((path) => globs.some((glob) => posix.matchesGlob(path, glob)));
+      const matched = [...new Set([...found, ...named])];
+      return { matched, scored: matched.filter((path) => !path.includes('.test.')) };
     },
   };
 }
@@ -169,10 +170,24 @@ describe('run', () => {
     ]);
   });
 
-  it('scores a single file named on the command line', () => {
+  it('scores only a single file named on the command line', () => {
     const { files, times } = project({ '/repo/src/rank.ts': branchy('rank', 12) });
     const scored = oxcrap(['--coverage', 'coverage.json', 'src/grade.ts'], files, times);
-    expect(scored.stderr[0]).toContain('grade');
+    const listed = scored.stderr[0].split('\n').slice(1);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatch(/^- src\/grade\.ts:1 grade: /);
+  });
+
+  it('scores only the code files in a folder named on the command line', () => {
+    const { files, times } = project({
+      '/repo/lib/rank.ts': branchy('rank', 12),
+      '/repo/src/grade.test.ts': branchy('check', 12),
+      '/repo/src/notes.md': '# Notes',
+    });
+    const scored = oxcrap(['--coverage', 'coverage.json', 'src'], files, times);
+    const listed = scored.stderr[0].split('\n').slice(1);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatch(/^- src\/grade\.ts:1 grade: /);
   });
 
   it('refuses a missing report, one older than the code, and one covering none of it', () => {
