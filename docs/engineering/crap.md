@@ -6,7 +6,7 @@ oxCrap scores each function in `src/` and `app/` by its complexity and how much 
 
 oxCrap reads the coverage report that every `npm test` writes to `coverage/coverage-final.json`. So **run `npm test` before `npm run oxcrap`**, as the [definition of done](../../AGENTS.md#definition-of-done) orders them.
 
-**The coverage a CRAP score uses comes from the Vitest projects only,** never from tests that run the whole program: not `npm run test:e2e`, and not a deep module's [feature contract](testing-conventions.md#feature-contracts-for-deep-modules). Don't add their coverage to the report oxCrap reads. [`.oxcraprc.json`](../../.oxcraprc.json), at the root, sets what it scores here and the limits.
+**The coverage a CRAP score uses comes from the Vitest projects only,** never from tests that run the whole program: not `npm run test:e2e`, and not a [feature contract](testing-conventions.md#feature-contracts-for-deep-modules) that runs a deep module's program. Don't add their coverage to the report oxCrap reads. [`.oxcraprc.json`](../../.oxcraprc.json), at the root, sets what it scores here and the limits.
 
 - **The Stop hook** gives a Claude Code session its findings as advice when it stops with changes to the app. [Its README](../../scripts/stop-hook.md) says what it runs and when.
 - **CI** runs `npm test`, then `npm run oxcrap`, and fails on any finding.
