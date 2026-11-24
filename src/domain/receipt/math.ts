@@ -1,4 +1,4 @@
-import type { RoomSnapshot } from './roomSnapshot';
+import type { Participant, ReceiptItem, RoomSnapshot } from './roomSnapshot';
 import {
   DEFAULT_CURRENCY,
   currencyExponent,
@@ -56,7 +56,37 @@ export function allocateMinor(total: number, weights: readonly number[]): readon
   return shares;
 }
 
-// @crap-allow CRAP 16, complexity 16. Debt from before the CRAP check (#63): too complex.
+/** One claimant's share of an item, in minor units of the receipt currency. */
+export interface ItemShare {
+  readonly id: Participant['id'];
+  readonly minor: number;
+}
+
+/**
+ * Splits the item at `itemIndex` of a receipt equally between the participants who claim it, in
+ * minor units of `currency`, as computeReceiptMath charges them. Leftover units go to claimants in
+ * a rotating order that starts one further along for each item, so identical items even out. The
+ * shares come in the participants' order and add up to exactly the item's amount; an item no one
+ * claims has none.
+ */
+export function splitItemMinor(
+  item: ReceiptItem,
+  itemIndex: number,
+  participants: readonly Participant[],
+  currency: string,
+): readonly ItemShare[] {
+  const itemMinor = toMinor(item.eur, currency);
+  const claimants = participants.filter((person) => item.claims[person.id]);
+  if (!claimants.length) return [];
+  const base = Math.floor(itemMinor / claimants.length);
+  const extra = itemMinor - base * claimants.length;
+  return claimants.map(({ id }, index) => {
+    const position = (index - (itemIndex % claimants.length) + claimants.length) % claimants.length;
+    return { id, minor: base + (position < extra ? 1 : 0) };
+  });
+}
+
+// @crap-allow CRAP 14, complexity 14. Most branches choose the display currency and the rate to convert at; #97 moved the item split out and left those, which read as one rule. Move them into their own function when the conversion rules next change.
 export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   const currency = normalizeCurrency(snapshot.currency ?? DEFAULT_CURRENCY);
   const exp = currencyExponent(currency);
@@ -80,17 +110,9 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
 
   let itemsSubtotalMinor = 0;
   snapshot.items.forEach((item, itemIndex) => {
-    const itemMinor = toMinor(item.eur, currency);
-    itemsSubtotalMinor += itemMinor;
-    const claimants = snapshot.participants.filter((person) => item.claims[person.id]);
-    if (!claimants.length) return;
-    // Equal split in minor units; leftover units go to claimants in a per-item rotating order.
-    const base = Math.floor(itemMinor / claimants.length);
-    const extra = itemMinor - base * claimants.length;
-    claimants.forEach(({ id }, index) => {
-      const position =
-        (index - (itemIndex % claimants.length) + claimants.length) % claimants.length;
-      perPerson[id].itemsSubtotalMinor += base + (position < extra ? 1 : 0);
+    itemsSubtotalMinor += toMinor(item.eur, currency);
+    splitItemMinor(item, itemIndex, snapshot.participants, currency).forEach(({ id, minor }) => {
+      perPerson[id].itemsSubtotalMinor += minor;
     });
   });
 

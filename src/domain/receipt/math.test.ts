@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RoomSnapshot } from './roomSnapshot';
-import { computeReceiptMath } from './math';
+import { computeReceiptMath, splitItemMinor } from './math';
 
 describe('receipt currency math', () => {
   it('uses the bank reconciliation rate and allocates tips proportionally', () => {
@@ -175,5 +175,49 @@ describe('integer minor-unit splitting', () => {
   it('shows no conversion without a rate', () => {
     const snap = { ...makeSnapshot('EUR', [10], [['a']]), displayCurrency: 'JPY' };
     expect(computeReceiptMath(snap).perPerson.a.converted).toBeNull();
+  });
+});
+
+describe('splitItemMinor', () => {
+  const snap = makeSnapshot(
+    'USD',
+    [1, 1, 1, 0],
+    [['a', 'b', 'c'], ['a', 'b', 'c'], ['b', 'c'], []],
+  );
+
+  it("gives the leftover cent of an item that doesn't divide evenly to its first claimant", () => {
+    expect(splitItemMinor(snap.items[0], 0, snap.participants, 'USD')).toEqual([
+      { id: 'a', minor: 34 },
+      { id: 'b', minor: 33 },
+      { id: 'c', minor: 33 },
+    ]);
+  });
+
+  it("gives the next item's leftover cent to the next claimant", () => {
+    expect(splitItemMinor(snap.items[1], 1, snap.participants, 'USD')).toEqual([
+      { id: 'a', minor: 33 },
+      { id: 'b', minor: 34 },
+      { id: 'c', minor: 33 },
+    ]);
+  });
+
+  it("splits only between an item's claimants, in the participants' order", () => {
+    expect(splitItemMinor(snap.items[2], 2, snap.participants, 'USD')).toEqual([
+      { id: 'b', minor: 50 },
+      { id: 'c', minor: 50 },
+    ]);
+  });
+
+  it('gives no shares of an item no one claims', () => {
+    expect(splitItemMinor(snap.items[3], 3, snap.participants, 'USD')).toEqual([]);
+  });
+
+  it('adds up to the subtotals computeReceiptMath charges', () => {
+    const { perPerson } = computeReceiptMath(snap);
+    expect([
+      perPerson.a.itemsSubtotalMinor,
+      perPerson.b.itemsSubtotalMinor,
+      perPerson.c.itemsSubtotalMinor,
+    ]).toEqual([34 + 33, 33 + 34 + 50, 33 + 33 + 50]);
   });
 });

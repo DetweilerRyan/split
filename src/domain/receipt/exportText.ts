@@ -1,8 +1,8 @@
 import type { RoomSnapshot } from './roomSnapshot';
-import { formatMoney } from '../money/currency';
-import { computeReceiptMath } from './math';
+import { formatMoney, fromMinor } from '../money/currency';
+import { computeReceiptMath, splitItemMinor } from './math';
 
-// @crap-allow CRAP 16.2, complexity 11. Debt from before the CRAP check (#63): no tests of its own yet; useSharing's and RoomView's tests only run it.
+// @crap-allow CRAP 11, complexity 11. One branch per line or note the summary may leave out; splitting them would scatter its layout across helpers. Split it if it gains another.
 export function buildExportText(snapshot: RoomSnapshot): string {
   const math = computeReceiptMath(snapshot);
   function fmt(amount: number) {
@@ -26,11 +26,12 @@ export function buildExportText(snapshot: RoomSnapshot): string {
         ? `${participant.name}: ${formatMoney(total.converted, math.displayCurrency)} (${fmt(total.total)})`
         : `${participant.name}: ${fmt(total.total)}`,
     );
-    snapshot.items.forEach((item) => {
-      if (!item.claims[participant.id]) return;
-      const claimCount = snapshot.participants.filter((person) => item.claims[person.id]).length;
+    snapshot.items.forEach((item, itemIndex) => {
+      const shares = splitItemMinor(item, itemIndex, snapshot.participants, math.currency);
+      const share = shares.find(({ id }) => id === participant.id);
+      if (!share) return;
       lines.push(
-        `  • ${item.name}: ${fmt(item.eur / claimCount)}${claimCount > 1 ? ` (1/${claimCount})` : ''}`,
+        `  • ${item.name}: ${fmt(fromMinor(share.minor, math.currency))}${shares.length > 1 ? ` (1/${shares.length})` : ''}`,
       );
     });
   });
