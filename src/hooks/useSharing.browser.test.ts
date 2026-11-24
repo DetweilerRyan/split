@@ -3,7 +3,7 @@ import { renderHook } from 'vitest-browser-react';
 import { buildExportText } from '../domain/receipt/exportText';
 import { roomIdSchema } from '../domain/room/roomId';
 import { EMPTY_SNAPSHOT } from '../sync/useReceiptStore';
-import { type CopyTarget, useSharing } from './useSharing';
+import { type CopyTarget, type SiteLocation, useSharing } from './useSharing';
 
 const roomId = roomIdSchema.parse('split-r1');
 const snapshot = { ...EMPTY_SNAPSHOT, title: 'Trattoria Da Enzo' };
@@ -12,11 +12,13 @@ function fakeClipboard() {
   return { writeText: vi.fn(async () => undefined) };
 }
 
+const site = { origin: 'https://split.example' };
+
 // `null` stands for no clipboard, since `undefined` would take the default.
-async function setup(target: CopyTarget | null = fakeClipboard()) {
+async function setup(target: CopyTarget | null = fakeClipboard(), location: SiteLocation = site) {
   const clipboard = target ?? undefined;
   const showToast = vi.fn();
-  const hook = await renderHook(() => useSharing(roomId, snapshot, clipboard, showToast));
+  const hook = await renderHook(() => useSharing(roomId, snapshot, clipboard, showToast, location));
   function current() {
     return hook.result.current;
   }
@@ -26,7 +28,12 @@ async function setup(target: CopyTarget | null = fakeClipboard()) {
 describe('useSharing', () => {
   it("links to the room's page on this site", async () => {
     const hook = await setup();
-    expect(hook.current().url).toBe(`${window.location.origin}/r/split-r1`);
+    expect(hook.current().url).toBe('https://split.example/r/split-r1');
+  });
+
+  it('has no link outside a browser', async () => {
+    const hook = await setup(fakeClipboard(), null);
+    expect(hook.current().url).toBe('');
   });
 
   it('opens and closes the share dialog', async () => {
@@ -42,7 +49,7 @@ describe('useSharing', () => {
     const hook = await setup();
     await hook.act(() => hook.current().copyLink());
     expect(hook.clipboard?.writeText).toHaveBeenCalledExactlyOnceWith(
-      `${window.location.origin}/r/split-r1`,
+      'https://split.example/r/split-r1',
     );
     await expect.poll(() => hook.showToast.mock.calls).toEqual([['Room link copied.']]);
   });

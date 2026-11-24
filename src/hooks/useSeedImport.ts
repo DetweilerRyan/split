@@ -7,12 +7,14 @@ import { hydrateFromSeed, pendingSeedKey, roomPath } from '../sync/seedCodec';
 
 /**
  * The seed dialog: whether it's open, importing a seed or a preset into the room's document, and
- * starting a new blank room, which `navigate` goes to.
+ * starting a new blank room, which `navigate` goes to. The new room's seed is saved in `storage`,
+ * `window.sessionStorage` when it's left out.
  */
 export function useSeedImport(
   doc: Doc,
   showToast: (message: string) => void,
   navigate: (path: string) => void,
+  storage?: Pick<Storage, 'setItem'>,
 ) {
   const [open, setOpen] = useState(false);
 
@@ -34,7 +36,8 @@ export function useSeedImport(
     importSeed(seed, true);
   }
 
-  // The new room's seed waits in sessionStorage until the room loads, as an ingest link's does.
+  // The new room's seed waits in storage until the room loads, as an ingest link's does. Reading
+  // `window.sessionStorage` throws where the browser blocks storage, so it's read inside the `try`.
   function newBlankRoom() {
     const blank: ReceiptSeed = {
       title: 'New Receipt',
@@ -47,7 +50,7 @@ export function useSeedImport(
     };
     const nextRoom = createRoomId();
     try {
-      window.sessionStorage.setItem(pendingSeedKey(nextRoom), JSON.stringify(blank));
+      (storage ?? window.sessionStorage).setItem(pendingSeedKey(nextRoom), JSON.stringify(blank));
     } catch {}
     navigate(roomPath(nextRoom));
   }

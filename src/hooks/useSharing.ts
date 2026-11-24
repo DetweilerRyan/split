@@ -7,18 +7,22 @@ import { roomPath } from '../sync/seedCodec';
 /** Where copied text goes: `navigator.clipboard`, which is missing outside a secure context. */
 export type CopyTarget = Pick<Clipboard, 'writeText'> | undefined;
 
+/** Where the app is served from: `window.location`, which is missing outside a browser. */
+export type SiteLocation = Pick<Location, 'origin'> | null;
+
 /**
- * Sharing the room: the share dialog, the room's link, and copying the link or the receipt's
- * summary to `clipboard`.
+ * Sharing the room: the share dialog, the room's link on the site at `location`, and copying the
+ * link or the receipt's summary to `clipboard`.
  */
 export function useSharing(
   roomId: RoomId,
   snapshot: RoomSnapshot,
   clipboard: CopyTarget,
   showToast: (message: string) => void,
+  location: SiteLocation = typeof window === 'undefined' ? null : window.location,
 ) {
   const [open, setOpen] = useState(false);
-  const url = typeof window === 'undefined' ? '' : `${window.location.origin}${roomPath(roomId)}`;
+  const url = location ? `${location.origin}${roomPath(roomId)}` : '';
 
   function openDialog() {
     setOpen(true);
