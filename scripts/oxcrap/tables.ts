@@ -122,9 +122,8 @@ function tableOf(init: unknown, functions: ReadonlySet<string>): Table | undefin
       return isFreeze(value)
         ? tableOf((value.arguments as readonly unknown[])[0], functions)
         : undefined;
-    default:
-      return undefined;
   }
+  return undefined;
 }
 
 /** Whether `call` is `Object.freeze(…)`. */
@@ -197,9 +196,8 @@ function addition(
       return assigned(expression);
     case 'CallExpression':
       return added(expression);
-    default:
-      return undefined;
   }
+  return undefined;
 }
 
 /** `T.k = v` or `T[k] = v`: the table's name and the value. */
@@ -222,9 +220,8 @@ function added(call: AstNode) {
       return { name, value: args[1] };
     case 'add':
       return { name, value: args[0] };
-    default:
-      return undefined;
   }
+  return undefined;
 }
 
 /** The names a module imports from relative paths. */
@@ -374,9 +371,8 @@ function mutatedName(node: AstNode): AstNode | undefined {
       return node.operator === 'delete' ? objectName(node.argument as AstNode) : undefined;
     case 'CallExpression':
       return mutatorCallee(node.callee as AstNode);
-    default:
-      return undefined;
   }
+  return undefined;
 }
 
 /**
