@@ -1,16 +1,22 @@
 // Finds the scored functions in a recursion cycle: those that call themselves, or call a function
 // that leads back to them. A call is resolved as JavaScript resolves it, within the file:
-// - a bare `f()` to the function bound to `f` in the nearest enclosing scope, so a parameter or a
-//   local of the same name hides it;
-// - `this.f()` to a method or function-valued field of the class around the call, unless a
-//   non-arrow function in between rebinds `this`.
+// - a bare `f()` or `new f()` to the function bound to `f` in the nearest enclosing scope, so a
+//   parameter or a local of the same name hides it. A default value sees the parameters and the
+//   scopes around the function, not the body's locals;
+// - `this.f()` or `this.#f()` to a method or function-valued field of that name in the class
+//   around the call, unless a non-arrow function in between rebinds `this`. An instance field
+//   hides a method of the same name, so if it holds no function, the call reaches none.
 // Calls through other objects, variables or files aren't followed. Why is in oxcrap.meta.md.
 import { type AstNode, children, isFunctionType, isNode } from './complexity.ts';
 
 /** A scope's names, each bound to the function it names, or to null for anything else. */
 type Scope = Map<string, AstNode | null>;
-/** A class's methods and function-valued fields, by name. */
-type Members = Map<string, AstNode>;
+/**
+ * What `this.f()` reaches in a class, by name, with `#` before a private one: a method or a
+ * function-valued field, or null for an instance field that holds no function. Members with a
+ * computed or literal key are under undefined, which no call is to.
+ */
+type Members = Map<string | undefined, AstNode | null>;
 
 /** Whether a node besides a function opens a scope of its own. */
 function opensScope(node: AstNode) {
@@ -123,39 +129,44 @@ function declareVariables(scope: Scope, declaration: AstNode) {
   }
 }
 
-/** Declares into `scope` every `var` in `node`, not looking inside nested functions. */
+/** Declares into `scope` every `var` in `node`, not looking inside functions or static blocks. */
 function declareVars(scope: Scope, node: AstNode) {
   for (const child of children(node)) {
-    if (isFunctionType(child.type)) continue;
+    if (isFunctionType(child.type) || child.type === 'StaticBlock') continue;
     // Only a VariableDeclaration has a `kind` of 'var'.
     if (child.kind === 'var') declareVariables(scope, child);
     declareVars(scope, child);
   }
 }
 
-/** The scope a function opens: its own name if it's a named expression, its parameters, its body's. */
-function functionScope(fn: AstNode): Scope {
-  const scope: Scope = new Map();
+/**
+ * The scopes around a function's parameters, and around its body. The parameters' scope holds the
+ * function's own name if it's a named expression, and its parameters, so a default value sees
+ * neither the body's `var`s nor its `let`s. The body's adds its `var`s, and its block the rest.
+ */
+function functionScopes(fn: AstNode, scopes: readonly Scope[]) {
+  const own: Scope = new Map();
   // A named function expression can call itself by its own name.
-  if (fn.type === 'FunctionExpression') declareId(scope, fn.id, fn);
-  for (const param of fn.params as unknown[]) declarePattern(scope, param);
+  if (fn.type === 'FunctionExpression') declareId(own, fn.id, fn);
+  for (const param of fn.params as unknown[]) declarePattern(own, param);
+  const vars: Scope = new Map();
   // Every function of the three function types has a body; a signature without one has a type of its own.
-  const body = fn.body as AstNode;
-  declareVars(scope, body);
-  if (body.type === 'BlockStatement') declareBlock(scope, body.body as AstNode[]);
-  return scope;
+  declareVars(vars, fn.body as AstNode);
+  const params = [...scopes, own];
+  return { params, body: [...params, vars] };
 }
 
 /** The scope a node opens, for a node `opensScope` accepts, with what it declares directly. */
 function blockScope(node: AstNode): Scope {
   const scope: Scope = new Map();
   switch (node.type) {
+    // A static block keeps its `var`s to itself, as a function does.
     case 'Program':
+    case 'StaticBlock':
       declareVars(scope, node);
       declareBlock(scope, node.body as AstNode[]);
       break;
     case 'BlockStatement':
-    case 'StaticBlock':
       declareBlock(scope, node.body as AstNode[]);
       break;
     case 'SwitchStatement':
@@ -165,6 +176,7 @@ function blockScope(node: AstNode): Scope {
       break;
     case 'CatchClause':
       declarePattern(scope, node.param);
+      redeclaredByVar(scope, node.body as AstNode);
       break;
     default:
       // A loop: what its head declares, as in `for (const x of xs)`.
@@ -173,23 +185,52 @@ function blockScope(node: AstNode): Scope {
   return scope;
 }
 
-/** A class body's methods and function-valued fields, by name. */
+/**
+ * Gives a catch parameter the value of a `var` in its block that declares it again. The `var` is
+ * hoisted out of the block, but in the block its name is the parameter, so its value goes there.
+ */
+function redeclaredByVar(scope: Scope, block: AstNode) {
+  const vars: Scope = new Map();
+  declareVars(vars, block);
+  for (const [name, value] of vars) if (scope.has(name)) scope.set(name, value);
+}
+
+/** What `this.f()` reaches in a class body, by name. */
 function classMembers(body: AstNode): Members {
   const members: Members = new Map();
-  for (const member of body.body as AstNode[]) {
-    if (member.computed || !isNode(member.key) || member.key.type !== 'Identifier') continue;
+  const all = body.body as AstNode[];
+  // An instance field is set on the instance, so it hides a method of its name wherever it's
+  // written: the instance fields go again at the end.
+  for (const member of [...all, ...all.filter(isInstanceField)]) {
+    const name = member.computed ? undefined : memberName(member.key);
     const value = functionValue(member.value);
-    if (value) members.set(member.key.name as string, value);
+    if (value || isInstanceField(member)) members.set(name, value);
   }
   return members;
 }
 
-/** The name `f` a `this.f()` call is to, or undefined for any other callee. */
+/** Whether a class member is a field of each instance, rather than a method or a static member. */
+function isInstanceField(member: AstNode) {
+  return member.type === 'PropertyDefinition' && !member.static;
+}
+
+/**
+ * A member's name, `f` or `#f`, from its key, or undefined if it has no key, such as a static
+ * block, or a literal key, which has a `value` and no `name`.
+ */
+function memberName(key: unknown): string | undefined {
+  if (!isNode(key)) return undefined;
+  return key.type === 'PrivateIdentifier'
+    ? `#${key.name as string}`
+    : (key.name as string | undefined);
+}
+
+/** The name, `f` or `#f`, a `this.f()` or `this.#f()` call is to, or undefined for any other callee. */
 function thisMethod(callee: AstNode): string | undefined {
   // Only a MemberExpression has an `object`.
   const isThis =
     !callee.computed && isNode(callee.object) && callee.object.type === 'ThisExpression';
-  return isThis && isNode(callee.property) ? (callee.property.name as string) : undefined;
+  return isThis ? memberName(callee.property) : undefined;
 }
 
 /**
@@ -213,15 +254,24 @@ function hidden(
     // Scope 0 is the program's own: a binding found further in hides the top-level one.
     if (scopes.findLastIndex((scope) => scope.has(name)) > 0) into.add(node);
   }
-  const inner = scopesInside(node, scopes);
+  if (isFunctionType(node.type)) return hiddenInFunction(node, scopes, names, into);
+  const inner = opensScope(node) ? [...scopes, blockScope(node)] : scopes;
   for (const child of children(node)) hidden(child, inner, names, into);
   return into;
 }
 
-/** The scopes around `node`'s children: `scopes`, and the one `node` opens, if any. */
-function scopesInside(node: AstNode, scopes: readonly Scope[]): readonly Scope[] {
-  if (isFunctionType(node.type)) return [...scopes, functionScope(node)];
-  return opensScope(node) ? [...scopes, blockScope(node)] : scopes;
+/** Adds the hidden uses in a function to `into`: its parameters in their scope, its body in its own. */
+function hiddenInFunction(
+  fn: AstNode,
+  scopes: readonly Scope[],
+  names: ReadonlySet<string>,
+  into: Set<AstNode>,
+) {
+  const inner = functionScopes(fn, scopes);
+  for (const child of children(fn)) {
+    hidden(child, child === fn.body ? inner.body : inner.params, names, into);
+  }
+  return into;
 }
 
 /**
@@ -263,7 +313,10 @@ function callsIn(
 ): Call[] {
   if (node.type === 'ClassBody') return callsInClass(node, context, into);
   if (isFunctionType(node.type)) return callsInFunction(node, context, members, into);
-  if (node.type === 'CallExpression') into.push(...callsOf(node, context));
+  // `new f()` runs `f`, as `f()` does.
+  if (node.type === 'CallExpression' || node.type === 'NewExpression') {
+    into.push(...callsOf(node, context));
+  }
   const inner = opensScope(node)
     ? { ...context, scopes: [...context.scopes, blockScope(node)] }
     : context;
@@ -271,7 +324,7 @@ function callsIn(
   return into;
 }
 
-/** A bare `f()` or a `this.f()`, resolved to the function it calls. */
+/** A bare `f()` or a `this.f()`, with or without `new`, resolved to the function it calls. */
 function callsOf(call: AstNode, context: Context): Call[] {
   const callee = call.callee as AstNode;
   // Stryker disable next-line ConditionalExpression: any other callee has no `name`, and no scope declares an undefined name, so its lookup finds no function.
@@ -285,11 +338,9 @@ function callsOf(call: AstNode, context: Context): Call[] {
 /** Adds the calls in a class's members to `into`, each with the class's methods and fields as its `this`. */
 function callsInClass(body: AstNode, context: Context, into: Call[]): Call[] {
   const own = classMembers(body);
-  for (const member of body.body as AstNode[]) {
-    // A method's or field's function gets the class as its `this`. callsIn hands it on through
-    // parentheses around the function.
-    for (const child of children(member)) callsIn(child, context, own, into);
-  }
+  // A method's or field's function gets the class as its `this`. callsIn hands it on through
+  // parentheses around the function, and opens a static block's scope.
+  for (const member of body.body as AstNode[]) callsIn(member, context, own, into);
   return into;
 }
 
@@ -303,8 +354,11 @@ function callsInFunction(
   // An arrow keeps the `this` around it; any other function has its own.
   // A class field's arrow has the instance as its `this`, which `members` then gives.
   const self = fn.type === 'ArrowFunctionExpression' ? (members ?? context.self) : members;
-  const scopes = [...context.scopes, functionScope(fn)];
-  for (const child of children(fn)) callsIn(child, { scopes, fn, self }, null, into);
+  const inner = functionScopes(fn, context.scopes);
+  for (const child of children(fn)) {
+    const scopes = child === fn.body ? inner.body : inner.params;
+    callsIn(child, { scopes, fn, self }, null, into);
+  }
   return into;
 }
 
