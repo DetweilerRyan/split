@@ -21,7 +21,7 @@ Essential logic is the users' problem itself: how a receipt is split, rounded an
 
 - **Write essential logic as pure functions over plain data, in `src/domain/`,** named in the domain's own words, such as receipt, item, claim, participant and share.
 - **Keep effects in the shell, and decisions out of it where you can.** The shell reads and writes the outside world, and passes plain values to the code that decides. A decision that exists only because of the machinery, such as whether a dialog is open, stays out of `src/domain/`. If it's more than wiring, write it as a pure function beside the shell code that uses it.
-- **Pass effects in as arguments,** typed by an interface holding only what the code uses (interface segregation), as `useActiveIdentity` takes `Pick<RoomProvider, 'setIdentity'>`. When the deciding code declares that interface in its own terms, importing nothing from the layer that implements it, the dependency is inverted too (dependency inversion). `useExchangeRate` declares `FetchRate` that way, and `RoomView` passes in `src/services/`'s `getExchangeRate`. Pure logic then needs no fakes, and the rest is tested with plain fakes.
+- **Pass effects into the code that decides as arguments,** typed by an interface holding only what the code uses (interface segregation), as `useActiveIdentity` takes `Pick<RoomProvider, 'setIdentity'>`. When the deciding code declares that interface in its own terms, importing nothing from the layer that implements it, the dependency is inverted too (dependency inversion). `useExchangeRate` declares `FetchRate` that way, and `RoomView` passes in `src/services/`'s `getExchangeRate`. Pure logic then needs no fakes, and the rest is tested with plain fakes.
 - **A business decision your change adds or edits in a component or hook goes in the domain,** and the UI calls it.
 
 ```ts
@@ -36,11 +36,11 @@ Where code goes is in [Code layout](code-layout.md), and what each layer may imp
 
 ## 2. Contained state: keep state minimal, immutable and contained
 
-State is the biggest cause of code that's hard to reason about, so keep as little of it as the task allows, and keep the rest apart.
+Out of the Tar Pit argues that state is the biggest remaining cause of complexity in most large systems, so keep as little of it as the task allows, and keep the rest apart.
 
 - **Don't store a value you can compute from other state.** Derive it where it's read. Keep a cached copy only when a reader needs a stable value or deriving it is too slow, and rebuild it from its source whenever the source changes, as `ReceiptStore` rebuilds the snapshot it gives `useSyncExternalStore`.
 - **Write functions over plain data, not classes.** Keep state in a function's parameters, or in a factory that closes over it and returns an object of functions, as `createActor` in [`e2e/screenplay/actor.ts`](../../e2e/screenplay/actor.ts) does. An `Error` subclass may be a class. Any other class needs the owner's approval, as `ReceiptStore`'s had on [#83](https://github.com/DetweilerRyan/split/issues/83). Use `this` only inside those classes. `npm run lint` enforces this through the local oxlint plugin [`scripts/lint/functional.ts`](../../scripts/lint/functional.ts).
-- **Keep state that's persisted or shared between peers in the shell's storage and sync code,** under `src/sync/`, and hand the core plain, immutable snapshots of it, as `ReceiptStore` turns the room's Yjs document into a `RoomSnapshot`. The receipt's data is essential; only how it's stored and synced belongs to the shell. UI state, such as whether a dialog is open, stays in the hook that uses it.
+- **Keep the room's data, which is persisted and shared between peers, in the shell's storage and sync code,** under `src/sync/`, and hand the core plain, immutable snapshots of it, as `ReceiptStore` turns the room's Yjs document into a `RoomSnapshot`. The receipt's data is essential; only how it's stored and synced belongs to the shell. A service's cache stays beside its service, as `src/services/exchangeRates.ts` keeps its rates. UI state, such as whether a dialog is open, stays in the component or hook that uses it.
 
 How each type is kept readonly, how to build a changed value, and the working value a function may change in place are in [Types and schemas](types-and-schemas.md#readonly-by-default).
 
@@ -52,7 +52,7 @@ This borrows the W3C's rule of least power, which is about choosing among langua
 - **Handle a closed set of cases with an exhaustive `switch`** over its discriminated union, as _honest types_ writes it, ending in a `never` check, so the compiler names every `switch` a new case has to reach.
 - **Don't turn a `switch` or a chain of conditions into a lookup table to shorten it or to pass a CRAP limit,** whether it's a `Map`, an object or a `Set` read at run time, and whether or not it's called a registry. It hides the branches from a reader without removing them. A table of plain values read for its value, such as region codes to currencies, is data, and a `switch` that only picks such a value may become one. A membership test, such as a `Set`'s `has`, is a branch.
 - **Use a registry rarely,** a table of handlers looked up by a key at run time. It's among the most dynamic constructs here, so the problem has to need it: cases added at run time by code the module can't know about, which an interface passed in can't serve. Say in a comment beside it why nothing weaker works.
-- **Prefer declarative config and plain data to code that builds the same thing at run time,** but never in place of branches, as the rule above says.
+- **Prefer declarative config and plain data to code that builds the same thing at run time,** but never in place of branches, except a `switch` that only picks a plain value, as the rule above says.
 
 ```ts
 // Wrong: the table hides which handler runs, and the branches it stands for.
@@ -117,7 +117,7 @@ type Rate =
 ## When two principles pull apart
 
 - **Core and shell wins over earned complexity for a business rule,** which goes in `src/domain/` even with one user, as [Code layout](code-layout.md) says.
-- **Least power and deep modules split a set of cases by where it varies.** A closed set handled in one module is a union with a `switch`. When the same `switch` recurs across modules, or an implementation lives outside the module, it's an interface. A registry comes after both, as _least power_ says.
+- **Least power and deep modules split a set of cases by where it varies.** A closed set handled in one module is a union with a `switch`. When the same `switch` recurs across modules, or a second implementation lives outside the module, it's an interface. A registry comes after both, as _least power_ says.
 - **Passing an effect in, as core and shell asks, isn't a parameter or an injection point that earned complexity counts,** and needs no justification under it. An injection point lets a caller swap a whole part, as `RoomView`'s `parts` do, by the owner's exception in [Testing conventions](testing-conventions.md#writing-component-and-hook-tests). Add one only when _earned complexity_'s test is met.
 
 ## Changing this document
