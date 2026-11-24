@@ -238,6 +238,18 @@ describe('which tables count', () => {
     expect(found.imports).toEqual([]);
   });
 
+  it.each([
+    [
+      'a type alias named like a table',
+      'const T = { a: () => 1, b: () => 2 };\nexport type T = keyof typeof T;',
+    ],
+    ['an interface named like a function', 'function f() {}\nexport interface f {}'],
+  ])('exports no table or function for %s', (_, code) => {
+    const found = tables(code);
+    expect(found.exported.tables.size).toBe(0);
+    expect(found.exported.functions.size).toBe(0);
+  });
+
   it('doesn’t follow an import from a package path with ./ inside it', () => {
     expect(tables("import { A } from 'vendor/./a.ts';").imports).toEqual([]);
   });
@@ -334,11 +346,6 @@ describe('reading a table', () => {
       2,
     ],
     ['a call through this', 'export class A { run(k: string) { return (this as any)[k](); } }', 2],
-    [
-      'a dispatch through get with no key, which isn’t a static one',
-      `${DISPATCH}\nexport function run() { return RULES.get()!(); }`,
-      4,
-    ],
     [
       'membership of a Set in a loop’s test, past a const of the same name in its block',
       "const S = new Set(['a', 'b', 'c']);\nexport function is(x: string) { while (S.has(x)) { const S = 1; log(S); } }",

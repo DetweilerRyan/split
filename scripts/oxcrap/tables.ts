@@ -261,10 +261,9 @@ function exportedNames(statement: AstNode): [string, string][] {
 
 /** The names an exported declaration declares: a function's, or its `const`s. */
 function declaredNames(declaration: AstNode): readonly string[] {
-  // Stryker disable next-line ConditionalExpression,LogicalOperator: the other declarations with an `id`, such as a class, an interface or an enum, name neither a table nor a function, so exportsOf drops what this would return for them.
-  if (declaration.type === 'FunctionDeclaration' && isNode(declaration.id)) {
-    return [declaration.id.name as string];
-  }
+  // An exported function declaration always has a name.
+  if (declaration.type === 'FunctionDeclaration')
+    return [(declaration.id as AstNode).name as string];
   return constants(declaration).map(([name]) => name);
 }
 /** A module's static tables: `const`s built from literals, with what its top level adds to them. */
