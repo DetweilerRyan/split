@@ -179,13 +179,17 @@ function advice(input: {
   return `${sections.join('\n\n')}\n\nThis is advice; CI fails on each of these.`;
 }
 
-let message: string | undefined;
-try {
-  const stdin = readFileSync(0, 'utf8').trim();
-  message = advice(stdin ? JSON.parse(stdin) : {});
-} catch (error) {
-  message = `The Stop hook couldn't run: ${error instanceof Error ? error.message : String(error)}`;
+/** The advice for the hook's input on stdin, or why the hook couldn't run. */
+function adviceForStdin(): string | undefined {
+  try {
+    const stdin = readFileSync(0, 'utf8').trim();
+    return advice(stdin ? JSON.parse(stdin) : {});
+  } catch (error) {
+    return `The Stop hook couldn't run: ${error instanceof Error ? error.message : String(error)}`;
+  }
 }
+
+const message = adviceForStdin();
 if (message) {
   console.log(
     JSON.stringify({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext: message } }),

@@ -1,9 +1,10 @@
 // A local oxlint JS plugin that keeps the code functional: it bans classes, except Error
-// subclasses, and `this`, which its allowInClasses option allows inside the classes that are
-// kept. `.oxlintrc.json` loads it through "jsPlugins" and turns on its rules as
-// `functional/no-classes` and `functional/no-this`. The rule is the "contained state" principle
-// in docs/engineering/code-design-principles.md; why it, and this plugin, are as they are is in
-// that document's sidecar. Read the sidecar only when changing or questioning the plugin.
+// subclasses, `this`, which its allowInClasses option allows inside the classes that are kept,
+// and `let` and `var` at module level. `.oxlintrc.json` loads it through "jsPlugins" and turns on
+// its rules as `functional/no-classes`, `functional/no-this` and `functional/no-module-let`. The
+// rules are the "contained state" principle in docs/engineering/code-design-principles.md; why
+// they, and this plugin, are as they are is in that document's sidecar. Read the sidecar only
+// when changing or questioning the plugin.
 // Node, and so oxlint, runs this as TypeScript by stripping the types, so use only syntax that
 // erases: no enums, namespaces or parameter properties.
 import type { RuleTester } from 'oxlint/plugins-dev';
@@ -131,7 +132,67 @@ export const noThis: Rule = {
   },
 };
 
+/** A variable declaration, as oxlint's visitors are given it. */
+type DeclarationNode = Parameters<
+  NonNullable<
+    ReturnType<Extract<Rule, { readonly create: unknown }>['create']>['VariableDeclaration']
+  >
+>[0];
+
+/**
+ * Whether a declaration's `let` or `var` lives as long as its module: it's in the module's own
+ * scope, or a namespace's, and not in a function's or a static block's. A `var` in a block, such
+ * as a top-level `for` or `if`, is hoisted to the module, and a `let` there isn't. A `declare`d one,
+ * or one in a `declare namespace` or `declare global`, only names a type and holds nothing.
+ */
+function livesWithModule(node: DeclarationNode): boolean {
+  if (node.declare) return false;
+  let parent: Ancestor | null = node.parent;
+  while (parent) {
+    switch (parent.type) {
+      case 'Program':
+        return true;
+      case 'FunctionDeclaration':
+      case 'FunctionExpression':
+      case 'ArrowFunctionExpression':
+      case 'StaticBlock':
+        return false;
+      case 'TSModuleDeclaration':
+        if (parent.declare) return false;
+        break;
+      case 'ExportNamedDeclaration':
+      case 'TSModuleBlock':
+        break;
+      default:
+        if (node.kind === 'let') return false;
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
+export const noModuleLet: Rule = {
+  meta: {
+    type: 'problem',
+    docs: { description: 'Disallow `let` and `var` at module level' },
+    messages: {
+      noModuleLet:
+        'A module-level `{{kind}}` is state that outlives every call. Use a `const`, or keep the value in a function and pass it on. Long-lived state belongs in the shell, as src/sync/ keeps it (contained state, docs/engineering/code-design-principles.md).',
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      VariableDeclaration(node) {
+        if ((node.kind === 'let' || node.kind === 'var') && livesWithModule(node)) {
+          context.report({ node, messageId: 'noModuleLet', data: { kind: node.kind } });
+        }
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: 'functional' },
-  rules: { 'no-classes': noClasses, 'no-this': noThis },
+  rules: { 'no-classes': noClasses, 'no-this': noThis, 'no-module-let': noModuleLet },
 } as const;

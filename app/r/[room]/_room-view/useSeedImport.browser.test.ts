@@ -9,14 +9,14 @@ import { useSeedImport } from './useSeedImport';
 
 const plitvice = PRESETS.plitvice;
 
-async function setup(storage?: Pick<Storage, 'setItem'>) {
+async function setup(storage?: Pick<Storage, 'setItem'>, language?: string) {
   const doc = new Y.Doc();
   const store = new ReceiptStore(doc);
   store.setMeta('title', 'Lunch');
   store.addItem('Bread', '', 3);
   const showToast = vi.fn();
   const navigate = vi.fn();
-  const hook = await renderHook(() => useSeedImport(doc, showToast, navigate, storage));
+  const hook = await renderHook(() => useSeedImport(doc, showToast, navigate, storage, language));
   function current() {
     return hook.result.current;
   }
@@ -97,9 +97,17 @@ describe('useSeedImport', () => {
       cardTipEur: 0,
       cashTipEur: 0,
       bankUsd: 0,
-      currency: localeCurrency(),
+      currency: localeCurrency(navigator.language),
       roster: [],
       items: [],
     });
+  });
+
+  it('starts the blank receipt in the currency of the language it is given', async () => {
+    const hook = await setup(undefined, 'en-GB');
+    await hook.act(() => hook.current().newBlankRoom());
+    const roomId = parseRoomPath(hook.navigate.mock.calls[0][0]);
+    const pending = window.sessionStorage.getItem(pendingSeedKey(roomId!));
+    expect(JSON.parse(pending!)).toMatchObject({ currency: 'GBP' });
   });
 });

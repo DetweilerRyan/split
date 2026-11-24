@@ -112,6 +112,8 @@ function nameFromParent(source: string, fn: AstNode, parent: AstNode) {
       return passedToCall(fn, parent) ? callback(text(source, parent.callee)) : undefined;
     case 'ExportDefaultDeclaration':
       return 'default export';
+    default:
+      return undefined;
   }
 }
 

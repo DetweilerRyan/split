@@ -5,6 +5,14 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    // Least power (docs/engineering/code-design-principles.md, #116): every `case` ends, so a
+    // reader sees each branch on its own.
+    "noFallthroughCasesInSwitch": true,
+    // Honest types (#116): an optional property is either set or left out, and `undefined` is a
+    // value only where its type says so.
+    "exactOptionalPropertyTypes": true,
+    // Honest types (#116): a function that returns a value says what it returns on every path.
+    "noImplicitReturns": true,
     "noEmit": true,
     // Node runs scripts/ as TypeScript by stripping types, so their imports name `.ts` files.
     "allowImportingTsExtensions": true,
