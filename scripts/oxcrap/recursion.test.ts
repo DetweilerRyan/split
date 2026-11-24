@@ -1,6 +1,8 @@
+import { parseSync } from 'oxc-parser';
 import { describe, expect, it } from 'vitest';
-import { COUNT_SEPARATELY, type Counting } from './complexity.ts';
+import { type AstNode, COUNT_SEPARATELY, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
+import { recursive, shadowedUses } from './recursion.ts';
 
 /** Each scored function's complexity, so 1 more than its branches means it's recursive. */
 function complexities(code: string, counting?: Counting) {
@@ -140,6 +142,11 @@ describe('recursion', () => {
       },
     ],
     ['a class declared in a block', 'function f() { { class f {} return f(); } }', { f: 1 }],
+    // 1, and 1 for the default value.
+    ['a parameter with a default value', 'function f(f = 1) { return f(); }', { f: 2 }],
+    ['a for loop’s let', 'function f() { for (let f = 0; ; ) f(); }', { f: 2 }],
+    ['a for-in loop’s const', 'function f(o) { for (const f in o) f(); }', { f: 2 }],
+    ['a name destructured from a function', 'const { f } = () => f();', { '{ f }': 1 }],
   ])('doesn’t count a call to a name hidden by %s', (_, code, expected) => {
     expect(complexities(code)).toEqual(expected);
   });
@@ -148,8 +155,70 @@ describe('recursion', () => {
     ['a call outside any function', 'f();\nfunction f() { return 1; }', { f: 1 }],
     ['a call to an import', "import { a } from 'x';\nfunction f() { return a(); }", { f: 1 }],
     ['this calling a computed method', "class A { ['m']() { return this.m(); } }", { "'m'": 1 }],
+    [
+      'this calling the name a computed method’s key holds',
+      "const m = 'x';\nclass A { [m]() { return this.m(); } }",
+      { m: 1 },
+    ],
+    // 1, and 1 for the call through a computed member.
+    ['this calling through a computed member', 'class A { m() { return this[m](); } }', { m: 2 }],
+    [
+      'this calling a public method from a private one of the same name',
+      'class A { m() { return 1; } #m() { return this.m(); } }',
+      { m: 1, '#m': 1 },
+    ],
+    [
+      'a function a call outside any function reaches',
+      'f();\nfunction f() { return go(); }',
+      { f: 1 },
+    ],
   ])('doesn’t count %s', (_, code, expected) => {
     expect(complexities(code)).toEqual(expected);
+  });
+
+  it.each([
+    // 1, the loop, and 1 for the recursion.
+    ['a call in a loop with an empty head', 'function f() { for (;;) return f(); }', { f: 3 }],
+    [
+      'a call in loops whose heads assign names declared before them',
+      'function f(xs) { let x, i; for (x of xs) f(); for (i = 0; ; ) f(); }',
+      { f: 4 },
+    ],
+    [
+      'a method of a class with a plain field',
+      'class A { n = 1; m() { return this.m(); } }',
+      { m: 2 },
+    ],
+  ])('counts %s', (_, code, expected) => {
+    expect(complexities(code)).toEqual(expected);
+  });
+
+  it('resolves a function’s own name to the last declaration of it, as JavaScript does', () => {
+    const code = 'function g() { function f() { return f(); } function f() { return 1; } }';
+    const counting = { ...COUNT_SEPARATELY, recursion: true };
+    const scored = parse('example.ts', code, counting).functions.map((fn) => fn.complexity);
+    expect(scored).toEqual([1, 1, 1]);
+  });
+
+  it('reaches no function through a call it can’t resolve, however functions are grouped', () => {
+    function program(code: string) {
+      return parseSync('example.ts', code).program as unknown as AstNode;
+    }
+    function all() {
+      return 'all';
+    }
+    expect(recursive(program('function a() { other.x(); go(); }'), all, all)).toEqual(new Set());
+    expect(recursive(program('function a() { a(); }'), all, all)).toEqual(new Set(['all']));
+  });
+
+  it('lists only the uses of the names it’s given that a binding hides', () => {
+    const code = 'const S = 1;\nclass A { #S = 1; m(S, T) { return this.#S + S + T; } }';
+    const program = parseSync('example.ts', code).program as unknown as AstNode;
+    const uses = [...shadowedUses(program, new Set(['S']))].map((use) => [use.type, use.start]);
+    expect(uses).toEqual([
+      ['Identifier', code.indexOf('S, T')],
+      ['Identifier', code.indexOf('S + T')],
+    ]);
   });
 
   it('counts a callback calling back only when nested functions count towards the outer one', () => {

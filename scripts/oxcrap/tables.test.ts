@@ -116,6 +116,41 @@ describe('which tables count', () => {
       "export const S = new Set(['a']);",
       { kind: 'set', entries: 1, dispatch: false },
     ],
+    [
+      'an array with one function among values',
+      'const A = [() => 1, 2];',
+      { kind: 'array', entries: 2, dispatch: true },
+    ],
+    [
+      'a Map with one arrow among values',
+      "const M = new Map([['a', () => 1], ['b', 2]]);",
+      { kind: 'map', entries: 2, dispatch: true },
+    ],
+    [
+      'an object holding a function among values deeper',
+      "const O = { us: { format: () => 1, code: 'USD' } };",
+      { kind: 'object', entries: 1, dispatch: true },
+    ],
+    [
+      'an object holding only values deeper',
+      "const O = { us: { code: 'USD' } };",
+      { kind: 'object', entries: 1, dispatch: false },
+    ],
+    [
+      'an object holding an array with a hole',
+      'const O = { a: [, 1] };',
+      { kind: 'object', entries: 1, dispatch: false },
+    ],
+    [
+      'an object naming a declared const with no value',
+      'declare const x: number;\nconst O = { x };',
+      { kind: 'object', entries: 1, dispatch: false },
+    ],
+    [
+      'an object naming a class',
+      'class C {}\nconst O = { C };',
+      { kind: 'object', entries: 1, dispatch: false },
+    ],
   ])('%s', (_, code, table) => {
     expect([...tables(code).own.values()]).toEqual([table]);
   });
@@ -134,6 +169,10 @@ describe('which tables count', () => {
     ['a call that isn’t Object.freeze', "const O = Object.keys({ a: 'x' });"],
     ['freeze on another object', "const O = Immutable.freeze({ a: 'x' });"],
     ['a Set of no array', 'const S = new Set();'],
+    ['an array with a spread', 'const A = [...names];'],
+    ['a WeakMap', 'const M = new WeakMap([[a, 1]]);'],
+    ['a Map with an entry that isn’t a pair literal', "const M = new Map([['a', 1], pair]);"],
+    ['a destructured array', "const [A, B] = [['a'], ['b']];"],
   ])('not %s', (_, code) => {
     expect(tables(code).own.size).toBe(0);
   });
@@ -164,6 +203,14 @@ describe('which tables count', () => {
     ['bumps a key', 'S[x]++'],
     ['deletes a key', 'delete S[x]'],
     ['pushes', 'S.push(x)'],
+    ['pops', 'S.pop()'],
+    ['shifts', 'S.shift()'],
+    ['unshifts', 'S.unshift(x)'],
+    ['splices', 'S.splice(0, 1)'],
+    ['sorts', 'S.sort()'],
+    ['reverses', 'S.reverse()'],
+    ['fills', 'S.fill(x)'],
+    ['copies within', 'S.copyWithin(0, 1)'],
   ])('makes a table state, not a table, when a function %s', (_, change) => {
     const code = `const S = new Set(['a', 'b', 'c']);\nfunction change(x: any) { ${change}; }\nexport function is(x: string) { return S.has(x); }`;
     expect(tables(code).own.size).toBe(0);
@@ -174,6 +221,34 @@ describe('which tables count', () => {
     const code =
       "const S = new Set(['a', 'b', 'c']);\nfunction other(o: any) { o.add(1); S.forEach(log); }\nexport function is(x: string) { return S.has(x); }";
     expect(last(code)).toBe(3);
+  });
+
+  it('leaves a table static when a function only checks an entry’s type or truth', () => {
+    const code =
+      'const O = { a: () => 1, b: () => 2 };\nfunction check(x: any) { return typeof O[x] === typeof !O[x]; }\nexport function run(k: string) { return O[k](); }';
+    expect(last(code)).toBe(1 + 2);
+  });
+
+  it('exports no table or function that it doesn’t name in an export of its own', () => {
+    const found = tables(
+      "const S = new Set(['a']);\nfunction g() {}\nexport let n = 1;\nexport const { a } = o;\nexport class C {}\nexport default function f() {}\nexport { S, g } from './s.ts';\nexport * from './all.ts';",
+    );
+    expect(found.exported.tables.size).toBe(0);
+    expect(found.exported.functions.size).toBe(0);
+    expect(found.imports).toEqual([]);
+  });
+
+  it('doesn’t follow an import from a package path with ./ inside it', () => {
+    expect(tables("import { A } from 'vendor/./a.ts';").imports).toEqual([]);
+  });
+
+  it('reads no table through an import its module doesn’t export as one', () => {
+    function imported(): Exports {
+      return { tables: new Map(), functions: new Set(['K']) };
+    }
+    const program = parseSync('example.ts', "import { K } from './k.ts';").program;
+    const found = tablesIn(program as unknown as AstNode, imported);
+    expect([...found.readable.tables.keys()]).toEqual([]);
   });
 
   it('follows only named imports and its own exports', () => {
@@ -259,6 +334,16 @@ describe('reading a table', () => {
       2,
     ],
     ['a call through this', 'export class A { run(k: string) { return (this as any)[k](); } }', 2],
+    [
+      'a dispatch through get with no key, which isn’t a static one',
+      `${DISPATCH}\nexport function run() { return RULES.get()!(); }`,
+      4,
+    ],
+    [
+      'membership of a Set in a loop’s test, past a const of the same name in its block',
+      "const S = new Set(['a', 'b', 'c']);\nexport function is(x: string) { while (S.has(x)) { const S = 1; log(S); } }",
+      1 + 1 + 2,
+    ],
   ])('%s counts', (_, code, expected) => {
     expect(last(code)).toBe(expected);
   });
@@ -306,8 +391,22 @@ describe('reading a table', () => {
       'a method a table doesn’t have',
       "const A = ['a', 'b'];\nexport function at(i: number) { return A.at(i); }",
     ],
+    [
+      '.get on a dispatch object',
+      'const O = { a: () => 1, b: () => 2 };\nexport function run(k: string) { return (O as any).get(k); }',
+    ],
+    [
+      'a comparison with an object of keys',
+      'const O = { a: 1, b: 2, c: 3 };\nexport function is(x: unknown) { return x !== O; }',
+    ],
   ])('%s adds nothing', (_, code) => {
     expect(last(code)).toBe(1);
+  });
+
+  it('doesn’t count a read past a static block’s const of the same name', () => {
+    const code =
+      "const S = new Set(['a', 'b', 'c']);\nexport class A { static { const S: any = other; this.is = (x: string) => S.has(x); } }";
+    expect(complexities(code)).toEqual({ 'this.is': 1 });
   });
 
   it('counts a dispatch read once, not again for calling it', () => {

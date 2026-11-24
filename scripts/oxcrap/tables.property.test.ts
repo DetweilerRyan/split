@@ -58,6 +58,22 @@ const CHANGES_TO_TABLE: readonly string[] = [
   '(T as any).set(x, 1);',
   '(T as any).push(x);',
   '(T as any).clear();',
+  '(T as any).delete(x);',
+  '(T as any).pop();',
+  '(T as any).shift();',
+  '(T as any).unshift(x);',
+  '(T as any).splice(0, 1);',
+  '(T as any).sort();',
+  '(T as any).reverse();',
+  '(T as any).fill(x);',
+  '(T as any).copyWithin(0, 1);',
+];
+/** Reads of the table that look like changes, or sit beside one, and leave it a table. */
+const READS_OF_TABLE: readonly string[] = [
+  'return (T as any)[x];',
+  'return typeof (T as any)[x];',
+  'return !(T as any)[x];',
+  'return -(T as any).size;',
 ];
 const CHANGES_TO_OTHER: readonly string[] = [
   'other.set(x, 1);',
@@ -145,10 +161,21 @@ function runFunction(test: Case, table: string) {
   }
 }
 
+/** The ways a decoy can be written, for what it does. */
+function decoyForms(does: Decoy['does']) {
+  switch (does) {
+    case 'read':
+      return READS_OF_TABLE;
+    case 'changeTable':
+      return CHANGES_TO_TABLE;
+    default:
+      return CHANGES_TO_OTHER;
+  }
+}
+
 /** A decoy function's body. */
 function decoyBody(decoy: Decoy) {
-  if (decoy.does === 'read') return 'return (T as any)[x];';
-  const forms = decoy.does === 'changeTable' ? CHANGES_TO_TABLE : CHANGES_TO_OTHER;
+  const forms = decoyForms(decoy.does);
   return forms[decoy.form % forms.length];
 }
 
