@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import '../index.css';
-import type { RoomSnapshot } from '../store/useReceiptStore';
-import { roomIdSchema } from '../store/seedCodec';
+import type { RoomSnapshot } from '../sync/useReceiptStore';
+import { roomIdSchema } from '../sync/seedCodec';
 import { RestaurantModal } from './RestaurantModal';
 
 const roomId = roomIdSchema.parse('split-enzo');

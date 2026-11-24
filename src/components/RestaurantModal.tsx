@@ -1,9 +1,9 @@
 import { CalendarDays, Globe, MapPin, Phone, Utensils, X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
-import type { RoomSnapshot } from '../store/useReceiptStore';
+import type { RoomSnapshot } from '../sync/useReceiptStore';
 import { formatPurchaseTime, parsePurchasedAt } from '../domain/receipt/mealInfo';
 import { mapsLink, parseWebsiteLink, phoneLink } from '../domain/receipt/restaurantLinks';
-import type { RoomId } from '../store/seedCodec';
+import type { RoomId } from '../sync/seedCodec';
 
 interface RestaurantModalProps {
   open: boolean;

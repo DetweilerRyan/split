@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { Participant, ReceiptItem } from '../store/useReceiptStore';
+import type { Participant, ReceiptItem } from '../sync/useReceiptStore';
 import { formatMoney } from '../domain/money/currency';
 import { ItemRow } from './ItemRow';
 

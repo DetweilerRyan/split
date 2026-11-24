@@ -1,6 +1,6 @@
 import { use } from 'react';
-import { type ReceiptSeed, pendingSeedKey, validateSeed, type RoomId } from '../store/seedCodec';
-import { getRoomProvider, type RoomProvider } from '../store/yjsProvider';
+import { type ReceiptSeed, pendingSeedKey, validateSeed, type RoomId } from '../sync/seedCodec';
+import { getRoomProvider, type RoomProvider } from '../sync/yjsProvider';
 
 // `use()` needs the same promise instance on every render, so loads are cached per room
 // outside of React. A rejected load stays cached; recovering requires reloading the page.

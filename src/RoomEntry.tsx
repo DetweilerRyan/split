@@ -12,7 +12,7 @@ import {
   roomPath,
   type ReceiptSeed,
   type RoomId,
-} from './store/seedCodec';
+} from './sync/seedCodec';
 
 function stashSeed(roomId: RoomId, seed: ReceiptSeed | null) {
   if (!seed) return;

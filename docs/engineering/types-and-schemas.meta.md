@@ -19,7 +19,7 @@ Why the rules in [types and schemas](types-and-schemas.md) are as they are, and 
 ## Ids and the strings built from them
 
 - **Branded ids:** asked for by the owner on [#37](https://github.com/DetweilerRyan/split/pull/37#discussion_r4649349619) ("can we use a branded type or a string template type via zod to better type the key?"), filed as [#40](https://github.com/DetweilerRyan/split/issues/40) and done in #42. A brand stops a plain string, or a key built from an id, from being passed where an id is expected.
-- **Which ids parse:** the owner chose, on [#40](https://github.com/DetweilerRyan/split/issues/40#issuecomment-7055361953), to accept only the forms the app has generated and to reject any other string. The patterns and that decision are documented in `src/store/seedCodec.ts`.
+- **Which ids parse:** the owner chose, on [#40](https://github.com/DetweilerRyan/split/issues/40#issuecomment-7055361953), to accept only the forms the app has generated and to reject any other string. The patterns and that decision are documented in `src/sync/seedCodec.ts`.
 - **Template literal keys:** from the same #37 question. A brand guards the id; a template literal type guards each key's shape, so `localStorage` and IndexedDB names can't be built from an unbranded string or with the wrong prefix. `seedCodec.test.ts` pins this with `@ts-expect-error` checks.
 - **Not taken:** `z.templateLiteral` schemas for the keys. The keys are built by the app, never parsed from input, so a type is enough.
 
