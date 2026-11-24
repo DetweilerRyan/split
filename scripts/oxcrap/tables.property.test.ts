@@ -10,9 +10,13 @@ import type { Imported } from './tables.ts';
 // never from tables.ts:
 // - **Where the table lives:** in the file, imported whole, or with its handlers imported.
 // - **How its handlers are written:** as arrows in the table, or every entry naming one function
-//   the file declares, exports or default-exports.
+//   the file declares, exports or default-exports. A default-exported function expression,
+//   `export default (function h() {})`, binds no `h` in the module, so it reads as no table.
 // - **How its last entry gets in:** in the literal, or added by the top level, as a statement, with
 //   `export =` or with `export default`.
+// - **Look-alike adds beside the table:** `export default T.add` with no call, or an add inside an
+//   exported array, `export default [T.add(x)]`. Neither is a top-level add, so neither changes the
+//   answer.
 // - **How it's read:** plainly or through a cast, with a runtime key or, for a dispatch, a static
 //   one or none, which reads as no table.
 // - **Decoy functions:** they read the table, change another object, or change the table, in the
@@ -24,9 +28,17 @@ import type { Imported } from './tables.ts';
 type Kind = 'object' | 'map' | 'set' | 'array' | 'in';
 type Placement = 'same' | 'importedTable' | 'importedHandlers' | 'namedHandler';
 /** How a module declares the one function every entry names, in the `namedHandler` placement. */
-type Handler = 'function' | 'exported' | 'defaultExported' | 'defaultAsync' | 'const';
+type Handler =
+  | 'function'
+  | 'exported'
+  | 'defaultExported'
+  | 'defaultAsync'
+  | 'defaultExpression'
+  | 'const';
 /** Where the last entry comes from: the literal, or a top-level add written one of these ways. */
 type Added = 'literal' | 'statement' | 'exportAssignment' | 'exportDefault';
+/** Code beside the table that looks like an add and isn't one. */
+type LookAlike = 'none' | 'uncalled' | 'inArray';
 type Cast = 'none' | 'any' | 'record' | 'parens' | 'nonNull';
 type Decoy = {
   readonly where: 'main' | 'other';
@@ -40,6 +52,7 @@ type Case = {
   readonly placement: Placement;
   readonly handler: Handler;
   readonly added: Added;
+  readonly lookAlike: LookAlike;
   readonly cast: Cast;
   readonly key: number;
   readonly decoys: readonly Decoy[];
@@ -93,32 +106,64 @@ const CHANGES_TO_OTHER: readonly string[] = [
   'delete other[x];',
 ];
 
-/** How the named handler is declared, and how the last entry gets in: one `export default` at most. */
-const handlerAndAdded = fc
-  .constantFrom<Handler>('function', 'exported', 'defaultExported', 'defaultAsync', 'const')
-  .chain((handler) =>
+/** The ways of writing the last entry's add, with `export default` among them when it's free. */
+function addedForms(defaultTaken: boolean): Added[] {
+  return [
+    'literal',
+    'statement',
+    'exportAssignment',
+    ...(defaultTaken ? [] : ['exportDefault' as const]),
+  ];
+}
+
+/**
+ * Where the table lives and how a named handler is declared, drawn together so each way of
+ * declaring it comes up as often as a placement does. Only `namedHandler` declares one.
+ */
+const placements = fc.oneof(
+  fc.record({
+    placement: fc.constantFrom<Placement>('same', 'importedTable', 'importedHandlers'),
+    handler: fc.constant<Handler>('function'),
+  }),
+  fc.record({
+    placement: fc.constant<Placement>('namedHandler'),
+    handler: fc.constantFrom<Handler>(
+      'function',
+      'exported',
+      'defaultExported',
+      'defaultAsync',
+      'defaultExpression',
+      'const',
+    ),
+  }),
+);
+
+/**
+ * The placement and handler, how the last entry gets in, and the look-alike beside the table: a
+ * module has one `export default` at most, so at most one of them uses it.
+ */
+const handlerAndAdded = placements.chain(({ placement, handler }) =>
+  fc.constantFrom(...addedForms(handler.startsWith('default'))).chain((added) =>
     fc.record({
+      placement: fc.constant(placement),
       handler: fc.constant(handler),
-      added: fc.constantFrom<Added>(
-        'literal',
-        'statement',
-        'exportAssignment',
-        ...(handler.startsWith('default') ? [] : ['exportDefault' as const]),
+      added: fc.constant(added),
+      lookAlike: fc.constantFrom<LookAlike>(
+        'none',
+        ...(handler.startsWith('default') || added === 'exportDefault'
+          ? []
+          : (['uncalled', 'inArray'] as const)),
       ),
     }),
-  );
+  ),
+);
 
 const rest = fc.record({
   names: keys,
   kind: fc.constantFrom<Kind>('object', 'map', 'set', 'array', 'in'),
-  placement: fc.constantFrom<Placement>(
-    'same',
-    'importedTable',
-    'importedHandlers',
-    'namedHandler',
-  ),
   cast: fc.constantFrom<Cast>('none', 'any', 'record', 'parens', 'nonNull'),
-  key: fc.nat(),
+  // A runtime key, 0, half the time: the static ones are look-alikes of the read that counts.
+  key: fc.oneof(fc.constant(0), fc.nat()),
   decoys: fc.array(
     fc.record({
       where: fc.constantFrom('main' as const, 'other' as const),
@@ -172,24 +217,49 @@ function definition(test: Case) {
   }
 }
 
-/** The top-level statement that adds the table's last entry, if the literal doesn't hold it. */
-function addition(test: Case) {
-  if (test.added === 'literal') return [];
-  const i = test.names.length - 1;
-  const name = test.names[i];
-  const add = {
+/** The expression that adds entry `i`, named `name`, to the table. */
+function addOf(test: Case, name: string, i: number) {
+  return {
     object: `T.${name} = ${handlerOf(test, i)}`,
     map: `T.set('${name}', ${handlerOf(test, i)})`,
     set: `T.add('${name}')`,
     array: `T[${i}] = '${name}'`,
     in: `T.${name} = 1`,
   }[test.kind];
+}
+
+/** The top-level statements that add the table's last entry, if the literal doesn't hold it, and the look-alike. */
+function addition(test: Case) {
+  return [...lastEntry(test), ...lookAlike(test)];
+}
+
+/** The top-level statement that adds the table's last entry, if the literal doesn't hold it. */
+function lastEntry(test: Case) {
+  if (test.added === 'literal') return [];
+  const i = test.names.length - 1;
+  const add = addOf(test, test.names[i], i);
   const statement = {
     statement: `${add};`,
     exportAssignment: `export = ${add};`,
     exportDefault: `export default ${add};`,
   }[test.added];
   return [statement];
+}
+
+/**
+ * Code beside the table that adds no entry: a method named but not called, or an add inside an
+ * exported array, with a name no key has (keys start with `k`).
+ */
+function lookAlike(test: Case) {
+  const n = test.names.length;
+  const callee = { object: 'T.zz', map: 'T.set', set: 'T.add', array: `T[${n}]`, in: 'T.zz' }[
+    test.kind
+  ];
+  return {
+    none: [],
+    uncalled: [`export default ${callee};`],
+    inArray: [`export default [${addOf(test, 'zz', n)}];`],
+  }[test.lookAlike];
 }
 
 /** The declaration of the one function every entry names, in the `namedHandler` placement. */
@@ -199,6 +269,7 @@ function namedHandler(test: Case) {
     exported: 'export function h() { return 0; }',
     defaultExported: 'export default function h() { return 0; }',
     defaultAsync: 'export default async function h() { return 0; }',
+    defaultExpression: 'export default (function h() { return 0; });',
     const: 'const h = () => 0;',
   }[test.handler];
 }
@@ -332,10 +403,21 @@ function chainVersion(names: readonly string[]) {
   return `export function run(k: string) { return ${names.map((name) => `k === '${name}'`).join(' || ')}; }`;
 }
 
+/** Whether every entry names an `h` the module never binds, so the table holds no function. */
+function unboundHandler(test: Case) {
+  return (
+    test.placement === 'namedHandler' &&
+    isDispatch(test.kind) &&
+    test.handler === 'defaultExpression'
+  );
+}
+
 /** What `run` must score: as the code with no table, or as a read of no table at all. */
 function expected(test: Case, counting: Counting) {
   const hidden = test.shadow === 'param' || test.shadow === 'local' || test.shadow === 'hoistedVar';
-  if (changesTable(test) || hidden || staticRead(test)) return score(test, 'Nope', counting);
+  if (changesTable(test) || hidden || staticRead(test) || unboundHandler(test)) {
+    return score(test, 'Nope', counting);
+  }
   const plain = isDispatch(test.kind) ? switchVersion(test.names) : chainVersion(test.names);
   return parse('plain.ts', plain, counting).functions.find((fn) => fn.label === 'run')?.complexity;
 }
