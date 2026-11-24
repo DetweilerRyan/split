@@ -15,7 +15,7 @@
     "max-nested-callbacks": ["error", 3],
     // The owner's decision (#83): ban classes, except Error subclasses, and `this`.
     "functional/no-classes": "error",
-    "functional/no-this": "error"
+    "functional/no-this": ["error", { "allowInClasses": true }]
   },
   "overrides": [
     {

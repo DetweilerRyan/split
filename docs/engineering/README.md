@@ -20,7 +20,7 @@ How work on this repository gets done: writing and testing code, choosing depend
 ## Code style
 
 - **Write functions over plain data, not classes, and don't use `this`.** Keep state in a function's parameters, or in a factory that closes over it and returns an object of functions, as `createActor` in [`e2e/screenplay/actor.ts`](../../e2e/screenplay/actor.ts) does. An `Error` subclass may be a class. `npm run lint` enforces this through the local oxlint plugin [`scripts/lint/functional.ts`](../../scripts/lint/functional.ts).
-- **`ReceiptStore` keeps its class,** as the owner decided on [#83](https://github.com/DetweilerRyan/split/issues/83). Keeping any other class needs the owner's approval. Disable `functional/no-classes` on the class's line with the reason, and `functional/no-this` on each line that reads `this`, with a short reason that points to the class's comment.
+- **`ReceiptStore` keeps its class,** as the owner decided on [#83](https://github.com/DetweilerRyan/split/issues/83). Keeping any other class needs the owner's approval. Disable `functional/no-classes` on the class's line, with the reason. A `this` that reads the class needs no disable, since `.oxlintrc.json` turns on `functional/no-this`'s `allowInClasses` option; a `this` under a `function` inside the class is still reported.
 
 ## Adding a procedure
 

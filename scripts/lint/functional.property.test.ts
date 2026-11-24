@@ -16,8 +16,19 @@ RuleTester.describe = inPlace;
 RuleTester.it = inPlace;
 const tester = new RuleTester({ languageOptions: { parserOptions: { lang: 'ts' } } });
 
-/** A piece of code, and how many classes and `this`es in it each rule must report. */
-type Code = { readonly code: string; readonly classes: number; readonly thises: number };
+/**
+ * A piece of code, and how many classes and `this`es in it each rule must report: `thises` by
+ * default, and `outside` with `no-this`'s allowInClasses option, which allows a `this` that reads
+ * its class. `free` counts the `this`es that bind to the scope the code is put in, rather than to a
+ * function of its own.
+ */
+type Code = {
+  readonly code: string;
+  readonly classes: number;
+  readonly thises: number;
+  readonly free: number;
+  readonly outside: number;
+};
 
 /**
  * The parts one after another. Each part's names end in `ID`, which becomes its place in the list,
@@ -28,6 +39,8 @@ function join(parts: readonly Code[]): Code {
     code: parts.map((part, i) => part.code.replaceAll('ID', `_${i}`)).join('\n'),
     classes: parts.reduce((sum, part) => sum + part.classes, 0),
     thises: parts.reduce((sum, part) => sum + part.thises, 0),
+    free: parts.reduce((sum, part) => sum + part.free, 0),
+    outside: parts.reduce((sum, part) => sum + part.outside, 0),
   };
 }
 
@@ -48,21 +61,28 @@ const heritage = fc.oneof(
   fc.constant({ clause: ' extends mixin(Error)', error: false }),
 );
 
-/** A statement that reads `this`, or one that looks like it does and doesn't. */
-const statement = fc.constantFrom<Code>(
-  { code: 'this;', classes: 0, thises: 1 },
-  { code: 'use(this.value);', classes: 0, thises: 1 },
-  { code: 'const readID = () => this;', classes: 0, thises: 1 },
-  { code: 'function nestedID() { return this.x + this.y; }', classes: 0, thises: 2 },
-  { code: 'self.value;', classes: 0, thises: 0 },
-  { code: 'globalThis;', classes: 0, thises: 0 },
-  { code: "const saidID = 'this';", classes: 0, thises: 0 },
-  { code: 'thisValue;', classes: 0, thises: 0 },
-  { code: '// this.value', classes: 0, thises: 0 },
-  // `typeof this` only names a type, so it reads nothing at run time.
-  { code: 'let typedID: typeof this;', classes: 0, thises: 0 },
-  { code: 'let fieldID: typeof this.value;', classes: 0, thises: 0 },
-);
+/**
+ * A statement that reads `this`, or one that looks like it does and doesn't. Outside a class, every
+ * `this` in it is reported, with allowInClasses or without.
+ */
+const statement = fc
+  .constantFrom<Omit<Code, 'outside'>>(
+    { code: 'this;', classes: 0, thises: 1, free: 1 },
+    { code: 'use(this.value);', classes: 0, thises: 1, free: 1 },
+    // An arrow function binds no `this` of its own, and a `function` does.
+    { code: 'const readID = () => this;', classes: 0, thises: 1, free: 1 },
+    { code: 'function nestedID() { return this.x + this.y; }', classes: 0, thises: 2, free: 0 },
+    { code: 'const boundID = function () { return this; };', classes: 0, thises: 1, free: 0 },
+    { code: 'self.value;', classes: 0, thises: 0, free: 0 },
+    { code: 'globalThis;', classes: 0, thises: 0, free: 0 },
+    { code: "const saidID = 'this';", classes: 0, thises: 0, free: 0 },
+    { code: 'thisValue;', classes: 0, thises: 0, free: 0 },
+    { code: '// this.value', classes: 0, thises: 0, free: 0 },
+    // `typeof this` only names a type, so it reads nothing at run time.
+    { code: 'let typedID: typeof this;', classes: 0, thises: 0, free: 0 },
+    { code: 'let fieldID: typeof this.value;', classes: 0, thises: 0, free: 0 },
+  )
+  .map((part) => ({ ...part, outside: part.thises }));
 const body = fc.array(statement, { maxLength: 3 }).map(join);
 
 /** The member of a class that holds a body. */
@@ -84,7 +104,7 @@ function membersOf(held: string, inner: string, derived: boolean): string {
   }
 }
 
-/** A class with `members`, written in `place`. */
+/** A class with `members`, written in `place`. Each member binds `this` to its class. */
 function classIn(place: string, n: string, clause: string, members: string): string {
   switch (place) {
     case 'declaration':
@@ -115,6 +135,9 @@ function classAt(places: fc.Arbitrary<string>): fc.Arbitrary<Code> {
       code: classIn(place, n, clause, membersOf(held, inner.code, clause !== '')),
       classes: (error ? 0 : 1) + (place === 'nested' ? 1 : 0),
       thises: inner.thises,
+      free: 0,
+      // The member's own `this`es read the class, and those under a `function` in it don't.
+      outside: inner.thises - inner.free,
     }));
 }
 
@@ -133,19 +156,23 @@ const placedClass = classAt(
 const defaultClass = classAt(fc.constant('export default'));
 
 /** Top-level code that's neither a class nor `this`, though it looks like one. */
-const lookAlike = fc.constantFrom<Code>(
-  { code: 'function typedID(this: Window) {}', classes: 0, thises: 0 },
-  { code: 'interface ChainID { next(): this }', classes: 0, thises: 0 },
-  { code: 'type SelfID = { m(): typeof this };', classes: 0, thises: 0 },
-  { code: 'function pickID(this: A, y: typeof this.x) {}', classes: 0, thises: 0 },
-  { code: "const klassID = { className: 'row' };", classes: 0, thises: 0 },
-  { code: 'function StoreID() { return {}; }', classes: 0, thises: 0 },
-);
+const lookAlike = fc
+  .constantFrom(
+    'function typedID(this: Window) {}',
+    'interface ChainID { next(): this }',
+    'type SelfID = { m(): typeof this };',
+    'function pickID(this: A, y: typeof this.x) {}',
+    "const klassID = { className: 'row' };",
+    'function StoreID() { return {}; }',
+  )
+  .map((code): Code => ({ code, classes: 0, thises: 0, free: 0, outside: 0 }));
 
 /** A function holding `body`, so `this` is read outside any class too. */
 const functionCode = body.map((inner) => ({
   ...inner,
   code: `function fID() {\n${inner.code}\n}`,
+  free: 0,
+  outside: inner.thises,
 }));
 
 const program = fc
@@ -158,15 +185,21 @@ const program = fc
   )
   .map(([parts, last]) => join(last ? [...parts, last] : parts));
 
-/** Checks that `rule` reports `count` problems in `code`. */
+/** A case RuleTester runs, written as an object rather than as code alone. */
+type Case = Exclude<Parameters<RuleTester['run']>[2]['valid'][number], string>;
+
+/** Checks that `rule`, given `options`, reports `count` problems in `code`. */
 function reports(
   ruleName: string,
   rule: typeof noClasses | typeof noThis,
   code: string,
   count: number,
+  options?: Case['options'],
 ) {
-  if (count === 0) tester.run(ruleName, rule, { valid: [code], invalid: [] });
-  else tester.run(ruleName, rule, { valid: [], invalid: [{ code, errors: count }] });
+  // A rule with no options refuses even an empty list, so `no-classes` is given none at all.
+  const test: Case = options ? { code, options } : { code };
+  if (count === 0) tester.run(ruleName, rule, { valid: [test], invalid: [] });
+  else tester.run(ruleName, rule, { valid: [], invalid: [{ ...test, errors: count }] });
 }
 
 describe('the functional plugin, on generated programs', () => {
@@ -175,6 +208,14 @@ describe('the functional plugin, on generated programs', () => {
       fc.property(program, ({ code, classes, thises }) => {
         reports('no-classes', noClasses, code, classes);
         reports('no-this', noThis, code, thises);
+      }),
+    );
+  });
+
+  it('with allowInClasses, reports every `this` that does not read its class', () => {
+    fc.assert(
+      fc.property(program, ({ code, outside }) => {
+        reports('no-this', noThis, code, outside, [{ allowInClasses: true }]);
       }),
     );
   });

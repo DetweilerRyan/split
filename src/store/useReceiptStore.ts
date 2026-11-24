@@ -78,44 +78,30 @@ export class ReceiptStore {
   private snapshot: RoomSnapshot;
 
   constructor(private readonly ydoc: Y.Doc) {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.meta = ydoc.getMap('meta');
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.participants = ydoc.getMap('participants');
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.items = ydoc.getMap('items');
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.claims = ydoc.getMap('claims');
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.snapshot = this.createSnapshot();
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     [this.meta, this.participants, this.items, this.claims].forEach((map) => {
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       map.observeDeep(() => this.publish());
     });
   }
 
   readonly subscribe = (listener: () => void): (() => void) => {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.listeners.add(listener);
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     return () => this.listeners.delete(listener);
   };
 
-  // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
   readonly getSnapshot = (): RoomSnapshot => this.snapshot;
 
   setPeers(peers: RoomSnapshot['peers']): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.peers = peers;
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.publish();
   }
 
   setConnection(connection: RoomSnapshot['connection']): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.connection = connection;
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.publish();
   }
 
@@ -131,18 +117,13 @@ export class ReceiptStore {
       | 'rateDate',
     value: string | number,
   ): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.meta.set(key, value);
   }
 
   setExchangeRate(displayCurrency: string, rate: number, rateDate: string): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.ydoc.transact(() => {
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       this.meta.set('displayCurrency', displayCurrency);
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       this.meta.set('rate', rate);
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       this.meta.set('rateDate', rateDate);
     });
   }
@@ -154,27 +135,19 @@ export class ReceiptStore {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')}`;
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     if (this.participants.has(id)) return null;
     const participant = new Y.Map<unknown>();
     participant.set('id', id);
     participant.set('name', trimmed);
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     participant.set('colorIdx', this.participants.size % 7);
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.participants.set(id, participant);
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     return { id, name: trimmed, colorIdx: this.participants.size % 7 };
   }
 
   removeParticipant(id: string): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.ydoc.transact(() => {
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       this.participants.delete(id);
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       this.claims.forEach((_value, key) => {
-        // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
         if (key.endsWith(`::${id}`)) this.claims.delete(key);
       });
     });
@@ -182,28 +155,22 @@ export class ReceiptStore {
 
   toggleClaim(itemId: string, participantId: string): void {
     const key = `${itemId}::${participantId}`;
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     const item = this.items.get(itemId);
     if (!item) return;
     const legacyClaims = item.get('claims');
     const legacyValue =
       legacyClaims instanceof Y.Map ? legacyClaims.get(participantId) === true : false;
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     const current = this.claims.has(key) ? this.claims.get(key) === true : legacyValue;
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.claims.set(key, !current);
   }
 
   setClaims(itemId: string, participantIds: string[], selected: boolean): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.ydoc.transact(() => {
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       participantIds.forEach((id) => this.claims.set(`${itemId}::${id}`, selected));
     });
   }
 
   updateItem(id: string, field: 'name' | 'en' | 'eur', value: string | number): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.items.get(id)?.set(field, value);
   }
 
@@ -211,31 +178,25 @@ export class ReceiptStore {
     const id = `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const item = new Y.Map<unknown>();
     item.set('id', id);
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     item.set('order', this.items.size);
     item.set('name', name);
     item.set('en', en);
     item.set('eur', eur);
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.items.set(id, item);
   }
 
   deleteItem(id: string): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.items.delete(id);
   }
 
   private publish(): void {
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.snapshot = this.createSnapshot();
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.listeners.forEach((listener) => listener());
   }
 
   // @crap-allow CRAP 27.1, complexity 27. Debt from before the CRAP check (#63): too complex.
   private createSnapshot(): RoomSnapshot {
     const participants: Participant[] = [];
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.participants.forEach((map, key) => {
       if (map instanceof Y.Map) {
         participants.push({
@@ -248,7 +209,6 @@ export class ReceiptStore {
     participants.sort((a, b) => a.colorIdx - b.colorIdx || a.id.localeCompare(b.id));
 
     const items: ReceiptItem[] = [];
-    // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
     this.items.forEach((map, key) => {
       if (!(map instanceof Y.Map)) return;
       const id = String(map.get('id') || key);
@@ -256,10 +216,8 @@ export class ReceiptStore {
       const claimState: Record<string, boolean> = {};
       participants.forEach(({ id: participantId }) => {
         const key = `${id}::${participantId}`;
-        // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
         claimState[participantId] = this.claims.has(key)
-          ? // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
-            this.claims.get(key) === true
+          ? this.claims.get(key) === true
           : legacyClaims instanceof Y.Map && legacyClaims.get(participantId) === true;
       });
       items.push({
@@ -274,37 +232,22 @@ export class ReceiptStore {
     items.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 
     return {
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       title: String(this.meta.get('title') || 'European Receipt'),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       address: String(this.meta.get('address') || ''),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       phone: String(this.meta.get('phone') || ''),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       website: String(this.meta.get('website') || ''),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       purchasedAt: String(this.meta.get('purchasedAt') || ''),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       mealType: String(this.meta.get('mealType') || ''),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       cardTipEur: Number(this.meta.get('cardTipEur')) || 0,
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       cashTipEur: Number(this.meta.get('cashTipEur')) || 0,
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       bankUsd: Number(this.meta.get('bankUsd')) || 0,
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       currency: normalizeCurrency(this.meta.get('currency')),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       displayCurrency: String(this.meta.get('displayCurrency') || ''),
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       rate: Number(this.meta.get('rate')) || 0,
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       rateDate: String(this.meta.get('rateDate') || ''),
       participants,
       items,
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       connection: this.connection,
-      // oxlint-disable-next-line functional/no-this -- ReceiptStore keeps its class; see the comment on it.
       peers: this.peers,
     };
   }
