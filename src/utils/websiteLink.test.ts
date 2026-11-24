@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { websiteUrl } from './websiteUrl';
+import { parseWebsiteLink } from './websiteLink';
 
-describe('websiteUrl', () => {
+describe('parseWebsiteLink', () => {
   it('links a bare domain over https', () => {
-    expect(websiteUrl('daenzoal29.com')?.href).toBe('https://daenzoal29.com/');
-    expect(websiteUrl('daenzoal29.com/menu')?.href).toBe('https://daenzoal29.com/menu');
+    expect(parseWebsiteLink('daenzoal29.com')?.href).toBe('https://daenzoal29.com/');
+    expect(parseWebsiteLink('daenzoal29.com/menu')?.href).toBe('https://daenzoal29.com/menu');
   });
 
   it('links an http or https URL as written', () => {
-    expect(websiteUrl('http://daenzoal29.com/menu')?.href).toBe('http://daenzoal29.com/menu');
-    expect(websiteUrl('HTTPS://DaEnzoAl29.com')?.href).toBe('https://daenzoal29.com/');
+    expect(parseWebsiteLink('http://daenzoal29.com/menu')?.href).toBe('http://daenzoal29.com/menu');
+    expect(parseWebsiteLink('HTTPS://DaEnzoAl29.com')?.href).toBe('https://daenzoal29.com/');
   });
 
   it.each([
@@ -20,6 +20,6 @@ describe('websiteUrl', () => {
     ['a note', 'Ask at the till'],
     ['a host with no dot', 'localhost'],
   ])('links nothing for %s', (_kind, website) => {
-    expect(websiteUrl(website)).toBeNull();
+    expect(parseWebsiteLink(website)).toBeNull();
   });
 });

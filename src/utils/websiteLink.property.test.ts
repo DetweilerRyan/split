@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { websiteUrl } from './websiteUrl';
+import { parseWebsiteLink } from './websiteLink';
 
 /** A scheme written in any mix of cases, as a receipt might print it. */
 function anyCase(scheme: string) {
@@ -23,11 +23,11 @@ const websiteLine = fc.oneof(
   fc.string(),
 );
 
-describe('websiteUrl', () => {
+describe('parseWebsiteLink', () => {
   it('only ever links a web address on a named host, with no credentials in it', () => {
     fc.assert(
       fc.property(websiteLine, (website) => {
-        const url = websiteUrl(website);
+        const url = parseWebsiteLink(website);
         if (!url) return;
         expect(['http:', 'https:']).toContain(url.protocol);
         expect(url.hostname).toContain('.');
@@ -41,7 +41,7 @@ describe('websiteUrl', () => {
   it('links a bare domain to that domain over https', () => {
     fc.assert(
       fc.property(fc.domain(), (domain) => {
-        const url = websiteUrl(domain);
+        const url = parseWebsiteLink(domain);
         expect(url?.protocol).toBe('https:');
         expect(url?.hostname).toBe(new URL(`http://${domain}`).hostname);
       }),
@@ -55,7 +55,7 @@ describe('websiteUrl', () => {
     });
     fc.assert(
       fc.property(written, ({ url, written }) => {
-        expect(websiteUrl(written)?.href).toBe(new URL(url).href);
+        expect(parseWebsiteLink(written)?.href).toBe(new URL(url).href);
       }),
     );
   });

@@ -3,7 +3,7 @@
  * `daenzoal29.com` over https. `null` for anything else a receipt's website line might hold, such as
  * an email address, another scheme, or a note.
  */
-export function websiteUrl(website: string): URL | null {
+export function parseWebsiteLink(website: string): URL | null {
   let url: URL;
   try {
     // `URL.parse` would do without the try, but Safari only has it from 18.
