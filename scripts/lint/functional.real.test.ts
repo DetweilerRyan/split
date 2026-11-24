@@ -41,6 +41,17 @@ describe('the repository lint config', () => {
     ]);
   });
 
+  it('reports a module-level `let` and `var` through the functional plugin', () => {
+    const { status, problems } = lint(
+      'export let count = 0;\nvar total = 0;\nexport function read() {\n  let n = count;\n  return n + total;\n}\n',
+    );
+    expect(status).toBe(1);
+    expect(problems).toEqual([
+      expect.stringMatching(/^code\.ts:1:8: .* \[Error\/functional\(no-module-let\)\]$/),
+      expect.stringMatching(/^code\.ts:2:1: .* \[Error\/functional\(no-module-let\)\]$/),
+    ]);
+  });
+
   it('leaves an Error subclass alone', () => {
     expect(lint('export class NotFound extends Error {}\n')).toEqual({ status: 0, problems: [] });
   });

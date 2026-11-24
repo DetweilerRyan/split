@@ -8,13 +8,15 @@ import { hydrateFromSeed, pendingSeedKey, roomPath } from '@/sync/seedCodec';
 /**
  * The seed dialog: whether it's open, importing a seed or a preset into the room's document, and
  * starting a new blank room, which `navigate` goes to. The new room's seed is saved in `storage`,
- * `window.sessionStorage` when it's left out.
+ * `window.sessionStorage` when it's left out, in the currency of `language`'s region,
+ * `navigator.language` when it's left out.
  */
 export function useSeedImport(
   doc: Doc,
   showToast: (message: string) => void,
   navigate: (path: string) => void,
   storage?: Pick<Storage, 'setItem'>,
+  language?: string,
 ) {
   const [open, setOpen] = useState(false);
 
@@ -44,7 +46,7 @@ export function useSeedImport(
       cardTipEur: 0,
       cashTipEur: 0,
       bankUsd: 0,
-      currency: localeCurrency(),
+      currency: localeCurrency(language ?? navigator.language),
       roster: [],
       items: [],
     };

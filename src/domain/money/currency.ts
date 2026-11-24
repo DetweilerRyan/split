@@ -135,10 +135,14 @@ export function formatMoney(amount: number, code: string, locale?: string): stri
   }).format(amount);
 }
 
-export function localeCurrency(language?: string): string {
+/**
+ * The currency of the region a BCP 47 language tag names or implies, such as `navigator.language`:
+ * `en-GB` is GBP, and `fr`, which implies France, is EUR. USD for a region it doesn't know, or a
+ * tag that isn't one.
+ */
+export function localeCurrency(language: string): string {
   try {
-    const tag = language ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');
-    const region = new Intl.Locale(tag).maximize().region;
+    const region = new Intl.Locale(language).maximize().region;
     return (region && REGION_CURRENCIES[region]) || DEFAULT_CURRENCY;
   } catch {
     return DEFAULT_CURRENCY;

@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { isValidCurrency, normalizeCurrency, toMinor, fromMinor } from './currency';
+import { isValidCurrency, localeCurrency, normalizeCurrency, toMinor, fromMinor } from './currency';
 
 /** A string written in any mix of cases. */
 function anyCase(text: string) {
@@ -98,6 +98,40 @@ describe('minor units', () => {
       fc.property(anyCurrency, minorAmount, (code, minor) => {
         const written = code as string;
         expect(toMinor(fromMinor(minor, written), written)).toBe(minor);
+      }),
+    );
+  });
+});
+
+/** Region subtags, and the currency each one's receipts are in. AQ, Antarctica, has none. */
+const region = fc.constantFrom(
+  { code: 'US', currency: 'USD' },
+  { code: 'GB', currency: 'GBP' },
+  { code: 'JP', currency: 'JPY' },
+  { code: 'DE', currency: 'EUR' },
+  { code: 'IE', currency: 'EUR' },
+  { code: 'BR', currency: 'BRL' },
+  { code: 'KW', currency: 'KWD' },
+  { code: 'AQ', currency: 'USD' },
+);
+
+/** Language subtags, which a tag with a region doesn't take its currency from. */
+const language = fc.constantFrom('en', 'fr', 'de', 'ja', 'pt', 'ar', 'zh-Hant');
+
+describe('localeCurrency', () => {
+  it("takes the currency from a tag's region, whatever its language and case", () => {
+    fc.assert(
+      fc.property(language, region, fc.boolean(), (lang, { code, currency }, upper) => {
+        const tag = `${lang}-${code}`;
+        expect(localeCurrency(upper ? tag.toUpperCase() : tag.toLowerCase())).toBe(currency);
+      }),
+    );
+  });
+
+  it('gives a valid currency for any string, a tag or not', () => {
+    fc.assert(
+      fc.property(fc.string(), (text) => {
+        expect(isValidCurrency(localeCurrency(text))).toBe(true);
       }),
     );
   });

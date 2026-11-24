@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { RuleTester } from 'oxlint/plugins-dev';
 import { describe, it } from 'vitest';
-import { noClasses, noThis } from './functional.ts';
+import { noClasses, noModuleLet, noThis } from './functional.ts';
 
 // Random programs from a small grammar that knows what it writes: how many classes the rule must
 // report, and how many `this`es. The forms vary where a class or `this` lives and what it extends,
@@ -191,7 +191,7 @@ type Case = Exclude<Parameters<RuleTester['run']>[2]['valid'][number], string>;
 /** Checks that `rule`, given `options`, reports `count` problems in `code`. */
 function reports(
   ruleName: string,
-  rule: typeof noClasses | typeof noThis,
+  rule: typeof noClasses | typeof noThis | typeof noModuleLet,
   code: string,
   count: number,
   options?: Case['options'],
@@ -216,6 +216,110 @@ describe('the functional plugin, on generated programs', () => {
     fc.assert(
       fc.property(program, ({ code, outside }) => {
         reports('no-this', noThis, code, outside, [{ allowInClasses: true }]);
+      }),
+    );
+  });
+});
+
+// `no-module-let`'s programs: declarations, each wrapped in what scopes it, and how many of them
+// the rule must report. A `let` lives as long as its module only in the module's own scope or a
+// namespace's; a `var` does unless a function or a static block holds it, since a block doesn't
+// scope a `var`.
+
+/** A declaration, and which keyword declares it. */
+const declaration = fc.oneof(
+  fc
+    .constantFrom('let', 'var', 'const')
+    .chain((kind) =>
+      fc
+        .constantFrom(
+          `${kind} xID = 1;`,
+          `${kind} aID = 1, bID = 2;`,
+          `${kind} { aID, bID } = read();`,
+          `${kind} [firstID] = list;`,
+        )
+        .map((code) => ({ code, kind })),
+    ),
+  // A `let` or `var` with no value, which only a `const` can't be.
+  fc.constantFrom('let', 'var').map((kind) => ({ code: `${kind} pendingID;`, kind })),
+);
+
+/** What scopes the code inside it: a function's own scope, or a block. */
+const scope = fc.constantFrom(
+  { open: 'function fID() {', close: '}', isFunction: true },
+  { open: 'const gID = () => {', close: '};', isFunction: true },
+  { open: 'const oID = { m() {', close: '} };', isFunction: true },
+  { open: 'const hID = async function* () {', close: '};', isFunction: true },
+  { open: 'use(class { static {', close: '} });', isFunction: true },
+  { open: 'use(class { m() {', close: '} });', isFunction: true },
+  { open: 'if (ready) {', close: '}', isFunction: false },
+  { open: 'for (const k of ks) {', close: '}', isFunction: false },
+  { open: 'while (more()) {', close: '}', isFunction: false },
+  { open: 'try {', close: '} catch {}', isFunction: false },
+  { open: 'try {} finally {', close: '}', isFunction: false },
+  { open: '{', close: '}', isFunction: false },
+  { open: 'switch (k) { case 1:', close: '}', isFunction: false },
+  { open: 'label: {', close: '}', isFunction: false },
+);
+
+/** Code that looks like a module-level `let` and isn't one. */
+const lookAlikeLet = fc.constantFrom(
+  "const sayID = 'let x = 1';",
+  '// let x = 1',
+  'declare let ambientID: number;',
+  'declare var ambientID: number;',
+  'declare namespace AmbientID { let x: number; var y: number; }',
+  'declare global { var globalID: number; }',
+  'type LetID = { let: number; var: number };',
+);
+
+/** A declaration, in up to two namespaces and up to three scopes, and whether it's reported. */
+const placedDeclaration = fc
+  .tuple(
+    fc.integer({ min: 0, max: 2 }),
+    fc.array(scope, { maxLength: 3 }),
+    declaration,
+    fc.boolean(),
+  )
+  .map(([namespaces, scopes, { code, kind }, exported]) => {
+    // Only a declaration in a module's or a namespace's own scope can be exported.
+    const written = exported && scopes.length === 0 ? `export ${code}` : code;
+    const opens = [
+      ...Array.from({ length: namespaces }, (_, i) => `namespace N${i}ID {`),
+      ...scopes.map((s) => s.open),
+    ];
+    const closes = [
+      ...Array.from({ length: namespaces }, () => '}'),
+      ...scopes.map((s) => s.close),
+    ];
+    const inFunction = scopes.some((s) => s.isFunction);
+    const reported =
+      (kind === 'let' && scopes.length === 0) || (kind === 'var' && !inFunction) ? 1 : 0;
+    return {
+      code: [...opens, written, ...closes.toReversed()].join('\n'),
+      reported,
+    };
+  });
+
+/** The parts one after another, each part's names made its own, as `join` does. */
+const declarations = fc
+  .array(
+    fc.oneof(
+      placedDeclaration,
+      lookAlikeLet.map((code) => ({ code, reported: 0 })),
+    ),
+    { minLength: 1, maxLength: 4 },
+  )
+  .map((parts) => ({
+    code: parts.map((part, i) => part.code.replaceAll('ID', `_${i}`)).join('\n'),
+    reported: parts.reduce((sum, part) => sum + part.reported, 0),
+  }));
+
+describe('no-module-let, on generated programs', () => {
+  it('reports every `let` in a module’s or namespace’s own scope, and every `var` no function holds', () => {
+    fc.assert(
+      fc.property(declarations, ({ code, reported }) => {
+        reports('no-module-let', noModuleLet, code, reported);
       }),
     );
   });

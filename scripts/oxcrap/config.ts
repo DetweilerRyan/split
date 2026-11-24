@@ -100,8 +100,11 @@ export function parseConfig(text: string, path: string): Partial<Config> {
   };
 }
 
+/** Options laid over the defaults by `merge`. An option set to `undefined` is left unset. */
+type Layer = { readonly [Option in keyof Config]?: Config[Option] | undefined };
+
 /** A config's options over the defaults, and then the command line's over both. */
-export function merge(...layers: readonly Partial<Config>[]): Config {
+export function merge(...layers: readonly Layer[]): Config {
   return Object.assign(
     {},
     DEFAULTS,

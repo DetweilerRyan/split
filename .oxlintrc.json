@@ -16,6 +16,24 @@
     // The owner's decision (#83): ban classes, except Error subclasses, and `this`.
     "functional/no-classes": "error",
     "functional/no-this": ["error", { "allowInClasses": true }],
+    // Contained state (docs/engineering/code-design-principles.md, #116): a module-level `let` or
+    // `var` is state that outlives every call. src/sync/, where long-lived state lives, is exempt
+    // in an override below.
+    "functional/no-module-let": "error",
+    // Least power (#116): no `eval`, `new Function` or `Proxy`. The src/domain/ override repeats
+    // Proxy, since an override's options replace these rather than adding to them.
+    "no-eval": "error",
+    "no-new-func": "error",
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "Proxy",
+        "message": "Write the behaviour out as plain functions: a Proxy hides what a property access does (least power, docs/engineering/code-design-principles.md)."
+      }
+    ],
+    // Deep modules (#116): a barrel file only passes another module's exports through. A
+    // threshold of 0 reports every `export *`, not only one that loads over 100 modules.
+    "oxc/no-barrel-file": ["error", { "threshold": 0 }],
     // The owner's decision (#69): the types we declare are readonly by default, checked level by
     // level. docs/engineering/types-and-schemas.md says what the rule asks for.
     "readonly/types": "error"
@@ -25,6 +43,12 @@
       // A test nests describe, it, fc.property and the callbacks inside by design (#76).
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": { "max-nested-callbacks": "off" }
+    },
+    {
+      // Contained state (#116): src/sync/ keeps the room's long-lived state, so it may hold some
+      // at module level.
+      "files": ["src/sync/**"],
+      "rules": { "functional/no-module-let": "off" }
     },
     // The next two keep out the npm packages a layer in docs/engineering/code-layout.md may not
     // use, from #94. rev-dep checks which repository files a layer imports, not which packages;
@@ -45,6 +69,68 @@
                 "message": "src/domain/ imports only src/domain/, src/utils/ and plain libraries such as zod: no UI, sync, browser storage or server packages (docs/engineering/code-layout.md)."
               }
             ]
+          }
+        ],
+        // Core and shell (#116): no effects or hidden inputs in the domain. The browser's globals
+        // and timers, and the clock and randomness, are the shell's, passed in as arguments.
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Proxy",
+            "message": "Write the behaviour out as plain functions: a Proxy hides what a property access does (least power, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "navigator",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "window",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "document",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "location",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "localStorage",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "sessionStorage",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "indexedDB",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "fetch",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "setTimeout",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "name": "setInterval",
+            "message": "src/domain/ has no effects: take what this gives as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          }
+        ],
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Date",
+            "property": "now",
+            "message": "src/domain/ has no hidden inputs: take the time or the random value as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
+          },
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "src/domain/ has no hidden inputs: take the time or the random value as an argument, and let the shell pass it in (core and shell, docs/engineering/code-design-principles.md)."
           }
         ],
         "react/jsx-filename-extension": ["error", { "extensions": [] }]
