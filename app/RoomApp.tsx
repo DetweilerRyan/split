@@ -8,8 +8,11 @@ function loading() {
   );
 }
 
-export const RoomEntry = dynamic(() => import('../src/RoomEntry'), { ssr: false, loading });
-export const IngestEntry = dynamic(() => import('../src/IngestEntry'), { ssr: false, loading });
+export const RoomEntry = dynamic(() => import('@/components/RoomEntry'), { ssr: false, loading });
+export const IngestEntry = dynamic(() => import('./ingest/_ingest-entry/IngestEntry'), {
+  ssr: false,
+  loading,
+});
 export const RoomView = dynamic(() => import('./r/[room]/_room-view/RoomView'), {
   ssr: false,
   loading,

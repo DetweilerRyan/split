@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Copy, X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
-import { qrSvgPath } from '../utils/qr';
+import { qrSvgPath } from '@/utils/qr';
 
 interface ShareModalProps {
   readonly open: boolean;

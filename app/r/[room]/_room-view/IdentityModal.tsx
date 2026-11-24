@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
-import type { Participant } from '../domain/receipt/roomSnapshot';
+import type { Participant } from '@/domain/receipt/roomSnapshot';
 
 interface IdentityModalProps {
   readonly open: boolean;

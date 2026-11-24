@@ -1,5 +1,5 @@
-import type { ReceiptItem } from '../domain/receipt/roomSnapshot';
-import { formatMoney } from '../domain/money/currency';
+import type { ReceiptItem } from '@/domain/receipt/roomSnapshot';
+import { formatMoney } from '@/domain/money/currency';
 
 interface UnclaimedBannerProps {
   readonly items: readonly ReceiptItem[];

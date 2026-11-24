@@ -3,7 +3,7 @@ import { type Participant, participantId } from '@/domain/receipt/roomSnapshot';
 import type { RoomId } from '@/domain/room/roomId';
 import type { ReceiptStore } from '@/sync/useReceiptStore';
 import type { RoomProvider } from '@/sync/yjsProvider';
-import { useActiveIdentity } from '@/hooks/useActiveIdentity';
+import { useActiveIdentity } from './useActiveIdentity';
 
 /** What `useIdentity` needs of the room's provider. */
 export interface IdentityProvider {

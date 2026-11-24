@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IdentityModal } from './src/components/IdentityModal';
+import { IdentityModal } from './app/r/[room]/_room-view/IdentityModal';
 
 // The app is built with the React Compiler (next.config.ts), and memoization can change what a
 // test sees, so the tests must run through it too. vitest.config.ts adds the compiler to

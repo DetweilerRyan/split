@@ -1,4 +1,4 @@
-import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
+import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 
 export function getConnectionStatusDisplay(status: RoomSnapshot['connection']['status']) {
   switch (status) {
