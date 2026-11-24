@@ -3,6 +3,7 @@ import { WebrtcProvider } from 'y-webrtc';
 import * as Y from 'yjs';
 import { createClient } from '@liveblocks/client';
 import { getYjsProviderForRoom } from '@liveblocks/yjs';
+import { z } from 'zod';
 import { hydrateFromSeed } from './seedCodec';
 import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 import type { RoomId } from '../domain/room/roomId';
@@ -37,7 +38,16 @@ type ProviderRegistry = typeof globalThis & {
   __splitLiveblocksClient?: ReturnType<typeof createClient>;
 };
 
-const providerRegistry = globalThis as ProviderRegistry;
+const providerRegistry: ProviderRegistry = globalThis;
+/**
+ * The part of a peer's awareness state the peer list shows. Any peer can set it to anything, so a
+ * state that doesn't fit shows as a guest.
+ */
+const peerState = z
+  .object({
+    user: z.object({ name: z.string().optional(), color: z.string().optional() }).optional(),
+  })
+  .catch({});
 const providers =
   providerRegistry.__splitRoomProviders ??
   (providerRegistry.__splitRoomProviders = new Map<RoomId, Promise<RoomProvider>>());
@@ -116,9 +126,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
   function updatePeers() {
     const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().entries()).map(
       ([clientId, state]) => {
-        const user = (
-          state as { readonly user?: { readonly name?: string; readonly color?: string } }
-        ).user;
+        const { user } = peerState.parse(state);
         return {
           id: String(clientId),
           name: user?.name || 'Guest',

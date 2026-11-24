@@ -4,7 +4,12 @@ import {
   COUNT_SEPARATELY,
   type Counting,
   isFunctionType,
+  isNamed,
   isNode,
+  parseList,
+  parseName,
+  parseNode,
+  parseNodes,
 } from './complexity.ts';
 import { parse } from './functions.ts';
 
@@ -171,6 +176,64 @@ describe('isNode', () => {
     expect(isNode({ type: 1 })).toBe(false);
     expect(isNode(null)).toBe(false);
     expect(isNode('Identifier')).toBe(false);
+  });
+});
+
+describe('isNamed', () => {
+  it('is true only for a node with a string name, as every identifier has', () => {
+    expect(isNamed({ type: 'Identifier', start: 0, end: 1, name: 'a' })).toBe(true);
+    expect(isNamed({ type: 'PrivateIdentifier', start: 0, end: 2, name: 'a' })).toBe(true);
+    // A literal key, as in `{ 'a': 1 }`, is a node with no name.
+    expect(isNamed({ type: 'Literal', start: 0, end: 3, value: 'a' })).toBe(false);
+    expect(isNamed({ type: 'Identifier', start: 0, end: 1, name: 1 })).toBe(false);
+    expect(isNamed({ name: 'a' })).toBe(false);
+    expect(isNamed(undefined)).toBe(false);
+  });
+});
+
+/** What a parse throws when oxc-parser gives back something it never does. */
+function unexpected(expected: string, found: string) {
+  return `oxCrap expected ${expected} from oxc-parser, but found ${found}. The parser's AST has changed shape: run oxCrap's tests against the installed oxc-parser, and fix what they find.`;
+}
+
+describe('parsing a field oxc-parser always fills', () => {
+  const node = { type: 'Identifier', start: 0, end: 1, name: 'a' };
+  const literal = { type: 'Literal', start: 0, end: 1, value: 1 };
+
+  it('gives back a node, or says what it found instead', () => {
+    expect(parseNode(node)).toBe(node);
+    expect(() => parseNode(undefined)).toThrow(
+      new TypeError(unexpected('an AST node', 'undefined')),
+    );
+    expect(() => parseNode([node])).toThrow(unexpected('an AST node', 'object'));
+  });
+
+  it('gives back a list of nodes, or says what it found instead', () => {
+    const nodes = [node, literal];
+    expect(parseNodes(nodes)).toBe(nodes);
+    expect(parseNodes([])).toEqual([]);
+    expect(() => parseNodes(node)).toThrow(
+      new TypeError(unexpected('a list of AST nodes', 'object')),
+    );
+    expect(() => parseNodes(undefined)).toThrow(unexpected('a list of AST nodes', 'undefined'));
+    // An array literal's hole is null, which only parseList keeps.
+    expect(() => parseNodes([node, null])).toThrow(unexpected('a list of AST nodes', 'object'));
+    expect(() => parseNodes([null, node])).toThrow(unexpected('a list of AST nodes', 'object'));
+  });
+
+  it('gives back a list whatever it holds, or says what it found instead', () => {
+    const items = [node, null];
+    expect(parseList(items)).toBe(items);
+    expect(() => parseList(node)).toThrow(new TypeError(unexpected('a list', 'object')));
+    expect(() => parseList('a')).toThrow(unexpected('a list', 'string'));
+  });
+
+  it("gives back a node's name, or says what it found instead", () => {
+    expect(parseName(node)).toBe('a');
+    expect(() => parseName(literal)).toThrow(
+      new TypeError(unexpected('a named AST node', 'object')),
+    );
+    expect(() => parseName(null)).toThrow(unexpected('a named AST node', 'object'));
   });
 });
 

@@ -57,7 +57,8 @@ function lineAndColumn(text: string, offset: number) {
 function describe(error: ErrorObject, path: string) {
   const option = error.instancePath.slice(1).replaceAll('/', '.');
   if (error.keyword === 'additionalProperties') {
-    const name = (error.params as { readonly additionalProperty: string }).additionalProperty;
+    // Ajv names the extra key in `additionalProperty`, which its types declare only as any.
+    const name = String(error.params.additionalProperty);
     return option
       ? `${path}: "${option}" has no option "${name}".`
       : `${path} has no option "${name}". The options are ${OPTIONS.join(', ')}.`;
@@ -87,10 +88,9 @@ export function parseConfig(text: string, path: string): Partial<Config> {
     throw new ConfigError(`${path} has no option "__proto__", at ${lineAndColumn(text, proto)}.`);
   }
   if (!validate(data)) {
-    // Ajv always sets `errors` when validation fails.
-    throw new ConfigError(
-      (validate.errors as readonly ErrorObject[]).map((error) => describe(error, path)).join('\n'),
-    );
+    // Ajv always sets `errors` when validation fails; its types allow null.
+    const errors = validate.errors ?? [];
+    throw new ConfigError(errors.map((error) => describe(error, path)).join('\n'));
   }
   const { $schema: _, limits, counting, ...rest } = data;
   return {

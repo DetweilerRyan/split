@@ -8,7 +8,9 @@ import {
   COUNT_ALL,
   type Counting,
   isFunctionType,
+  isNamed,
   isNode,
+  parseNode,
 } from './complexity.ts';
 import { recursive } from './recursion.ts';
 import { type Exports, type Imported, lookupAdds, type Readable, tablesIn } from './tables.ts';
@@ -93,7 +95,7 @@ function text(source: string, node: unknown) {
 export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
   const own = fn.id;
   // A function's `id`, when it has one, is an Identifier, whose name is a string.
-  if (isNode(own)) return own.name as string;
+  if (isNamed(own)) return own.name;
   return (parent && nameFromParent(source, fn, parent)) ?? '(anonymous)';
 }
 
@@ -277,7 +279,7 @@ export function parse(
   const result = parseSync(file, source);
   const [error] = result.errors;
   if (error) throw new ParseError(`Couldn't parse ${file}: ${error.message}`);
-  const program = result.program as unknown as AstNode;
+  const program = parseNode(result.program);
   const position = positions(source);
   const tables = tablesIn(program, imported).readable;
   const found: Found = { functions: [], nested: [], statements: [] };
@@ -289,7 +291,7 @@ export function parse(
   const all = found.functions.map(({ fn }) => fn);
   const scored = enclosing ? all.filter((fn) => fn.parents.length === 0) : all;
   if (counting.recursion) countRecursion(program, found.functions, scored, counting);
-  const comments = (result.comments as readonly Comment[]).map(({ type, value, start, end }) => ({
+  const comments = result.comments.map(({ type, value, start, end }) => ({
     type,
     value,
     start,
@@ -311,5 +313,5 @@ export function parse(
 export function moduleExports(file: string, source: string): Exports {
   const result = parseSync(file, source);
   if (result.errors.length > 0) return { tables: new Map(), functions: new Set() };
-  return tablesIn(result.program as unknown as AstNode).exported;
+  return tablesIn(parseNode(result.program)).exported;
 }

@@ -62,6 +62,13 @@ Why the rules in [types and schemas](types-and-schemas.md) are as they are, and 
 - **`satisfies` for `PRESETS`:** the annotation `Readonly<Record<string, ReceiptSeed>>` widened its keys to every string, so the tests' `PRESETS.plitvice` read as possibly missing. `satisfies` checks each seed against the same type and keeps the keys.
 - **Vitest's `assert` in tests:** it narrows the type, as `expect(value).toBeDefined()` doesn't, and fails the test with its message when the value is missing.
 
+## Checked, not asserted
+
+- **Asked for** on [#117](https://github.com/DetweilerRyan/split/issues/117): a type assertion claims a type without checking it, so it's the main way around _honest types_' "parse input where it enters". The owner chose "Everywhere outside tests", [recorded on #117](https://github.com/DetweilerRyan/split/issues/117), including `scripts/oxcrap/`, whose AST narrowing becomes checks, keeping oxCrap's mutation score at its threshold.
+- **Tests are exempt,** where a cast builds a fake. The end-to-end tests' and oxCrap's feature contract's screenplays count as tests: each reads its actor's notes back through one cast, the same in both.
+- **oxCrap parses its AST fields rather than narrowing each node kind to oxc-parser's own types.** Those are interfaces, which TypeScript won't assign to `AstNode`'s index signature, so each walk would need a cast back. A parser that throws on a field oxc-parser always fills adds no branch to its caller, so no function's complexity rises and no mutant is left that only a malformed AST could kill.
+- **What the sweep changed:** 95 assertions outside tests when the rule was turned on, counted on #117. A string name in an import or export, as in `export { T as 'a-b' }`, now names no table or function, where before it was read as `undefined`. A parse error in a coverage report now gives its error's name before its message. `decodeSeed` in `src/sync/seedCodec.ts` keeps its assertion, disabled on its line: it checks only that `items` is an array, and parsing the whole seed would refuse seeds it takes today.
+
 ## The document's scope
 
 - **Not taken:** a broader `code-conventions.md`, considered on #43. Its "Read when" would match almost every task, and it would collect unrelated rules.

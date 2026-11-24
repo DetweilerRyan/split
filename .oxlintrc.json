@@ -34,6 +34,10 @@
     // Deep modules (#116): a barrel file only passes another module's exports through. A
     // threshold of 0 reports every `export *`, not only one that loads over 100 modules.
     "oxc/no-barrel-file": ["error", { "threshold": 0 }],
+    // The owner's decision (#117): honest types, in docs/engineering/code-design-principles.md.
+    // `x as T` claims a type without checking it, so parse or narrow the value instead. `as const`
+    // is still allowed, and tests are exempt in the override below.
+    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
     // The owner's decision (#69): the types we declare are readonly by default, checked level by
     // level. docs/engineering/types-and-schemas.md says what the rule asks for.
     "readonly/types": "error",
@@ -53,6 +57,12 @@
       // at module level.
       "files": ["src/sync/**"],
       "rules": { "functional/no-module-let": "off" }
+    },
+    {
+      // #117: a test may cast to build a fake. The end-to-end tests and oxCrap's feature contract
+      // are tests, screenplays included.
+      "files": ["**/*.test.ts", "**/*.test.tsx", "e2e/**", "scripts/oxcrap/features/**"],
+      "rules": { "typescript/consistent-type-assertions": "off" }
     },
     // The next two keep out the npm packages a layer in docs/engineering/code-layout.md may not
     // use, from #94. rev-dep checks which repository files a layer imports, not which packages;

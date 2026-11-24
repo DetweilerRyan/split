@@ -12,9 +12,20 @@ export type FileCoverage = {
 export type Report = Readonly<Record<string, FileCoverage>>;
 
 /** Whether `file` has every part of an istanbul file entry that the scoring reads. */
-function isFileCoverage(file: unknown) {
-  const entry = file as Partial<FileCoverage> | null | undefined;
-  return Boolean(entry?.statementMap && entry.s && entry.fnMap && entry.f);
+function isFileCoverage(file: unknown): file is FileCoverage {
+  if (typeof file !== 'object' || file === null) return false;
+  return Boolean(
+    Reflect.get(file, 'statementMap') &&
+    Reflect.get(file, 's') &&
+    Reflect.get(file, 'fnMap') &&
+    Reflect.get(file, 'f'),
+  );
+}
+
+/** Whether `report` is an object of istanbul file entries, by path. */
+function isReport(report: unknown): report is Report {
+  const isObject = report !== null && typeof report === 'object' && !Array.isArray(report);
+  return isObject && Object.values(report).every(isFileCoverage);
 }
 
 /** Reads a report's text, keyed by absolute path as istanbul writes it, or says what's wrong. */
@@ -23,13 +34,13 @@ export function parseReport(text: string, path: string): Report {
   try {
     report = JSON.parse(text);
   } catch (error) {
-    throw new Error(`${path} isn't a JSON coverage report: ${(error as Error).message}`);
+    // JSON.parse throws only a SyntaxError, which reads as its name and message.
+    throw new Error(`${path} isn't a JSON coverage report: ${String(error)}`);
   }
-  const isObject = report !== null && typeof report === 'object' && !Array.isArray(report);
-  if (!isObject || !Object.values(report as object).every(isFileCoverage)) {
+  if (!isReport(report)) {
     throw new Error(`${path} isn't an istanbul JSON coverage report, such as coverage-final.json.`);
   }
-  return report as Report;
+  return report;
 }
 
 /**

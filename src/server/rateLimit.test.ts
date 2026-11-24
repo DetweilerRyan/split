@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { isRateLimited, normalizeIp } from './rateLimit';
 
 describe('isRateLimited', () => {
@@ -7,6 +7,24 @@ describe('isRateLimited', () => {
     expect(isRateLimited('k', 2, 1000, 1)).toBe(false);
     expect(isRateLimited('k', 2, 1000, 2)).toBe(true);
     expect(isRateLimited('k', 2, 1000, 2000)).toBe(false);
+  });
+
+  it('keeps at most 1000 keys, forgetting idle ones first and then the oldest', async () => {
+    // A fresh module, so no other test's keys are in it.
+    vi.resetModules();
+    const { isRateLimited: limited } = await import('./rateLimit');
+    for (let i = 0; i < 998; i++) limited(`ip-${i}`, 1, 1000, 5000);
+    limited('idle-a', 1, 1000, 0);
+    limited('idle-b', 1, 1000, 0);
+
+    // Full: the two idle keys go, though they're the newest, and the active ones stay.
+    limited('new-1', 1, 1000, 5000);
+    expect(limited('ip-0', 1, 1000, 5001)).toBe(true);
+
+    // Full of active keys: the oldest, ip-0, goes, so it starts afresh.
+    limited('new-2', 1, 1000, 5002);
+    limited('new-3', 1, 1000, 5003);
+    expect(limited('ip-0', 1, 1000, 5004)).toBe(false);
   });
 });
 

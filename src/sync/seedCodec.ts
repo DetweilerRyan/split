@@ -56,6 +56,7 @@ export function decodeSeed(value: string | null): ReceiptSeed | null {
       ? content
       : LZString.decompressFromEncodedURIComponent(content);
     if (!json) return null;
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- it checks only that `items` is an array, as SeedModal's comment says. Parsing the whole seed would refuse seeds it takes today, a change of behaviour for the owner to decide (#117).
     const seed = JSON.parse(json) as ReceiptSeed;
     return seed && typeof seed === 'object' && Array.isArray(seed.items) ? seed : null;
   } catch {

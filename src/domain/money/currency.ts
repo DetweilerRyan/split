@@ -151,10 +151,10 @@ export function localeCurrency(language: string): string {
 
 export function listCurrencies(): readonly string[] {
   try {
-    const supported = (
-      Intl as unknown as { readonly supportedValuesOf?: (key: string) => readonly string[] }
-    ).supportedValuesOf?.('currency');
-    if (supported?.length) return supported;
+    // TypeScript's lib declares Intl.supportedValuesOf, but older browsers don't have it.
+    const supported =
+      typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('currency') : [];
+    if (supported.length) return supported;
   } catch {}
   return COMMON_CURRENCIES;
 }

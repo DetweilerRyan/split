@@ -328,6 +328,15 @@ describe('which tables count', () => {
     expect([...found.exported.functions].sort()).toEqual(['a', 'bee', 'd', 'e']);
   });
 
+  it('follows no import or export under a string name, which no identifier reads', () => {
+    const found = tables(
+      "import { 'a-b' as A, C } from './a.ts';\nconst S = new Set(['x']);\nfunction f() {}\nexport { S as 's-t', f as 'f-g', S as U };",
+    );
+    expect(found.imports).toEqual([{ local: 'C', imported: 'C', from: './a.ts' }]);
+    expect([...found.exported.tables.keys()]).toEqual(['U']);
+    expect([...found.exported.functions]).toEqual([]);
+  });
+
   it('lists what a module exports and imports', () => {
     const found = tables(
       "import { A, B as C } from './a.ts';\nimport D from './d.ts';\nimport { E } from 'package';\nconst S = new Set(['x']);\nexport { S as T };\nexport const U = ['y'];",

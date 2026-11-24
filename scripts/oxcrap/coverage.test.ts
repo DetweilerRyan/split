@@ -159,6 +159,15 @@ describe('parseReport', () => {
     );
   });
 
+  it.each(['5', '"x"'])(
+    'refuses a report whose file entry is %s, which isn’t an object',
+    (entry) => {
+      expect(() => parseReport(`{"/repo/src/a.ts": ${entry}}`, 'c.json')).toThrow(
+        "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
+      );
+    },
+  );
+
   it.each(['null', '5', '"x"', 'true', '[]'])('refuses %s, which isn’t a report at all', (text) => {
     expect(() => parseReport(text, 'c.json')).toThrow(
       "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",

@@ -13,10 +13,49 @@ export type AstNode = {
 
 export function isNode(value: unknown): value is AstNode {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as { readonly type?: unknown }).type === 'string'
+    typeof value === 'object' && value !== null && typeof Reflect.get(value, 'type') === 'string'
   );
+}
+
+/** A node with a string `name`: an identifier of any kind, such as `Identifier` or `PrivateIdentifier`. */
+export type Named = AstNode & { readonly name: string };
+
+export function isNamed(value: unknown): value is Named {
+  return isNode(value) && typeof value.name === 'string';
+}
+
+/** The error for a value where oxc-parser always puts something else. */
+function unexpected(expected: string, value: unknown) {
+  return new TypeError(
+    `oxCrap expected ${expected} from oxc-parser, but found ${typeof value}. The parser's AST has changed shape: run oxCrap's tests against the installed oxc-parser, and fix what they find.`,
+  );
+}
+
+/** A field where oxc-parser always puts a node, such as a call's `callee`. Throws if it holds none. */
+export function parseNode(value: unknown): AstNode {
+  if (isNode(value)) return value;
+  throw unexpected('an AST node', value);
+}
+
+/** The name of a node oxc-parser always names, such as an `Identifier`. Throws if it has none. */
+export function parseName(value: unknown): string {
+  if (isNamed(value)) return value.name;
+  throw unexpected('a named AST node', value);
+}
+
+/** A field where oxc-parser always puts a list of nodes, such as a block's `body`. Throws if it doesn't. */
+export function parseNodes(value: unknown): readonly AstNode[] {
+  if (Array.isArray(value) && value.every(isNode)) return value;
+  throw unexpected('a list of AST nodes', value);
+}
+
+/**
+ * A field where oxc-parser always puts a list whose entries may not all be nodes, such as an array
+ * literal's `elements`, where a hole is null. Throws if it holds no list.
+ */
+export function parseList(value: unknown): readonly unknown[] {
+  if (Array.isArray(value)) return value;
+  throw unexpected('a list', value);
 }
 
 /** Whether a node type is a function's. A nested one is scored separately only with `own` counting. */
@@ -112,8 +151,7 @@ function adds(node: AstNode, parent: AstNode, counting: Counting) {
   switch (node.type) {
     case 'SwitchStatement':
       // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
-      return counting.switchCases === 'once' &&
-        (node.cases as readonly AstNode[]).some((c) => c.test !== null)
+      return counting.switchCases === 'once' && parseNodes(node.cases).some((c) => c.test !== null)
         ? 1
         : 0;
     case 'SwitchCase':
@@ -129,7 +167,7 @@ function adds(node: AstNode, parent: AstNode, counting: Counting) {
       return counting.labelledJumps && node.label ? 1 : 0;
     case 'AssignmentExpression':
       // `&&=`, `||=` and `??=`.
-      return LOGICAL_ASSIGNMENTS.has(node.operator as string) ? 1 : 0;
+      return LOGICAL_ASSIGNMENTS.has(String(node.operator)) ? 1 : 0;
     case 'AssignmentPattern':
       // `x = 1` as a parameter, or `{ x = 1 }` and `[x = 1]` in destructuring.
       return counting.defaultValues ? 1 : 0;
@@ -149,11 +187,11 @@ function adds(node: AstNode, parent: AstNode, counting: Counting) {
 function operatorRuns(node: AstNode) {
   const operators: string[] = [];
   function walk(n: AstNode) {
-    if (n.type === 'ParenthesizedExpression') walk(n.expression as AstNode);
+    if (n.type === 'ParenthesizedExpression') walk(parseNode(n.expression));
     else if (n.type === 'LogicalExpression') {
-      walk(n.left as AstNode);
-      operators.push(n.operator as string);
-      walk(n.right as AstNode);
+      walk(parseNode(n.left));
+      operators.push(String(n.operator));
+      walk(parseNode(n.right));
     }
   }
   walk(node);

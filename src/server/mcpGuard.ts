@@ -1,9 +1,12 @@
 import { ipAddress } from '@vercel/functions';
+import { z } from 'zod';
 import { isRateLimited, normalizeIp } from './rateLimit';
 
 export const MAX_BODY_BYTES = 64 * 1024;
 const LIMIT = 30;
 const WINDOW_MS = 60_000;
+/** A JSON-RPC message calling a tool. */
+const toolCall = z.object({ method: z.literal('tools/call') });
 
 function jsonRpcError(
   status: number,
@@ -43,7 +46,7 @@ function hasToolCall(body: string): boolean {
   try {
     const parsed: unknown = JSON.parse(body);
     return (Array.isArray(parsed) ? parsed : [parsed]).some(
-      (message) => (message as { readonly method?: unknown } | null)?.method === 'tools/call',
+      (message) => toolCall.safeParse(message).success,
     );
   } catch {
     return false;

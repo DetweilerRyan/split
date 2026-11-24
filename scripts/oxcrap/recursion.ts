@@ -9,7 +9,17 @@
 //   it's the instance and reaches the rest. A field hides a method of the same name on its side,
 //   so if it holds no function, the call reaches none.
 // Calls through other objects, variables or files aren't followed. Why is in oxcrap.meta.md.
-import { type AstNode, children, isFunctionType, isNode } from './complexity.ts';
+import {
+  type AstNode,
+  children,
+  isFunctionType,
+  isNamed,
+  isNode,
+  parseList,
+  parseName,
+  parseNode,
+  parseNodes,
+} from './complexity.ts';
 
 /** A scope's names, each bound to the function it names, or to null for anything else. */
 type Scope = ReadonlyMap<string, AstNode | null>;
@@ -55,7 +65,7 @@ function opensScope(node: AstNode) {
 function boundNames(pattern: unknown, into: Names = []): readonly string[] {
   if (!isNode(pattern)) return into;
   // Stryker disable next-line ConditionalExpression: no other binding pattern has a `name`, so this would only add undefined, which no lookup asks for.
-  if (pattern.type === 'Identifier') into.push(pattern.name as string);
+  if (pattern.type === 'Identifier') into.push(parseName(pattern));
   for (const part of patternParts(pattern)) boundNames(part, into);
   return into;
 }
@@ -70,9 +80,9 @@ function patternParts(pattern: AstNode): readonly unknown[] {
     case 'TSParameterProperty':
       return [pattern.parameter];
     case 'ArrayPattern':
-      return pattern.elements as readonly unknown[];
+      return parseList(pattern.elements);
     case 'ObjectPattern':
-      return (pattern.properties as readonly AstNode[]).map((property) =>
+      return parseNodes(pattern.properties).map((property) =>
         property.type === 'RestElement' ? property : property.value,
       );
     default:
@@ -90,7 +100,7 @@ function functionValue(node: unknown): AstNode | null {
 
 /** Declares `id`, if there is one, as naming `fn`. */
 function declareId(scope: Filling, id: unknown, fn: AstNode | null) {
-  if (isNode(id)) scope.set(id.name as string, fn);
+  if (isNamed(id)) scope.set(id.name, fn);
 }
 
 /** Declares every name `pattern` binds, as naming no function. */
@@ -133,7 +143,7 @@ function declareLexical(scope: Filling, node: unknown) {
 }
 
 function declareVariables(scope: Filling, declaration: AstNode) {
-  for (const declarator of declaration.declarations as readonly AstNode[]) {
+  for (const declarator of parseNodes(declaration.declarations)) {
     const value =
       isNode(declarator.id) && declarator.id.type === 'Identifier'
         ? functionValue(declarator.init)
@@ -161,10 +171,10 @@ function functionScopes(fn: AstNode, scopes: readonly Scope[]) {
   const own: Filling = new Map();
   // A named function expression can call itself by its own name.
   if (fn.type === 'FunctionExpression') declareId(own, fn.id, fn);
-  for (const param of fn.params as readonly unknown[]) declarePattern(own, param);
+  for (const param of parseList(fn.params)) declarePattern(own, param);
   const vars: Filling = new Map();
   // Every function of the three function types has a body; a signature without one has a type of its own.
-  declareVars(vars, fn.body as AstNode);
+  declareVars(vars, parseNode(fn.body));
   const params = [...scopes, own];
   return { params, body: [...params, vars] };
 }
@@ -177,19 +187,19 @@ function blockScope(node: AstNode): Scope {
     case 'Program':
     case 'StaticBlock':
       declareVars(scope, node);
-      declareBlock(scope, node.body as readonly AstNode[]);
+      declareBlock(scope, parseNodes(node.body));
       break;
     case 'BlockStatement':
-      declareBlock(scope, node.body as readonly AstNode[]);
+      declareBlock(scope, parseNodes(node.body));
       break;
     case 'SwitchStatement':
-      for (const switchCase of node.cases as readonly AstNode[]) {
-        declareBlock(scope, switchCase.consequent as readonly AstNode[]);
+      for (const switchCase of parseNodes(node.cases)) {
+        declareBlock(scope, parseNodes(switchCase.consequent));
       }
       break;
     case 'CatchClause':
       declarePattern(scope, node.param);
-      redeclaredByVar(scope, node.body as AstNode);
+      redeclaredByVar(scope, parseNode(node.body));
       break;
     default:
       // A loop: what its head declares, as in `for (const x of xs)`.
@@ -215,7 +225,7 @@ function redeclaredByVar(scope: Filling, block: AstNode) {
 function classMembers(body: AstNode): { readonly instance: Members; readonly statics: Members } {
   const instance = new Map<string | undefined, AstNode | null>();
   const statics = new Map<string | undefined, AstNode | null>();
-  const all = body.body as readonly AstNode[];
+  const all = parseNodes(body.body);
   // A field is defined on the instance or the class after the methods are, so it hides a method of
   // its name wherever it's written: the fields go again at the end.
   for (const member of [...all, ...all.filter(isField)]) {
@@ -236,10 +246,8 @@ function isField(member: AstNode) {
  * block, or a literal key, which has a `value` and no `name`.
  */
 function memberName(key: unknown): string | undefined {
-  if (!isNode(key)) return undefined;
-  return key.type === 'PrivateIdentifier'
-    ? `#${key.name as string}`
-    : (key.name as string | undefined);
+  if (!isNamed(key)) return undefined;
+  return key.type === 'PrivateIdentifier' ? `#${key.name}` : key.name;
 }
 
 /** The name, `f` or `#f`, a `this.f()` or `this.#f()` call is to, or undefined for any other callee. */
@@ -261,10 +269,10 @@ export function shadowedUses(program: AstNode, names: ReadonlySet<string>): Read
 
 /** Adds the uses of `names` in `node` and below that an inner scope hides, to `into`. */
 function hidden(node: AstNode, scopes: readonly Scope[], names: ReadonlySet<string>, into: Hidden) {
-  if (node.type === 'Identifier' && names.has(node.name as string)) {
-    const name = node.name as string;
+  if (node.type === 'Identifier') {
+    const name = parseName(node);
     // Scope 0 is the program's own: a binding found further in hides the top-level one.
-    if (scopes.findLastIndex((scope) => scope.has(name)) > 0) into.add(node);
+    if (names.has(name) && scopes.findLastIndex((scope) => scope.has(name)) > 0) into.add(node);
   }
   if (isFunctionType(node.type)) return hiddenInFunction(node, scopes, names, into);
   const inner = opensScope(node) ? [...scopes, blockScope(node)] : scopes;
@@ -342,9 +350,9 @@ function callsIn(
 
 /** A bare `f()` or a `this.f()`, with or without `new`, resolved to the function it calls. */
 function callsOf(call: AstNode, context: Context): readonly Call[] {
-  const callee = call.callee as AstNode;
+  const callee = parseNode(call.callee);
   // Stryker disable next-line ConditionalExpression: any other callee has no `name`, and no scope declares an undefined name, so its lookup finds no function.
-  const named = callee.type === 'Identifier' ? [lookup(context.scopes, callee.name as string)] : [];
+  const named = callee.type === 'Identifier' ? [lookup(context.scopes, parseName(callee))] : [];
   const method = thisMethod(callee);
   // Stryker disable next-line ConditionalExpression: a class has no member named undefined, so the lookup finds no function.
   const viaThis = method === undefined ? [] : [context.self?.get(method)];
@@ -357,7 +365,7 @@ function callsOf(call: AstNode, context: Context): readonly Call[] {
  */
 function callsInClass(body: AstNode, context: Context, into: Calls): readonly Call[] {
   const { instance, statics } = classMembers(body);
-  for (const member of body.body as readonly AstNode[]) {
+  for (const member of parseNodes(body.body)) {
     const self = member.static || member.type === 'StaticBlock' ? statics : instance;
     callsInMember(member, context, self, into);
   }
@@ -425,16 +433,16 @@ function graphOf<Fn>(
 
 /** The nodes in a cycle of `edges`: those that lead back to themselves. */
 function inCycles<Fn>(edges: ReadonlyMap<Fn, ReadonlySet<Fn>>) {
-  return new Set([...edges.keys()].filter((fn) => reachable(edges, fn).has(fn)));
+  const cycles = [...edges].filter(([fn, targets]) => reachable(edges, targets).has(fn));
+  return new Set(cycles.map(([fn]) => fn));
 }
 
-/** The nodes `start` leads to by one edge or more. */
-function reachable<Fn>(edges: ReadonlyMap<Fn, ReadonlySet<Fn>>, start: Fn) {
+/** The nodes `targets` are, and those they lead to by one edge or more. */
+function reachable<Fn>(edges: ReadonlyMap<Fn, ReadonlySet<Fn>>, targets: ReadonlySet<Fn>) {
   const seen = new Set<Fn>();
-  // `start` is one of the keys of `edges`.
-  const next = [...(edges.get(start) as ReadonlySet<Fn>)];
-  while (next.length > 0) {
-    const fn = next.pop() as Fn;
+  const next = [...targets];
+  // No node is undefined: graphOf leaves out a call from or to none.
+  for (let fn = next.pop(); fn !== undefined; fn = next.pop()) {
     if (seen.has(fn)) continue;
     seen.add(fn);
     // Stryker disable next-line ArrayDeclaration: the seeded string is no function, so it adds no way back to one.
