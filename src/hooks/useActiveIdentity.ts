@@ -4,9 +4,9 @@ import type { RoomProvider } from '../sync/yjsProvider';
 import type { RoomId } from '../domain/room/roomId';
 
 interface Participant {
-  id: string;
-  name: string;
-  colorIdx: number;
+  readonly id: string;
+  readonly name: string;
+  readonly colorIdx: number;
 }
 
 export function useActiveIdentity(

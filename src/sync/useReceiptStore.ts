@@ -129,7 +129,7 @@ export class ReceiptStore {
     this.claims.set(key, !current);
   }
 
-  setClaims(itemId: string, participantIds: string[], selected: boolean): void {
+  setClaims(itemId: string, participantIds: readonly string[], selected: boolean): void {
     this.ydoc.transact(() => {
       participantIds.forEach((id) => this.claims.set(`${itemId}::${id}`, selected));
     });

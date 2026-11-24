@@ -4,18 +4,18 @@ import type { Participant, RoomSnapshot } from '../domain/receipt/roomSnapshot';
 import { getConnectionStatusDisplay } from './connectionStatus';
 
 interface HeaderProps {
-  title: string;
-  purchasedAt: string;
-  mealType: string;
-  onDetails: () => void;
-  activeId: string | null;
-  connection: RoomSnapshot['connection'];
-  peers: RoomSnapshot['peers'];
-  participants: readonly Participant[];
-  editing: boolean;
-  onIdentity: () => void;
-  onEdit: () => void;
-  onShare: () => void;
+  readonly title: string;
+  readonly purchasedAt: string;
+  readonly mealType: string;
+  readonly onDetails: () => void;
+  readonly activeId: string | null;
+  readonly connection: RoomSnapshot['connection'];
+  readonly peers: RoomSnapshot['peers'];
+  readonly participants: readonly Participant[];
+  readonly editing: boolean;
+  readonly onIdentity: () => void;
+  readonly onEdit: () => void;
+  readonly onShare: () => void;
 }
 
 export function Header({

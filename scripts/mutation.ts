@@ -28,7 +28,7 @@ function mutated(file: string) {
  * `--mutate` takes them: `file:start-end`. Deleted lines leave nothing to mutate. It expects the
  * diff `diffArgs` asks for: `a/` and `b/` prefixes and unquoted paths.
  */
-export function changedRanges(diff: string): string[] {
+export function changedRanges(diff: string): readonly string[] {
   const ranges: string[] = [];
   let file: string | undefined;
   for (const line of diff.split('\n')) {
@@ -71,7 +71,7 @@ export function diffArgs(base: string) {
   ];
 }
 
-function git(args: string[], cwd: string) {
+function git(args: readonly string[], cwd: string) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   if (result.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${result.stderr.trim()}`);
   return result.stdout.trim();
@@ -101,7 +101,7 @@ function copyAtomically(from: string, to: string) {
   renameSync(partial, to);
 }
 
-function stryker(root: string, args: string[]) {
+function stryker(root: string, args: readonly string[]) {
   const result = spawnSync(resolve(root, 'node_modules/.bin/stryker'), args, {
     cwd: root,
     stdio: 'inherit',

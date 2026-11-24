@@ -1,13 +1,13 @@
 import { normalizeCurrency } from '../domain/money/currency';
 
 export interface ExchangeRate {
-  base: string;
-  quote: string;
-  rate: number;
+  readonly base: string;
+  readonly quote: string;
+  readonly rate: number;
   /** Publication date of the rate (YYYY-MM-DD) as reported by the provider. */
-  date: string;
+  readonly date: string;
   /** Epoch ms when the rate was fetched. */
-  fetchedAt: number;
+  readonly fetchedAt: number;
 }
 
 const DB_NAME = 'splitsmart-rates';
@@ -67,7 +67,7 @@ async function writeCache(key: string, value: ExchangeRate): Promise<void> {
 export async function getExchangeRate(
   baseCode: string,
   quoteCode: string,
-  { force = false, now = Date.now() }: { force?: boolean; now?: number } = {},
+  { force = false, now = Date.now() }: { readonly force?: boolean; readonly now?: number } = {},
 ): Promise<ExchangeRate | null> {
   const base = normalizeCurrency(baseCode);
   const quote = normalizeCurrency(quoteCode);
@@ -80,7 +80,10 @@ export async function getExchangeRate(
   try {
     const response = await fetch(`${API}?base=${base}&symbols=${quote}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = (await response.json()) as { date?: string; rates?: Record<string, number> };
+    const data = (await response.json()) as {
+      readonly date?: string;
+      readonly rates?: Readonly<Record<string, number>>;
+    };
     const rate = data.rates?.[quote];
     if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error('No rate');
     const fresh: ExchangeRate = {

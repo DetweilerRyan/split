@@ -5,19 +5,23 @@ import { parse } from './functions.ts';
 
 /** An istanbul file entry with one statement per listed line, run or not. */
 function report(
-  statements: [line: number, run: boolean][],
-  functions: [line: number, called: boolean][] = [],
+  statements: readonly (readonly [line: number, run: boolean])[],
+  functions: readonly (readonly [line: number, called: boolean])[] = [],
 ) {
-  const file: FileCoverage = { statementMap: {}, s: {}, fnMap: {}, f: {} };
-  statements.forEach(([line, run], i) => {
-    file.statementMap[i] = { start: { line, column: 2 }, end: { line, column: 10 } };
-    file.s[i] = run ? 1 : 0;
-  });
-  functions.forEach(([line, called], i) => {
+  const file: FileCoverage = {
+    statementMap: Object.fromEntries(
+      statements.map(([line], i) => [i, { start: { line, column: 2 }, end: { line, column: 10 } }]),
+    ),
+    s: Object.fromEntries(statements.map(([, run], i) => [i, run ? 1 : 0])),
     // Where `const one = () => 1;` puts its arrow function: columns 12 to 19.
-    file.fnMap[i] = { loc: { start: { line, column: 12 }, end: { line, column: 19 } } };
-    file.f[i] = called ? 1 : 0;
-  });
+    fnMap: Object.fromEntries(
+      functions.map(([line], i) => [
+        i,
+        { loc: { start: { line, column: 12 }, end: { line, column: 19 } } },
+      ]),
+    ),
+    f: Object.fromEntries(functions.map(([, called], i) => [i, called ? 1 : 0])),
+  };
   return file;
 }
 

@@ -4,13 +4,18 @@
 // oxcrap.meta.md beside this file.
 
 /** An oxc-parser AST node: ESTree-shaped, with UTF-16 `start` and `end` offsets. */
-export type AstNode = { type: string; start: number; end: number; [key: string]: unknown };
+export type AstNode = {
+  readonly type: string;
+  readonly start: number;
+  readonly end: number;
+  readonly [key: string]: unknown;
+};
 
 export function isNode(value: unknown): value is AstNode {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof (value as { type?: unknown }).type === 'string'
+    typeof (value as { readonly type?: unknown }).type === 'string'
   );
 }
 
@@ -42,24 +47,24 @@ const LOGICAL_ASSIGNMENTS = new Set(['&&=', '||=', '??=']);
 /** What counts beyond the fixed branches. Each is on by default. */
 export type Counting = {
   /** `enclosing`: a function's nested functions count towards it. `own`: each is scored alone. */
-  nestedFunctions: 'enclosing' | 'own';
+  readonly nestedFunctions: 'enclosing' | 'own';
   /** Whether each default value, in a parameter or in destructuring, adds a path. */
-  defaultValues: boolean;
+  readonly defaultValues: boolean;
   /** Whether each optional link, `?.`, adds a path. */
-  optionalChaining: boolean;
+  readonly optionalChaining: boolean;
   /** `each`: every non-default `case` adds a path. `once`: a whole `switch` adds one. */
-  switchCases: 'each' | 'once';
+  readonly switchCases: 'each' | 'once';
   /** `each`: every `&&`, `||` and `??` adds a path. `sequence`: each run of the same one adds one. */
-  logicalOperators: 'each' | 'sequence';
+  readonly logicalOperators: 'each' | 'sequence';
   /** Whether a function in a recursion cycle, calling itself or through others, adds a path. */
-  recursion: boolean;
+  readonly recursion: boolean;
   /** Whether each `break` or `continue` to a label adds a path. */
-  labelledJumps: boolean;
+  readonly labelledJumps: boolean;
   /**
    * Whether reading a static lookup table adds the paths it stands for: a dispatch table, holding
    * functions, as a switch; `.has`, `.includes` and `in` as an `||` chain. tables.ts says how.
    */
-  lookupTables: boolean;
+  readonly lookupTables: boolean;
 };
 
 /** Every kind of branching counted: oxCrap's default. */
@@ -90,12 +95,12 @@ export const COUNT_SEPARATELY: Counting = {
 };
 
 /** The child nodes of `node`, in source order. */
-export function children(node: AstNode): AstNode[] {
+export function children(node: AstNode): readonly AstNode[] {
   return Object.values(node).flatMap(nodesIn);
 }
 
 /** The nodes one property of a node holds: those in its array, or the value if it's a node. */
-function nodesIn(value: unknown): AstNode[] {
+function nodesIn(value: unknown): readonly AstNode[] {
   if (Array.isArray(value)) return value.filter(isNode);
   return isNode(value) ? [value] : [];
 }
@@ -108,7 +113,7 @@ function adds(node: AstNode, parent: AstNode, counting: Counting) {
     case 'SwitchStatement':
       // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
       return counting.switchCases === 'once' &&
-        (node.cases as AstNode[]).some((c) => c.test !== null)
+        (node.cases as readonly AstNode[]).some((c) => c.test !== null)
         ? 1
         : 0;
     case 'SwitchCase':

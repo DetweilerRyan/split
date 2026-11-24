@@ -14,34 +14,40 @@ import { recursive } from './recursion.ts';
 import { type Exports, type Imported, lookupAdds, type Readable, tablesIn } from './tables.ts';
 
 /** A 1-based line and a 0-based column in UTF-16 units, as istanbul coverage reports use. */
-export type Position = { line: number; column: number };
-export type Range = { start: Position; end: Position };
+export type Position = { readonly line: number; readonly column: number };
+export type Range = { readonly start: Position; readonly end: Position };
 export type Fn = Range & {
   /** Its own label, such as "changeDisplayCurrency" or "seed.items.forEach callback". */
-  label: string;
+  readonly label: string;
   /** Its label inside the functions around it: "RoomView > changeDisplayCurrency". */
-  name: string;
+  readonly name: string;
+  // oxlint-disable-next-line readonly/types -- countRecursion adds to it in place: a nested function's `parents` holds this Fn itself, so a copy would leave them stale.
   complexity: number;
   /** UTF-16 offsets of the function in its file. */
-  offset: { start: number; end: number };
+  readonly offset: { readonly start: number; readonly end: number };
   /** The functions it sits inside, outermost first. */
-  parents: Fn[];
+  readonly parents: readonly Fn[];
   /** Whether it's passed straight to a call, as `items.forEach(() => …)` passes its callback. */
-  passedToCall: boolean;
+  readonly passedToCall: boolean;
 };
-export type Comment = { type: 'Line' | 'Block'; value: string; start: number; end: number };
+export type Comment = {
+  readonly type: 'Line' | 'Block';
+  readonly value: string;
+  readonly start: number;
+  readonly end: number;
+};
 export type Parsed = {
   /** The functions scored: all of them, or with `enclosing` counting only the outermost. */
-  functions: Fn[];
+  readonly functions: readonly Fn[];
   /** With `enclosing` counting, the functions inside a scored one, which count towards it. */
-  nested: Fn[];
-  comments: Comment[];
+  readonly nested: readonly Fn[];
+  readonly comments: readonly Comment[];
   /**
    * The UTF-16 offsets of every simple statement, outermost first: an expression, a variable
    * declaration, a `return` or an export. Not a block, a loop, an `if`, a class or a function.
    */
-  statements: { start: number; end: number }[];
-  position: (offset: number) => Position;
+  readonly statements: readonly { readonly start: number; readonly end: number }[];
+  readonly position: (offset: number) => Position;
 };
 
 /** The statements a formatter might wrap a call in, which a @crap-allow comment can sit above. */
@@ -119,20 +125,25 @@ function callback(callee: string | undefined) {
  * function in a JSX expression. A JSX child's expression sits in an element or fragment instead,
  * which has no name.
  */
-function jsxAttribute(source: string, ancestors: AstNode[]) {
+function jsxAttribute(source: string, ancestors: readonly AstNode[]) {
   return text(source, ancestors[ancestors.length - 2].name);
 }
 
 /** What one file's walk needs throughout: its text, how to count, and where each offset is. */
 type Source = {
-  text: string;
-  counting: Counting;
-  position: (offset: number) => Position;
+  readonly text: string;
+  readonly counting: Counting;
+  readonly position: (offset: number) => Position;
   /** The lookup tables the module can read, own and imported, and the uses a local hides. */
   readonly tables: Readable;
 };
 /** What a walk finds: each function with the node it came from, and the simple statements. */
-type Found = { functions: { fn: Fn; node: AstNode }[]; statements: Parsed['statements'] };
+type Found = {
+  // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, so deeply nested code needs no copy at each level.
+  readonly functions: { readonly fn: Fn; readonly node: AstNode }[];
+  // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, as for `functions`.
+  readonly statements: { readonly start: number; readonly end: number }[];
+};
 
 /**
  * Adds the functions and simple statements in `node` and below it to `into`, in source order, and
@@ -141,8 +152,8 @@ type Found = { functions: { fn: Fn; node: AstNode }[]; statements: Parsed['state
  */
 function walk(
   node: AstNode,
-  ancestors: AstNode[],
-  enclosing: Fn[],
+  ancestors: readonly AstNode[],
+  enclosing: readonly Fn[],
   source: Source,
   into: Found = { functions: [], statements: [] },
 ): Found {
@@ -157,11 +168,11 @@ function walk(
  */
 function record(
   node: AstNode,
-  ancestors: AstNode[],
-  enclosing: Fn[],
+  ancestors: readonly AstNode[],
+  enclosing: readonly Fn[],
   source: Source,
   into: Found,
-): Fn[] {
+): readonly Fn[] {
   if (SIMPLE_STATEMENTS.has(node.type)) into.statements.push({ start: node.start, end: node.end });
   if (!isFunctionType(node.type) || !node.body) return enclosing;
   const fn = describe(node, ancestors, enclosing, source);
@@ -170,7 +181,12 @@ function record(
 }
 
 /** A function node as a scored `Fn`: its name, complexity and place. */
-function describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: Source): Fn {
+function describe(
+  node: AstNode,
+  ancestors: readonly AstNode[],
+  enclosing: readonly Fn[],
+  source: Source,
+): Fn {
   // A function always has a parent: only the Program has none.
   const parent = ancestors[ancestors.length - 1];
   const own =
@@ -198,7 +214,7 @@ function describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: 
 function countRecursion(
   program: AstNode,
   found: Found['functions'],
-  scored: Fn[],
+  scored: readonly Fn[],
   counting: Counting,
 ) {
   const enclosing = counting.nestedFunctions === 'enclosing';
@@ -250,7 +266,7 @@ export function parse(
   const all = found.functions.map(({ fn }) => fn);
   const scored = enclosing ? all.filter((fn) => fn.parents.length === 0) : all;
   if (counting.recursion) countRecursion(program, found.functions, scored, counting);
-  const comments = (result.comments as Comment[]).map(({ type, value, start, end }) => ({
+  const comments = (result.comments as readonly Comment[]).map(({ type, value, start, end }) => ({
     type,
     value,
     start,

@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-react';
 import '../index.css';
 import { Header } from './Header';
 
-const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 };
+const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 } as const;
 
 async function renderHeader(props: Partial<Parameters<typeof Header>[0]> = {}) {
   const handlers = { onDetails: vi.fn(), onIdentity: vi.fn(), onEdit: vi.fn(), onShare: vi.fn() };

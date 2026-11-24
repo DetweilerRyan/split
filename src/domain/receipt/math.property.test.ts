@@ -48,7 +48,7 @@ const displayCurrency = fc.oneof(
     .map((written): WrittenCurrency => ({ written, code: 'USD', exponent: 2 })),
 );
 
-const ids = ['a', 'b', 'c', 'd'];
+const ids = ['a', 'b', 'c', 'd'] as const;
 
 /** Whom an item's claims name: each participant claiming, unclaiming or absent, plus a stranger. */
 const claims = fc.record(

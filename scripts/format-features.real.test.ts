@@ -3,10 +3,9 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 const script = fileURLToPath(new URL('./format-features.ts', import.meta.url));
-const directories: string[] = [];
 
 const formatted = `Feature: Split a bill
 
@@ -24,9 +23,9 @@ const unformatted = `Feature: Split a bill
       | Fries | 4.00 |
 `;
 
-function features(files: Record<string, string>) {
+function features(files: Readonly<Record<string, string>>) {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-features-'));
-  directories.push(cwd);
+  onTestFinished(() => rmSync(cwd, { recursive: true }));
   for (const [name, text] of Object.entries(files)) {
     mkdirSync(join(cwd, name, '..'), { recursive: true });
     writeFileSync(join(cwd, name), text);
@@ -34,13 +33,9 @@ function features(files: Record<string, string>) {
   return cwd;
 }
 
-function run(cwd: string, ...args: string[]) {
+function run(cwd: string, ...args: readonly string[]) {
   return spawnSync(process.execPath, [script, ...args], { cwd, encoding: 'utf8' });
 }
-
-afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
-});
 
 describe('format-features', () => {
   it('passes the check when every feature is formatted', () => {

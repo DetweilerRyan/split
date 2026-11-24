@@ -32,7 +32,7 @@ const APP = [
   'vitest.config.browser.test.ts',
   '.oxcraprc.json',
   'package.json',
-];
+] as const;
 /**
  * Tooling and its tests: lint, `npm run test:tooling` and `npm run oxcrap:tooling`, which scores
  * oxCrap's own code.
@@ -46,12 +46,12 @@ const TOOLING = [
   'rev-dep.config.real.test.ts',
   'stryker.config.json',
   'package.json',
-];
+] as const;
 const WATCHED = [...new Set([...APP, ...TOOLING])];
 /** How long a session's fingerprint is kept after its last stop. */
 const KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 
-function run(command: string, args: string[], cwd: string) {
+function run(command: string, args: readonly string[], cwd: string) {
   // On Windows, npm is npm.cmd, which Node runs only through a shell.
   const shell = process.platform === 'win32' && command === 'npm';
   const result = spawnSync(shell ? `${command} ${args.join(' ')}` : command, shell ? [] : args, {
@@ -109,7 +109,11 @@ function stateFile(root: string, session: string) {
 }
 
 /** The advice for Claude, or nothing when there's nothing to say. */
-function advice(input: { cwd?: string; stop_hook_active?: boolean; session_id?: string }) {
+function advice(input: {
+  readonly cwd?: string;
+  readonly stop_hook_active?: boolean;
+  readonly session_id?: string;
+}) {
   // Advise once: when Claude is already continuing because of a stop hook, let it stop.
   if (input.stop_hook_active) return undefined;
   const top = run('git', ['rev-parse', '--show-toplevel'], input.cwd ?? process.cwd());
@@ -120,7 +124,7 @@ function advice(input: { cwd?: string; stop_hook_active?: boolean; session_id?: 
   );
   if (!base) return `The Stop hook couldn't find origin/main or main to compare with.`;
   const mergeBase = run('git', ['merge-base', base, 'HEAD'], root).output;
-  function changedIn(paths: string[]) {
+  function changedIn(paths: readonly string[]) {
     return (
       run('git', ['diff', '--quiet', mergeBase, '--', ...paths], root).status !== 0 ||
       run('git', ['ls-files', '--others', '--exclude-standard', '--', ...paths], root).output !== ''

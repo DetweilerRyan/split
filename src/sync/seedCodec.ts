@@ -6,14 +6,14 @@ import { participantId } from '../domain/receipt/roomSnapshot';
 import { type RoomId, createRoomId, isUuidRoomId, parseRoomId } from '../domain/room/roomId';
 
 export interface HydrationOptions {
-  forceReset?: boolean;
+  readonly forceReset?: boolean;
 }
 
 export interface ParsedIngestUrl {
-  seed: ReceiptSeed;
-  roomId: RoomId;
-  encodedRoom: string;
-  redirectUrl: string;
+  readonly seed: ReceiptSeed;
+  readonly roomId: RoomId;
+  readonly encodedRoom: string;
+  readonly redirectUrl: string;
 }
 
 export const INGEST_PATH = '/ingest';
@@ -62,7 +62,7 @@ export function decodeSeed(value: string | null): ReceiptSeed | null {
   }
 }
 
-export function parseIngestUrl(href: string): ParsedIngestUrl | { error: string } | null {
+export function parseIngestUrl(href: string): ParsedIngestUrl | { readonly error: string } | null {
   let url: URL;
   try {
     url = new URL(href);
@@ -125,7 +125,10 @@ export function pendingSeedKey(roomId: RoomId): PendingSeedKey {
   return `splitsmart-ingest-${roomId}` as const;
 }
 
-export function parseRoomHash(hash: string): { roomId: RoomId | null; seed: string | null } {
+export function parseRoomHash(hash: string): {
+  readonly roomId: RoomId | null;
+  readonly seed: string | null;
+} {
   const params = new URLSearchParams(hash.replace(/^#/, ''));
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }

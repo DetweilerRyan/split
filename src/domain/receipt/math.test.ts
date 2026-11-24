@@ -73,8 +73,8 @@ describe('receipt currency math', () => {
 
 function makeSnapshot(
   currency: string | undefined,
-  amounts: number[],
-  claimants: string[][],
+  amounts: readonly number[],
+  claimants: readonly (readonly string[])[],
   tips = { card: 0, cash: 0 },
 ): RoomSnapshot {
   const ids = ['a', 'b', 'c'];

@@ -21,7 +21,7 @@ function stashSeed(roomId: RoomId, seed: ReceiptSeed | null) {
 }
 
 // @crap-allow CRAP 110, complexity 10. Debt from before the CRAP check (#63): no tests yet.
-export default function RoomEntry({ mode = 'root' }: { mode?: 'root' | 'ingest' }) {
+export default function RoomEntry({ mode = 'root' }: { readonly mode?: 'root' | 'ingest' }) {
   const router = useRouter();
   const [error, setError] = useState('');
 

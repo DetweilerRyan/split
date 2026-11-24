@@ -3,15 +3,19 @@ import type { Participant, ReceiptItem } from '../domain/receipt/roomSnapshot';
 import { currencyExponent, formatMoney } from '../domain/money/currency';
 
 interface ItemRowProps {
-  item: ReceiptItem;
-  participants: readonly Participant[];
-  activeId: string | null;
-  editing: boolean;
-  currency: string;
-  onClaim: (itemId: string, participantId: string) => void;
-  onClaimAll: (itemId: string, participants: readonly Participant[], claimed: boolean) => void;
-  onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
-  onDelete: (itemId: string) => void;
+  readonly item: ReceiptItem;
+  readonly participants: readonly Participant[];
+  readonly activeId: string | null;
+  readonly editing: boolean;
+  readonly currency: string;
+  readonly onClaim: (itemId: string, participantId: string) => void;
+  readonly onClaimAll: (
+    itemId: string,
+    participants: readonly Participant[],
+    claimed: boolean,
+  ) => void;
+  readonly onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
+  readonly onDelete: (itemId: string) => void;
 }
 
 // @crap-allow CRAP 205.3, complexity 14. Debt from before the CRAP check (#63): no tests yet.

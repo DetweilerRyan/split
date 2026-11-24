@@ -12,14 +12,24 @@
 import { type AstNode, children, isFunctionType, isNode } from './complexity.ts';
 
 /** A scope's names, each bound to the function it names, or to null for anything else. */
-type Scope = Map<string, AstNode | null>;
+type Scope = ReadonlyMap<string, AstNode | null>;
 /**
  * What `this.f()` reaches from an instance's or a class's `this`, by name, with `#` before a
  * private one: a method or a function-valued field, or null for a member that holds no function,
  * such as a field or an accessor. Members with a computed or literal key, and static blocks, are
  * under undefined, which no call is to.
  */
-type Members = Map<string | undefined, AstNode | null>;
+type Members = ReadonlyMap<string | undefined, AstNode | null>;
+// What the functions below fill in place. A walk adds to one list or set, rather than joining
+// each child's, so each level of the tree takes one stack frame, as deeply nested code needs.
+// oxlint-disable-next-line readonly/types -- a new scope, which the declare functions fill in place before it's read.
+type Filling = Map<string, AstNode | null>;
+// oxlint-disable-next-line readonly/types -- the list boundNames' walk adds to in place.
+type Names = string[];
+// oxlint-disable-next-line readonly/types -- the set hidden's walk adds to in place.
+type Hidden = Set<AstNode>;
+// oxlint-disable-next-line readonly/types -- the list callsIn's walk adds to in place.
+type Calls = Call[];
 
 /** Whether a node besides a function opens a scope of its own. */
 function opensScope(node: AstNode) {
@@ -42,7 +52,7 @@ function opensScope(node: AstNode) {
 
 /** The names a binding pattern, such as a parameter or a destructuring, declares. */
 // Stryker disable next-line ArrayDeclaration: the seeded name has spaces in it, so no identifier is ever looked up under it.
-function boundNames(pattern: unknown, into: string[] = []): string[] {
+function boundNames(pattern: unknown, into: Names = []): readonly string[] {
   if (!isNode(pattern)) return into;
   // Stryker disable next-line ConditionalExpression: no other binding pattern has a `name`, so this would only add undefined, which no lookup asks for.
   if (pattern.type === 'Identifier') into.push(pattern.name as string);
@@ -51,7 +61,7 @@ function boundNames(pattern: unknown, into: string[] = []): string[] {
 }
 
 /** The patterns directly inside a binding pattern: an array's elements, an object's values. */
-function patternParts(pattern: AstNode): unknown[] {
+function patternParts(pattern: AstNode): readonly unknown[] {
   switch (pattern.type) {
     case 'AssignmentPattern':
       return [pattern.left];
@@ -60,9 +70,9 @@ function patternParts(pattern: AstNode): unknown[] {
     case 'TSParameterProperty':
       return [pattern.parameter];
     case 'ArrayPattern':
-      return pattern.elements as unknown[];
+      return pattern.elements as readonly unknown[];
     case 'ObjectPattern':
-      return (pattern.properties as AstNode[]).map((property) =>
+      return (pattern.properties as readonly AstNode[]).map((property) =>
         property.type === 'RestElement' ? property : property.value,
       );
     default:
@@ -79,17 +89,17 @@ function functionValue(node: unknown): AstNode | null {
 }
 
 /** Declares `id`, if there is one, as naming `fn`. */
-function declareId(scope: Scope, id: unknown, fn: AstNode | null) {
+function declareId(scope: Filling, id: unknown, fn: AstNode | null) {
   if (isNode(id)) scope.set(id.name as string, fn);
 }
 
 /** Declares every name `pattern` binds, as naming no function. */
-function declarePattern(scope: Scope, pattern: unknown) {
+function declarePattern(scope: Filling, pattern: unknown) {
   for (const name of boundNames(pattern)) scope.set(name, null);
 }
 
 /** Declares into `scope` what `statements` declare directly: functions, classes, let and const. */
-function declareBlock(scope: Scope, statements: readonly AstNode[]) {
+function declareBlock(scope: Filling, statements: readonly AstNode[]) {
   for (const statement of statements) declareStatement(scope, exported(statement));
 }
 
@@ -102,7 +112,7 @@ function exported(statement: AstNode): AstNode {
 }
 
 /** Declares into `scope` what one statement declares, other than `var`. */
-function declareStatement(scope: Scope, statement: AstNode) {
+function declareStatement(scope: Filling, statement: AstNode) {
   switch (statement.type) {
     case 'FunctionDeclaration':
       declareId(scope, statement.id, statement);
@@ -116,14 +126,14 @@ function declareStatement(scope: Scope, statement: AstNode) {
 }
 
 /** Declares into `scope` what `node` declares if it's a `let` or `const` declaration. */
-function declareLexical(scope: Scope, node: unknown) {
+function declareLexical(scope: Filling, node: unknown) {
   if (isNode(node) && node.type === 'VariableDeclaration' && node.kind !== 'var') {
     declareVariables(scope, node);
   }
 }
 
-function declareVariables(scope: Scope, declaration: AstNode) {
-  for (const declarator of declaration.declarations as AstNode[]) {
+function declareVariables(scope: Filling, declaration: AstNode) {
+  for (const declarator of declaration.declarations as readonly AstNode[]) {
     const value =
       isNode(declarator.id) && declarator.id.type === 'Identifier'
         ? functionValue(declarator.init)
@@ -133,7 +143,7 @@ function declareVariables(scope: Scope, declaration: AstNode) {
 }
 
 /** Declares into `scope` every `var` in `node`, not looking inside functions or static blocks. */
-function declareVars(scope: Scope, node: AstNode) {
+function declareVars(scope: Filling, node: AstNode) {
   for (const child of children(node)) {
     if (isFunctionType(child.type) || child.type === 'StaticBlock') continue;
     // Only a VariableDeclaration has a `kind` of 'var'.
@@ -148,11 +158,11 @@ function declareVars(scope: Scope, node: AstNode) {
  * neither the body's `var`s nor its `let`s. The body's adds its `var`s, and its block the rest.
  */
 function functionScopes(fn: AstNode, scopes: readonly Scope[]) {
-  const own: Scope = new Map();
+  const own: Filling = new Map();
   // A named function expression can call itself by its own name.
   if (fn.type === 'FunctionExpression') declareId(own, fn.id, fn);
-  for (const param of fn.params as unknown[]) declarePattern(own, param);
-  const vars: Scope = new Map();
+  for (const param of fn.params as readonly unknown[]) declarePattern(own, param);
+  const vars: Filling = new Map();
   // Every function of the three function types has a body; a signature without one has a type of its own.
   declareVars(vars, fn.body as AstNode);
   const params = [...scopes, own];
@@ -161,20 +171,20 @@ function functionScopes(fn: AstNode, scopes: readonly Scope[]) {
 
 /** The scope a node opens, for a node `opensScope` accepts, with what it declares directly. */
 function blockScope(node: AstNode): Scope {
-  const scope: Scope = new Map();
+  const scope: Filling = new Map();
   switch (node.type) {
     // A static block keeps its `var`s to itself, as a function does.
     case 'Program':
     case 'StaticBlock':
       declareVars(scope, node);
-      declareBlock(scope, node.body as AstNode[]);
+      declareBlock(scope, node.body as readonly AstNode[]);
       break;
     case 'BlockStatement':
-      declareBlock(scope, node.body as AstNode[]);
+      declareBlock(scope, node.body as readonly AstNode[]);
       break;
     case 'SwitchStatement':
-      for (const switchCase of node.cases as AstNode[]) {
-        declareBlock(scope, switchCase.consequent as AstNode[]);
+      for (const switchCase of node.cases as readonly AstNode[]) {
+        declareBlock(scope, switchCase.consequent as readonly AstNode[]);
       }
       break;
     case 'CatchClause':
@@ -192,8 +202,8 @@ function blockScope(node: AstNode): Scope {
  * Gives a catch parameter the value of a `var` in its block that declares it again. The `var` is
  * hoisted out of the block, but in the block its name is the parameter, so its value goes there.
  */
-function redeclaredByVar(scope: Scope, block: AstNode) {
-  const vars: Scope = new Map();
+function redeclaredByVar(scope: Filling, block: AstNode) {
+  const vars: Filling = new Map();
   declareVars(vars, block);
   for (const [name, value] of vars) if (scope.has(name)) scope.set(name, value);
 }
@@ -202,10 +212,10 @@ function redeclaredByVar(scope: Scope, block: AstNode) {
  * What `this.f()` reaches in a class body, by name: `instance` from an instance's `this`, in an
  * instance method or field, and `statics` from the class's, in a static method, field or block.
  */
-function classMembers(body: AstNode): { instance: Members; statics: Members } {
-  const instance: Members = new Map();
-  const statics: Members = new Map();
-  const all = body.body as AstNode[];
+function classMembers(body: AstNode): { readonly instance: Members; readonly statics: Members } {
+  const instance = new Map<string | undefined, AstNode | null>();
+  const statics = new Map<string | undefined, AstNode | null>();
+  const all = body.body as readonly AstNode[];
   // A field is defined on the instance or the class after the methods are, so it hides a method of
   // its name wherever it's written: the fields go again at the end.
   for (const member of [...all, ...all.filter(isField)]) {
@@ -250,12 +260,7 @@ export function shadowedUses(program: AstNode, names: ReadonlySet<string>): Read
 }
 
 /** Adds the uses of `names` in `node` and below that an inner scope hides, to `into`. */
-function hidden(
-  node: AstNode,
-  scopes: readonly Scope[],
-  names: ReadonlySet<string>,
-  into: Set<AstNode>,
-) {
+function hidden(node: AstNode, scopes: readonly Scope[], names: ReadonlySet<string>, into: Hidden) {
   if (node.type === 'Identifier' && names.has(node.name as string)) {
     const name = node.name as string;
     // Scope 0 is the program's own: a binding found further in hides the top-level one.
@@ -272,7 +277,7 @@ function hiddenInFunction(
   fn: AstNode,
   scopes: readonly Scope[],
   names: ReadonlySet<string>,
-  into: Set<AstNode>,
+  into: Hidden,
 ) {
   const inner = functionScopes(fn, scopes);
   for (const child of children(fn)) {
@@ -301,9 +306,13 @@ export function recursive<Fn>(
  * Where a node sits: the scopes around it, innermost last; the function it's in; and the class
  * members that function's `this` reaches, or null.
  */
-type Context = { scopes: readonly Scope[]; fn: AstNode | undefined; self: Members | null };
+type Context = {
+  readonly scopes: readonly Scope[];
+  readonly fn: AstNode | undefined;
+  readonly self: Members | null;
+};
 /** A call from the function it's written in to the function it resolves to, if any. */
-type Call = { from: AstNode | undefined; to: AstNode | null | undefined };
+type Call = { readonly from: AstNode | undefined; readonly to: AstNode | null | undefined };
 
 /**
  * Adds the calls in `node` and below it to `into`, in the scope and `this` each kind of node gives
@@ -316,8 +325,8 @@ function callsIn(
   context: Context,
   members: Members | null,
   // Stryker disable next-line ArrayDeclaration: a seeded entry that isn't a call has no `from`, so graphOf skips it.
-  into: Call[] = [],
-): Call[] {
+  into: Calls = [],
+): readonly Call[] {
   if (node.type === 'ClassBody') return callsInClass(node, context, into);
   if (isFunctionType(node.type)) return callsInFunction(node, context, members, into);
   // `new f()` runs `f`, as `f()` does.
@@ -332,7 +341,7 @@ function callsIn(
 }
 
 /** A bare `f()` or a `this.f()`, with or without `new`, resolved to the function it calls. */
-function callsOf(call: AstNode, context: Context): Call[] {
+function callsOf(call: AstNode, context: Context): readonly Call[] {
   const callee = call.callee as AstNode;
   // Stryker disable next-line ConditionalExpression: any other callee has no `name`, and no scope declares an undefined name, so its lookup finds no function.
   const named = callee.type === 'Identifier' ? [lookup(context.scopes, callee.name as string)] : [];
@@ -346,9 +355,9 @@ function callsOf(call: AstNode, context: Context): Call[] {
  * Adds the calls in a class's members to `into`. A static member's or static block's `this` is the
  * class, and any other member's is the instance.
  */
-function callsInClass(body: AstNode, context: Context, into: Call[]): Call[] {
+function callsInClass(body: AstNode, context: Context, into: Calls): readonly Call[] {
   const { instance, statics } = classMembers(body);
-  for (const member of body.body as AstNode[]) {
+  for (const member of body.body as readonly AstNode[]) {
     const self = member.static || member.type === 'StaticBlock' ? statics : instance;
     callsInMember(member, context, self, into);
   }
@@ -360,7 +369,7 @@ function callsInClass(body: AstNode, context: Context, into: Call[]): Call[] {
  * block. callsIn hands `self` on through parentheses around a method's or field's function, and
  * opens a static block's scope.
  */
-function callsInMember(member: AstNode, context: Context, self: Members, into: Call[]) {
+function callsInMember(member: AstNode, context: Context, self: Members, into: Calls) {
   if (member.type === 'StaticBlock') return callsIn(member, { ...context, self }, self, into);
   for (const child of children(member)) {
     // Only the value runs with the class's `this`. A computed key and decorators run where the
@@ -376,8 +385,8 @@ function callsInFunction(
   fn: AstNode,
   context: Context,
   members: Members | null,
-  into: Call[],
-): Call[] {
+  into: Calls,
+): readonly Call[] {
   // An arrow keeps the `this` around it; any other function has its own.
   // A class field's arrow has the instance as its `this`, which `members` then gives.
   const self = fn.type === 'ArrowFunctionExpression' ? (members ?? context.self) : members;
@@ -399,31 +408,31 @@ function lookup(scopes: readonly Scope[], name: string) {
  * function `callerOf` gives, and reaches one only if `scoredAt` gives one.
  */
 function graphOf<Fn>(
-  calls: Call[],
+  calls: readonly Call[],
   callerOf: (node: AstNode) => Fn | undefined,
   scoredAt: (node: AstNode) => Fn | undefined,
 ) {
-  const edges = new Map<Fn, Set<Fn>>();
+  const edges = new Map<Fn, ReadonlySet<Fn>>();
   for (const { from, to } of calls) {
     const source = from ? callerOf(from) : undefined;
     const target = to ? scoredAt(to) : undefined;
     // Stryker disable next-line ConditionalExpression: an edge from undefined, or one to it, can't close a cycle while the other check stays, since undefined is then only ever a source or only ever a target.
     if (source === undefined || target === undefined) continue;
-    edges.set(source, (edges.get(source) ?? new Set<Fn>()).add(target));
+    edges.set(source, new Set(edges.get(source)).add(target));
   }
   return edges;
 }
 
 /** The nodes in a cycle of `edges`: those that lead back to themselves. */
-function inCycles<Fn>(edges: Map<Fn, Set<Fn>>) {
+function inCycles<Fn>(edges: ReadonlyMap<Fn, ReadonlySet<Fn>>) {
   return new Set([...edges.keys()].filter((fn) => reachable(edges, fn).has(fn)));
 }
 
 /** The nodes `start` leads to by one edge or more. */
-function reachable<Fn>(edges: Map<Fn, Set<Fn>>, start: Fn) {
+function reachable<Fn>(edges: ReadonlyMap<Fn, ReadonlySet<Fn>>, start: Fn) {
   const seen = new Set<Fn>();
   // `start` is one of the keys of `edges`.
-  const next = [...(edges.get(start) as Set<Fn>)];
+  const next = [...(edges.get(start) as ReadonlySet<Fn>)];
   while (next.length > 0) {
     const fn = next.pop() as Fn;
     if (seen.has(fn)) continue;

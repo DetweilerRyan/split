@@ -1,8 +1,8 @@
 import qrcode from 'qrcode-generator';
 
 export interface QrSvg {
-  size: number;
-  path: string;
+  readonly size: number;
+  readonly path: string;
 }
 
 // Returns an SVG path (1 unit per module) plus the quiet-zone-padded size.

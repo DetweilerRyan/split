@@ -6,7 +6,7 @@ import { type Entry, findFiles, type Glob } from './files.ts';
 // features/ checks that end to end.
 
 const ROOT = '/repo';
-const CODE = ['**/*.ts'];
+const CODE = ['**/*.ts'] as const;
 
 /** Every folder `path` is in, each ending in `/`, then `path` itself. */
 function withFolders(path: string) {
@@ -23,7 +23,7 @@ function withFolders(path: string) {
  * a dot folder it matched, finding `.next/cache/.tsbuildinfo`.
  */
 function inMemory(paths: readonly string[]): Glob {
-  const inFolder = new Map<string, [string, Entry][]>();
+  const inFolder = new Map<string, readonly (readonly [string, Entry])[]>();
   for (const path of new Set(paths.flatMap(withFolders))) {
     const folder = path.endsWith('/');
     const name = folder ? path.slice(0, -1) : path;
@@ -58,10 +58,10 @@ function find(
     extra = [],
     gitignore = '',
   }: {
-    files?: readonly string[];
-    ignorePatterns?: readonly string[];
-    extra?: readonly string[];
-    gitignore?: string;
+    readonly files?: readonly string[];
+    readonly ignorePatterns?: readonly string[];
+    readonly extra?: readonly string[];
+    readonly gitignore?: string;
   } = {},
 ) {
   return findFiles(inMemory(paths), ROOT, files, ignorePatterns, extra, gitignore);
@@ -157,7 +157,7 @@ describe('findFiles', () => {
   });
 
   it('reads an absolute parentPath, as Node’s glob gives one, from the root', () => {
-    function glob(): Entry[] {
+    function glob(): readonly Entry[] {
       return [
         { name: 'a.ts', parentPath: '/repo/src', isFile: () => true, isDirectory: () => false },
       ];

@@ -3,9 +3,14 @@ import { DEFAULTS, merge, OPTIONS, parseConfig } from './config.ts';
 import schemaFile from './configuration_schema.json' with { type: 'json' };
 
 const schema = schemaFile as {
-  properties: Record<
-    string,
-    { default?: unknown; properties?: Record<string, { default?: unknown }> }
+  readonly properties: Readonly<
+    Record<
+      string,
+      {
+        readonly default?: unknown;
+        readonly properties?: Readonly<Record<string, { readonly default?: unknown }>>;
+      }
+    >
   >;
 };
 

@@ -5,7 +5,11 @@ export const MAX_BODY_BYTES = 64 * 1024;
 const LIMIT = 30;
 const WINDOW_MS = 60_000;
 
-function jsonRpcError(status: number, message: string, headers: Record<string, string> = {}) {
+function jsonRpcError(
+  status: number,
+  message: string,
+  headers: Readonly<Record<string, string>> = {},
+) {
   return new Response(
     JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }),
     {
@@ -39,7 +43,7 @@ function hasToolCall(body: string): boolean {
   try {
     const parsed: unknown = JSON.parse(body);
     return (Array.isArray(parsed) ? parsed : [parsed]).some(
-      (message) => (message as { method?: unknown } | null)?.method === 'tools/call',
+      (message) => (message as { readonly method?: unknown } | null)?.method === 'tools/call',
     );
   } catch {
     return false;

@@ -4,15 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 const script = fileURLToPath(new URL('./prepare-sandbox.sh', import.meta.url));
-const directories: string[] = [];
 const runCommand = promisify(execFile);
 
 function fixture() {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-setup-'));
-  directories.push(cwd);
+  onTestFinished(() => rmSync(cwd, { recursive: true, force: true }));
   mkdirSync(join(cwd, 'bin'));
   writeFileSync(join(cwd, 'package.json'), '{}');
   writeFileSync(join(cwd, 'package-lock.json'), '{}');
@@ -79,11 +78,6 @@ console.log('Headless Chromium launched and rendered a page.');
   }
   return { cwd, run, runAsync };
 }
-
-afterEach(() => {
-  for (const directory of directories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
-});
 
 describe.skipIf(process.platform !== 'linux')('sandbox dependency setup', () => {
   it('reuses an installation until the lockfile changes', () => {

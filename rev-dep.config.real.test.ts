@@ -3,14 +3,13 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 // The rules in .rev-dep.config.jsonc, which docs/engineering/dependency-direction.md describes. If a
 // rule is dropped or its pattern stops matching, the rest of the suite still passes, so this runs the
 // real rev-dep with the real config on throwaway files laid out like the repository.
 const config = fileURLToPath(new URL('./.rev-dep.config.jsonc', import.meta.url));
 const revDep = fileURLToPath(new URL('./node_modules/.bin/rev-dep', import.meta.url));
-const directories: string[] = [];
 
 const keep = 'export const k = 1;\n';
 
@@ -46,7 +45,7 @@ const layout: Readonly<Record<string, string>> = {
 /** A throwaway project holding the real config, the app's `@/` alias, `base` and `files`. */
 function check(files: Readonly<Record<string, string>>, base = layout) {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-rev-dep-'));
-  directories.push(cwd);
+  onTestFinished(() => rmSync(cwd, { recursive: true }));
   copyFileSync(config, join(cwd, '.rev-dep.config.jsonc'));
   const project = {
     // rev-dep resolves an npm package only when package.json declares it, as the real one does.
@@ -113,10 +112,6 @@ function importsOf(layer: string, targets: readonly string[]) {
   );
 }
 
-afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
-});
-
 describe('.rev-dep.config.jsonc', () => {
   it('fails each way scripts/oxcrap/ could import from outside itself', () => {
     const { status, output } = check({
@@ -148,7 +143,7 @@ describe('.rev-dep.config.jsonc', () => {
 
   it('fails an import it can’t resolve, which the rule couldn’t check', () => {
     const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-rev-dep-outside-'));
-    directories.push(cwd);
+    onTestFinished(() => rmSync(cwd, { recursive: true }));
     writeFileSync(join(cwd, 'x.ts'), 'export const x = 1;\n');
     const { status, output } = check({
       'scripts/oxcrap/absolute.ts': `import { x } from '${join(cwd, 'x.ts')}';\nexport const a = x;\n`,

@@ -6,11 +6,11 @@ import { decodeSeed } from '../sync/seedCodec';
 import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 
 interface SeedModalProps {
-  open: boolean;
-  onClose: () => void;
-  onImport: (seed: ReceiptSeed, forceReset: boolean) => void;
-  onPreset: (seed: ReceiptSeed) => void;
-  onBlankRoom: () => void;
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly onImport: (seed: ReceiptSeed, forceReset: boolean) => void;
+  readonly onPreset: (seed: ReceiptSeed) => void;
+  readonly onBlankRoom: () => void;
 }
 
 export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: SeedModalProps) {

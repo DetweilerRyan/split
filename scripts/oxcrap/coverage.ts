@@ -4,12 +4,12 @@ import type { Fn, Range } from './functions.ts';
 
 /** One file's entry in an istanbul JSON coverage report. */
 export type FileCoverage = {
-  statementMap: Record<string, Range>;
-  s: Record<string, number>;
-  fnMap: Record<string, { loc: Range }>;
-  f: Record<string, number>;
+  readonly statementMap: Readonly<Record<string, Range>>;
+  readonly s: Readonly<Record<string, number>>;
+  readonly fnMap: Readonly<Record<string, { readonly loc: Range }>>;
+  readonly f: Readonly<Record<string, number>>;
 };
-export type Report = Record<string, FileCoverage>;
+export type Report = Readonly<Record<string, FileCoverage>>;
 
 /** Whether `file` has every part of an istanbul file entry that the scoring reads. */
 function isFileCoverage(file: unknown) {
@@ -36,7 +36,10 @@ export function parseReport(text: string, path: string): Report {
  * The files changed after the report was written, newest first, so a report made before the
  * latest edits isn't mistaken for one that covers them.
  */
-export function newerThan(reportTime: number, files: { file: string; time: number }[]) {
+export function newerThan(
+  reportTime: number,
+  files: readonly { readonly file: string; readonly time: number }[],
+) {
   return files
     .filter((f) => f.time > reportTime)
     .sort((a, b) => b.time - a.time)
@@ -51,7 +54,7 @@ function contains(outer: Range, inner: Range) {
 }
 
 /** The innermost of `functions` whose range holds `range`. */
-function innermost(functions: Fn[], range: Range) {
+function innermost(functions: readonly Fn[], range: Range) {
   let best: Fn | undefined;
   for (const fn of functions) {
     if (
@@ -66,22 +69,20 @@ function innermost(functions: Fn[], range: Range) {
 }
 
 /** For each function, how many statements it holds, and how many of them ran. */
-function statementCounts(functions: Fn[], file: FileCoverage) {
-  const counts = new Map<Fn, { total: number; run: number }>();
+function statementCounts(functions: readonly Fn[], file: FileCoverage) {
+  const counts = new Map<Fn, { readonly total: number; readonly run: number }>();
   for (const [id, range] of Object.entries(file.statementMap)) {
     const owner = innermost(functions, range);
     // Stryker disable next-line ConditionalExpression: a statement outside every function would be counted under `undefined`, which `coverageOf` never looks up.
     if (!owner) continue;
     const count = counts.get(owner) ?? { total: 0, run: 0 };
-    count.total++;
-    if (file.s[id] > 0) count.run++;
-    counts.set(owner, count);
+    counts.set(owner, { total: count.total + 1, run: count.run + (file.s[id] > 0 ? 1 : 0) });
   }
   return counts;
 }
 
 /** The functions the report shows were called, for those with no statements of their own. */
-function calledFunctions(functions: Fn[], file: FileCoverage) {
+function calledFunctions(functions: readonly Fn[], file: FileCoverage) {
   const called = new Set<Fn>();
   for (const [id, fn] of Object.entries(file.fnMap)) {
     const owner = innermost(functions, fn.loc);
@@ -97,7 +98,7 @@ function calledFunctions(functions: Fn[], file: FileCoverage) {
  * function with no statements of its own, such as a one-line arrow, counts as covered when the
  * report shows it was called. A file the report doesn't have scores 0 throughout.
  */
-export function coverageOf(functions: Fn[], file: FileCoverage | undefined) {
+export function coverageOf(functions: readonly Fn[], file: FileCoverage | undefined) {
   const counts = file ? statementCounts(functions, file) : new Map();
   const called = file ? calledFunctions(functions, file) : new Set<Fn>();
   const covered = new Map<Fn, number>();

@@ -1,39 +1,43 @@
 export interface ReceiptItem {
-  id: string;
-  name: string;
-  en: string;
-  eur: number;
-  order: number;
-  claims: Readonly<Record<string, boolean>>;
+  readonly id: string;
+  readonly name: string;
+  readonly en: string;
+  readonly eur: number;
+  readonly order: number;
+  readonly claims: Readonly<Record<string, boolean>>;
 }
 
 export interface Participant {
-  id: string;
-  name: string;
-  colorIdx: number;
+  readonly id: string;
+  readonly name: string;
+  readonly colorIdx: number;
 }
 
 export interface RoomSnapshot {
-  title: string;
-  address: string;
-  phone: string;
-  website: string;
-  purchasedAt: string;
-  mealType: string;
-  cardTipEur: number;
-  cashTipEur: number;
-  bankUsd: number;
-  currency: string;
-  displayCurrency: string;
-  rate: number;
-  rateDate: string;
-  participants: readonly Participant[];
-  items: readonly ReceiptItem[];
-  connection: {
-    provider: 'Liveblocks' | 'WebRTC';
-    status: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+  readonly title: string;
+  readonly address: string;
+  readonly phone: string;
+  readonly website: string;
+  readonly purchasedAt: string;
+  readonly mealType: string;
+  readonly cardTipEur: number;
+  readonly cashTipEur: number;
+  readonly bankUsd: number;
+  readonly currency: string;
+  readonly displayCurrency: string;
+  readonly rate: number;
+  readonly rateDate: string;
+  readonly participants: readonly Participant[];
+  readonly items: readonly ReceiptItem[];
+  readonly connection: {
+    readonly provider: 'Liveblocks' | 'WebRTC';
+    readonly status: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
   };
-  peers: readonly { id: string; name: string; color?: string }[];
+  readonly peers: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly color?: string;
+  }[];
 }
 
 /**

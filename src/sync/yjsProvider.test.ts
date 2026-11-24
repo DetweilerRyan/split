@@ -16,7 +16,9 @@ vi.mock('y-indexeddb', () => ({ IndexeddbPersistence: mocks.IndexeddbPersistence
 vi.mock('y-webrtc', () => ({ WebrtcProvider: mocks.WebrtcProvider }));
 
 type ProviderRegistry = typeof globalThis & {
-  __splitRoomProviders?: Map<string, Promise<unknown>>;
+  // oxlint-disable-next-line readonly/types -- each test deletes the global cache, so the module under test starts without one.
+  __splitRoomProviders?: ReadonlyMap<string, Promise<unknown>>;
+  // oxlint-disable-next-line readonly/types -- each test deletes the global client, as for the cache above.
   __splitLiveblocksClient?: unknown;
 };
 
@@ -171,7 +173,7 @@ describe('room sync provider selection', () => {
     let onWebrtcStatus: ((status: { connected: boolean }) => void) | undefined;
     const webrtcProvider = {
       awareness,
-      on: vi.fn((_event: string, listener: (status: { connected: boolean }) => void) => {
+      on: vi.fn((_event: string, listener: (status: { readonly connected: boolean }) => void) => {
         onWebrtcStatus = listener;
       }),
     };

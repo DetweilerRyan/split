@@ -107,7 +107,7 @@ const CHANGES_TO_OTHER: readonly string[] = [
 ];
 
 /** The ways of writing the last entry's add, with `export default` among them when it's free. */
-function addedForms(defaultTaken: boolean): Added[] {
+function addedForms(defaultTaken: boolean): readonly Added[] {
   return [
     'literal',
     'statement',

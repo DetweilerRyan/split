@@ -4,7 +4,7 @@ import { formatMoney } from '../domain/money/currency';
 import { computeReceiptMath } from '../domain/receipt/math';
 
 interface ParticipantCardsProps {
-  snapshot: RoomSnapshot;
+  readonly snapshot: RoomSnapshot;
 }
 
 export function ParticipantCards({ snapshot }: ParticipantCardsProps) {

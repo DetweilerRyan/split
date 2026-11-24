@@ -11,8 +11,8 @@ export type Question<T> = (actor: Actor) => T;
 
 /** What one run of the check gave back. */
 export interface Run {
-  status: number | null;
-  output: string;
+  readonly status: number | null;
+  readonly output: string;
 }
 
 /** A file's share of a test run: every statement in it ran, or none did. */
@@ -20,9 +20,9 @@ export type Covered = 'all' | 'none';
 
 /** What an actor can remember between steps. */
 export interface Notes {
-  run: Run;
-  coverage: Map<string, Covered>;
-  otherFolder: string;
+  readonly run: Run;
+  readonly coverage: ReadonlyMap<string, Covered>;
+  readonly otherFolder: string;
 }
 
 // The CLI under test, run as a program, as a developer runs it. oxCrap's folder imports nothing
@@ -36,14 +36,14 @@ const cli = fileURLToPath(new URL('../../oxcrap.ts', import.meta.url));
  */
 export interface Actor {
   readonly name: string;
-  readonly attemptsTo: (...tasks: Task[]) => void;
+  readonly attemptsTo: (...tasks: readonly Task[]) => void;
   readonly answer: <T>(question: Question<T>) => T;
   /** The actor's project folder. */
   readonly project: string;
   /** Another throwaway folder, outside the project, deleted with it. */
   readonly elsewhere: () => string;
   /** Runs the check with `args`, from `cwd` (the project folder by default). */
-  readonly runsTheCheck: (args: string[], cwd?: string) => Run;
+  readonly runsTheCheck: (args: readonly string[], cwd?: string) => Run;
   readonly remember: <K extends keyof Notes>(key: K, value: Notes[K]) => void;
   readonly recall: <K extends keyof Notes>(key: K) => Notes[K];
   readonly has: (key: keyof Notes) => boolean;
@@ -56,7 +56,7 @@ export function createActor(name: string): Actor {
   const others: string[] = [];
   const notes = new Map<keyof Notes, Notes[keyof Notes]>();
 
-  function attemptsTo(...tasks: Task[]): void {
+  function attemptsTo(...tasks: readonly Task[]): void {
     for (const task of tasks) task(actor);
   }
 
@@ -75,7 +75,7 @@ export function createActor(name: string): Actor {
     return other;
   }
 
-  function runsTheCheck(args: string[], cwd = project()): Run {
+  function runsTheCheck(args: readonly string[], cwd = project()): Run {
     const result = spawnSync(process.execPath, [cli, ...args], {
       cwd,
       encoding: 'utf8',
