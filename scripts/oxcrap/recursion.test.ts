@@ -333,6 +333,39 @@ describe('recursion', () => {
       'class A { m() { return class { [this.m()]() {} }; } }',
       [['m', 2]],
     ],
+    // A decorator runs where the class is written, as a computed key does.
+    [
+      'an inner class’s decorator, which is the this around it',
+      'class A { m() { return class { @dec(this.m()) n() {} }; } }',
+      [['m', 2]],
+    ],
+    // An accessor is a getter on the prototype, or the class, so it's a method: the later wins.
+    [
+      'a method hidden by a later accessor of the same name',
+      'class A { m() { return this.m(); } accessor m = 1; }',
+      [['m', 1]],
+    ],
+    [
+      'a method past an earlier accessor of the same name',
+      'class A { accessor m = 1; m() { return this.m(); } }',
+      [['m', 2]],
+    ],
+    [
+      'a static method hidden by a later static accessor of the same name',
+      'class A { static m() { return this.m(); } static accessor m = 1; }',
+      [['m', 1]],
+    ],
+    [
+      'a static method past an earlier static accessor of the same name',
+      'class A { static accessor m = 1; static m() { return this.m(); } }',
+      [['m', 2]],
+    ],
+    [
+      'an accessor’s arrow calling the accessor',
+      'class A { accessor m = (n) => this.m(n - 1); }',
+      // functions.ts doesn't name an accessor's function yet.
+      [['(anonymous)', 2]],
+    ],
   ])('resolves this in %s', (_, code, expected) => {
     const scored = parse('example.ts', code).functions.map((fn) => [fn.name, fn.complexity]);
     expect(scored).toEqual(expected);
