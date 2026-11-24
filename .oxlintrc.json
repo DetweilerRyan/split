@@ -17,18 +17,20 @@
     "functional/no-classes": "error",
     "functional/no-this": ["error", { "allowInClasses": true }]
   },
-  // The npm packages a layer in docs/engineering/code-layout.md keeps out, from #94. rev-dep checks
-  // which repository files a layer imports, not which packages; dependency-direction.md lists
-  // both. Each regex matches a package and its subpaths, not a relative path such as './y-axis',
-  // which a gitignore-style "y-*" group would.
   "overrides": [
     {
       // A test nests describe, it, fc.property and the callbacks inside by design (#76).
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": { "max-nested-callbacks": "off" }
     },
+    // The next two keep out the npm packages a layer in docs/engineering/code-layout.md may not
+    // use, from #94. rev-dep checks which repository files a layer imports, not which packages;
+    // dependency-direction.md lists both. Each regex matches a package and its subpaths, not a
+    // relative path such as './y-axis', which a gitignore-style "y-*" group would.
     {
-      // #94: no React, Next, icons, Yjs, sync providers or browser storage in the domain.
+      // #94: no React, Next, icons, Yjs, sync providers, browser storage or server packages in
+      // the domain. jsx-filename-extension with no extensions refuses JSX in every file: JSX
+      // imports react/jsx-runtime with no import statement for no-restricted-imports to see.
       "files": ["src/domain/**"],
       "rules": {
         "no-restricted-imports": [
@@ -36,16 +38,18 @@
           {
             "patterns": [
               {
-                "regex": "^(react|react-dom|next|lucide-react|yjs|y-[^/]+|@liveblocks/[^/]+|idb|idb-keyval|localforage|dexie)(/.*)?$",
-                "message": "src/domain/ imports only src/domain/, src/utils/ and plain libraries such as zod: no UI, sync or browser storage (docs/engineering/code-layout.md)."
+                "regex": "^(react|react-dom|next|lucide-react|yjs|y-[^/]+|@liveblocks/[^/]+|idb|idb-keyval|localforage|dexie|@vercel/functions|mcp-handler|@modelcontextprotocol/[^/]+|dialog-closedby-polyfill)(/.*)?$",
+                "message": "src/domain/ imports only src/domain/, src/utils/ and plain libraries such as zod: no UI, sync, browser storage or server packages (docs/engineering/code-layout.md)."
               }
             ]
           }
-        ]
+        ],
+        "react/jsx-filename-extension": ["error", { "extensions": [] }]
       }
     },
     {
-      // #94: services "may import domain/ and utils/, but nothing UI or sync".
+      // #94's "New src/services/": nothing UI or sync. That includes next/server with the rest of
+      // next; code-layout.meta.md says why.
       "files": ["src/services/**"],
       "rules": {
         "no-restricted-imports": [

@@ -12,16 +12,35 @@ const config = fileURLToPath(new URL('./.rev-dep.config.jsonc', import.meta.url)
 const revDep = fileURLToPath(new URL('./node_modules/.bin/rev-dep', import.meta.url));
 const directories: string[] = [];
 
+const keep = 'export const k = 1;\n';
+
 /**
  * One file in each folder a rule covers. rev-dep fails a rule whose pattern matches no files, so a
  * throwaway project needs them all to pass.
  */
+const ruled: Readonly<Record<string, string>> = {
+  'scripts/oxcrap/keep.ts': keep,
+  'src/domain/keep.ts': keep,
+  'src/utils/keep.ts': keep,
+  'src/services/keep.ts': keep,
+  'src/sync/keep.ts': keep,
+};
+
+/**
+ * The ruled folders, and one file in each other folder a rule's `allow` could be widened to. A
+ * widened glob then matches files, so the boundary tests below fail on the import they let through,
+ * not on rev-dep's check for a glob that matches nothing.
+ */
 const layout: Readonly<Record<string, string>> = {
-  'scripts/oxcrap/keep.ts': 'export const k = 1;\n',
-  'src/domain/keep.ts': 'export const k = 1;\n',
-  'src/utils/keep.ts': 'export const k = 1;\n',
-  'src/services/keep.ts': 'export const k = 1;\n',
-  'src/sync/keep.ts': 'export const k = 1;\n',
+  ...ruled,
+  'scripts/keep.ts': keep,
+  'src/keep.ts': keep,
+  'src/components/keep.ts': keep,
+  'src/hooks/keep.ts': keep,
+  'src/server/keep.ts': keep,
+  'src/data/keep.ts': keep,
+  'src/polyfills/keep.ts': keep,
+  'app/keep.ts': keep,
 };
 
 /** A throwaway project holding the real config, the app's `@/` alias, `base` and `files`. */
@@ -63,9 +82,9 @@ function check(files: Readonly<Record<string, string>>, base = layout) {
   return { status: result.status, output: result.stdout + result.stderr };
 }
 
-/** A module under `src/` that a layer's rule refuses or allows, by its path under `src/`. */
+/** A module that a layer's rule refuses or allows, by its path from the root without `.ts`. */
 function target(path: string) {
-  return { [`src/${path}.ts`]: 'export const o = 1;\nexport type O = number;\n' };
+  return { [`${path}.ts`]: 'export const o = 1;\nexport type O = number;\n' };
 }
 
 /**
@@ -84,12 +103,12 @@ function waysOut(layer: string, outside: string) {
   };
 }
 
-/** Imports from `src/<layer>/` of each of `targets`, one file per import. */
+/** Imports from `src/<layer>/` of each of `targets`, by path from the root, one file each. */
 function importsOf(layer: string, targets: readonly string[]) {
   return Object.fromEntries(
     targets.map((path, index) => [
       `src/${layer}/imports${index}.ts`,
-      `import { o } from '@/${path}';\nexport const i${index} = o;\n`,
+      `import { o } from '../../${path}.ts';\nexport const i${index} = o;\n`,
     ]),
   );
 }
@@ -156,65 +175,86 @@ describe('.rev-dep.config.jsonc', () => {
     expect(status).toBe(0);
   });
 
-  it.each(Object.keys(layout))(
+  it.each(Object.keys(ruled))(
     'fails when no file matches %s’s rule, so it can’t quietly stop applying',
     (path) => {
       const rest = Object.fromEntries(Object.entries(layout).filter(([key]) => key !== path));
-      const { status, output } = check({ 'scripts/other.ts': 'export const o = 1;\n' }, rest);
+      const { status, output } = check({ 'scripts/other.ts': keep }, rest);
 
       expect(status).toBe(1);
       expect(output).toContain('Config lint:');
+      expect(output).not.toContain('Config lint: no issues');
     },
   );
 
   it('leaves files outside the ruled folders free to import from anywhere', () => {
     const { status } = check({
-      ...target('x'),
+      ...target('src/x'),
       'scripts/other.ts': "import { x } from '../src/x.ts';\nexport const o = x;\n",
       'src/components/view.ts':
         "import { k } from '../sync/keep.ts';\nimport { o } from '../services/api.ts';\nexport const v = [k, o];\n",
-      ...target('services/api'),
+      ...target('src/services/api'),
     });
 
     expect(status).toBe(0);
   });
 
-  // The layers in docs/engineering/code-layout.md, from #94. Each refuses `outside` in each way out,
-  // and a direct import of each folder in `refused`.
+  // The layers in docs/engineering/code-layout.md, from #94. Each refuses `outside`, under src/, in
+  // each way out, and a direct import of each path in `refused`, from the root. Every folder here
+  // already holds a file from `layout`, so a rule widened to one fails on the import it lets
+  // through, which each test asserts, and not on the config lint.
+  const unruled = ['src/RoomView', 'src/data/presets', 'src/polyfills/dialog', 'app/page'];
   describe.each([
     {
       layer: 'domain',
       outside: 'sync/store',
-      refused: ['services/api', 'components/view', 'hooks/useView', 'server/guard', 'RoomView'],
-      allowed: ['domain/money/currency', 'utils/qr'],
+      refused: [
+        'src/services/api',
+        'src/components/view',
+        'src/hooks/useView',
+        'src/server/guard',
+        ...unruled,
+      ],
+      allowed: ['src/domain/money/currency', 'src/utils/qr'],
     },
     {
       layer: 'utils',
       outside: 'domain/money/currency',
-      refused: ['sync/store', 'services/api', 'components/view', 'hooks/useView', 'RoomView'],
-      allowed: ['utils/qr'],
+      refused: [
+        'src/sync/store',
+        'src/services/api',
+        'src/components/view',
+        'src/hooks/useView',
+        'src/server/guard',
+        ...unruled,
+      ],
+      allowed: ['src/utils/qr'],
     },
     {
       layer: 'services',
       outside: 'sync/store',
-      refused: ['components/view', 'hooks/useView', 'server/guard', 'RoomView'],
-      allowed: ['services/cache', 'domain/money/currency', 'utils/qr'],
+      refused: ['src/components/view', 'src/hooks/useView', 'src/server/guard', ...unruled],
+      allowed: ['src/services/cache', 'src/domain/money/currency', 'src/utils/qr'],
     },
     {
       layer: 'sync',
       outside: 'components/view',
-      refused: ['services/api', 'hooks/useView', 'server/guard', 'RoomView'],
-      allowed: ['sync/store', 'domain/money/currency', 'utils/qr'],
+      refused: ['src/services/api', 'src/hooks/useView', 'src/server/guard', ...unruled],
+      allowed: ['src/sync/store', 'src/domain/money/currency', 'src/utils/qr'],
     },
   ])('src/$layer/', ({ layer, outside, refused, allowed }) => {
     it(`fails each way it could import src/${outside}.ts`, () => {
-      const { status, output } = check({ ...target(outside), ...waysOut(layer, outside) });
+      const { status, output } = check({
+        ...target(`src/${outside}`),
+        ...waysOut(layer, outside),
+      });
 
-      expect(status).toBe(1);
+      expect(output).toContain('Config lint: no issues');
       for (const file of ['parent', 'typeonly', 'reexport', 'dynamic', 'alias', 'a/b/deep']) {
         expect(output).toContain(`src/${layer}/${file}.ts -> src/${outside}.ts (NOT ALLOWED)`);
       }
       expect(output).toContain('Module Boundary Issues (6)');
+      expect(status).toBe(1);
     });
 
     it('fails an import of each other folder it may not use', () => {
@@ -223,18 +263,19 @@ describe('.rev-dep.config.jsonc', () => {
         ...importsOf(layer, refused),
       });
 
-      expect(status).toBe(1);
+      expect(output).toContain('Config lint: no issues');
       for (const [index, path] of refused.entries()) {
-        expect(output).toContain(`src/${layer}/imports${index}.ts -> src/${path}.ts (NOT ALLOWED)`);
+        expect(output).toContain(`src/${layer}/imports${index}.ts -> ${path}.ts (NOT ALLOWED)`);
       }
       expect(output).toContain(`Module Boundary Issues (${refused.length})`);
+      expect(status).toBe(1);
     });
 
-    it(`lets it import ${allowed.map((path) => `src/${path.split('/')[0]}/`).join(', ')}`, () => {
+    it(`lets it import ${allowed.map((path) => path.split('/').slice(0, 2).join('/')).join(', ')}`, () => {
       const { status, output } = check({
         ...Object.assign({}, ...allowed.map(target)),
         ...importsOf(layer, allowed),
-        [`src/${layer}/a/b/deep.ts`]: `import { o } from '../b/../../../${allowed[0]}.ts';\nexport const d = o;\n`,
+        [`src/${layer}/a/b/deep.ts`]: `import { o } from '../b/../../../../${allowed[0]}.ts';\nexport const d = o;\n`,
       });
 
       expect(output).toContain('All checks passed!');

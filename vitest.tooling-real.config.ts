@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     name: 'tooling-real',
     environment: 'node',
-    include: ['scripts/**/*.real.test.ts', 'rev-dep.config.real.test.ts'],
+    include: ['scripts/**/*.real.test.ts', 'rev-dep.config.real.test.ts', 'oxlintrc.real.test.ts'],
     exclude: [
       ...configDefaults.exclude,
       '**/.next/**',

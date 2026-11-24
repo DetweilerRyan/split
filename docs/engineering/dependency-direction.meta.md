@@ -18,16 +18,18 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 - **`src/sync/` isn't allowed `src/services/`,** since it imported nothing from there when the rule was added ([code layout's sidecar](code-layout.meta.md#srcstore-was-split-not-moved-and-renamed-srcsync)).
 - **The UI folders have no rule:** they may import every layer.
 - **Each test throwaway project holds one file per ruled folder,** because `--lint-config-rules` fails a rule whose pattern matches nothing. A test per folder checks that a missing folder fails.
+- **It also holds a file in every other folder a rule's `allow` could be widened to,** such as `src/server/` and `app/`, and each boundary test asserts the config lint passed. A widened rule then fails on the import it lets through, not on a glob matching nothing. Checked in #94's review by widening the domain rule to `src/server/**/*`: only the boundary assertion for `src/server/guard.ts` failed.
 
 ### Package bans per layer are oxlint's
 
-- **rev-dep can't say which npm packages a folder uses** (see the known gap below), so #94 asked for an oxlint `no-restricted-imports` override for `src/domain/`. The owner's "nothing UI or sync" for `src/services/` ([decisions](https://github.com/DetweilerRyan/split/issues/94#issuecomment-7122174375)) got a second one.
+- **rev-dep can't say which npm packages a folder uses** (see the known gap below), so #94 asked for an oxlint `no-restricted-imports` override for `src/domain/`. `src/services/` got a second one, for the "nothing UI or sync" that described the owner's choice of "New src/services/" ([decisions](https://github.com/DetweilerRyan/split/issues/94#issuecomment-7122174375)).
 - **String matching is right here,** unlike for oxCrap's folder rule: a package specifier names the package, so there's no `../` for it to misjudge.
 - **A `regex` per layer, not a gitignore-style `group`.** Tried on oxlint 1.91.0 on 2026-11-24:
   - **A group's `y-*` also matched the relative path `./y-axis`,** which would ban a file named that way.
   - **`y-*` and `@liveblocks/*` missed subpaths** such as `y-protocols/awareness` and `@liveblocks/client/internal`, so each needed a second `/**` pattern.
   - **The regex `^(…)(/.*)?$`** matches each package and its subpaths, and nothing relative.
-- **What the override was checked against,** with throwaway files on 2026-11-24: an import, a subpath, a type-only import, `export … from`, `export * from` and a dynamic `import()` of a banned package each fail; `zod`, `reactive-thing`, `next-intl`, and relative imports of `../money/` and `../../utils/` pass. In `src/services/`, browser-storage packages pass.
+- **[`oxlintrc.real.test.ts`](../../oxlintrc.real.test.ts) tests the overrides** with the real oxlint: each banned package and subpath, a type-only import, `export … from`, `export * from` and a dynamic `import()` fail, and look-alike names and relative paths pass. An override's `files` globs match paths relative to the config, so the test copies the config into its throwaway project and links `scripts/lint/` for the repository's plugin. Dropping a package or the JSX rule from the config fails it.
+- **JSX in `src/domain/` is refused** by `react/jsx-filename-extension` with no allowed extensions, because JSX imports `react/jsx-runtime` implicitly ([code layout's sidecar](code-layout.meta.md#srcdomain-may-import-srcutils-and-plain-libraries)).
 - **Not taken:** a `no-restricted-globals` ban on `localStorage` and `indexedDB` in `src/domain/`. #94 asked for package bans only.
 
 ### rev-dep checks the rules
