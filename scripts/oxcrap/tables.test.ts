@@ -162,6 +162,11 @@ describe('which tables count', () => {
       { kind: 'object', entries: 1, dispatch: true },
     ],
     [
+      'an object naming a default-exported function expression, which binds no name',
+      'export default (function f() {});\nconst O = { a: f };',
+      { kind: 'object', entries: 1, dispatch: false },
+    ],
+    [
       'an object naming a default-exported class',
       'export default class C {}\nconst O = { C };',
       { kind: 'object', entries: 1, dispatch: false },
@@ -216,6 +221,13 @@ describe('which tables count', () => {
     ['an assignment', 'const O = { a: 1 };\nexport = O.b = 2;', 'O', 'object', false],
   ])('counts %s the top level exports with `export =`', (_, code, name, kind, dispatch) => {
     expect(tables(code).own.get(name)).toEqual({ kind, entries: 2, dispatch });
+  });
+
+  it.each([
+    ['a method it doesn’t call', "const S = new Set(['a']);\nexport default S.add;"],
+    ['an add inside an array', "const S = new Set(['a']);\nexport default [S.add('b')];"],
+  ])('counts no add for an `export default` of %s', (_, code) => {
+    expect(tables(code).own.get('S')).toEqual({ kind: 'set', entries: 1, dispatch: false });
   });
 
   it('counts an add the top level exports with `export default`', () => {
