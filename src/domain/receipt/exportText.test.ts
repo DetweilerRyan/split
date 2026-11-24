@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { formatMoney } from '../money/currency';
 import type { RoomSnapshot } from './roomSnapshot';
 import { buildExportText } from './exportText';
 
@@ -36,6 +37,21 @@ function receipt(
   };
 }
 
+// The summary formats money in the runtime's default locale, so the expected text does too;
+// what these tests check is the amounts, not how they're written.
+function usd(amount: number) {
+  return formatMoney(amount, 'USD');
+}
+function eur(amount: number) {
+  return formatMoney(amount, 'EUR');
+}
+function jpy(amount: number) {
+  return formatMoney(amount, 'JPY');
+}
+function kwd(amount: number) {
+  return formatMoney(amount, 'KWD');
+}
+
 describe('buildExportText', () => {
   it("shows the extra cent of an item that doesn't divide evenly on the share that pays it", () => {
     // $1.00 three ways is 33 cents each, and the cent left over goes to the first claimant.
@@ -43,13 +59,13 @@ describe('buildExportText', () => {
       [
         '🧾 Lunch',
         '💱 Currency: USD',
-        'Ana: $0.34',
-        '  • Dish 1: $0.34 (1/3)',
-        'Ben: $0.33',
-        '  • Dish 1: $0.33 (1/3)',
-        'Cy: $0.33',
-        '  • Dish 1: $0.33 (1/3)',
-        'Total: $1.00',
+        `Ana: ${usd(0.34)}`,
+        `  • Dish 1: ${usd(0.34)} (1/3)`,
+        `Ben: ${usd(0.33)}`,
+        `  • Dish 1: ${usd(0.33)} (1/3)`,
+        `Cy: ${usd(0.33)}`,
+        `  • Dish 1: ${usd(0.33)} (1/3)`,
+        `Total: ${usd(1)}`,
       ].join('\n'),
     );
   });
@@ -71,16 +87,16 @@ describe('buildExportText', () => {
       [
         '🧾 Lunch',
         '💱 Currency: JPY',
-        'Ana: ¥67',
-        '  • Dish 1: ¥34 (1/3)',
-        '  • Dish 2: ¥33 (1/3)',
-        'Ben: ¥67',
-        '  • Dish 1: ¥33 (1/3)',
-        '  • Dish 2: ¥34 (1/3)',
-        'Cy: ¥66',
-        '  • Dish 1: ¥33 (1/3)',
-        '  • Dish 2: ¥33 (1/3)',
-        'Total: ¥200',
+        `Ana: ${jpy(67)}`,
+        `  • Dish 1: ${jpy(34)} (1/3)`,
+        `  • Dish 2: ${jpy(33)} (1/3)`,
+        `Ben: ${jpy(67)}`,
+        `  • Dish 1: ${jpy(33)} (1/3)`,
+        `  • Dish 2: ${jpy(34)} (1/3)`,
+        `Cy: ${jpy(66)}`,
+        `  • Dish 1: ${jpy(33)} (1/3)`,
+        `  • Dish 2: ${jpy(33)} (1/3)`,
+        `Total: ${jpy(200)}`,
       ].join('\n'),
     );
   });
@@ -99,13 +115,13 @@ describe('buildExportText', () => {
         '🧾 Lunch',
         '💱 Currency: EUR',
         '💱 Rate: 1 EUR = 1.1000 USD',
-        '💳 Bank charged: $11.00',
-        '💶 Cash tip: €2.00',
-        'Ana: $13.20 (€12.00)',
-        '  • Dish 1: €10.00',
-        'Ben: $0.00 (€0.00)',
-        'Cy: $0.00 (€0.00)',
-        'Total: €12.00',
+        `💳 Bank charged: ${usd(11)}`,
+        `💶 Cash tip: ${eur(2)}`,
+        `Ana: ${usd(13.2)} (${eur(12)})`,
+        `  • Dish 1: ${eur(10)}`,
+        `Ben: ${usd(0)} (${eur(0)})`,
+        `Cy: ${usd(0)} (${eur(0)})`,
+        `Total: ${eur(12)}`,
       ].join('\n'),
     );
   });
@@ -116,12 +132,12 @@ describe('buildExportText', () => {
       [
         '🧾 Lunch',
         '💱 Currency: KWD',
-        'Ana: KWD\u00a00.000',
-        'Ben: KWD\u00a00.501',
-        '  • Dish 1: KWD\u00a00.501 (1/2)',
-        'Cy: KWD\u00a00.500',
-        '  • Dish 1: KWD\u00a00.500 (1/2)',
-        'Total: KWD\u00a01.001',
+        `Ana: ${kwd(0)}`,
+        `Ben: ${kwd(0.501)}`,
+        `  • Dish 1: ${kwd(0.501)} (1/2)`,
+        `Cy: ${kwd(0.5)}`,
+        `  • Dish 1: ${kwd(0.5)} (1/2)`,
+        `Total: ${kwd(1.001)}`,
       ].join('\n'),
     );
   });
