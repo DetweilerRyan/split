@@ -4,7 +4,8 @@
 // the options, the config file and the comment's rules are in README.md beside this file; why it
 // works this way is in oxcrap.meta.md, to read only when changing or questioning it.
 //
-// This file only connects run.ts to the real file system and the process; run.ts does the work.
+// This file only connects run.ts and files.ts to the real file system and the process; they do
+// the work.
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
 import { existsSync, globSync, readFileSync, realpathSync, statSync } from 'node:fs';

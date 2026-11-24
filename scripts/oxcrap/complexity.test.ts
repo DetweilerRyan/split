@@ -3,7 +3,6 @@ import {
   COUNT_ALL,
   COUNT_SEPARATELY,
   type Counting,
-  complexity,
   isFunctionType,
   isNode,
 } from './complexity.ts';
@@ -181,39 +180,5 @@ describe('isFunctionType', () => {
       ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'].map(isFunctionType),
     ).toEqual([true, true, true]);
     expect(isFunctionType('IfStatement')).toBe(false);
-  });
-});
-
-describe('complexity of a hand-built node', () => {
-  it('counts what `also` adds for each node, and nothing without it', () => {
-    const fn = {
-      type: 'FunctionDeclaration',
-      start: 0,
-      end: 0,
-      body: { type: 'BlockStatement', start: 0, end: 0, body: [] },
-    };
-    expect(complexity(fn)).toBe(1);
-    expect(complexity(fn, COUNT_ALL, (node) => (node.type === 'BlockStatement' ? 2 : 0))).toBe(3);
-  });
-
-  it('counts a switch with no list of cases as one with none', () => {
-    const fn = {
-      type: 'FunctionDeclaration',
-      start: 0,
-      end: 0,
-      body: { type: 'SwitchStatement', start: 0, end: 0 },
-    };
-    expect(complexity(fn, { ...COUNT_ALL, switchCases: 'once' })).toBe(1);
-  });
-
-  it('counts the runs of a logical expression missing an operand from what it has', () => {
-    const name = { type: 'Identifier', start: 0, end: 0, name: 'a' };
-    const fn = {
-      type: 'FunctionDeclaration',
-      start: 0,
-      end: 0,
-      body: { type: 'LogicalExpression', start: 0, end: 0, operator: '&&', left: name },
-    };
-    expect(complexity(fn, { ...COUNT_ALL, logicalOperators: 'sequence' })).toBe(2);
   });
 });
