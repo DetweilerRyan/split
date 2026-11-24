@@ -1,6 +1,6 @@
 # Code design principles
 
-Four principles for deciding how code is shaped here. Each says how to decide, with the reason, so it applies to cases nothing below names. The rules that enforce parts of them live in the documents each one links to.
+Six principles for deciding how code is shaped here. Each says how to decide, with the reason, so it applies to cases nothing below names. The rules that enforce parts of them live in the documents each one links to.
 
 Apply them to the code your task writes or changes. Don't reshape other code to fit them unless the task asks.
 
@@ -60,9 +60,35 @@ switch (action.kind) {
 
 An abstraction made before its second use is a guess, and a wrong one costs more to undo than duplication does.
 
-- **Add a layer, folder, option, parameter or injection point when a current use needs it:** a second caller, or a test that can't run without it. Don't add one for a use you expect.
+- **Add a layer, folder, option, parameter or injection point when a current use needs it:** a second caller, or a test that can't run without it. Don't add one for a use you expect. One implementation behind a seam is a guess at one; two make it real.
 - **Keep code beside its one user.** [Code layout](code-layout.md) says where that is, and when the code moves. Two similar pieces of code are cheaper than the wrong shared one.
 - **Default each option to the simple case,** so a caller that doesn't need it passes nothing, as oxCrap's `counting` options do. [Its README](../../scripts/oxcrap/README.md) lists their defaults.
+
+## 5. Give each module a small interface over a lot of behaviour
+
+A module earns its place by carrying complexity its callers would otherwise carry, as a [deep module](testing-conventions.md#feature-contracts-for-deep-modules) does.
+
+- **Test a module by imagining it deleted.** If its complexity would reappear in each caller, it's earning its place. If the complexity would vanish with it, it's a pass-through: fold it into its caller.
+- **Its interface is everything a caller relies on:** its exports and types, and also the invariants it keeps and the errors it can raise. Test it through that interface. A test that has to reach past it means the module has the wrong shape.
+- **An error says what went wrong and what to do about it.** Whoever reads it, a person or an agent, acts on its words.
+
+## 6. Let the types rule out states that can't happen
+
+A value that can't be invalid needs no check where it's used.
+
+- **Write alternatives as a discriminated union,** not as booleans and optional fields that could contradict each other.
+- **Parse input where it enters the program,** into a type that guarantees it's valid, and pass that type on, rather than checking the raw value again where it's used. [Types and schemas](types-and-schemas.md#ids-and-the-strings-built-from-them) says how, for ids.
+
+```ts
+// Wrong: nothing stops `loading` and `error` from both being set.
+type Rate = { loading: boolean; error?: string; value?: number };
+
+// Right: each state carries only what's true in it.
+type Rate =
+  | { readonly status: 'loading' }
+  | { readonly status: 'failed'; readonly error: string }
+  | { readonly status: 'ready'; readonly value: number };
+```
 
 ## When two principles pull apart
 
