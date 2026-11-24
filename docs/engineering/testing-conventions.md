@@ -121,7 +121,7 @@ Tooling tests check the repository's own dev tools: everything in `scripts/`, an
 
 ### Feature contracts for deep modules
 
-A deep module is any module whose small interface hides much more logic than the interface shows. It might be a program with a command line, or a simplified abstraction over complex code that callers use through a few functions. Its contract is what its callers give it and get back, which is the part that survives rewriting its internals.
+What a deep module is, is in [principle 5](code-design-principles.md#5-give-each-module-a-small-interface-over-a-lot-of-behaviour) of the code design principles. Its contract is what its callers give it and get back, which is the part that survives rewriting its internals.
 
 - **Test a deep module's contract with Gherkin features,** written in its callers' words and kept beside it.
 - **Drive the features through the module's own interface.** Run a program end to end, as a process. A module used through code is driven through its functions, which needn't be end to end.
