@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { type Participant, participantId } from '../domain/receipt/roomSnapshot';
-import type { RoomId } from '../domain/room/roomId';
-import type { ReceiptStore } from '../sync/useReceiptStore';
-import type { RoomProvider } from '../sync/yjsProvider';
-import { useActiveIdentity } from './useActiveIdentity';
+import { type Participant, participantId } from '@/domain/receipt/roomSnapshot';
+import type { RoomId } from '@/domain/room/roomId';
+import type { ReceiptStore } from '@/sync/useReceiptStore';
+import type { RoomProvider } from '@/sync/yjsProvider';
+import { useActiveIdentity } from '@/hooks/useActiveIdentity';
 
 /** What `useIdentity` needs of the room's provider. */
 export interface IdentityProvider {

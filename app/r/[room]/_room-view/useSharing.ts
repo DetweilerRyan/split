@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { buildExportText } from '../domain/receipt/exportText';
-import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
-import type { RoomId } from '../domain/room/roomId';
-import { roomPath } from '../sync/seedCodec';
+import { buildExportText } from '@/domain/receipt/exportText';
+import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import type { RoomId } from '@/domain/room/roomId';
+import { roomPath } from '@/sync/seedCodec';
 
 /** Where copied text goes: `navigator.clipboard`, which is missing outside a secure context. */
 export type CopyTarget = Pick<Clipboard, 'writeText'> | undefined;

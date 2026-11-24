@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import * as Y from 'yjs';
-import './index.css';
-import { ToastContext } from './components/Toast';
-import { PRESETS } from './data/presets';
-import { roomIdSchema } from './domain/room/roomId';
-import type { FetchRate } from './hooks/useExchangeRate';
-import { parseRoomPath } from './sync/seedCodec';
-import { ReceiptStore } from './sync/useReceiptStore';
+import '@/index.css';
+import { ToastContext } from '@/components/Toast';
+import { PRESETS } from '@/data/presets';
+import { roomIdSchema } from '@/domain/room/roomId';
+import type { FetchRate } from './useExchangeRate';
+import { parseRoomPath } from '@/sync/seedCodec';
+import { ReceiptStore } from '@/sync/useReceiptStore';
 import { type RoomParts, RoomView } from './RoomView';
 
 // Each fake shows what RoomView gives it, and offers a button for each callback it's handed, so

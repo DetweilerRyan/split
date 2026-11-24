@@ -125,8 +125,10 @@ const files = sourceFiles();
 
 describe('reformatting this repository’s code', () => {
   it('finds the code to check', () => {
-    // Files directly in src/ and app/ too, which a plain pathspec's ** would miss.
-    expect(files).toContain('src/RoomView.tsx');
+    // Files directly in src/ and app/ too, which a plain pathspec's ** would miss, and a route
+    // folder whose name is a glob character class.
+    expect(files).toContain('src/RoomEntry.tsx');
+    expect(files).toContain('app/r/[room]/_room-view/RoomView.tsx');
     expect(files.length).toBeGreaterThan(30);
   });
 

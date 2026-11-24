@@ -1,5 +1,5 @@
-import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
-import type { ReceiptStore } from '../sync/useReceiptStore';
+import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import type { ReceiptStore } from '@/sync/useReceiptStore';
 
 /** Gets the rate from `base` to `quote`, or null when none is available, as `getExchangeRate` does. */
 export type FetchRate = (

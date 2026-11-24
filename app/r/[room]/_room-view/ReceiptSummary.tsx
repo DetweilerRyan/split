@@ -1,6 +1,6 @@
-import { formatMoney } from '../domain/money/currency';
-import type { ReceiptMath } from '../domain/receipt/math';
-import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
+import { formatMoney } from '@/domain/money/currency';
+import type { ReceiptMath } from '@/domain/receipt/math';
+import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 
 interface ReceiptSummaryProps {
   readonly snapshot: RoomSnapshot;

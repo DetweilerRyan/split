@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import * as Y from 'yjs';
-import { PRESETS } from '../data/presets';
-import { localeCurrency } from '../domain/money/currency';
-import { parseRoomPath, pendingSeedKey } from '../sync/seedCodec';
-import { ReceiptStore } from '../sync/useReceiptStore';
+import { PRESETS } from '@/data/presets';
+import { localeCurrency } from '@/domain/money/currency';
+import { parseRoomPath, pendingSeedKey } from '@/sync/seedCodec';
+import { ReceiptStore } from '@/sync/useReceiptStore';
 import { useSeedImport } from './useSeedImport';
 
 const plitvice = PRESETS.plitvice;
