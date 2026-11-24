@@ -19,6 +19,7 @@ Folders not in the table, such as `src/server/`, `src/data/` and `src/polyfills/
 - **A business rule, or a type it decides, goes in `src/domain/<subject>/`,** even when only one component uses it today. Add a subject folder when no existing one fits. [Types and schemas](types-and-schemas.md#where-a-type-lives) says where its type lives.
 - **A helper goes in `src/utils/` only if it knows nothing about receipts, money or rooms,** so it needs nothing [its rule](dependency-direction.md#the-rules) keeps out. One that does belongs in `src/domain/`.
 - **Code that fetches from or calls an outside service goes in `src/services/`.** Pass it what it needs from a layer [its rule](dependency-direction.md#the-rules) keeps out, rather than importing it.
+- **A React hook goes in `src/hooks/`, one concern to a hook,** such as `useIdentity` or `useSharing`. It takes what it works on, such as the room's provider, store, clipboard or rate fetcher, as arguments rather than importing or reading them itself, so its test can pass fakes. A component composes the hooks and renders.
 - **Display code goes beside the UI that uses it,** such as `src/components/connectionStatus.ts` beside `Header`, not in `src/utils/` or `src/domain/`.
 - **A new folder under `src/` that a layer rule should cover** needs a rule, added as [Adding or changing a rule](dependency-direction.md#adding-or-changing-a-rule) says, and a row in the table above.
 

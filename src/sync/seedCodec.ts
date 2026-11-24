@@ -130,7 +130,7 @@ export function parseRoomHash(hash: string): { roomId: RoomId | null; seed: stri
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }
 
-/* @crap-allow CRAP 50.4, complexity 30. Too complex: a branch for each seed field's default, in
+/* @crap-allow CRAP 33.1, complexity 30. Too complex: a branch for each seed field's default, in
    the room's details and in each item, and for whether forceReset overwrites it. Splitting the
    details from the items would bring it within the limits, but that is a change of its own, not
    part of moving the domain logic out of src/store/ (#94). */

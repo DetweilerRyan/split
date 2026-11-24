@@ -135,7 +135,6 @@ export function formatMoney(amount: number, code: string, locale?: string): stri
   }).format(amount);
 }
 
-// @crap-allow CRAP 42, complexity 6. Debt from before the CRAP check (#63): no tests yet.
 export function localeCurrency(language?: string): string {
   try {
     const tag = language ?? (typeof navigator !== 'undefined' ? navigator.language : 'en-US');

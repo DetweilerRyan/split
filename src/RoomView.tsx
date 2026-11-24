@@ -1,128 +1,84 @@
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { type ComponentProps, type ComponentType, useState } from 'react';
 import { EditReceiptDrawer } from './components/EditReceiptDrawer';
 import { Header } from './components/Header';
 import { IdentityModal } from './components/IdentityModal';
 import { ItemList } from './components/ItemList';
 import { ParticipantCards } from './components/ParticipantCards';
-import { SeedModal } from './components/SeedModal';
+import { ReceiptSummary } from './components/ReceiptSummary';
 import { RestaurantModal } from './components/RestaurantModal';
+import { SeedModal } from './components/SeedModal';
 import { ShareModal } from './components/ShareModal';
 import { Toast, ToastContext } from './components/Toast';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
-import { useActiveIdentity } from './hooks/useActiveIdentity';
+import { useExchangeRate } from './hooks/useExchangeRate';
+import { useIdentity } from './hooks/useIdentity';
 import { useRoomProvider } from './hooks/useRoomProvider';
-import { hydrateFromSeed, pendingSeedKey, roomPath } from './sync/seedCodec';
-import type { ReceiptSeed } from './domain/receipt/receiptSeed';
-import { type RoomId, createRoomId } from './domain/room/roomId';
+import { useSeedImport } from './hooks/useSeedImport';
+import { useSharing } from './hooks/useSharing';
+import { useToast } from './hooks/useToast';
 import { computeReceiptMath } from './domain/receipt/math';
-import { formatMoney, localeCurrency } from './domain/money/currency';
+import type { RoomId } from './domain/room/roomId';
 import { getExchangeRate } from './services/exchangeRates';
-import { buildExportText } from './domain/receipt/exportText';
 import { useReceiptStore } from './sync/useReceiptStore';
+import type { RoomProvider } from './sync/yjsProvider';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-// @crap-allow CRAP 506, complexity 22. It wires the room provider, every handler and every dialog together, so it can only be tested or split as one; #93 splits it by concern.
-export default function RoomView({ roomId }: { roomId: RoomId }) {
-  const router = useRouter();
-  const provider = useRoomProvider(roomId);
+/** The components a room is built from. A test passes fakes, to check only how the room wires them. */
+export interface RoomParts {
+  readonly Header: ComponentType<ComponentProps<typeof Header>>;
+  readonly UnclaimedBanner: ComponentType<ComponentProps<typeof UnclaimedBanner>>;
+  readonly EditReceiptDrawer: ComponentType<ComponentProps<typeof EditReceiptDrawer>>;
+  readonly ItemList: ComponentType<ComponentProps<typeof ItemList>>;
+  readonly ReceiptSummary: ComponentType<ComponentProps<typeof ReceiptSummary>>;
+  readonly ParticipantCards: ComponentType<ComponentProps<typeof ParticipantCards>>;
+  readonly IdentityModal: ComponentType<ComponentProps<typeof IdentityModal>>;
+  readonly RestaurantModal: ComponentType<ComponentProps<typeof RestaurantModal>>;
+  readonly ShareModal: ComponentType<ComponentProps<typeof ShareModal>>;
+  readonly SeedModal: ComponentType<ComponentProps<typeof SeedModal>>;
+  readonly Toast: ComponentType;
+}
+
+const roomParts: RoomParts = {
+  Header,
+  UnclaimedBanner,
+  EditReceiptDrawer,
+  ItemList,
+  ReceiptSummary,
+  ParticipantCards,
+  IdentityModal,
+  RestaurantModal,
+  ShareModal,
+  SeedModal,
+  Toast,
+};
+
+interface RoomViewProps {
+  readonly roomId: RoomId;
+  /** The room's document, store and presence. Pass the same one on every render. */
+  readonly provider: RoomProvider;
+  /** Goes to another page of the app, such as a new room. */
+  readonly navigate: (path: string) => void;
+  readonly parts?: RoomParts;
+}
+
+/** A receipt room: its header, items and totals, and the dialogs they open. */
+export function RoomView({ roomId, provider, navigate, parts = roomParts }: RoomViewProps) {
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<ItemFilter>('all');
-  const [identityOpen, setIdentityOpen] = useState(false);
-  const [seedOpen, setSeedOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [toast, setToast] = useState('');
-  const snapshot = useReceiptStore(provider.store);
+  const { store } = provider;
+  const snapshot = useReceiptStore(store);
   const math = computeReceiptMath(snapshot);
-  const [activeId, setActiveId] = useActiveIdentity(provider, roomId, snapshot.participants);
-
-  const roomUrl =
-    typeof window === 'undefined' ? '' : `${window.location.origin}${roomPath(roomId)}`;
-
-  function showToast(message: string) {
-    setToast(message);
-    window.setTimeout(() => setToast(''), 2600);
-  }
-
-  function chooseIdentity(id: string) {
-    setActiveId(id);
-    setIdentityOpen(false);
-  }
-
-  function addParticipant(name: string) {
-    const participant = provider.store.addParticipant(name);
-    if (participant) chooseIdentity(participant.id);
-    else {
-      const id = `p-${name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')}`;
-      if (snapshot.participants.some((person) => person.id === id)) chooseIdentity(id);
-      else showToast('Enter a participant name.');
-    }
-  }
-
-  function removeParticipant(id: string) {
-    provider.store.removeParticipant(id);
-    if (id === activeId) setActiveId(null);
-  }
-
-  function shareRoom() {
-    setShareOpen(true);
-  }
-
-  function copyRoomLink() {
-    void navigator.clipboard?.writeText(roomUrl).then(() => showToast('Room link copied.'));
-  }
-
-  function importSeed(seed: ReceiptSeed, forceReset: boolean) {
-    hydrateFromSeed(provider.doc, seed, { forceReset });
-    setSeedOpen(false);
-    showToast(`Imported ${seed.items.length} receipt items.`);
-  }
-
-  function loadPreset(seed: ReceiptSeed) {
-    importSeed(seed, true);
-  }
-
-  function newBlankRoom() {
-    const blank: ReceiptSeed = {
-      title: 'New Receipt',
-      cardTipEur: 0,
-      cashTipEur: 0,
-      bankUsd: 0,
-      currency: localeCurrency(),
-      roster: [],
-      items: [],
-    };
-    const nextRoom = createRoomId();
-    try {
-      window.sessionStorage.setItem(pendingSeedKey(nextRoom), JSON.stringify(blank));
-    } catch {}
-    router.push(roomPath(nextRoom));
-  }
-
-  async function changeDisplayCurrency(code: string, force = false, base = snapshot.currency) {
-    if (!code || code === base) {
-      provider.store.setExchangeRate('', 0, '');
-      return;
-    }
-    provider.store.setExchangeRate(code, 0, '');
-    const result = await getExchangeRate(base, code, { force });
-    if (result) provider.store.setExchangeRate(code, result.rate, result.date);
-    else showToast('Exchange rate unavailable offline; showing receipt currency only.');
-  }
-
-  function copySummary() {
-    void navigator.clipboard
-      ?.writeText(buildExportText(snapshot))
-      .then(() => showToast('Summary copied.'));
-  }
-
-  const totals = math.perPerson;
+  const toast = useToast();
+  const identity = useIdentity(provider, roomId, snapshot.participants, toast.showToast);
+  const sharing = useSharing(roomId, snapshot, navigator.clipboard, toast.showToast);
+  const seed = useSeedImport(provider.doc, toast.showToast, navigate);
+  const rates = useExchangeRate(store, snapshot, getExchangeRate, toast.showToast);
+  const dialogOpen = [identity.pickerOpen, detailsOpen, sharing.open, seed.open].some(Boolean);
+  const { Header, UnclaimedBanner, EditReceiptDrawer, ItemList, ReceiptSummary } = parts;
+  const { ParticipantCards, IdentityModal, RestaurantModal, ShareModal, SeedModal, Toast } = parts;
 
   return (
     <div className="min-h-screen pb-12">
@@ -131,14 +87,14 @@ export default function RoomView({ roomId }: { roomId: RoomId }) {
         purchasedAt={snapshot.purchasedAt}
         mealType={snapshot.mealType}
         onDetails={() => setDetailsOpen(true)}
-        activeId={activeId}
+        activeId={identity.activeId}
         connection={snapshot.connection}
         peers={snapshot.peers}
         participants={snapshot.participants}
         editing={editing}
-        onIdentity={() => setIdentityOpen(true)}
+        onIdentity={identity.openPicker}
         onEdit={() => setEditing((value) => !value)}
-        onShare={shareRoom}
+        onShare={sharing.openDialog}
       />
       <UnclaimedBanner
         items={snapshot.items}
@@ -152,96 +108,39 @@ export default function RoomView({ roomId }: { roomId: RoomId }) {
           {editing && (
             <EditReceiptDrawer
               snapshot={snapshot}
-              onMeta={(key, value) => provider.store.setMeta(key, value)}
-              onCurrency={(code) => {
-                provider.store.setMeta('currency', code);
-                if (snapshot.displayCurrency)
-                  void changeDisplayCurrency(snapshot.displayCurrency, false, code);
-              }}
-              onDisplayCurrency={changeDisplayCurrency}
-              onRate={(rate) =>
-                provider.store.setExchangeRate(
-                  snapshot.displayCurrency,
-                  rate,
-                  new Date().toISOString().slice(0, 10),
-                )
-              }
-              onAddItem={(name, en, eur) => provider.store.addItem(name, en, eur)}
+              onMeta={(key, value) => store.setMeta(key, value)}
+              onCurrency={rates.changeCurrency}
+              onDisplayCurrency={rates.changeDisplayCurrency}
+              onRate={rates.setRate}
+              onAddItem={(name, en, eur) => store.addItem(name, en, eur)}
             />
           )}
           <ItemList
             items={snapshot.items}
             participants={snapshot.participants}
-            activeId={activeId}
+            activeId={identity.activeId}
             editing={editing}
             currency={math.currency}
             filter={filter}
-            onClaim={(itemId, participantId) => provider.store.toggleClaim(itemId, participantId)}
+            onClaim={(itemId, participantId) => store.toggleClaim(itemId, participantId)}
             onClaimAll={(itemId, participants, claimed) =>
-              provider.store.setClaims(
+              store.setClaims(
                 itemId,
                 participants.map((person) => person.id),
                 claimed,
               )
             }
-            onUpdate={(itemId, field, value) => provider.store.updateItem(itemId, field, value)}
-            onDelete={(itemId) => provider.store.deleteItem(itemId)}
+            onUpdate={(itemId, field, value) => store.updateItem(itemId, field, value)}
+            onDelete={(itemId) => store.deleteItem(itemId)}
           />
         </div>
         <aside className="space-y-4">
-          <section className="card space-y-3 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-extrabold text-slate-900">{snapshot.title}</h2>
-                <p className="text-xs text-slate-500">Live receipt split</p>
-              </div>
-              <button className="button-secondary" onClick={copySummary}>
-                Copy summary
-              </button>
-            </div>
-            <dl className="space-y-1 border-t border-slate-100 pt-3 text-sm">
-              <div className="flex justify-between">
-                <dt>Currency</dt>
-                <dd className="font-mono">{math.currency}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>Items subtotal</dt>
-                <dd className="font-mono font-bold">
-                  {formatMoney(math.itemsSubtotal, math.currency)}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>Card total</dt>
-                <dd className="font-mono">{formatMoney(math.cardTotal, math.currency)}</dd>
-              </div>
-              {math.displayCurrency && math.effectiveRate !== null && (
-                <>
-                  {snapshot.bankUsd > 0 && (
-                    <div className="flex justify-between">
-                      <dt>Bank charge</dt>
-                      <dd className="font-mono">
-                        {formatMoney(snapshot.bankUsd, math.displayCurrency)}
-                      </dd>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-slate-100 pt-1 font-bold">
-                    <dt>
-                      Exchange rate
-                      {math.isEstimatedRate && snapshot.rateDate ? ` (${snapshot.rateDate})` : ''}
-                    </dt>
-                    <dd className="font-mono">
-                      {math.effectiveRate.toFixed(4)} {math.displayCurrency} / {math.currency}
-                    </dd>
-                  </div>
-                </>
-              )}
-            </dl>
-          </section>
+          <ReceiptSummary snapshot={snapshot} onCopySummary={sharing.copySummary} />
           <ParticipantCards snapshot={snapshot} />
           <section className="card p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-extrabold">Receipt seed</h2>
-              <button className="button-secondary" onClick={() => setSeedOpen(true)}>
+              <button className="button-secondary" onClick={seed.openDialog}>
                 Seed / presets
               </button>
             </div>
@@ -254,15 +153,15 @@ export default function RoomView({ roomId }: { roomId: RoomId }) {
           </section>
         </aside>
       </main>
-      <ToastContext value={toast}>
+      <ToastContext value={toast.message}>
         <IdentityModal
-          open={identityOpen}
+          open={identity.pickerOpen}
           participants={snapshot.participants}
-          activeId={activeId}
-          onClose={() => setIdentityOpen(false)}
-          onSelect={chooseIdentity}
-          onAdd={addParticipant}
-          onRemove={removeParticipant}
+          activeId={identity.activeId}
+          onClose={identity.closePicker}
+          onSelect={identity.choose}
+          onAdd={identity.add}
+          onRemove={identity.remove}
         />
         <RestaurantModal
           open={detailsOpen}
@@ -271,21 +170,30 @@ export default function RoomView({ roomId }: { roomId: RoomId }) {
           onClose={() => setDetailsOpen(false)}
         />
         <ShareModal
-          open={shareOpen}
-          url={roomUrl}
-          onClose={() => setShareOpen(false)}
-          onCopy={copyRoomLink}
+          open={sharing.open}
+          url={sharing.url}
+          onClose={sharing.closeDialog}
+          onCopy={sharing.copyLink}
         />
         <SeedModal
-          open={seedOpen}
-          onClose={() => setSeedOpen(false)}
-          onImport={importSeed}
-          onPreset={loadPreset}
-          onBlankRoom={newBlankRoom}
+          open={seed.open}
+          onClose={seed.closeDialog}
+          onImport={seed.importSeed}
+          onPreset={seed.loadPreset}
+          onBlankRoom={seed.newBlankRoom}
         />
-        {[identityOpen, detailsOpen, shareOpen, seedOpen].every((open) => !open) && <Toast />}
+        {!dialogOpen && <Toast />}
       </ToastContext>
-      {Object.keys(totals).length === 0 && <div className="sr-only">No participants yet.</div>}
+      {Object.keys(math.perPerson).length === 0 && (
+        <div className="sr-only">No participants yet.</div>
+      )}
     </div>
   );
+}
+
+/** The room at `roomId`, once its provider has loaded; it suspends until then. */
+export default function LoadedRoomView({ roomId }: { readonly roomId: RoomId }) {
+  const router = useRouter();
+  const provider = useRoomProvider(roomId);
+  return <RoomView roomId={roomId} provider={provider} navigate={(path) => router.push(path)} />;
 }
