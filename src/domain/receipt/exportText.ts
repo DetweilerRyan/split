@@ -1,5 +1,5 @@
-import type { RoomSnapshot } from '../store/useReceiptStore';
-import { formatMoney } from './currency';
+import type { RoomSnapshot } from '../../store/useReceiptStore';
+import { formatMoney } from '../money/currency';
 import { computeReceiptMath } from './math';
 
 // @crap-allow CRAP 132, complexity 11. Debt from before the CRAP check (#63): no tests yet.

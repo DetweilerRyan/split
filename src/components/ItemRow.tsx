@@ -1,6 +1,6 @@
 import { Check, Trash2 } from 'lucide-react';
 import type { Participant, ReceiptItem } from '../store/useReceiptStore';
-import { currencyExponent, formatMoney } from '../utils/currency';
+import { currencyExponent, formatMoney } from '../domain/money/currency';
 
 interface ItemRowProps {
   item: ReceiptItem;

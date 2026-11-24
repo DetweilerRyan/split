@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronRight, Pencil, Share2, Users } from 'lucide-react';
-import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
+import { formatPurchaseTime, parsePurchasedAt } from '../domain/receipt/mealInfo';
 import type { Participant, RoomSnapshot } from '../store/useReceiptStore';
-import { getConnectionStatusDisplay } from '../utils/connectionStatus';
+import { getConnectionStatusDisplay } from './connectionStatus';
 
 interface HeaderProps {
   title: string;

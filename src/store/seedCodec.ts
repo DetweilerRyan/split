@@ -1,7 +1,7 @@
 import LZString from 'lz-string';
 import * as Y from 'yjs';
 import { z } from 'zod';
-import { isValidCurrency, normalizeCurrency } from '../utils/currency';
+import { isValidCurrency, normalizeCurrency } from '../domain/money/currency';
 
 export interface HydrationOptions {
   forceReset?: boolean;

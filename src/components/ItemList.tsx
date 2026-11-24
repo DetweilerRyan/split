@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { Participant, ReceiptItem } from '../store/useReceiptStore';
-import { formatMoney } from '../utils/currency';
+import { formatMoney } from '../domain/money/currency';
 import { ItemRow } from './ItemRow';
 
 interface ItemListProps {

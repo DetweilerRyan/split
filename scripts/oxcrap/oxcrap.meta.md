@@ -376,7 +376,7 @@ It checks that each function's complexity, which functions a `@crap-allow` match
 - **A hook mode inside the CRAP script:** it tied the script to Claude Code, and to running lint and the tests.
 - **A blocking hook:** #63 chose advice inside the session and a gate in CI.
 - **Other ways to enforce the import rule:** in [dependency direction's sidecar](../../docs/engineering/dependency-direction.meta.md#options-not-taken).
-- **Mutation testing:** deferred. Revisit Stryker for `src/utils/math.ts` and `src/store/seedCodec.ts` in its own issue.
+- **Mutation testing:** deferred. Revisit Stryker for `src/domain/receipt/math.ts` (in `src/utils/` until #94) and `src/store/seedCodec.ts` in its own issue.
 
 ## What would reopen this
 

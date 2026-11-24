@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
 import type { RoomSnapshot } from '../store/useReceiptStore';
-import { currencyExponent, currencyLabel, listCurrencies } from '../utils/currency';
+import { currencyExponent, currencyLabel, listCurrencies } from '../domain/money/currency';
 
 interface EditReceiptDrawerProps {
   snapshot: RoomSnapshot;
