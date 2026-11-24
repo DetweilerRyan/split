@@ -28,7 +28,7 @@ import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
-// @crap-allow CRAP 506, complexity 22. Debt from before the CRAP check (#63): no tests yet.
+// @crap-allow CRAP 506, complexity 22. It wires the room provider, every handler and every dialog together, so it can only be tested or split as one; #93 splits it by concern.
 export default function RoomView({ roomId }: { roomId: RoomId }) {
   const router = useRouter();
   const provider = useRoomProvider(roomId);

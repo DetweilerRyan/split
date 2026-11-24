@@ -7,7 +7,6 @@ interface ParticipantCardsProps {
   snapshot: RoomSnapshot;
 }
 
-// @crap-allow CRAP 72, complexity 8. Debt from before nested functions, default values and ?. counted (#74): no tests yet.
 export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
   const math = computeReceiptMath(snapshot);
   const headingId = useId();
