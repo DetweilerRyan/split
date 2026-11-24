@@ -9,7 +9,8 @@
   "mutate": [
     "scripts/oxcrap/**/*.ts",
     "!scripts/oxcrap/**/*.test.ts",
-    "!scripts/oxcrap/features/**"
+    "!scripts/oxcrap/features/**",
+    "!scripts/oxcrap/oxcrap.ts"
   ],
   "ignoreStatic": true,
   "disableTypeChecks": false,
