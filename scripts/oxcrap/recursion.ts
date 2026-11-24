@@ -199,12 +199,17 @@ function thisMethod(callee: AstNode): string | undefined {
  * a parameter, a local, or a catch or loop variable of the same name. tables.ts reads a table only
  * through a use this doesn't list.
  */
-export function shadowedUses(program: AstNode, names: Set<string>): Set<AstNode> {
+export function shadowedUses(program: AstNode, names: ReadonlySet<string>): ReadonlySet<AstNode> {
   return hidden(program, [], names, new Set());
 }
 
 /** Adds the uses of `names` in `node` and below that an inner scope hides, to `into`. */
-function hidden(node: AstNode, scopes: Scope[], names: Set<string>, into: Set<AstNode>) {
+function hidden(
+  node: AstNode,
+  scopes: readonly Scope[],
+  names: ReadonlySet<string>,
+  into: Set<AstNode>,
+) {
   if (node.type === 'Identifier' && names.has(node.name as string)) {
     const name = node.name as string;
     // Scope 0 is the program's own: a binding found further in hides the top-level one.
@@ -216,7 +221,7 @@ function hidden(node: AstNode, scopes: Scope[], names: Set<string>, into: Set<As
 }
 
 /** The scopes around `node`'s children: `scopes`, and the one `node` opens, if any. */
-function scopesInside(node: AstNode, scopes: Scope[]): Scope[] {
+function scopesInside(node: AstNode, scopes: readonly Scope[]): readonly Scope[] {
   if (isFunctionType(node.type)) return [...scopes, functionScope(node)];
   return opensScope(node) ? [...scopes, blockScope(node)] : scopes;
 }
