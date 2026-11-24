@@ -2,7 +2,7 @@ import { CalendarDays, Globe, MapPin, Phone, Utensils, X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import type { RoomSnapshot } from '../store/useReceiptStore';
 import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
-import { websiteUrl } from '../utils/websiteUrl';
+import { parseWebsiteLink } from '../utils/websiteLink';
 import type { RoomId } from '../store/seedCodec';
 
 interface RestaurantModalProps {
@@ -46,7 +46,7 @@ function detailRows(snapshot: RoomSnapshot) {
   }
   const website = snapshot.website.trim();
   if (website)
-    rows.push({ icon: Globe, label: 'Website', value: website, link: websiteUrl(website) });
+    rows.push({ icon: Globe, label: 'Website', value: website, link: parseWebsiteLink(website) });
   return rows;
 }
 
