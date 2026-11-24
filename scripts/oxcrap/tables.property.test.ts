@@ -9,7 +9,12 @@ import type { Imported } from './tables.ts';
 // that must, or must not, change the answer. The answer comes from code with no table at all,
 // never from tables.ts:
 // - **Where the table lives:** in the file, imported whole, or with its handlers imported.
-// - **How it's read:** plainly or through a cast.
+// - **How its handlers are written:** as arrows in the table, or every entry naming one function
+//   the file declares, exports or default-exports.
+// - **How its last entry gets in:** in the literal, or added by the top level, as a statement, with
+//   `export =` or with `export default`.
+// - **How it's read:** plainly or through a cast, with a runtime key or, for a dispatch, a static
+//   one or none, which reads as no table.
 // - **Decoy functions:** they read the table, change another object, or change the table, in the
 //   file or in the table's own module. A table something changes is state, so it reads as no table.
 // - **A local of the same name:** a parameter, a `const`, or a hoisted `var` hides the table, so
@@ -17,7 +22,11 @@ import type { Imported } from './tables.ts';
 
 /** Dispatch tables stand for a switch; membership tests for an `||` chain. */
 type Kind = 'object' | 'map' | 'set' | 'array' | 'in';
-type Placement = 'same' | 'importedTable' | 'importedHandlers';
+type Placement = 'same' | 'importedTable' | 'importedHandlers' | 'namedHandler';
+/** How a module declares the one function every entry names, in the `namedHandler` placement. */
+type Handler = 'function' | 'exported' | 'defaultExported' | 'defaultAsync' | 'const';
+/** Where the last entry comes from: the literal, or a top-level add written one of these ways. */
+type Added = 'literal' | 'statement' | 'exportAssignment' | 'exportDefault';
 type Cast = 'none' | 'any' | 'record' | 'parens' | 'nonNull';
 type Decoy = {
   readonly where: 'main' | 'other';
@@ -29,7 +38,10 @@ type Case = {
   readonly names: readonly string[];
   readonly kind: Kind;
   readonly placement: Placement;
+  readonly handler: Handler;
+  readonly added: Added;
   readonly cast: Cast;
+  readonly key: number;
   readonly decoys: readonly Decoy[];
   readonly shadow: Shadow;
 };
@@ -81,11 +93,32 @@ const CHANGES_TO_OTHER: readonly string[] = [
   'delete other[x];',
 ];
 
-const cases: fc.Arbitrary<Case> = fc.record({
+/** How the named handler is declared, and how the last entry gets in: one `export default` at most. */
+const handlerAndAdded = fc
+  .constantFrom<Handler>('function', 'exported', 'defaultExported', 'defaultAsync', 'const')
+  .chain((handler) =>
+    fc.record({
+      handler: fc.constant(handler),
+      added: fc.constantFrom<Added>(
+        'literal',
+        'statement',
+        'exportAssignment',
+        ...(handler.startsWith('default') ? [] : ['exportDefault' as const]),
+      ),
+    }),
+  );
+
+const rest = fc.record({
   names: keys,
   kind: fc.constantFrom<Kind>('object', 'map', 'set', 'array', 'in'),
-  placement: fc.constantFrom<Placement>('same', 'importedTable', 'importedHandlers'),
+  placement: fc.constantFrom<Placement>(
+    'same',
+    'importedTable',
+    'importedHandlers',
+    'namedHandler',
+  ),
   cast: fc.constantFrom<Cast>('none', 'any', 'record', 'parens', 'nonNull'),
+  key: fc.nat(),
   decoys: fc.array(
     fc.record({
       where: fc.constantFrom('main' as const, 'other' as const),
@@ -97,21 +130,39 @@ const cases: fc.Arbitrary<Case> = fc.record({
   shadow: fc.constantFrom<Shadow>('none', 'param', 'local', 'hoistedVar', 'siblingBlock'),
 });
 
+const cases: fc.Arbitrary<Case> = fc
+  .tuple(rest, handlerAndAdded)
+  .map(([others, handling]) => ({ ...others, ...handling }));
+
 function isDispatch(kind: Kind) {
   return kind === 'object' || kind === 'map';
 }
 
-/** The table's entries: handlers for dispatch, named `h<i>` when they're imported. */
-function definition(test: Case) {
-  function handler(i: number) {
-    return test.placement === 'importedHandlers' ? `h${i}` : `() => ${i}`;
+/** Entry `i`'s handler: `h<i>` when they're imported, `h` when one is named, or an arrow. */
+function handlerOf(test: Case, i: number) {
+  switch (test.placement) {
+    case 'importedHandlers':
+      return `h${i}`;
+    case 'namedHandler':
+      return 'h';
+    default:
+      return `() => ${i}`;
   }
-  const { names } = test;
+}
+
+/** The names the table's literal holds: all of them, or all but the last when the top level adds it. */
+function literalNames(test: Case) {
+  return test.added === 'literal' ? test.names : test.names.slice(0, -1);
+}
+
+/** The table's literal: handlers for dispatch, values for membership. */
+function definition(test: Case) {
+  const names = literalNames(test);
   switch (test.kind) {
     case 'object':
-      return `{ ${names.map((name, i) => `${name}: ${handler(i)}`).join(', ')} }`;
+      return `{ ${names.map((name, i) => `${name}: ${handlerOf(test, i)}`).join(', ')} }`;
     case 'map':
-      return `new Map([${names.map((name, i) => `['${name}', ${handler(i)}]`).join(', ')}])`;
+      return `new Map([${names.map((name, i) => `['${name}', ${handlerOf(test, i)}]`).join(', ')}])`;
     case 'set':
       return `new Set([${names.map((name) => `'${name}'`).join(', ')}])`;
     case 'array':
@@ -119,6 +170,51 @@ function definition(test: Case) {
     default:
       return `{ ${names.map((name) => `${name}: 1`).join(', ')} }`;
   }
+}
+
+/** The top-level statement that adds the table's last entry, if the literal doesn't hold it. */
+function addition(test: Case) {
+  if (test.added === 'literal') return [];
+  const i = test.names.length - 1;
+  const name = test.names[i];
+  const add = {
+    object: `T.${name} = ${handlerOf(test, i)}`,
+    map: `T.set('${name}', ${handlerOf(test, i)})`,
+    set: `T.add('${name}')`,
+    array: `T[${i}] = '${name}'`,
+    in: `T.${name} = 1`,
+  }[test.kind];
+  const statement = {
+    statement: `${add};`,
+    exportAssignment: `export = ${add};`,
+    exportDefault: `export default ${add};`,
+  }[test.added];
+  return [statement];
+}
+
+/** The declaration of the one function every entry names, in the `namedHandler` placement. */
+function namedHandler(test: Case) {
+  return {
+    function: 'function h() { return 0; }',
+    exported: 'export function h() { return 0; }',
+    defaultExported: 'export default function h() { return 0; }',
+    defaultAsync: 'export default async function h() { return 0; }',
+    const: 'const h = () => 0;',
+  }[test.handler];
+}
+
+/** The ways a dispatch can be keyed: at run time first, then static ones; a Map's `.get()` can take none. */
+const DISPATCH_KEYS = { object: ['k', "'k0'", '`k0`'], map: ['k', "'k0'", '`k0`', ''] } as const;
+
+/** The key a dispatch reads with, by the case's choice. */
+function keyOf(test: Case, kind: 'object' | 'map') {
+  const forms = DISPATCH_KEYS[kind];
+  return forms[test.key % forms.length];
+}
+
+/** Whether the case reads a dispatch with a key known before it runs. */
+function staticRead(test: Case) {
+  return (test.kind === 'object' || test.kind === 'map') && keyOf(test, test.kind) !== 'k';
 }
 
 /** The read of the table, through the case's cast, under the name `table`. */
@@ -132,9 +228,9 @@ function read(test: Case, table: string) {
   }[test.cast];
   switch (test.kind) {
     case 'object':
-      return `return ${wrapped}[k]();`;
+      return `return ${wrapped}[${keyOf(test, 'object')}]();`;
     case 'map':
-      return `return ${wrapped}.get(k)!();`;
+      return `return ${wrapped}.get(${keyOf(test, 'map')})!();`;
     case 'set':
       return `return ${wrapped}.has(k);`;
     case 'array':
@@ -191,14 +287,17 @@ function modules(test: Case, table: string) {
   const other: string[] = [];
   const main: string[] = [];
   if (test.placement === 'importedTable') {
-    other.push(`export const T = ${definition(test)};`);
+    other.push(`export const T = ${definition(test)};`, ...addition(test));
     main.push("import { T } from './other.ts';");
   } else if (test.placement === 'importedHandlers' && isDispatch(test.kind)) {
     other.push(...handlers);
     main.push(`import { ${test.names.map((_, i) => `h${i}`).join(', ')} } from './other.ts';`);
-    main.push(`const T = ${definition(test)};`);
+    main.push(`const T = ${definition(test)};`, ...addition(test));
+  } else if (test.placement === 'namedHandler' && isDispatch(test.kind)) {
+    main.push(namedHandler(test), `const T = ${definition(test)};`, ...addition(test));
   } else {
-    main.push(`const T = ${definition({ ...test, placement: 'same' })};`);
+    const same = { ...test, placement: 'same' as const };
+    main.push(`const T = ${definition(same)};`, ...addition(same));
   }
   other.push(...decoys('other'));
   main.push(...decoys('main'), runFunction(test, table));
@@ -236,7 +335,7 @@ function chainVersion(names: readonly string[]) {
 /** What `run` must score: as the code with no table, or as a read of no table at all. */
 function expected(test: Case, counting: Counting) {
   const hidden = test.shadow === 'param' || test.shadow === 'local' || test.shadow === 'hoistedVar';
-  if (changesTable(test) || hidden) return score(test, 'Nope', counting);
+  if (changesTable(test) || hidden || staticRead(test)) return score(test, 'Nope', counting);
   const plain = isDispatch(test.kind) ? switchVersion(test.names) : chainVersion(test.names);
   return parse('plain.ts', plain, counting).functions.find((fn) => fn.label === 'run')?.complexity;
 }

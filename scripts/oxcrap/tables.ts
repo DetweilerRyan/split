@@ -154,13 +154,16 @@ function objectOf(object: AstNode, functions: ReadonlySet<string>): Table | unde
   return { kind: 'object', entries: properties.length, dispatch };
 }
 
-/** A module's top-level statements, with `export` taken off a declaration. */
+/**
+ * A module's top-level statements, with `export` and `export default` taken off what they export,
+ * and an expression statement or `export =` as its expression.
+ */
 function topLevel(program: AstNode): readonly AstNode[] {
-  return (program.body as AstNode[]).map((statement) =>
-    statement.type === 'ExportNamedDeclaration' && isNode(statement.declaration)
-      ? statement.declaration
-      : statement,
-  );
+  return (program.body as AstNode[]).map((statement) => {
+    // Only an export has a `declaration`, and only `x;` or `export = x` an `expression` node.
+    const inner = statement.declaration ?? statement.expression;
+    return isNode(inner) ? inner : statement;
+  });
 }
 
 /** The `const` names a statement declares with a value, and those values. */
@@ -175,12 +178,10 @@ function constants(statement: AstNode): [string, unknown][] {
 }
 
 /**
- * An entry a top-level statement adds to one of `tables`: `T.set(k, v)`, `T.add(x)`, or
- * `T.k = v`. Returns the table's name and the value added, or nothing.
+ * An entry a top-level expression adds to one of `tables`: `T.set(k, v)`, `T.add(x)`, or
+ * `T.k = v`, as a statement or exported. Returns the table's name and the value added, or nothing.
  */
-function addition(statement: AstNode): { name: string; value: unknown } | undefined {
-  if (statement.type !== 'ExpressionStatement' || !isNode(statement.expression)) return undefined;
-  const expression = statement.expression;
+function addition(expression: AstNode): { name: string; value: unknown } | undefined {
   switch (expression.type) {
     case 'AssignmentExpression':
       return assigned(expression);
@@ -394,9 +395,12 @@ function isMutator(method: string) {
       return false;
   }
 }
-/** Whether `node` is a key known before the program runs: a literal, or a template with no `${}`. */
+/**
+ * Whether `node` is a key known before the program runs: a literal, a template with no `${}`, or
+ * none at all, as in `T.get()`, which reads `undefined`.
+ */
 function staticKey(node: unknown): boolean {
-  if (!isNode(node)) return false;
+  if (!isNode(node)) return true;
   if (node.type === 'Literal') return true;
   return node.type === 'TemplateLiteral' && (node.expressions as unknown[]).length === 0;
 }
