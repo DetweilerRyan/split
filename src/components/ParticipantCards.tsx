@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { RoomSnapshot } from '../store/useReceiptStore';
+import type { RoomSnapshot } from '../sync/useReceiptStore';
 import { formatMoney } from '../domain/money/currency';
 import { computeReceiptMath } from '../domain/receipt/math';
 

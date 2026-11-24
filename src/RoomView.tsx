@@ -19,12 +19,12 @@ import {
   hydrateFromSeed,
   pendingSeedKey,
   roomPath,
-} from './store/seedCodec';
+} from './sync/seedCodec';
 import { computeReceiptMath } from './domain/receipt/math';
 import { formatMoney, localeCurrency } from './domain/money/currency';
 import { getExchangeRate } from './services/exchangeRates';
 import { buildExportText } from './domain/receipt/exportText';
-import { useReceiptStore } from './store/useReceiptStore';
+import { useReceiptStore } from './sync/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 

@@ -4,7 +4,7 @@ Where TypeScript types and zod schemas are defined, and how ids and the strings 
 
 ## Where a type lives
 
-- **Define a type or schema in the module that creates or holds the state it describes,** and export it from there. `RoomSnapshot` lives in `src/store/useReceiptStore.ts`, which builds it. `receiptSeedSchema` and `RoomId` live in `src/store/seedCodec.ts`, which parses and creates them.
+- **Define a type or schema in the module that creates or holds the state it describes,** and export it from there. `RoomSnapshot` lives in `src/sync/useReceiptStore.ts`, which builds it. `receiptSeedSchema` and `RoomId` live in `src/sync/seedCodec.ts`, which parses and creates them.
 - **Don't create a file only to hold types or schemas,** and don't add a shared types folder.
 - **A type that many modules use still lives with its state.** Import it with `import type`, so the importer doesn't load the module's runtime code.
 
