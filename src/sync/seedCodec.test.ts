@@ -2,7 +2,9 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   buildIngestUrl,
   decodeRoomId,
+  decodeSeed,
   encodeRoomId,
+  encodeSeed,
   parseIngestUrl,
   parseRoomHash,
   parseRoomPath,
@@ -115,6 +117,23 @@ describe('ingest links', () => {
     expect(url.startsWith('https://split.detweiler.me/ingest#ingest=')).toBe(true);
     const parsed = parseIngestUrl(url);
     expect(parsed && 'seed' in parsed && parsed.seed).toEqual(seed);
+  });
+});
+
+describe('decoding a seed', () => {
+  it('decodes a seed as JSON or compressed', () => {
+    expect(decodeSeed(JSON.stringify(seed))).toEqual(seed);
+    expect(decodeSeed(encodeSeed(seed))).toEqual(seed);
+  });
+
+  it.each([
+    ['nothing', null],
+    ['text that holds no seed', 'not a seed'],
+    ['a seed with only a title and items', JSON.stringify({ title: 'No roster', items: [] })],
+    ['a seed whose item has no price', JSON.stringify({ ...seed, items: [{ id: 'item-0' }] })],
+    ['a compressed seed with no roster', encodeSeed({ ...seed, roster: undefined } as never)],
+  ])('refuses %s', (_, value) => {
+    expect(decodeSeed(value)).toBeNull();
   });
 });
 

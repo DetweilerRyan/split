@@ -31,8 +31,6 @@ export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: Se
       );
       const seed = decodeSeed(urlParams.get('seed') ?? input);
       if (!seed) throw new Error('Invalid seed');
-      // decodeSeed checks only that `items` is an array, so a seed missing other fields, such as
-      // `roster`, throws while it's imported.
       onImport(seed, forceReset);
     } catch {
       window.alert('Could not parse seed JSON, compressed seed, or room link.');
