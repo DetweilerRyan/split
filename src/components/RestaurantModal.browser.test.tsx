@@ -52,14 +52,14 @@ describe('RestaurantModal', () => {
       .element(dialog.getByRole('link', { name: 'Via dei Vascellari 29, Rome' }))
       .toHaveAttribute(
         'href',
-        'https://www.google.com/maps/search/?api=1&query=Trattoria%20Da%20Enzo%20Via%20dei%20Vascellari%2029%2C%20Rome',
+        'https://www.google.com/maps/search/?api=1&query=Trattoria+Da+Enzo+Via+dei+Vascellari+29%2C+Rome',
       );
     await expect
       .element(dialog.getByRole('link', { name: '+39 06 581 2260' }))
       .toHaveAttribute('href', 'tel:+39065812260');
     await expect
       .element(dialog.getByRole('link', { name: 'daenzoal29.com' }))
-      .toHaveAttribute('href', 'https://daenzoal29.com');
+      .toHaveAttribute('href', 'https://daenzoal29.com/');
   });
 
   it('shows only the day when the receipt has no time', async () => {
