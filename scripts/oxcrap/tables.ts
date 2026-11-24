@@ -184,9 +184,8 @@ function constants(statement: AstNode): readonly (readonly [string, unknown])[] 
   // Only a VariableDeclaration has a `kind` of 'const'.
   if (statement.kind !== 'const') return [];
   return parseNodes(statement.declarations).flatMap((declarator) =>
-    isNamed(declarator.id) && declarator.id.type === 'Identifier'
-      ? [[declarator.id.name, declarator.init] as const]
-      : [],
+    // Only an Identifier has a name; a destructuring pattern declares no table.
+    isNamed(declarator.id) ? [[declarator.id.name, declarator.init] as const] : [],
   );
 }
 
