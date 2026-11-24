@@ -151,6 +151,21 @@ describe('which tables count', () => {
       'class C {}\nconst O = { C };',
       { kind: 'object', entries: 1, dispatch: false },
     ],
+    [
+      'an object naming a default-exported function',
+      'export default function f() {}\nconst O = { a: f, b: f };',
+      { kind: 'object', entries: 2, dispatch: true },
+    ],
+    [
+      'an object naming a default-exported async function',
+      'export default async function f() {}\nconst O = { a: f };',
+      { kind: 'object', entries: 1, dispatch: true },
+    ],
+    [
+      'an object naming a default-exported class',
+      'export default class C {}\nconst O = { C };',
+      { kind: 'object', entries: 1, dispatch: false },
+    ],
   ])('%s', (_, code, table) => {
     expect([...tables(code).own.values()]).toEqual([table]);
   });
@@ -196,8 +211,23 @@ describe('which tables count', () => {
   });
 
   it.each([
+    ['an add', "const S = new Set(['a']);\nexport = S.add('b');", 'S', 'set', false],
+    ['a set', "const M = new Map([['a', 1]]);\nexport = M.set('b', () => 2);", 'M', 'map', true],
+    ['an assignment', 'const O = { a: 1 };\nexport = O.b = 2;', 'O', 'object', false],
+  ])('counts %s the top level exports with `export =`', (_, code, name, kind, dispatch) => {
+    expect(tables(code).own.get(name)).toEqual({ kind, entries: 2, dispatch });
+  });
+
+  it('counts an add the top level exports with `export default`', () => {
+    const found = tables("const S = new Set(['a']);\nexport default S.add('b');").own;
+    expect(found.get('S')).toEqual({ kind: 'set', entries: 2, dispatch: false });
+  });
+
+  it.each([
     ['adds to a Set', 'S.add(x)'],
     ['deletes from a Set', 'S.delete(x)'],
+    ['sets an entry of a Map', 'S.set(x, 1)'],
+    ['clears', 'S.clear()'],
     ['sets a key', 'S[x] = 1'],
     ['sets a key through a cast', '(S as any)[x] = 1'],
     ['bumps a key', 'S[x]++'],
@@ -347,6 +377,11 @@ describe('reading a table', () => {
     ],
     ['a call through this', 'export class A { run(k: string) { return (this as any)[k](); } }', 2],
     [
+      'a dispatch through an index, naming a default-exported function',
+      'export default function f() {}\nconst O = { a: f, b: f };\nexport function run(k: string) { return O[k](); }',
+      1 + 2,
+    ],
+    [
       'membership of a Set in a loop’s test, past a const of the same name in its block',
       "const S = new Set(['a', 'b', 'c']);\nexport function is(x: string) { while (S.has(x)) { const S = 1; log(S); } }",
       1 + 1 + 2,
@@ -367,6 +402,10 @@ describe('reading a table', () => {
     [
       'a dispatch with a static key',
       `${DISPATCH}\nexport function run() { return RULES.get('a')!(); }`,
+    ],
+    [
+      'a dispatch with no key, which reads undefined',
+      `${DISPATCH}\nexport function run() { return RULES.get()!(); }`,
     ],
     ['a static index', "const O = { a: () => 1 };\nexport function run() { return O['a'](); }"],
     ['a static computed call', 'export function run(o: any) { return o[`go`](); }'],
