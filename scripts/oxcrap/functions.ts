@@ -86,11 +86,11 @@ export function label(source: string, fn: AstNode, parent: AstNode | undefined) 
   const own = fn.id;
   // A function's `id`, when it has one, is an Identifier, whose name is a string.
   if (isNode(own)) return own.name as string;
-  return (parent && nameFromParent(source, parent)) ?? '(anonymous)';
+  return (parent && nameFromParent(source, fn, parent)) ?? '(anonymous)';
 }
 
 /** The name a function's parent gives it, as `const f = …` names `f`, or nothing if it can't. */
-function nameFromParent(source: string, parent: AstNode) {
+function nameFromParent(source: string, fn: AstNode, parent: AstNode) {
   switch (parent.type) {
     case 'VariableDeclarator':
       return text(source, parent.id);
@@ -102,7 +102,8 @@ function nameFromParent(source: string, parent: AstNode) {
       return text(source, parent.left);
     case 'CallExpression':
     case 'NewExpression':
-      return callback(text(source, parent.callee));
+      // A function the call calls, as an IIFE is, isn't passed to it, so it has no name.
+      return passedToCall(fn, parent) ? callback(text(source, parent.callee)) : undefined;
     case 'ExportDefaultDeclaration':
       return 'default export';
   }
