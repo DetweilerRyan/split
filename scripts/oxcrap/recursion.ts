@@ -84,11 +84,12 @@ function declareBlock(scope: Scope, statements: readonly AstNode[]) {
   for (const statement of statements) declareStatement(scope, exported(statement));
 }
 
-/** What an export statement declares, or the statement itself if it isn't one. */
+/**
+ * What an export statement declares, or the statement itself if it isn't one. Only the two export
+ * declarations have a `declaration`.
+ */
 function exported(statement: AstNode): AstNode {
-  // Stryker disable next-line Regex: no other node type contains ExportNamedDeclaration or ExportDefaultDeclaration, so the anchors change no match.
-  const isExport = /^Export(Named|Default)Declaration$/.test(statement.type);
-  return isExport && isNode(statement.declaration) ? statement.declaration : statement;
+  return isNode(statement.declaration) ? statement.declaration : statement;
 }
 
 /** Declares into `scope` what one statement declares, other than `var`. */
