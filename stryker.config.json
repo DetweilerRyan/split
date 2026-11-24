@@ -14,6 +14,7 @@
   ],
   "ignoreStatic": true,
   "disableTypeChecks": false,
+  "thresholds": { "high": 100, "low": 99, "break": 99 },
   "reporters": ["clear-text", "progress", "html", "json"],
   "htmlReporter": {
     "fileName": "reports/mutation/mutation.html"

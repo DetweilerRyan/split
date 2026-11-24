@@ -155,6 +155,7 @@ function operatorRuns(node: AstNode) {
   }
   walk(node);
   // operators[-1] is undefined, so the first operator always starts a run.
+  // Stryker disable next-line ArithmeticOperator: comparing with the next operator instead counts each run by its end rather than its start, and every run has one of each.
   return operators.filter((op, i) => operators[i - 1] !== op).length;
 }
 

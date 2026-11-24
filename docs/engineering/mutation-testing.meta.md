@@ -63,8 +63,33 @@ The first full run, on 2026-11-23, before any survivor was addressed:
 - **Survivors are left to follow-ups:** the owner said "set up and record the baseline, survivors in follow-ups".
 - **Where they are:** `oxcrap.ts` and `files.ts` have no coverage because only real tests and the feature contract reach them. That's [#70](https://github.com/DetweilerRyan/split/issues/70)'s gap. `recursion.ts`'s survivors are most likely its scope handling for imports, `catch` parameters, `switch` cases and loops, which no test declares names in.
 
+## After the survivors (#79)
+
+The owner had the survivors split into three batches, each worked by a subagent and checked by fresh reviews ([decisions](https://github.com/DetweilerRyan/split/issues/79#issuecomment-7118031362)). A full run on `main` after the last of them, on 2026-11-24:
+
+| File            | Mutation score | Killed | Timed out | Survived | No coverage |
+| :-------------- | -------------: | -----: | --------: | -------: | ----------: |
+| `check.ts`      |           100% |     58 |         0 |        0 |           0 |
+| `complexity.ts` |           100% |    135 |         0 |        0 |           0 |
+| `config.ts`     |           100% |     67 |         0 |        0 |           0 |
+| `coverage.ts`   |           100% |    101 |         0 |        0 |           0 |
+| `files.ts`      |           100% |     30 |         0 |        0 |           0 |
+| `functions.ts`  |           100% |    140 |        10 |        0 |           0 |
+| `run.ts`        |           100% |    210 |         0 |        0 |           0 |
+| `allow.ts`      |          99.4% |    152 |         0 |        1 |           0 |
+| `tables.ts`     |          98.9% |    452 |         0 |        4 |           1 |
+| `recursion.ts`  |          97.5% |    234 |         4 |        6 |           0 |
+| **All files**   |      **99.3%** |  1,579 |        14 |       11 |           1 |
+
+- **What's left:**
+  - `allow.ts`'s survivor is a confirmed equivalent, left unmarked because a disable comment would also hide a killed mutant on its line.
+  - The rest are bugs filed as [#87](https://github.com/DetweilerRyan/split/issues/87) and [#88](https://github.com/DetweilerRyan/split/issues/88). Fixing them changes scores, so #79 left them.
+- **Dead code was deleted rather than marked,** as the owner decided ("Delete dead code first", [decision](https://github.com/DetweilerRyan/split/issues/79)). A disable comment turns off every mutant of its mutator on its line, killed ones included, so each one kept was checked for what it hides.
+- **`oxcrap.ts` left `mutate`,** and `files.ts`'s logic moved behind an injected glob so unit tests reach it ("Unit-test files.ts, exclude oxcrap.ts").
+- **The threshold ratchets** ("Ratchet at the result"): `break` is the score reached, rounded down, and is raised as the score rises. A run on oxCrap that a change makes worse fails locally, where mutation testing runs.
+- **A full run starts from no results.** Measuring this showed `oxcrap.ts` still reported as mutated after it left `mutate`. Stryker keeps a file from old incremental results, and the baseline every new worktree is seeded from still held it. A full run reuses nothing anyway, so it now deletes the worktree's file first.
+
 ## What would reopen this
 
 - **Running it in CI, or in the Stop hook,** once changed-lines runs prove fast. The first full run took 78 s.
 - **The app,** after oxCrap. `src/utils/math.ts` and `src/store/seedCodec.ts` were named first in #64.
-- **A threshold,** once survivors are worked down from the baseline.
