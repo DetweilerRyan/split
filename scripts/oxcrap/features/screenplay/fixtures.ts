@@ -1,5 +1,5 @@
 import { createBdd, test as base } from 'playwright-bdd';
-import { Actor } from './actor.ts';
+import { type Actor, createActor } from './actor.ts';
 
 /**
  * The scenario's cast: the same name always gives the same actor within one scenario. It takes no
@@ -12,7 +12,7 @@ export const test = base.extend<{ actorCalled: (name: string) => Actor }>({
     await use((name) => {
       let actor = cast.get(name);
       if (!actor) {
-        actor = new Actor(name);
+        actor = createActor(name);
         cast.set(name, actor);
       }
       return actor;

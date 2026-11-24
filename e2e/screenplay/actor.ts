@@ -25,60 +25,82 @@ function isLocal(url: URL): boolean {
  * a browser of their own (a separate context, so separate storage and identity) and an MCP
  * client session.
  */
-export class Actor {
-  #page: Page | undefined;
-  #mcp: McpSession | undefined;
-  readonly #notes = new Map<keyof Notes, Notes[keyof Notes]>();
+export interface Actor {
+  readonly name: string;
+  readonly attemptsTo: (...tasks: Task[]) => Promise<void>;
+  readonly answer: <T>(question: Question<T>) => T;
+  readonly browseTheWeb: () => Promise<Page>;
+  /** The browser page, for questions; throws if the actor never opened one. */
+  readonly page: Page;
+  readonly useMcpServer: () => Promise<McpSession>;
+  readonly remember: <K extends keyof Notes>(key: K, value: Notes[K]) => void;
+  readonly recall: <K extends keyof Notes>(key: K) => Notes[K];
+  readonly exit: () => Promise<void>;
+}
 
-  constructor(
-    readonly name: string,
-    private readonly browser: Browser,
-    private readonly baseURL: string,
-  ) {}
+/** A new actor called `name`, who browses `baseURL` in a context of their own on `browser`. */
+export function createActor(name: string, browser: Browser, baseURL: string): Actor {
+  let page: Page | undefined;
+  let mcp: McpSession | undefined;
+  const notes = new Map<keyof Notes, Notes[keyof Notes]>();
 
-  async attemptsTo(...tasks: Task[]): Promise<void> {
-    for (const task of tasks) await task(this);
+  async function attemptsTo(...tasks: Task[]): Promise<void> {
+    for (const task of tasks) await task(actor);
   }
 
-  answer<T>(question: Question<T>): T {
-    return question(this);
+  function answer<T>(question: Question<T>): T {
+    return question(actor);
   }
 
-  async browseTheWeb(): Promise<Page> {
-    if (!this.#page) {
-      const context = await this.browser.newContext({ ...phone, baseURL: this.baseURL });
+  async function browseTheWeb(): Promise<Page> {
+    if (!page) {
+      const context = await browser.newContext({ ...phone, baseURL });
       // Tests stay offline: anything not served by this machine, such as web fonts, is refused.
       await context.route(
         (url) => !isLocal(url),
         (route) => route.abort('blockedbyclient'),
       );
-      this.#page = await context.newPage();
+      page = await context.newPage();
     }
-    return this.#page;
+    return page;
   }
 
-  /** The browser page, for questions; throws if the actor never opened one. */
-  get page(): Page {
-    if (!this.#page) throw new Error(`${this.name} has not opened a browser yet.`);
-    return this.#page;
+  function openedPage(): Page {
+    if (!page) throw new Error(`${name} has not opened a browser yet.`);
+    return page;
   }
 
-  async useMcpServer(): Promise<McpSession> {
-    this.#mcp ??= await connectToMcpServer(new URL('/api/mcp', this.baseURL));
-    return this.#mcp;
+  async function useMcpServer(): Promise<McpSession> {
+    mcp ??= await connectToMcpServer(new URL('/api/mcp', baseURL));
+    return mcp;
   }
 
-  remember<K extends keyof Notes>(key: K, value: Notes[K]): void {
-    this.#notes.set(key, value);
+  function remember<K extends keyof Notes>(key: K, value: Notes[K]): void {
+    notes.set(key, value);
   }
 
-  recall<K extends keyof Notes>(key: K): Notes[K] {
-    if (!this.#notes.has(key)) throw new Error(`${this.name} doesn't remember a ${key}.`);
-    return this.#notes.get(key) as Notes[K];
+  function recall<K extends keyof Notes>(key: K): Notes[K] {
+    if (!notes.has(key)) throw new Error(`${name} doesn't remember a ${key}.`);
+    return notes.get(key) as Notes[K];
   }
 
-  async exit(): Promise<void> {
-    await this.#mcp?.close();
-    await this.#page?.context().close();
+  async function exit(): Promise<void> {
+    await mcp?.close();
+    await page?.context().close();
   }
+
+  const actor: Actor = {
+    name,
+    attemptsTo,
+    answer,
+    browseTheWeb,
+    get page() {
+      return openedPage();
+    },
+    useMcpServer,
+    remember,
+    recall,
+    exit,
+  };
+  return actor;
 }

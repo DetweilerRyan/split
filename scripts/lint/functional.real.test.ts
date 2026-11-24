@@ -1,0 +1,65 @@
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterEach, describe, expect, it } from 'vitest';
+
+// The plugin as `npm run lint` runs it: the real oxlint with the repository's .oxlintrc.json, on a
+// throwaway file. functional.test.ts covers the rules' cases; this covers loading them.
+const oxlint = fileURLToPath(new URL('../../node_modules/oxlint/bin/oxlint', import.meta.url));
+const config = fileURLToPath(new URL('../../.oxlintrc.json', import.meta.url));
+const directories: string[] = [];
+
+/** oxlint's one-line-per-problem output for `source`, linted as a file of its own. */
+function lint(source: string) {
+  const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-lint-'));
+  directories.push(cwd);
+  writeFileSync(join(cwd, 'code.ts'), source);
+  const result = spawnSync(
+    process.execPath,
+    [oxlint, '-c', config, '--format', 'unix', 'code.ts'],
+    {
+      cwd,
+      encoding: 'utf8',
+    },
+  );
+  return {
+    status: result.status,
+    problems: result.stdout.split('\n').filter((l) => l.includes('[')),
+  };
+}
+
+afterEach(() => {
+  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
+});
+
+describe('the repository lint config', () => {
+  it('reports a class and a `this` through the functional plugin', () => {
+    const { status, problems } = lint(
+      'export class Store {}\nexport function read() {\n  return this;\n}\n',
+    );
+    expect(status).toBe(1);
+    expect(problems).toEqual([
+      expect.stringMatching(/^code\.ts:1:8: .* \[Error\/functional\(no-classes\)\]$/),
+      expect.stringMatching(/^code\.ts:3:10: .* \[Error\/functional\(no-this\)\]$/),
+    ]);
+  });
+
+  it('leaves an Error subclass alone', () => {
+    expect(lint('export class NotFound extends Error {}\n')).toEqual({ status: 0, problems: [] });
+  });
+
+  it('honours a disable comment for the rest of a block, as ReceiptStore uses', () => {
+    const source = [
+      '// oxlint-disable functional/no-this -- a reason',
+      'export function a() { return this; }',
+      '// oxlint-enable functional/no-this',
+      'export function b() { return this; }',
+      '',
+    ].join('\n');
+    expect(lint(source).problems).toEqual([
+      expect.stringMatching(/^code\.ts:4:30: .*\[Error\/functional\(no-this\)\]$/),
+    ]);
+  });
+});
