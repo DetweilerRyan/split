@@ -15,10 +15,11 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
 | `npm run test:mutation`         | Mutates all of oxCrap again. When oxCrap hasn't changed on the branch, it also refreshes the baseline other worktrees start from. |
 
 - **Each worktree keeps an incremental results file,** in git's folder (`git rev-parse --git-path stryker/incremental.json`). It's never committed.
-  - **A full run** tests every mutant again, and writes the file.
+  - **A full run** starts from no results, tests every mutant, and writes the file.
   - **A changed-lines run** reuses its results for mutants whose code and tests haven't changed, and doesn't write it back.
-- **A worktree without one starts from the baseline:** `stryker/baseline.json` in the folder `git rev-parse --git-common-dir` names, which every worktree shares. A full run writes it when oxCrap hasn't changed on the branch, so it describes `main`'s oxCrap.
+- **A worktree without one starts its changed-lines runs from the baseline:** `stryker/baseline.json` in the folder `git rev-parse --git-common-dir` names, which every worktree shares. A full run writes it when oxCrap hasn't changed on the branch, so it describes `main`'s oxCrap.
 - **Run a full run on a branch that hasn't changed oxCrap** after a pull request that changed it merges, after `npm install`, or when a change to a shared helper or a dependency should be retested. Incremental mode only notices changes to mutated files and test files.
+- **A run scoring below `thresholds.break`** in [`stryker.config.json`](../../stryker.config.json) exits non-zero. When a full run on `main`'s oxCrap scores higher, raise `break` to that score rounded down, in the pull request that raised it. Lower it only with the owner's approval.
 - **The report** is in `reports/mutation/mutation.html`, and Stryker's working copy is in `.stryker-tmp/`. Both are gitignored, and the Vitest configs leave the working copy out.
 
 ## When oxCrap's code changes

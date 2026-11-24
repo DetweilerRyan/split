@@ -456,6 +456,12 @@ describe('reading a table', () => {
     expect(last(code)).toBe(1 + 3);
   });
 
+  it('adds nothing for membership of one entry, as `x === a` alone adds nothing', () => {
+    const code = "const S = new Set(['a']);\nexport function is(x: string) { return S.has(x); }";
+    expect(last(code)).toBe(1);
+    expect(last(code, { ...COUNT_ALL, logicalOperators: 'sequence' })).toBe(1);
+  });
+
   it('follows switchCases and logicalOperators, and lookupTables turns it off', () => {
     const code = `${DISPATCH}\nconst S = new Set(['a', 'b', 'c']);\nexport function run(k: string) { return S.has(k) && RULES.get(k)!(); }`;
     // 1, the `&&`, 2 for membership of 3, and 3 for the dispatch.

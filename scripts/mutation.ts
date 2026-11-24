@@ -146,7 +146,9 @@ function run() {
   }
 
   // A full run tests every mutant again, so it also catches what incremental mode can't see: a
-  // change to a dependency or a shared helper.
+  // change to a dependency or a shared helper. It starts from no results, since it reuses none,
+  // and Stryker keeps reporting a file from old results after it leaves `mutate`.
+  rmSync(own, { force: true });
   const status = stryker(root, ['run', '--incremental', '--force', '--incrementalFile', own]);
   if (status !== 0) return status;
   // Its results describe main's oxCrap when this worktree hasn't changed oxCrap, so they become
