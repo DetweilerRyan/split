@@ -12,7 +12,7 @@ Some code in this repository may import only from certain places. [rev-dep](http
 | `services-imports-services-domain-and-utils` | `src/services/**`   | `src/services/**`, `src/domain/**`, `src/utils/**`, and npm packages except those `.oxlintrc.json` keeps out |
 | `sync-imports-sync-domain-and-utils`         | `src/sync/**`       | `src/sync/**`, `src/domain/**`, `src/utils/**`, and npm packages                                             |
 
-The `src/` rules are the layers in [Code layout](code-layout.md). For `src/domain/` and `src/services/`, a `no-restricted-imports` override in [`.oxlintrc.json`](../../.oxlintrc.json) keeps out the npm packages those layers may not use, which rev-dep can't check. oxlint reports a breach as `eslint(no-restricted-imports)`.
+The `src/` rules are the layers in [Code layout](code-layout.md). For `src/domain/` and `src/services/`, an override in [`.oxlintrc.json`](../../.oxlintrc.json) keeps out the npm packages those layers may not use, which rev-dep can't check. The `src/domain/` override also refuses JSX, since JSX imports React without an import statement. oxlint reports a breach as `eslint(no-restricted-imports)` or `react(jsx-filename-extension)`.
 
 Every import in the repository must also resolve. An import rev-dep can't resolve fails, because no rule could check it. That includes an absolute path, a `file://` URL, an import through a symlinked folder, `import(variable)`, and an npm package `package.json` doesn't declare.
 
@@ -31,6 +31,7 @@ npx rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,o
 
 - **`Module Boundary Issues` with `(NOT ALLOWED)`:** a file imports from outside what its rule allows. Change the import: move the code it needs inside the folder, or pass it in as a parameter. Changing what the rule allows changes the rule, so follow [Adding or changing a rule](#adding-or-changing-a-rule).
 - **`eslint(no-restricted-imports)` in `src/domain/` or `src/services/`:** the file imports a package its layer keeps out. Move the code that needs the package to a layer that may use it, as [Code layout](code-layout.md) says.
+- **`react(jsx-filename-extension)` in `src/domain/`:** the file holds JSX, which is UI. Move it beside the component that renders it.
 - **`Unresolved Imports`:** fix the import so it resolves. Use a relative path or a declared package, not an absolute path or a computed `import()`.
 - **`Config lint` errors:** a rule's pattern matches no files, usually after a folder moved. Update the pattern in `.rev-dep.config.jsonc`.
 
@@ -48,7 +49,7 @@ npx rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,o
 3. **Add the rule to the table above,** and its reasons to the sidecar.
 4. **Run `npm run lint`** on the repository, so the rule's pattern matches real files.
 
-To change which packages `src/domain/` or `src/services/` keeps out, edit that folder's `regex` in `.oxlintrc.json`'s `overrides`. Check it with a throwaway file in the folder that imports each package, and one that imports an allowed package and a relative path, then delete the file.
+To change which packages `src/domain/` or `src/services/` keeps out, edit that folder's `regex` in `.oxlintrc.json`'s `overrides`. Add each package to the lists in [`oxlintrc.real.test.ts`](../../oxlintrc.real.test.ts), which runs the real oxlint with the real config on throwaway files, and a look-alike name it must still allow when the pattern could catch one.
 
 ## Changing this document
 
