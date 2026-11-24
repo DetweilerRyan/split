@@ -36,13 +36,16 @@ const receiptCurrency = fc.oneof(
     .map((written): WrittenCurrency => ({ written, code: 'USD', exponent: 2 })),
 );
 
-/** The display currency: none, the receipt's own in any case, or another one. */
+/** The display currency: none, the receipt's own in any case, another one, or an invalid one that means USD. */
 const displayCurrency = fc.oneof(
   fc.constant(''),
   writtenAs('USD', 2),
   writtenAs('EUR', 2),
   writtenAs('JPY', 0),
   writtenAs('KWD', 3),
+  fc
+    .constantFrom('US', 'dollars', '12€', ' EUR')
+    .map((written): WrittenCurrency => ({ written, code: 'USD', exponent: 2 })),
 );
 
 const ids = ['a', 'b', 'c', 'd'];
@@ -58,7 +61,14 @@ const minor = fc.integer({ min: 0, max: 1_000_000 });
 const receipt = fc.record({
   currency: receiptCurrency,
   participantCount: fc.integer({ min: 0, max: ids.length }),
-  items: fc.array(fc.record({ minor, claims }), { maxLength: 6 }),
+  // `offset` writes an amount up to 0.45 of a minor unit past its rounded value, as a receipt
+  // might, so every amount still rounds to `minor`.
+  items: fc.array(
+    fc.record({ minor, claims, offset: fc.double({ min: 0, max: 0.45, noNaN: true }) }),
+    {
+      maxLength: 6,
+    },
+  ),
   cardTipMinor: fc.oneof(fc.constant(0), minor),
   cashTipMinor: fc.oneof(fc.constant(0), minor),
   display: displayCurrency,
@@ -97,7 +107,7 @@ function snapshotOf(r: Receipt): RoomSnapshot {
       id: `item-${order}`,
       name: `Item ${order}`,
       en: '',
-      eur: major(item.minor, r.currency.exponent),
+      eur: major(item.minor + item.offset, r.currency.exponent),
       order,
       claims: item.claims,
     })),
@@ -169,6 +179,35 @@ describe('computeReceiptMath', () => {
           expect(subtotal).toBeGreaterThanOrEqual(fewest);
           expect(subtotal).toBeLessThanOrEqual(most);
         });
+      }),
+    );
+  });
+
+  it('gives everyone the same subtotal when they share identical items, one per claimant', () => {
+    // The leftover minor units of each item go to a different claimant in turn, so n identical
+    // items split n ways leave no one ahead.
+    fc.assert(
+      fc.property(fc.integer({ min: 1, max: ids.length }), minor, (count, amount) => {
+        const everyone = Object.fromEntries(ids.slice(0, count).map((id) => [id, true]));
+        const r: Receipt = {
+          currency: { written: 'USD', code: 'USD', exponent: 2 },
+          participantCount: count,
+          items: Array.from({ length: count }, () => ({
+            minor: amount,
+            claims: everyone,
+            offset: 0,
+          })),
+          cardTipMinor: 0,
+          cashTipMinor: 0,
+          display: '',
+          bankUsd: 0,
+          rate: 0,
+        };
+        const subtotals = Object.values(computeReceiptMath(snapshotOf(r)).perPerson).map(
+          (p) => p.itemsSubtotalMinor,
+        );
+        expect(new Set(subtotals).size).toBe(1);
+        expect(sum(subtotals)).toBe(amount * count);
       }),
     );
   });
