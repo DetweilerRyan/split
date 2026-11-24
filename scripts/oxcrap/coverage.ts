@@ -70,13 +70,15 @@ function innermost(functions: readonly Fn[], range: Range) {
 
 /** For each function, how many statements it holds, and how many of them ran. */
 function statementCounts(functions: readonly Fn[], file: FileCoverage) {
-  const counts = new Map<Fn, { readonly total: number; readonly run: number }>();
+  const counts: Map<Fn, { total: number; run: number }> = new Map();
   for (const [id, range] of Object.entries(file.statementMap)) {
     const owner = innermost(functions, range);
     // Stryker disable next-line ConditionalExpression: a statement outside every function would be counted under `undefined`, which `coverageOf` never looks up.
     if (!owner) continue;
     const count = counts.get(owner) ?? { total: 0, run: 0 };
-    counts.set(owner, { total: count.total + 1, run: count.run + (file.s[id] > 0 ? 1 : 0) });
+    count.total++;
+    if (file.s[id] > 0) count.run++;
+    counts.set(owner, count);
   }
   return counts;
 }

@@ -32,7 +32,7 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
   - `readonly T[]` and `readonly [A, B]`, not `T[]` and `[A, B]`;
   - `ReadonlyArray<T>`, `ReadonlyMap<K, V>` and `ReadonlySet<T>`, not `Array`, `Map` and `Set`;
   - `Readonly<Record<K, V>>`, not `Record<K, V>`;
-  - `readonly` on each property, index signature and mapped type, or the object type wrapped in `Readonly<…>`.
+  - `readonly` on each property and index signature of an object type or interface, and on each mapped type, or the object type wrapped in `Readonly<…>`.
 - **Make each level readonly on its own.** `Readonly<…>` reaches only the top level of its argument, through a union or an intersection: in `Readonly<{ a: { b: string } }>`, `b` still needs `readonly`, and a `Map` or `Set` inside is still mutable.
 - **A variable declared inside a function may have a mutable type,** as a working value: `const out: string[] = []`, then `out.push(…)`. Return it as a readonly type. A type alias, a type argument or a cast inside a function is still checked.
 - **Don't change a readonly value in place.** Build a new one with `map`, `filter`, spread or a sorted copy.

@@ -143,6 +143,16 @@ describe('integer minor-unit splitting', () => {
     expect(people.reduce((s, p) => s + p.totalMinor, 0)).toBe(1001 + 2002 + 3003 + 501);
   });
 
+  it('gives callers readonly totals, which TypeScript refuses to change', () => {
+    const result = computeReceiptMath(makeSnapshot('USD', [10], [['a']]));
+    // @ts-expect-error A person's totals are readonly to callers.
+    result.perPerson.a.total = 1;
+    // @ts-expect-error So is the record of them.
+    result.perPerson.b = result.perPerson.a;
+    // @ts-expect-error And the receipt's own totals.
+    result.grandTotal = 1;
+  });
+
   it('falls back to USD when the receipt has no currency (legacy rooms)', () => {
     const result = computeReceiptMath(makeSnapshot(undefined, [10.5], [['a']]));
     expect(result.currency).toBe('USD');
