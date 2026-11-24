@@ -328,6 +328,12 @@ describe('which tables count', () => {
     expect([...found.exported.functions].sort()).toEqual(['a', 'bee', 'd', 'e']);
   });
 
+  it('exports no table that a destructuring declares', () => {
+    const found = tables("export const { a } = { a: ['x', 'y'] };\nexport const [b] = [['x']];");
+    expect(found.exported.tables.size).toBe(0);
+    expect(found.own.size).toBe(0);
+  });
+
   it('follows no import or export under a string name, which no identifier reads', () => {
     const found = tables(
       "import { 'a-b' as A, C } from './a.ts';\nconst S = new Set(['x']);\nfunction f() {}\nexport { S as 's-t', f as 'f-g', S as U };",

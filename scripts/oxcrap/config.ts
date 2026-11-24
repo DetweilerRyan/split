@@ -89,6 +89,7 @@ export function parseConfig(text: string, path: string): Partial<Config> {
   }
   if (!validate(data)) {
     // Ajv always sets `errors` when validation fails; its types allow null.
+    // Stryker disable next-line ArrayDeclaration: Ajv sets `errors` whenever validate returns false, so the empty list is never read.
     const errors = validate.errors ?? [];
     throw new ConfigError(errors.map((error) => describe(error, path)).join('\n'));
   }
