@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { type Participant, participantId } from '@/domain/receipt/roomSnapshot';
+import { type Participant, findParticipant } from '@/domain/receipt/roomSnapshot';
 import type { RoomId } from '@/domain/room/roomId';
 import type { ReceiptStore } from '@/sync/useReceiptStore';
 import type { RoomProvider } from '@/sync/yjsProvider';
@@ -40,10 +40,9 @@ export function useIdentity(
 
   // Adding a name already on the bill chooses that participant instead.
   function add(name: string) {
-    const participant = provider.store.addParticipant(name);
-    const id = participantId(name);
+    const participant = provider.store.addParticipant(name) ?? findParticipant(participants, name);
     if (participant) choose(participant.id);
-    else if (participants.some((person) => person.id === id)) choose(id);
+    else if (name.trim()) showToast('Enter a name with at least one letter or number.');
     else showToast('Enter a participant name.');
   }
 

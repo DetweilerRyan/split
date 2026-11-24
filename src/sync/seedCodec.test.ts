@@ -135,6 +135,72 @@ describe('receipt currency in seeds', () => {
   });
 });
 
+describe('seed hydration into a room that already has data', () => {
+  it('fills in the fields an item already in the room is missing, and keeps the rest', async () => {
+    const { hydrateFromSeed } = await import('./seedCodec');
+    const { ReceiptStore } = await import('./useReceiptStore');
+    const Y = await import('yjs');
+    const doc = new Y.Doc();
+    const stored = new Y.Map<unknown>();
+    stored.set('name', 'Edited taco');
+    doc.getMap('items').set('item-0', stored);
+
+    hydrateFromSeed(doc, seed);
+    expect(new ReceiptStore(doc).getSnapshot().items).toEqual([
+      { id: 'item-0', name: 'Edited taco', en: 'Taco', eur: 5, order: 0, claims: {} },
+    ]);
+  });
+
+  it('keeps a display currency and its rate from the seed', async () => {
+    const { hydrateFromSeed } = await import('./seedCodec');
+    const { ReceiptStore } = await import('./useReceiptStore');
+    const Y = await import('yjs');
+    const doc = new Y.Doc();
+
+    hydrateFromSeed(doc, { ...seed, displayCurrency: 'usd', rate: 1.08, rateDate: '2026-11-01' });
+    const snapshot = new ReceiptStore(doc).getSnapshot();
+    expect([snapshot.displayCurrency, snapshot.rate, snapshot.rateDate]).toEqual([
+      'USD',
+      1.08,
+      '2026-11-01',
+    ]);
+  });
+});
+
+describe('the roster in seeds', () => {
+  const base = { title: 't', cardTipEur: 0, cashTipEur: 0, bankUsd: 0, items: [] };
+
+  it('adds nobody for a roster name with no letter or digit', async () => {
+    const { hydrateFromSeed } = await import('./seedCodec');
+    const { ReceiptStore } = await import('./useReceiptStore');
+    const Y = await import('yjs');
+    const doc = new Y.Doc();
+    hydrateFromSeed(doc, { ...base, roster: ['李', '!!!', 'Мария'] });
+    expect(new ReceiptStore(doc).getSnapshot().participants.map(({ id }) => id)).toEqual([
+      'p-李',
+      'p-мария',
+    ]);
+  });
+
+  it('keeps a participant stored under an older id, rather than adding them again', async () => {
+    const { hydrateFromSeed } = await import('./seedCodec');
+    const { ReceiptStore } = await import('./useReceiptStore');
+    const Y = await import('yjs');
+    const doc = new Y.Doc();
+    const jose = new Y.Map<unknown>();
+    jose.set('id', 'p-jos');
+    jose.set('name', 'José');
+    jose.set('colorIdx', 0);
+    doc.getMap('participants').set('p-jos', jose);
+
+    hydrateFromSeed(doc, { ...base, roster: ['José', 'Sam'] });
+    expect(new ReceiptStore(doc).getSnapshot().participants.map(({ id }) => id)).toEqual([
+      'p-jos',
+      'p-sam',
+    ]);
+  });
+});
+
 describe('RoomId at compile time', () => {
   // Each @ts-expect-error fails `npm run typecheck` if the call it marks ever type-checks:
   // a plain string, or the URL's encoded segment, must not stand in for a room id.

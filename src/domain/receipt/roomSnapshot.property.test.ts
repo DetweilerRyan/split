@@ -3,51 +3,55 @@ import { describe, expect, it } from 'vitest';
 import { participantId } from './roomSnapshot';
 
 /**
- * How one character of a word is written: as it is, upper-cased, or as a character outside a to z
- * that lower-cases into one. The Kelvin sign lower-cases to `k`. `İ` lower-cases to `i` and a
- * combining dot, which the id drops, so it stands for an `i` only at the end of a word.
+ * How one character of a word is written: as it is, upper-cased, with its accent as a separate
+ * combining mark, fullwidth, or as the Kelvin sign, which is a `k` once normalized.
  */
-type Writing = 'plain' | 'upper' | 'lookalike';
+type Writing = 'plain' | 'upper' | 'decomposed' | 'fullwidth' | 'lookalike';
 
-function write(c: string, how: Writing, last: boolean): string {
-  if (how === 'upper') return c.toUpperCase();
-  if (how === 'lookalike' && c === 'k') return '\u212A';
-  if (how === 'lookalike' && c === 'i' && last) return '\u0130';
-  return c;
+function write(c: string, how: Writing): string {
+  switch (how) {
+    case 'plain':
+      return c;
+    case 'upper':
+      // `ß` upper-cases to `SS`, which lower-cases to `ss`, a different word.
+      return c.toUpperCase().toLowerCase() === c ? c.toUpperCase() : c;
+    case 'decomposed':
+      return c.normalize('NFD');
+    case 'fullwidth':
+      return /^[a-z0-9]$/.test(c) ? String.fromCodePoint(c.codePointAt(0)! + 0xfee0) : c;
+    case 'lookalike':
+      return c === 'k' ? 'K' : c;
+    default: {
+      const unhandled: never = how;
+      return unhandled;
+    }
+  }
 }
+
+/**
+ * Characters an id keeps, each as its id writes it: Latin letters and digits, accented Latin
+ * letters, and letters and digits of other scripts, including an Arabic-Indic digit.
+ */
+const kept = [...'abcdefghijklmnopqrstuvwxyz0123456789kéëøßñ李王мжبع٣'];
 
 /** A word of the characters an id keeps, written in any of those ways. */
 const word = fc
   .tuple(
-    fc.string({ unit: fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789ik'), minLength: 1 }),
-    fc.array(fc.constantFrom<Writing>('plain', 'upper', 'lookalike')),
+    fc.array(fc.constantFrom(...kept), { minLength: 1 }),
+    fc.array(fc.constantFrom<Writing>('plain', 'upper', 'decomposed', 'fullwidth', 'lookalike')),
   )
   .map(([letters, how]) => ({
-    id: letters,
-    written: [...letters]
-      .map((c, i) => write(c, how[i] ?? 'plain', i === letters.length - 1))
-      .join(''),
+    id: letters.join(''),
+    written: letters.map((c, i) => write(c, how[i] ?? 'plain')).join(''),
   }));
 
-/** Characters an id drops: spacing, punctuation, hyphens, and letters outside a to z. */
+/**
+ * Characters with no letter or digit in them: spacing, punctuation, hyphens, symbols and emoji.
+ * None is a combining mark, which would join the word before it.
+ */
+const symbols = [' ', '\t', ' ', '-', '_', '.', ',', "'", '&', '/', '(', ')', '!', '€', '·'];
 const separator = fc.string({
-  unit: fc.constantFrom(
-    ' ',
-    '\t',
-    '-',
-    '_',
-    '.',
-    ',',
-    "'",
-    '&',
-    '/',
-    '(',
-    ')',
-    'é',
-    'ß',
-    'Ø',
-    '日',
-  ),
+  unit: fc.constantFrom(...symbols, '\u{1F389}', '❤️'),
   minLength: 1,
 });
 
@@ -67,11 +71,24 @@ const name = fc
     id: `p-${words.map((w) => w.id).join('-')}`,
   }));
 
+/** A name with no letter or digit, including combining marks with nothing to attach to. */
+const nameless = fc.string({
+  unit: fc.constantFrom(...symbols, '\u{1F389}', '́', '̈'),
+});
+
 describe('participantId', () => {
   it('gives every way of writing a name the same id: its words, lower-cased, joined by hyphens', () => {
     fc.assert(
       fc.property(name, ({ written, id }) => {
         expect(participantId(written)).toBe(id);
+      }),
+    );
+  });
+
+  it('gives no id for a name with no letter or digit', () => {
+    fc.assert(
+      fc.property(nameless, (written) => {
+        expect(participantId(written)).toBeNull();
       }),
     );
   });
