@@ -77,6 +77,7 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
 - **Assert absence with `await expect.element(locator).not.toBeInTheDocument()`.**
 - **Don't wrap calls in React's `act`.** Rendering and `userEvent` already handle it. The one exception is the `act` that `renderHook` returns, which you use to call a hook's own functions.
 - **Test a hook through the component that uses it.** Use `renderHook` from `vitest-browser-react` instead only when the hook is complex enough that a component would obscure it, or when several components share it. `src/hooks/useActiveIdentity.browser.test.ts` is an example.
+- **`RoomView` is the exception to both rules above it and to [faking only what can't run](#replacing-external-dependencies).** Its hooks are tested on their own with `renderHook`, and its own test passes fake components through its `parts` prop and fakes of its `services`, checking only how it wires them together, as the owner decided on [#93](https://github.com/DetweilerRyan/split/issues/93#issuecomment-7122174580). Its hooks aren't passed in: it calls the real ones.
 - **A component's callback props are part of what it shows its developer user.** Checking that `onSelect` was called with the chosen id is fine. Checking which internal function ran is not.
 
 ## End-to-end tests

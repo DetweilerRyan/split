@@ -11,12 +11,12 @@ import { SeedModal } from './components/SeedModal';
 import { ShareModal } from './components/ShareModal';
 import { Toast, ToastContext } from './components/Toast';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
-import { useExchangeRate } from './hooks/useExchangeRate';
+import { type FetchRate, useExchangeRate } from './hooks/useExchangeRate';
 import { useIdentity } from './hooks/useIdentity';
 import { useRoomProvider } from './hooks/useRoomProvider';
 import { useSeedImport } from './hooks/useSeedImport';
-import { useSharing } from './hooks/useSharing';
-import { useToast } from './hooks/useToast';
+import { type CopyTarget, useSharing } from './hooks/useSharing';
+import { TOAST_MS, useToast } from './hooks/useToast';
 import { computeReceiptMath } from './domain/receipt/math';
 import type { RoomId } from './domain/room/roomId';
 import { getExchangeRate } from './services/exchangeRates';
@@ -54,6 +54,20 @@ const roomParts: RoomParts = {
   Toast,
 };
 
+/** What the room reaches outside itself for. A test passes fakes. */
+export interface RoomServices {
+  /** Where the room's link and summary are copied to. */
+  readonly clipboard: CopyTarget;
+  /** Gets the rate to the currency the receipt is shown in. */
+  readonly fetchRate: FetchRate;
+  /** How long a toast stays up, in milliseconds. */
+  readonly toastMs: number;
+}
+
+function browserServices(): RoomServices {
+  return { clipboard: navigator.clipboard, fetchRate: getExchangeRate, toastMs: TOAST_MS };
+}
+
 interface RoomViewProps {
   readonly roomId: RoomId;
   /** The room's document, store and presence. Pass the same one on every render. */
@@ -61,21 +75,28 @@ interface RoomViewProps {
   /** Goes to another page of the app, such as a new room. */
   readonly navigate: (path: string) => void;
   readonly parts?: RoomParts;
+  readonly services?: RoomServices;
 }
 
 /** A receipt room: its header, items and totals, and the dialogs they open. */
-export function RoomView({ roomId, provider, navigate, parts = roomParts }: RoomViewProps) {
+export function RoomView({
+  roomId,
+  provider,
+  navigate,
+  parts = roomParts,
+  services = browserServices(),
+}: RoomViewProps) {
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<ItemFilter>('all');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { store } = provider;
   const snapshot = useReceiptStore(store);
   const math = computeReceiptMath(snapshot);
-  const toast = useToast();
+  const toast = useToast(services.toastMs);
   const identity = useIdentity(provider, roomId, snapshot.participants, toast.showToast);
-  const sharing = useSharing(roomId, snapshot, navigator.clipboard, toast.showToast);
+  const sharing = useSharing(roomId, snapshot, services.clipboard, toast.showToast);
   const seed = useSeedImport(provider.doc, toast.showToast, navigate);
-  const rates = useExchangeRate(store, snapshot, getExchangeRate, toast.showToast);
+  const rates = useExchangeRate(store, snapshot, services.fetchRate, toast.showToast);
   const dialogOpen = [identity.pickerOpen, detailsOpen, sharing.open, seed.open].some(Boolean);
   const { Header, UnclaimedBanner, EditReceiptDrawer, ItemList, ReceiptSummary } = parts;
   const { ParticipantCards, IdentityModal, RestaurantModal, ShareModal, SeedModal, Toast } = parts;
@@ -135,7 +156,7 @@ export function RoomView({ roomId, provider, navigate, parts = roomParts }: Room
           />
         </div>
         <aside className="space-y-4">
-          <ReceiptSummary snapshot={snapshot} onCopySummary={sharing.copySummary} />
+          <ReceiptSummary snapshot={snapshot} math={math} onCopySummary={sharing.copySummary} />
           <ParticipantCards snapshot={snapshot} />
           <section className="card p-4">
             <div className="flex items-center justify-between">

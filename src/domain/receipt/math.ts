@@ -146,3 +146,6 @@ export function computeReceiptMath(snapshot: RoomSnapshot) {
     perPerson,
   };
 }
+
+/** What `computeReceiptMath` works out for a receipt. */
+export type ReceiptMath = ReturnType<typeof computeReceiptMath>;

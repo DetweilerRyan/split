@@ -8,13 +8,13 @@ afterEach(() => {
 
 describe('useToast', () => {
   it('shows no message at first', async () => {
-    const hook = await renderHook(() => useToast());
+    const hook = await renderHook(() => useToast(2600));
     expect(hook.result.current.message).toBe('');
   });
 
-  it('shows the message for 2.6 seconds, then clears it', async () => {
+  it('shows the message for as long as it is given, then clears it', async () => {
     vi.useFakeTimers();
-    const hook = await renderHook(() => useToast());
+    const hook = await renderHook(() => useToast(2600));
     await hook.act(() => hook.result.current.showToast('Room link copied.'));
     expect(hook.result.current.message).toBe('Room link copied.');
     await hook.act(() => vi.advanceTimersByTime(2599));
@@ -24,7 +24,7 @@ describe('useToast', () => {
   });
 
   it('replaces the message shown with a newer one', async () => {
-    const hook = await renderHook(() => useToast());
+    const hook = await renderHook(() => useToast(2600));
     await hook.act(() => hook.result.current.showToast('Room link copied.'));
     await hook.act(() => hook.result.current.showToast('Summary copied.'));
     expect(hook.result.current.message).toBe('Summary copied.');

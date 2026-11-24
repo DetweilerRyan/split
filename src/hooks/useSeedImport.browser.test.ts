@@ -9,14 +9,14 @@ import { useSeedImport } from './useSeedImport';
 
 const plitvice = PRESETS.plitvice;
 
-async function setup() {
+async function setup(storage?: Pick<Storage, 'setItem'>) {
   const doc = new Y.Doc();
   const store = new ReceiptStore(doc);
   store.setMeta('title', 'Lunch');
   store.addItem('Bread', '', 3);
   const showToast = vi.fn();
   const navigate = vi.fn();
-  const hook = await renderHook(() => useSeedImport(doc, showToast, navigate));
+  const hook = await renderHook(() => useSeedImport(doc, showToast, navigate, storage));
   function current() {
     return hook.result.current;
   }
@@ -65,7 +65,27 @@ describe('useSeedImport', () => {
     expect(hook.showToast).toHaveBeenCalledExactlyOnceWith('Imported 4 receipt items.');
   });
 
-  it('goes to a new room, with a blank receipt in the local currency waiting for it', async () => {
+  it('goes to a new room, with its blank receipt waiting in the storage it is given', async () => {
+    const saved = new Map<string, string>();
+    const hook = await setup({ setItem: (key, value) => saved.set(key, value) });
+    await hook.act(() => hook.current().newBlankRoom());
+    const roomId = parseRoomPath(hook.navigate.mock.calls[0][0]);
+    expect(saved.has(pendingSeedKey(roomId!))).toBe(true);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('still goes to a new room when storage refuses its blank receipt', async () => {
+    const hook = await setup({
+      setItem: () => {
+        throw new DOMException('Storage is full', 'QuotaExceededError');
+      },
+    });
+    await hook.act(() => hook.current().newBlankRoom());
+    expect(hook.navigate).toHaveBeenCalledOnce();
+    expect(parseRoomPath(hook.navigate.mock.calls[0][0])).not.toBeNull();
+  });
+
+  it('goes to a new room, with a blank receipt in the local currency waiting in sessionStorage', async () => {
     const hook = await setup();
     await hook.act(() => hook.current().newBlankRoom());
     expect(hook.navigate).toHaveBeenCalledOnce();
