@@ -2,6 +2,7 @@ import { CalendarDays, Globe, MapPin, Phone, Utensils, X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import type { RoomSnapshot } from '../store/useReceiptStore';
 import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
+import { websiteUrl } from '../utils/websiteUrl';
 import type { RoomId } from '../store/seedCodec';
 
 interface RestaurantModalProps {
@@ -15,13 +16,15 @@ interface DetailRow {
   icon: typeof MapPin;
   label: string;
   value: string;
-  href?: string | null;
+  link?: URL | null;
 }
 
-/** A link for the receipt's website: as written when it has a scheme, over https when it's a bare domain. */
-function websiteHref(website: string) {
-  if (/^https?:\/\//i.test(website)) return website;
-  return /^[^\s@]+\.[^\s@]+$/.test(website) ? `https://${website}` : null;
+/** A Google Maps search for the restaurant. */
+function mapsUrl(title: string, address: string) {
+  const url = new URL('https://www.google.com/maps/search/');
+  url.searchParams.set('api', '1');
+  url.searchParams.set('query', `${title} ${address}`);
+  return url;
 }
 
 /** The restaurant details the receipt has, in the order the dialog lists them. */
@@ -34,21 +37,16 @@ function detailRows(snapshot: RoomSnapshot) {
   }
   if (snapshot.mealType) rows.push({ icon: Utensils, label: 'Meal', value: snapshot.mealType });
   if (snapshot.address) {
-    const query = encodeURIComponent(`${snapshot.title} ${snapshot.address}`);
-    rows.push({
-      icon: MapPin,
-      label: 'Address',
-      value: snapshot.address,
-      href: `https://www.google.com/maps/search/?api=1&query=${query}`,
-    });
+    const link = mapsUrl(snapshot.title, snapshot.address);
+    rows.push({ icon: MapPin, label: 'Address', value: snapshot.address, link });
   }
   if (snapshot.phone) {
-    const href = `tel:${snapshot.phone.replace(/[^\d+]/g, '')}`;
-    rows.push({ icon: Phone, label: 'Phone', value: snapshot.phone, href });
+    const link = new URL(`tel:${snapshot.phone.replace(/[^\d+]/g, '')}`);
+    rows.push({ icon: Phone, label: 'Phone', value: snapshot.phone, link });
   }
   const website = snapshot.website.trim();
   if (website)
-    rows.push({ icon: Globe, label: 'Website', value: website, href: websiteHref(website) });
+    rows.push({ icon: Globe, label: 'Website', value: website, link: websiteUrl(website) });
   return rows;
 }
 
@@ -72,7 +70,7 @@ export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantM
       </div>
       {rows.length ? (
         <dl className="mt-3 space-y-3">
-          {rows.map(({ icon: Icon, label, value, href }) => (
+          {rows.map(({ icon: Icon, label, value, link }) => (
             <div key={label} className="flex items-start gap-3">
               <Icon size={16} className="mt-0.5 shrink-0 text-indigo-600" aria-hidden="true" />
               <div className="min-w-0">
@@ -80,10 +78,10 @@ export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantM
                   {label}
                 </dt>
                 <dd className="break-words text-sm text-slate-900">
-                  {href ? (
+                  {link ? (
                     <a
                       className="text-indigo-600 underline"
-                      href={href}
+                      href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
