@@ -38,6 +38,9 @@ describe('parse', () => {
     ['a name of 40 characters, in full', `const ${'a'.repeat(40)} = () => 1;`, 'a'.repeat(40)],
     ['a name longer than 40 characters', `const ${'a'.repeat(41)} = () => 1;`, '(anonymous)'],
     ['a callback whose call spans lines', 'items\n  .forEach((n) => n);', '(anonymous)'],
+    ['an IIFE', 'const v = (function () { return 1; })();', '(anonymous)'],
+    ['an IIFE without brackets', 'const v = function () { return 1; }();', '(anonymous)'],
+    ['a function called with `new`', 'const v = new function () {}();', '(anonymous)'],
     ['anything else', '[() => 1];', '(anonymous)'],
   ])('labels %s', (_, code, name) => {
     expect(names(code)).toEqual([name]);
@@ -84,8 +87,8 @@ describe('parse', () => {
       ['Promise callback', true],
       ['f', false],
     ]);
-    // A function that is itself called isn't passed to the call.
-    expect(called.passedToCall).toBe(false);
+    // A function that is itself called isn't passed to the call, so isn't named after it.
+    expect([called.name, called.passedToCall]).toEqual(['(anonymous)', false]);
   });
 
   it('lists every simple statement, outermost first, and no block, loop or if', () => {

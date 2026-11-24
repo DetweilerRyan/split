@@ -123,7 +123,7 @@ CRAP findings:
 Get help: docs/crap.md
 ```
 
-A function inside another is named with the functions around it, such as `RoomView > changeDisplayCurrency`. An unnamed one is named by what it's assigned to, the call it's passed to (`items.forEach callback`), or its JSX attribute (`onClick`).
+A function inside another is named with the functions around it, such as `RoomView > changeDisplayCurrency`. An unnamed one is named by what it's assigned to, the call it's passed to (`items.forEach callback`), or its JSX attribute (`onClick`). One that's called where it's written, such as an IIFE with or without brackets, is `(anonymous)`.
 
 ## Allowing a function over the limits
 
