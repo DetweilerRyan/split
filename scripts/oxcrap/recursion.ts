@@ -24,8 +24,8 @@ import {
 /** A scope's names, each bound to the function it names, or to null for anything else. */
 type Scope = ReadonlyMap<string, AstNode | null>;
 /**
- * What `this.f()` reaches from an instance's or a class's `this`, by name, with `#` before a
- * private one: a method or a function-valued field, or null for a member that holds no function,
+ * What `this.f()` reaches from an instance's or a class's `this`, by `memberName`, which keeps a
+ * private name apart from a public one: a method or a function-valued field, or null for a member that holds no function,
  * such as a field or an accessor. Members with a computed or literal key, and static blocks, are
  * under undefined, which no call is to.
  */
@@ -242,15 +242,17 @@ function isField(member: AstNode) {
 }
 
 /**
- * A member's name, `f` or `#f`, from its key, or undefined if it has no key, such as a static
- * block, or a literal key, which has a `value` and no `name`.
+ * A member's name from its key, with the key's type, so `f` (an `Identifier`) and `#f` (a
+ * `PrivateIdentifier`) differ, as they do in a class and in a `this.f()` or `this.#f()` call.
+ * Undefined if it has no key, such as a static block, or a literal key, which has a `value` and no
+ * `name`.
  */
 function memberName(key: unknown): string | undefined {
   if (!isNamed(key)) return undefined;
-  return key.type === 'PrivateIdentifier' ? `#${key.name}` : key.name;
+  return `${key.type} ${key.name}`;
 }
 
-/** The name, `f` or `#f`, a `this.f()` or `this.#f()` call is to, or undefined for any other callee. */
+/** The member name a `this.f()` or `this.#f()` call is to, or undefined for any other callee. */
 function thisMethod(callee: AstNode): string | undefined {
   // Only a MemberExpression has an `object`.
   const isThis =
