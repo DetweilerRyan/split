@@ -76,12 +76,14 @@ describe('parse', () => {
       'const x = function () { return 1; }();',
       'const f = () => 1;',
     ].join('\n');
-    expect(parse('example.ts', code).functions.map((fn) => [fn.name, fn.passedToCall])).toEqual([
+    const [forEach, promise, called, f] = parse('example.ts', code).functions;
+    expect([forEach, promise, f].map((fn) => [fn.name, fn.passedToCall])).toEqual([
       ['items.forEach callback', true],
       ['Promise callback', true],
-      ['function () { return 1; } callback', false],
       ['f', false],
     ]);
+    // A function that is itself called isn't passed to the call.
+    expect(called.passedToCall).toBe(false);
   });
 
   it('lists every simple statement, outermost first, and no block, loop or if', () => {
