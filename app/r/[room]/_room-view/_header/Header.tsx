@@ -1,6 +1,6 @@
 import { CalendarDays, ChevronRight, Pencil, Share2, Users } from 'lucide-react';
-import { formatPurchaseTime, parsePurchasedAt } from '../domain/receipt/mealInfo';
-import type { Participant, RoomSnapshot } from '../domain/receipt/roomSnapshot';
+import { formatPurchaseTime, parsePurchasedAt } from '@/domain/receipt/mealInfo';
+import type { Participant, RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { getConnectionStatusDisplay } from './connectionStatus';
 
 interface HeaderProps {

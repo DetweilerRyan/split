@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import '../index.css';
+import '../../../index.css';
 import { ModalDialog } from './ModalDialog';
 import { ToastContext } from './Toast';
 
