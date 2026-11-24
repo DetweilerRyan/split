@@ -91,15 +91,13 @@ export const COUNT_SEPARATELY: Counting = {
 
 /** The child nodes of `node`, in source order. */
 export function children(node: AstNode): AstNode[] {
-  const found: AstNode[] = [];
-  for (const value of Object.values(node)) {
-    if (Array.isArray(value)) {
-      for (const item of value) if (isNode(item)) found.push(item);
-    } else if (isNode(value)) {
-      found.push(value);
-    }
-  }
-  return found;
+  return Object.values(node).flatMap(nodesIn);
+}
+
+/** The nodes one property of a node holds: those in its array, or the value if it's a node. */
+function nodesIn(value: unknown): AstNode[] {
+  if (Array.isArray(value)) return value.filter(isNode);
+  return isNode(value) ? [value] : [];
 }
 
 /** How many paths a node adds, under `counting`. */

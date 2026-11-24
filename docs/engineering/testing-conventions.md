@@ -17,6 +17,7 @@ How to write tests in this repository: what they check, which project they belon
   ```
 
 - **Name each test after the one behaviour it pins down,** and take its expected values from the requirement, not by running the code and pasting its output.
+- **Test files are exempt from `max-nested-callbacks`,** through an override in [`.oxlintrc.json`](../../.oxlintrc.json), because `describe`, `it`, `fc.property` and the callbacks inside them nest by design. `max-depth` still applies.
 
 ## Which project a test belongs in
 
