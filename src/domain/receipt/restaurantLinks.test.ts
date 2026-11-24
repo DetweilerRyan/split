@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseWebsiteLink } from './websiteLink';
+import { mapsLink, parseWebsiteLink, phoneLink } from './restaurantLinks';
 
 describe('parseWebsiteLink', () => {
   it('links a bare domain over https', () => {
@@ -21,5 +21,20 @@ describe('parseWebsiteLink', () => {
     ['a host with no dot', 'localhost'],
   ])('links nothing for %s', (_kind, website) => {
     expect(parseWebsiteLink(website)).toBeNull();
+  });
+});
+
+describe('mapsLink', () => {
+  it('searches Google Maps for the restaurant at its address', () => {
+    expect(mapsLink('Trattoria Da Enzo', 'Via dei Vascellari 29, Rome').href).toBe(
+      'https://www.google.com/maps/search/?api=1&query=Trattoria+Da+Enzo+Via+dei+Vascellari+29%2C+Rome',
+    );
+  });
+});
+
+describe('phoneLink', () => {
+  it('calls the number with only its digits and its leading +', () => {
+    expect(phoneLink('+39 06 581 2260').href).toBe('tel:+39065812260');
+    expect(phoneLink('(06) 581-2260').href).toBe('tel:065812260');
   });
 });
