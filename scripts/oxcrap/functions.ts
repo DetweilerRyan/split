@@ -84,8 +84,8 @@ function text(source: string, node: unknown) {
 /** A label for a function, from its own name or what it's assigned or passed to. */
 export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
   const own = fn.id;
-  // Stryker disable next-line ConditionalExpression: a function's `id`, when there is one, is always an Identifier, whose `name` is always a string.
-  if (isNode(own) && typeof own.name === 'string') return own.name;
+  // A function's `id`, when it has one, is an Identifier, whose name is a string.
+  if (isNode(own)) return own.name as string;
   return (parent && nameFromParent(source, parent)) ?? '(anonymous)';
 }
 
@@ -221,9 +221,8 @@ function countRecursion(
 
 /** Whether `node` is passed straight to a call, as `items.forEach(() => …)` passes its callback. */
 function passedToCall(node: AstNode, parent: AstNode) {
-  const call = parent.type === 'CallExpression' || parent.type === 'NewExpression';
-  // Stryker disable next-line LogicalOperator: only calls and `new` have `arguments`, so `call || …` lets through no other parent.
-  return call && Array.isArray(parent.arguments) && parent.arguments.includes(node);
+  // Only a call or a `new` has `arguments`.
+  return Array.isArray(parent.arguments) && parent.arguments.includes(node);
 }
 
 /**
@@ -244,7 +243,7 @@ export function parse(
   const program = result.program as unknown as AstNode;
   const position = positions(source);
   const tables = tablesIn(program, imported).readable;
-  // Stryker disable next-line ArrayDeclaration: the root's ancestors are only ever read from the end, by `at(-1)` and `slice(-2)` beside a JSX expression, which is never a top-level node, so an entry at the start is never read.
+  // Stryker disable next-line ArrayDeclaration: the root's ancestors are only ever read from the end, as the parent at `length - 1` and, beside a JSX expression, which is never a top-level node, the attribute at `length - 2`, so an entry at the start is never read.
   const found = walk(program, [], [], { text: source, counting, position, tables });
   const enclosing = counting.nestedFunctions === 'enclosing';
   const all = found.functions.map(({ fn }) => fn);
