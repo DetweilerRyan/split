@@ -30,6 +30,8 @@ export type Fn = Range & {
   /** Whether it's passed straight to a call, as `items.forEach(() => …)` passes its callback. */
   readonly passedToCall: boolean;
 };
+/** A function inside another, which it counts towards with `enclosing` counting. */
+export type NestedFn = Fn & { readonly parents: readonly [Fn, ...(readonly Fn[])] };
 export type Comment = {
   readonly type: 'Line' | 'Block';
   readonly value: string;
@@ -40,7 +42,7 @@ export type Parsed = {
   /** The functions scored: all of them, or with `enclosing` counting only the outermost. */
   readonly functions: readonly Fn[];
   /** With `enclosing` counting, the functions inside a scored one, which count towards it. */
-  readonly nested: readonly Fn[];
+  readonly nested: readonly NestedFn[];
   readonly comments: readonly Comment[];
   /**
    * The UTF-16 offsets of every simple statement, outermost first: an expression, a variable
@@ -126,13 +128,12 @@ function callback(callee: string | undefined) {
  * function's JSX expression. A JSX child's expression sits in an element or fragment instead,
  * which has no name.
  */
-function jsxAttribute(source: string, around: AstNode | undefined) {
-  // Stryker disable next-line OptionalChaining: the walk starts below the Program, so a function's ancestors end with it, and a JSX expression's function has at least the expression and the Program around it.
-  return text(source, around?.name);
+function jsxAttribute(source: string, around: AstNode) {
+  return text(source, around.name);
 }
 
-/** The nodes around one, nearest first: its parent, that one's parent, and so on to the Program. */
-type Ancestors = readonly [AstNode, ...(readonly AstNode[])];
+/** The two nodes around one below the top level: its parent, and that one's parent. */
+type Around = readonly [parent: AstNode, grandparent: AstNode];
 
 /** What one file's walk needs throughout: its text, how to count, and where each offset is. */
 type Source = {
@@ -147,6 +148,8 @@ type Found = {
   // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, so deeply nested code needs no copy at each level.
   readonly functions: { readonly fn: Fn; readonly node: AstNode }[];
   // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, as for `functions`.
+  readonly nested: NestedFn[];
+  // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, as for `functions`.
   readonly statements: { readonly start: number; readonly end: number }[];
 };
 
@@ -157,55 +160,70 @@ type Found = {
  */
 function walk(
   node: AstNode,
-  ancestors: Ancestors,
+  [parent, grandparent]: Around,
   enclosing: readonly Fn[],
   source: Source,
   into: Found,
 ): void {
-  const inside = record(node, ancestors, enclosing, source, into);
-  for (const child of children(node)) walk(child, [node, ...ancestors], inside, source, into);
+  const inside = record(node, parent, enclosing, source, into, () =>
+    parent.type === 'JSXExpressionContainer'
+      ? (jsxAttribute(source.text, grandparent) ?? '(anonymous)')
+      : label(source.text, node, parent),
+  );
+  for (const child of children(node)) walk(child, [node, parent], inside, source, into);
+}
+
+/** Walks a node at the top level, whose parent is the Program. A JSX expression is never one. */
+function walkTop(node: AstNode, program: AstNode, source: Source, into: Found): void {
+  const inside = record(node, program, [], source, into, () => label(source.text, node, program));
+  for (const child of children(node)) walk(child, [node, program], inside, source, into);
 }
 
 /**
  * Adds `node` to `into` if it's a simple statement or a function, and returns the functions
- * around its children: `enclosing`, and `node` too if it's a function.
+ * around its children: `enclosing`, and `node` too if it's a function, labelled by `labelOf`.
  */
 function record(
   node: AstNode,
-  ancestors: Ancestors,
+  parent: AstNode,
   enclosing: readonly Fn[],
   source: Source,
   into: Found,
+  labelOf: () => string,
 ): readonly Fn[] {
   if (SIMPLE_STATEMENTS.has(node.type)) into.statements.push({ start: node.start, end: node.end });
   if (!isFunctionType(node.type) || !node.body) return enclosing;
-  const fn = describe(node, ancestors, enclosing, source);
+  const [outer, ...rest] = enclosing;
+  if (outer) {
+    const parents: NestedFn['parents'] = [outer, ...rest];
+    const fn = describe(node, parent, labelOf(), parents, source);
+    into.functions.push({ fn, node });
+    into.nested.push(fn);
+    return [...enclosing, fn];
+  }
+  const fn = describe(node, parent, labelOf(), [], source);
   into.functions.push({ fn, node });
-  return [...enclosing, fn];
+  return [fn];
 }
 
-/** A function node as a scored `Fn`: its name, complexity and place. */
-function describe(
+/** A function node as a scored `Fn`: its name, complexity and place, inside `parents`. */
+function describe<Parents extends readonly Fn[]>(
   node: AstNode,
-  ancestors: Ancestors,
-  enclosing: readonly Fn[],
+  parent: AstNode,
+  own: string,
+  parents: Parents,
   source: Source,
-): Fn {
-  const [parent, grandparent] = ancestors;
-  const own =
-    parent.type === 'JSXExpressionContainer'
-      ? (jsxAttribute(source.text, grandparent) ?? '(anonymous)')
-      : label(source.text, node, parent);
+): Fn & { readonly parents: Parents } {
   return {
     label: own,
-    name: [...enclosing.map((outer) => outer.label), own].join(' > '),
+    name: [...parents.map((outer) => outer.label), own].join(' > '),
     complexity: complexity(node, source.counting, (child) =>
       source.counting.lookupTables ? lookupAdds(child, source.tables, source.counting) : 0,
     ),
     offset: { start: node.start, end: node.end },
     start: source.position(node.start),
     end: source.position(node.end),
-    parents: enclosing,
+    parents,
     passedToCall: passedToCall(node, parent),
   };
 }
@@ -262,10 +280,10 @@ export function parse(
   const program = result.program as unknown as AstNode;
   const position = positions(source);
   const tables = tablesIn(program, imported).readable;
-  const found: Found = { functions: [], statements: [] };
+  const found: Found = { functions: [], nested: [], statements: [] };
   // The Program is neither a function nor a simple statement, so the walk starts below it.
   for (const child of children(program)) {
-    walk(child, [program], [], { text: source, counting, position, tables }, found);
+    walkTop(child, program, { text: source, counting, position, tables }, found);
   }
   const enclosing = counting.nestedFunctions === 'enclosing';
   const all = found.functions.map(({ fn }) => fn);
@@ -279,7 +297,7 @@ export function parse(
   }));
   return {
     functions: scored,
-    nested: enclosing ? all.filter((fn) => fn.parents.length > 0) : [],
+    nested: enclosing ? found.nested : [],
     comments,
     statements: found.statements,
     position,

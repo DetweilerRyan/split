@@ -88,6 +88,7 @@ The owner had the survivors split into three batches, each worked by a subagent 
 - **`oxcrap.ts` left `mutate`,** and `files.ts`'s logic moved behind an injected glob so unit tests reach it ("Unit-test files.ts, exclude oxcrap.ts").
 - **The threshold ratchets** ("Ratchet at the result"): `break` is the score reached, rounded down, and is raised as the score rises. A run on oxCrap that a change makes worse fails locally, where mutation testing runs.
 - **A full run starts from no results.** Measuring this showed `oxcrap.ts` still reported as mutated after it left `mutate`. Stryker keeps a file from old incremental results, and the baseline every new worktree is seeded from still held it. A full run reuses nothing anyway, so it now deletes the worktree's file first.
+- **A guard for a case that can't happen is proved away, not marked** (#127). The owner chose "Prove it in the type, else disable" on [#127](https://github.com/DetweilerRyan/split/pull/127), extending "Delete dead code first". The case was `noUncheckedIndexedAccess`: guards for a nested function's outer function and a JSX expression's attribute left equivalent mutants. So `NestedFn` types `parents` as non-empty, and the walk carries a node's parent and grandparent as a pair below the top level, which deletes both guards and their disable comments.
 
 ## What would reopen this
 

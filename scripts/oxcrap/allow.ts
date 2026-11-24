@@ -59,7 +59,7 @@ function targetLine(code: readonly string[], comment: Comment, parsed: Parsed) {
 }
 
 /** The outermost of `functions`: those not nested in another of them. */
-function outermost(functions: readonly Fn[]) {
+function outermost<F extends Fn>(functions: readonly F[]) {
   return functions.filter((fn) => !functions.some((other) => fn.parents.includes(other)));
 }
 
@@ -68,7 +68,7 @@ function outermost(functions: readonly Fn[]) {
  * that, the outermost functions passed straight to a call in the simple statement starting on it,
  * so a call a formatter wrapped, with its callback on the line below, still counts.
  */
-function functionsAt(line: number | undefined, parsed: Parsed, among = parsed.functions) {
+function functionsAt<F extends Fn>(line: number | undefined, parsed: Parsed, among: readonly F[]) {
   const starting = outermost(among.filter((fn) => fn.start.line === line));
   if (starting.length > 0) return { candidates: starting, where: `start on line ${line}` };
   // Statements are listed outermost first, so this is the widest one starting on the line.
@@ -87,17 +87,14 @@ function functionFor(
   parsed: Parsed,
 ): { readonly fn: Fn } | { readonly problem: string } {
   const target = targetLine(code, comment, parsed);
-  const { candidates, where } = functionsAt(target, parsed);
+  const { candidates, where } = functionsAt(target, parsed, parsed.functions);
   const [inner] =
     candidates.length === 0 ? functionsAt(target, parsed, parsed.nested).candidates : [];
   if (inner) {
     const [outer] = inner.parents;
-    // Stryker disable next-line ConditionalExpression: `inner` is one of `parsed.nested`, the functions with one around them, so `outer` is never undefined and `true` chooses the same.
-    if (outer) {
-      return {
-        problem: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
-      };
-    }
+    return {
+      problem: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
+    };
   }
   const [fn] = candidates;
   if (!fn) {
