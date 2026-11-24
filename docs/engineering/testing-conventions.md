@@ -121,7 +121,7 @@ Tooling tests check the repository's own dev tools: everything in `scripts/`, an
 
 ### Feature contracts for deep modules
 
-What a deep module is, is in [principle 5](code-design-principles.md#5-give-each-module-a-small-interface-over-a-lot-of-behaviour) of the code design principles. Its contract is what its callers give it and get back, which is the part that survives rewriting its internals.
+What a deep module is, is in the code design principles' [_deep modules_](code-design-principles.md#5-deep-modules-give-each-module-a-small-interface-over-a-lot-of-behaviour). Its contract is what its callers give it and get back, which is the part that survives rewriting its internals.
 
 - **Test a deep module's contract with Gherkin features,** written in its callers' words and kept beside it.
 - **Drive the features through the module's own interface.** Run a program end to end, as a process. A module used through code is driven through its functions, which needn't be end to end.
@@ -171,7 +171,7 @@ These rules cover a deep module whose interface is a program, the only kind set 
 ## Replacing external dependencies
 
 - **Fake only what can't run in a test,** and fake it at the edge: the network, storage, or a third-party service. Let the app's own logic (Yjs documents, claim math, seed validation) run for real. Don't fake something just to make a test faster.
-- **Prefer passing the dependency in.** When code takes its provider, client, clock or fetcher as a parameter, as [principle 1](code-design-principles.md#1-keep-essential-logic-apart-from-accidental-machinery) asks of code that decides, a test can hand it a plain fake object with no mocking at all. Design other new code this way too, where it costs little.
+- **Prefer passing the dependency in.** When code takes its provider, client, clock or fetcher as a parameter, as [_core and shell_](code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-accidental-machinery) asks of code that decides, a test can hand it a plain fake object with no mocking at all. Design other new code this way too, where it costs little.
 - **`vi.fn()` is fine for a fake's methods** and for a component's callback props, when the test needs to check how they were called.
 - **Use `vi.mock` only for a third-party module the code imports directly** and can't reasonably take as a parameter, as `src/sync/yjsProvider.test.ts` does for Liveblocks, `y-webrtc` and `y-indexeddb`. Never mock React or its hooks. Never `vi.mock` the repository's own modules; test them for real.
 
