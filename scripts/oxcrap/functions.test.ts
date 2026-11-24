@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { COUNT_SEPARATELY } from './complexity.ts';
-import { ParseError, parse, positions } from './functions.ts';
+import { moduleExports, ParseError, parse, positions } from './functions.ts';
 
 /** Counting as before #74, for the tests that pin it. */
 const SEPARATELY = COUNT_SEPARATELY;
@@ -26,7 +26,16 @@ describe('parse', () => {
       'items.forEach callback',
     ],
     ['a default export', 'export default () => 1;', 'default export'],
+    [
+      'a callback passed to a constructor, by the class',
+      'new Promise((resolve) => resolve(1));',
+      'Promise callback',
+    ],
     ['a JSX handler, by its attribute', 'const v = <button onClick={() => 1} />;', 'onClick'],
+    ['a function written as a JSX child', 'const v = <div>{() => 1}</div>;', '(anonymous)'],
+    ['a name of 40 characters, in full', `const ${'a'.repeat(40)} = () => 1;`, 'a'.repeat(40)],
+    ['a name longer than 40 characters', `const ${'a'.repeat(41)} = () => 1;`, '(anonymous)'],
+    ['a callback whose call spans lines', 'items\n  .forEach((n) => n);', '(anonymous)'],
     ['anything else', '[() => 1];', '(anonymous)'],
   ])('labels %s', (_, code, name) => {
     expect(names(code)).toEqual([name]);
@@ -60,6 +69,41 @@ describe('parse', () => {
     ]);
   });
 
+  it('says which functions are passed straight to a call or a constructor', () => {
+    const code = [
+      'items.forEach((n) => n);',
+      'new Promise((resolve) => resolve(1));',
+      'const x = function () { return 1; }();',
+      'const f = () => 1;',
+    ].join('\n');
+    expect(parse('example.ts', code).functions.map((fn) => [fn.name, fn.passedToCall])).toEqual([
+      ['items.forEach callback', true],
+      ['Promise callback', true],
+      ['function () { return 1; } callback', false],
+      ['f', false],
+    ]);
+  });
+
+  it('lists every simple statement, outermost first, and no block, loop or if', () => {
+    const code = [
+      'const a = 1;',
+      'if (a) {',
+      '  for (const b of [a]) run(() => {',
+      '    return b;',
+      '  });',
+      '}',
+      'export default a;',
+    ].join('\n');
+    const { statements } = parse('example.ts', code);
+    expect(statements.map(({ start, end }) => code.slice(start, end))).toEqual([
+      'const a = 1;',
+      'const b',
+      'run(() => {\n    return b;\n  });',
+      'return b;',
+      'export default a;',
+    ]);
+  });
+
   it('throws a ParseError naming the file when the code doesn’t parse', () => {
     expect(() => parse('broken.ts', 'function (')).toThrow(ParseError);
     expect(() => parse('broken.ts', 'function (')).toThrow("Couldn't parse broken.ts");
@@ -76,5 +120,25 @@ describe('positions', () => {
       { line: 2, column: 1 },
       { line: 3, column: 0 },
     ]);
+  });
+});
+
+describe('moduleExports', () => {
+  it('gives the lookup tables and functions a module exports', () => {
+    const exports = moduleExports(
+      'rates.ts',
+      "export const RATES = new Set(['a', 'b']);\nexport function grade() {}\n",
+    );
+    expect([...exports.tables.keys()]).toEqual(['RATES']);
+    expect([...exports.functions]).toEqual(['grade']);
+  });
+
+  it('gives nothing for a module that doesn’t parse, even what it exports before the error', () => {
+    expect(
+      moduleExports(
+        'rates.ts',
+        "export const RATES = new Set(['a', 'b']);\nexport function grade() {}\nconst broken;\n",
+      ),
+    ).toEqual({ tables: new Map(), functions: new Set() });
   });
 });

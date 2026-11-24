@@ -81,6 +81,43 @@ describe('coverageOf', () => {
     expect(covered(report([], [[9, false]]))).toMatchObject({ one: 0 });
   });
 
+  it('gives a statement to the innermost function around it, whatever order the functions come in', () => {
+    const functions = parse('example.ts', code, SEPARATELY).functions;
+    const shares = coverageOf(
+      [...functions].reverse(),
+      report([
+        [3, false],
+        [5, true],
+      ]),
+    );
+    expect(Object.fromEntries([...shares].map(([fn, c]) => [fn.name, c]))).toEqual({
+      one: 0,
+      'outer > inner': 1,
+      outer: 0,
+    });
+  });
+
+  it('leaves out a statement before a function, on its first line or one above it', () => {
+    const source = 'const ready = true; start();\nrun(); const f = () => {\n  go();\n};\n';
+    function at(line: number, column: number) {
+      return { line, column };
+    }
+    // `start()` is on the line above f, at a column past where f starts; `run()` is on f's line, before it.
+    const file: FileCoverage = {
+      statementMap: {
+        0: { start: at(1, 20), end: at(1, 28) },
+        1: { start: at(2, 0), end: at(2, 6) },
+        2: { start: at(3, 2), end: at(3, 7) },
+      },
+      s: { 0: 0, 1: 0, 2: 1 },
+      fnMap: {},
+      f: {},
+    };
+    const [f] = parse('example.ts', source, SEPARATELY).functions;
+    expect(f.start).toEqual(at(2, 17));
+    expect(coverageOf([f], file).get(f)).toBe(1);
+  });
+
   it('scores 0 throughout a file the report doesn’t have', () => {
     expect(covered(undefined)).toEqual({ outer: 0, 'outer > inner': 0, one: 0 });
   });
@@ -101,6 +138,22 @@ describe('parseReport', () => {
     );
   });
 
+  it.each(['statementMap', 's', 'fnMap', 'f'] as const)(
+    'refuses a file entry with no %s, which scoring reads',
+    (part) => {
+      const { [part]: _, ...entry } = report([[2, true]], [[9, true]]);
+      expect(() => parseReport(JSON.stringify({ '/repo/src/a.ts': entry }), 'c.json')).toThrow(
+        "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
+      );
+    },
+  );
+
+  it('refuses a report whose file entry is null', () => {
+    expect(() => parseReport('{"/repo/src/a.ts": null}', 'c.json')).toThrow(
+      "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
+    );
+  });
+
   it.each(['null', '5', '"x"', 'true', '[]'])('refuses %s, which isn’t a report at all', (text) => {
     expect(() => parseReport(text, 'c.json')).toThrow(
       "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
@@ -117,5 +170,15 @@ describe('newerThan', () => {
       { file: 'src/same.ts', time: 150 },
     ];
     expect(newerThan(150, files)).toEqual(['src/newer.ts', 'src/new.ts']);
+  });
+
+  it('sorts the files newest first, whatever order they come in', () => {
+    const files = [
+      { file: 'src/a.ts', time: 200 },
+      { file: 'src/b.ts', time: 300 },
+      { file: 'src/c.ts', time: 400 },
+      { file: 'src/d.ts', time: 500 },
+    ];
+    expect(newerThan(100, files)).toEqual(['src/d.ts', 'src/c.ts', 'src/b.ts', 'src/a.ts']);
   });
 });

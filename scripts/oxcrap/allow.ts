@@ -28,6 +28,7 @@ export function commentText(comment: Comment) {
 
 /** `source` with every comment blanked to spaces, keeping line breaks, so only code is left. */
 function withoutComments(source: string, comments: Comment[]) {
+  // Stryker disable next-line StringLiteral: text before line 1 only shifts what `targetLine` reads after a comment on line 1 further left, into the comment's own blanks, since a @crap-allow comment FORMAT accepts is over 30 characters long.
   let code = '';
   let from = 0;
   for (const comment of comments) {
@@ -47,6 +48,7 @@ function targetLine(code: string[], comment: Comment, parsed: Parsed) {
   const rest = code[end.line - 1].slice(end.column).trim();
   if (rest !== '' && rest !== '}') return end.line;
   for (let line = end.line + 1; line <= code.length; line++) {
+    // Stryker disable next-line MethodExpression: `trimmed` is only read with all its whitespace removed, so trimming its ends first changes nothing.
     const trimmed = code[line - 1].trim();
     // A JSX comment, {/* … */}, leaves its braces behind once the comment is blanked.
     if (trimmed.replace(/\s+/g, '') !== '' && trimmed.replace(/\s+/g, '') !== '{}') return line;
@@ -65,6 +67,7 @@ function outermost(functions: Fn[]) {
  * so a call a formatter wrapped, with its callback on the line below, still counts.
  */
 function functionsAt(line: number | undefined, parsed: Parsed, among = parsed.functions) {
+  // Stryker disable next-line ConditionalExpression,StringLiteral: with no line, no function or statement is on it, so the rest of the function finds no candidates as well; and `where` is only shown with two candidates or more.
   if (line === undefined) return { candidates: [], where: '' };
   const starting = outermost(among.filter((fn) => fn.start.line === line));
   if (starting.length > 0) return { candidates: starting, where: `start on line ${line}` };
@@ -132,6 +135,7 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
       problems.push({ ...at, message: `${fn.name} already has a @crap-allow comment.` });
       continue;
     }
+    // Stryker disable next-line MethodExpression: `commentText` already trims the text, and FORMAT's reason starts with a non-space, so there is nothing to trim.
     const reason = (match[3] ?? '').trim();
     if (!reason) {
       problems.push({ ...at, message: `The @crap-allow comment for ${fn.name} gives no reason.` });

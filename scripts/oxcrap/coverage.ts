@@ -56,6 +56,7 @@ function innermost(functions: Fn[], range: Range) {
   for (const fn of functions) {
     if (
       contains(fn, range) &&
+      // Stryker disable next-line EqualityOperator: two functions of one length that both hold a range would be the same function, since a file's functions are either nested or apart, so `<` and `<=` never choose differently.
       (!best || fn.offset.end - fn.offset.start < best.offset.end - best.offset.start)
     ) {
       best = fn;
@@ -69,6 +70,7 @@ function statementCounts(functions: Fn[], file: FileCoverage) {
   const counts = new Map<Fn, { total: number; run: number }>();
   for (const [id, range] of Object.entries(file.statementMap)) {
     const owner = innermost(functions, range);
+    // Stryker disable next-line ConditionalExpression: a statement outside every function would be counted under `undefined`, which `coverageOf` never looks up.
     if (!owner) continue;
     const count = counts.get(owner) ?? { total: 0, run: 0 };
     count.total++;
@@ -101,6 +103,7 @@ export function coverageOf(functions: Fn[], file: FileCoverage | undefined) {
   const covered = new Map<Fn, number>();
   for (const fn of functions) {
     const count = counts.get(fn);
+    // Stryker disable next-line ConditionalExpression,EqualityOperator: `statementCounts` only makes a count when it counts a statement, so every count's total is at least 1.
     if (count && count.total > 0) covered.set(fn, count.run / count.total);
     else covered.set(fn, called.has(fn) ? 1 : 0);
   }
