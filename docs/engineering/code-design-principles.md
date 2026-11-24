@@ -10,7 +10,7 @@ Essential logic is the business rule itself: how a receipt splits, rounds and co
 
 - **Write essential logic as pure functions over plain data, in `src/domain/`,** named in the words users use, such as receipt, item, claim, participant and share.
 - **Keep accidental machinery in the shell:** UI, sync, storage and outside services. A condition in the shell is one that wouldn't exist without them, such as whether a request failed or a dialog is open. Any other condition is essential logic.
-- **Keep effects out of the code that decides.** The shell performs them, and passes their results, or the effect itself, in as arguments: only the part the code uses, as `useActiveIdentity` takes only its provider's `setIdentity`. Pure essential logic then needs no fakes, and the rest is tested with plain fakes.
+- **Keep effects out of the code that decides.** The shell performs them, and passes their results, or the effect itself, in as arguments. Type each one by an interface the deciding code declares, or narrows with `Pick`, holding only what it uses, as `useActiveIdentity` takes only its provider's `setIdentity` (dependency inversion and interface segregation). Pure essential logic then needs no fakes, and the rest is tested with plain fakes.
 - **A business decision your change adds or edits in a component or hook goes in the domain,** and the UI calls it.
 
 ```ts
@@ -38,8 +38,10 @@ How each type is kept readonly, how to build a changed value, and the working va
 
 The less a construct can do, the more a reader and a tool can tell about what it does.
 
-- **Reach for the weakest form that works:** a value or plain data, then a pure function, then a `switch` or a chain of conditions, then a function passed in. Dynamic dispatch, `Proxy`, `eval` and calls through computed property names come last, only when nothing weaker works.
-- **Don't turn a `switch` or a chain of conditions into a lookup table,** a `Map`, object or `Set` read at run time. It hides the branches from a reader without removing them. A table of plain values, such as region codes to currencies, is data, not branches, so it's fine.
+- **Reach for the weakest form that works:** a value or plain data, then a pure function, then a `switch` or a chain of conditions, then a function or an interface passed in. A registry, dynamic dispatch, `Proxy`, `eval` and calls through computed property names come last, only when nothing weaker works.
+- **Write a closed set of cases as a discriminated union, and handle it with an exhaustive `switch`** that ends in a `never` check, so the compiler names every `switch` a new case has to reach.
+- **Don't turn a `switch` or a chain of conditions into a lookup table to shorten it or to pass a CRAP limit,** whether it's a `Map`, an object or a `Set` read at run time, and whether or not it's called a registry. It hides the branches from a reader without removing them. A table of plain values, such as region codes to currencies, is data, not branches, so it's fine.
+- **Use a registry rarely,** a table of handlers looked up by a key at run time. It's the most dynamic construct here, so the problem has to need it: cases added at run time by code the module can't know about, which an interface passed in can't serve. Say in a comment beside it why nothing weaker works.
 - **Prefer declarative config and plain data to code that builds the same thing at run time,** but never in place of branches, as the rule above says.
 
 ```ts
@@ -53,6 +55,10 @@ switch (action.kind) {
     return addItem(state, action);
   case 'remove':
     return removeItem(state, action);
+  default: {
+    const unhandled: never = action;
+    return unhandled;
+  }
 }
 ```
 
@@ -68,8 +74,11 @@ An abstraction made before its second use is a guess, and a wrong one costs more
 
 A module earns its place by carrying complexity its callers would otherwise carry. A deep module is one whose small interface hides much more logic than the interface shows. It might be a program with a command line, or a simplified abstraction over complex code that callers use through a few functions.
 
-- **Test a module by imagining it deleted.** If its complexity would reappear in each caller, it's earning its place. If the complexity would vanish with it, it's a pass-through: fold it into its caller.
-- **Its interface is everything a caller relies on:** its exports and types, and also the invariants it keeps and the errors it can raise. Test it through that interface. A test that has to reach past it means the module has the wrong shape.
+- **Test a module by imagining it deleted.** If its complexity would reappear in each caller, it's earning its place. If the complexity would vanish with it, it's a pass-through: fold it into its caller. A shell module that only performs effects is principle 1's, and stays.
+- **Give a module one reason to change** (single responsibility). It hides one concern, so a change to that concern touches it, and changes to other concerns don't. If you can't name its concern without "and", it has two.
+- **Its interface is everything a caller relies on:** its exports and types, and also the invariants it keeps and the errors it can raise. Test it through that interface. A test of the module that has to reach past its interface means the module has the wrong shape.
+- **Anything that implements an interface keeps its whole contract,** not only its types, and that includes a fake in a test (Liskov substitution).
+- **Put a stable interface where variation is real,** and pass the implementation in (open-closed, read as protected variation). Variation is real when there are two or more implementations. Move a closed set from principle 3's `switch` to an interface when the same `switch` over the same union recurs in two or more modules, or when a second implementation lives outside the module. `RoomProvider` shows both sides: callers depend on its interface, which tests fake, and inside `createProvider` a plain condition picks the backend from a closed set.
 - **An error says what went wrong and what to do about it.** Whoever reads it, a person or an agent, acts on its words.
 
 ## 6. Let the types rule out states that can't happen
@@ -93,6 +102,7 @@ type Rate =
 ## When two principles pull apart
 
 - **Principle 1 wins over principle 4 for a business rule,** which goes in `src/domain/` even with one user, as [Code layout](code-layout.md) says.
+- **Principles 3 and 5 split a set of cases by whether it's closed.** A closed set the module owns is a union with a `switch`. A real point of variation is an interface. A registry comes after both, as principle 3 says.
 - **Passing an effect in, as principle 1 asks, isn't a parameter or an injection point that principle 4 counts.** An injection point lets a caller swap a whole part, as `RoomView`'s `parts` do, by the owner's exception in [Testing conventions](testing-conventions.md#writing-component-and-hook-tests). Add one only when principle 4's test is met.
 
 ## Changing this document
