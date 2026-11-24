@@ -30,6 +30,12 @@ const lookAlike = fc.oneof(
   fc
     .tuple(fc.oneof(uuidRoomId, legacyRoomId), fc.constantFrom(' ', '/', '#', '-'))
     .map(([id, extra]) => id + extra),
+  fc
+    .tuple(fc.constantFrom(' ', 'x', '#', '/', 'room='), fc.oneof(uuidRoomId, legacyRoomId))
+    .map(([extra, id]) => extra + id),
+  fc
+    .tuple(fc.uuid({ version: 4 }), fc.constantFrom(...'01234567cdef'))
+    .map(([uuid, variant]) => `urn:split:room:${uuid.slice(0, 19)}${variant}${uuid.slice(20)}`),
 );
 
 describe('parseRoomId', () => {

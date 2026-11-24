@@ -41,11 +41,72 @@ function seedWith(itemCount: { readonly minLength: number; readonly maxLength: n
   ) satisfies fc.Arbitrary<ReceiptSeed>;
 }
 
+/** One text field of a seed, with its limit and how to put a value in it. */
+interface TextField {
+  readonly path: string;
+  readonly max: number;
+  readonly set: (seed: ReceiptSeed, value: string) => ReceiptSeed;
+}
+
+const textFields: readonly TextField[] = [
+  ...(['title', 'address', 'website'] as const).map((key) => ({
+    path: key,
+    max: MAX_TEXT,
+    set: (s: ReceiptSeed, value: string) => ({ ...s, [key]: value }),
+  })),
+  ...(['phone', 'mealType'] as const).map((key) => ({
+    path: key,
+    max: 64,
+    set: (s: ReceiptSeed, value: string) => ({ ...s, [key]: value }),
+  })),
+  ...(['purchasedAt', 'rateDate'] as const).map((key) => ({
+    path: key,
+    max: 32,
+    set: (s: ReceiptSeed, value: string) => ({ ...s, [key]: value }),
+  })),
+  {
+    path: 'roster[0]',
+    max: MAX_TEXT,
+    set: (s, value) => ({ ...s, roster: [value, ...s.roster.slice(1)] }),
+  },
+  ...(
+    [
+      ['id', 64],
+      ['name', MAX_TEXT],
+      ['en', MAX_TEXT],
+    ] as const
+  ).map(([key, max]) => ({
+    path: `items[0].${key}`,
+    max,
+    set: (s: ReceiptSeed, value: string) => ({
+      ...s,
+      items: [{ ...s.items[0], [key]: value }, ...s.items.slice(1)],
+    }),
+  })),
+];
+
 describe('validateSeed', () => {
   it('returns every seed within the limits as it was given', () => {
     fc.assert(
       fc.property(seedWith({ minLength: 0, maxLength: MAX_ITEMS }), (given) => {
         expect(validateSeed(given)).toEqual(given);
+      }),
+    );
+  });
+
+  it('rejects each text field one unit over its limit, naming the field', () => {
+    const overLimit = fc
+      .tuple(seedWith({ minLength: 1, maxLength: MAX_ITEMS }), fc.constantFrom(...textFields))
+      .chain(([s, field]) =>
+        fc
+          .string({ minLength: field.max + 1, maxLength: field.max + 1 })
+          .map((value) => ({ seed: field.set(s, value), field })),
+      );
+    fc.assert(
+      fc.property(overLimit, ({ seed: given, field }) => {
+        expect(() => validateSeed(given)).toThrow(
+          `${field.path} must be at most ${field.max} characters`,
+        );
       }),
     );
   });
