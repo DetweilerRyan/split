@@ -9,6 +9,7 @@ How work on this repository gets done: writing and testing code, choosing depend
 | Procedure                                           | Read when                                                                                                                                                                                                                                                                                                           |
 | :-------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Workflow](workflow/README.md)                      | Before starting, resuming, reviewing, submitting, revising, or cleaning up after a piece of work: any branch, worktree or pull request task. Its own index lists a procedure for each stage                                                                                                                         |
+| [Code design principles](code-design-principles.md) | Before reading or writing code                                                                                                                                                                                                                                                                                      |
 | [Testing conventions](testing-conventions.md)       | Before writing, changing, or moving a test, including a component or hook test, or replacing an external dependency in a test                                                                                                                                                                                       |
 | [Choosing and adding dependencies](dependencies.md) | Before adding or changing an entry in `package.json`, before importing a package the repository doesn't import yet, or before writing code for a general problem a library may already solve                                                                                                                        |
 | [Code layout](code-layout.md)                       | Before adding a module or folder under `src/`, moving one, or deciding where code belongs                                                                                                                                                                                                                           |
@@ -18,11 +19,6 @@ How work on this repository gets done: writing and testing code, choosing depend
 | [Mutation testing](mutation-testing.md)             | When oxCrap's code (`scripts/oxcrap/`) changes and the definition of done passes; before running `npm run test:mutation`, or handling a surviving mutant                                                                                                                                                            |
 | [CI](ci.md)                                         | Before changing `.github/workflows/`, updating `playwright`, `@playwright/test` or a GitHub Action, or when a pull request's CI run fails                                                                                                                                                                           |
 
-## Code style
-
-- **Write functions over plain data, not classes, and don't use `this`.** Keep state in a function's parameters, or in a factory that closes over it and returns an object of functions, as `createActor` in [`e2e/screenplay/actor.ts`](../../e2e/screenplay/actor.ts) does. An `Error` subclass may be a class. `npm run lint` enforces this through the local oxlint plugin [`scripts/lint/functional.ts`](../../scripts/lint/functional.ts).
-- **`ReceiptStore` keeps its class,** as the owner decided on [#83](https://github.com/DetweilerRyan/split/issues/83). Keeping any other class needs the owner's approval. Disable `functional/no-classes` on the class's line, with the reason. A `this` that reads the class needs no disable, since `.oxlintrc.json` turns on `functional/no-this`'s `allowInClasses` option; a `this` under a `function` inside the class is still reported.
-
 ## Adding a procedure
 
 1. Write it as `docs/engineering/<topic>.md` (lowercase, hyphenated), one topic per file. A procedure for a stage of a piece of work, from starting it to cleaning up after its merge, goes in `docs/engineering/workflow/` instead; its [index](workflow/README.md#adding-a-procedure) says how.
@@ -30,7 +26,4 @@ How work on this repository gets done: writing and testing code, choosing depend
 3. Don't add it to `AGENTS.md`; this index is the pointer. The exception is a boundary the owner has asked to have loaded in every session, which gets one line in `AGENTS.md`'s boundaries that links to the procedure.
 4. Follow [single source of truth](../prose/single-source-of-truth.md): link to rules that live elsewhere instead of restating them.
 5. Keep the procedure to instructions. Put its reasons, sources and the decisions behind it in a `docs/engineering/<topic>.meta.md` sidecar, linked from a final "Changing this document" section, as [Reasons live in a `.meta.md` sidecar](../prose/single-source-of-truth.md#reasons-live-in-a-metamd-sidecar) says. Don't give the sidecar an index row.
-
-## Changing this document
-
-The reasons for the code-style rules, and the decisions behind them, are in [README.meta.md](README.meta.md). Read it only when changing or questioning a rule here.
+6. Keep this index to the table and these steps. A rule goes in a procedure, not here.
