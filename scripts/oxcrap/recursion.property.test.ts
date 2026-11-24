@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { COUNT_ALL } from './complexity.ts';
+import { COUNT_ALL, COUNT_SEPARATELY } from './complexity.ts';
 import { parse } from './functions.ts';
 
 // Random call graphs among a few functions, written in the forms oxCrap resolves, with decoy calls
@@ -26,7 +26,7 @@ import { parse } from './functions.ts';
 /** How the functions are written: as declarations, const arrows, or public, private or static methods. */
 type Form = 'declaration' | 'arrow' | 'method' | 'private' | 'static';
 /** How a real call is written. */
-type Via = 'call' | 'new' | 'defaultValue' | 'patternDefault';
+type Via = 'call' | 'new' | 'defaultValue' | 'patternDefault' | 'staticBlock' | 'fieldInit';
 /** A binding of the called name that hides the call from the function. */
 type Hiding =
   | 'param'
@@ -45,7 +45,7 @@ type Nearby = 'none' | 'siblingBlock' | 'nestedParam' | 'staticVar';
  * A field of a method's name: on the method's own side, instance or static, it hides the method
  * from `this`; on the other side it doesn't.
  */
-type Field = 'none' | 'sameBefore' | 'sameAfter' | 'other';
+type Field = 'none' | 'sameBefore' | 'sameAfter' | 'other' | 'otherMethod';
 /** A call in a function's body: to another function, or a decoy that must not count. */
 type Call = {
   to: number;
@@ -156,6 +156,12 @@ function realCall(form: Form, via: Via, to: number) {
       return `((n = ${fn}()) => { const ${name(to)} = 0; return n + ${name(to)}; })();`;
     case 'patternDefault':
       return `(({ n = ${fn}() }) => { const ${name(to)} = 0; return n + ${name(to)}; })({});`;
+    // An inner class's static block or field sees the scopes around the class. A method's `this`
+    // isn't theirs, so a class's methods call plainly. The class's own `this` is checked apart.
+    case 'staticBlock':
+      return inClass(form) ? `${fn}();` : `void class { static { ${fn}(); } };`;
+    case 'fieldInit':
+      return inClass(form) ? `${fn}();` : `void class { x = ${fn}(); };`;
     default:
       return `${fn}();`;
   }
@@ -174,11 +180,12 @@ function viaBranches(via: Via) {
 
 /**
  * A call of the stub with function `to`'s name in the other privacy, which isn't the function. A
- * static method's `this` can't reach the instance's stub, so it calls nothing.
+ * static method's is a private static stub.
  */
 function otherPrivacy(form: Form, to: number) {
   switch (form) {
     case 'method':
+    case 'static':
       return `this.#${name(to)}();`;
     case 'private':
       return `this.${name(to)}();`;
@@ -216,28 +223,47 @@ function callCode(form: Form, { to, decoy, via, hiding, nearby }: Call) {
  * before or after it, or on the other side.
  */
 function withField(form: Form, field: Field, method: string, name: string) {
-  const own = form === 'static' ? `  static ${name} = 0;` : `  ${name} = 0;`;
-  const other = form === 'static' ? `  ${name} = 0;` : `  static ${name} = 0;`;
+  const own = form === 'static' ? `  static ${name}` : `  ${name}`;
+  const other = form === 'static' ? `  ${name}` : `  static ${name}`;
   switch (field) {
     case 'sameBefore':
-      return `${own}\n${method}`;
+      return `${own} = 0;\n${method}`;
     case 'sameAfter':
-      return `${method}\n${own}`;
+      return `${method}\n${own} = 0;`;
     case 'other':
-      return `${method}\n${other}`;
+      return `${method}\n${other} = 0;`;
+    // A method of the same name on the other side, written after it.
+    case 'otherMethod':
+      return `${method}\n${other}() { return 0; }`;
     default:
       return method;
   }
 }
 
-/** The prefix of each stub's name: private for public methods, and public otherwise. */
-function stubPrefix(form: Form) {
-  return form === 'method' ? '#' : '';
+/**
+ * The stubs each method has, as the prefix they're declared with and the one oxCrap names them
+ * with: a private one for a public method, a public one for a private method, and for a static
+ * method, an instance one and a private static one.
+ */
+function stubKinds(form: Form): [string, string][] {
+  switch (form) {
+    case 'method':
+      return [['#', '#']];
+    case 'static':
+      return [
+        ['', ''],
+        ['static #', '#'],
+      ];
+    default:
+      return [['', '']];
+  }
 }
 
-/** A class of the methods, with a stub of each one's name that `this` mustn't reach. */
+/** A class of the methods, with stubs of each one's name that `this` mustn't reach. */
 function classSource(form: Form, stubsFirst: boolean, methods: string[]) {
-  const stubs = methods.map((_, i) => `  ${stubPrefix(form)}${name(i)}() { return 0; }`);
+  const stubs = stubKinds(form).flatMap(([declared]) =>
+    methods.map((_, i) => `  ${declared}${name(i)}() { return 0; }`),
+  );
   const members = stubsFirst ? [...stubs, ...methods] : [...methods, ...stubs];
   return `class C {\n${members.join('\n')}\n}\n`;
 }
@@ -309,11 +335,20 @@ function expected(program: Program) {
     program.form === 'private' ? `#${name(i)}` : name(i),
     1 + branches(calls) + (cycles[i] ? 1 : 0),
   ]);
-  // The stubs call nothing.
+  // The stubs, and the methods of the same name on the other side, call nothing.
   const stubs = inClass(program.form)
-    ? program.fns.map((_, i) => [`${stubPrefix(program.form)}${name(i)}`, 1])
+    ? stubKinds(program.form).flatMap(([, named]) =>
+        program.fns.map((_, i) => [`${named}${name(i)}`, 1]),
+      )
     : [];
-  return sorted([...scored, ...stubs]);
+  const otherMethods = program.fns
+    .map(({ field }, i) => [field, name(i)])
+    .filter(
+      ([field]) =>
+        field === 'otherMethod' && (program.form === 'method' || program.form === 'static'),
+    )
+    .map(([, fn]) => [fn, 1]);
+  return sorted([...scored, ...stubs, ...otherMethods]);
 }
 
 const call = fc.record<Call>({
@@ -330,7 +365,14 @@ const call = fc.record<Call>({
     'innerStatic',
     'innerField',
   ),
-  via: fc.constantFrom<Via>('call', 'new', 'defaultValue', 'patternDefault'),
+  via: fc.constantFrom<Via>(
+    'call',
+    'new',
+    'defaultValue',
+    'patternDefault',
+    'staticBlock',
+    'fieldInit',
+  ),
   hiding: fc.constantFrom<Hiding>(
     'param',
     'defaultParam',
@@ -347,7 +389,7 @@ const call = fc.record<Call>({
 });
 const fn = fc.record<Fn>({
   calls: fc.array(call, { maxLength: 3 }),
-  field: fc.constantFrom<Field>('none', 'none', 'sameBefore', 'sameAfter', 'other'),
+  field: fc.constantFrom<Field>('none', 'none', 'sameBefore', 'sameAfter', 'other', 'otherMethod'),
 });
 const programs = fc
   .record({
@@ -364,6 +406,117 @@ const programs = fc
     })),
   }));
 
+// A class's own `this`, where only nested functions scored apart can see it: a class inside a
+// function `w`, whose methods call each other through `this` and call `w` back, and whose static
+// block and fields call its methods. A static method, static block or static field reaches only
+// the static methods, and an instance method or field only the instance ones. Each method may have
+// a twin of its name on the other side, before or after it, which nothing must reach.
+
+/** Which side of a class a method is on. */
+type Side = 'instance' | 'static';
+/** Where in the class a call that runs as `w`'s code is written. */
+type Place = 'staticBlock' | 'staticField' | 'instanceField';
+/** A method: its side, a twin of its name on the other side, and what it calls. */
+type Member = { side: Side; twin: 'none' | 'before' | 'after'; calls: (number | 'w')[] };
+type ClassProgram = { members: Member[]; initializers: { place: Place; to: number }[] };
+
+/** The side a place's `this` is: the class's for static code, an instance's otherwise. */
+function placeSide(place: Place): Side {
+  return place === 'instanceField' ? 'instance' : 'static';
+}
+
+/** A member's declaration, its twin's before or after it. */
+function memberCode({ side, twin, calls }: Member, i: number) {
+  const own = side === 'static' ? 'static ' : '';
+  const other = side === 'static' ? '' : 'static ';
+  const body = calls.map((to) => (to === 'w' ? 'w();' : `this.${name(to)}();`)).join(' ');
+  const method = `    ${own}${name(i)}() { ${body} }`;
+  const twinCode = `    ${other}${name(i)}() { return 0; }`;
+  if (twin === 'before') return `${twinCode}\n${method}`;
+  return twin === 'after' ? `${method}\n${twinCode}` : method;
+}
+
+/** An initializer's code: a static block, a static field or an instance field calling `to`. */
+function initializerCode(place: Place, to: number, k: number) {
+  switch (place) {
+    case 'staticBlock':
+      return `    static { this.${name(to)}(); }`;
+    case 'staticField':
+      return `    static x${k} = this.${name(to)}();`;
+    default:
+      return `    x${k} = this.${name(to)}();`;
+  }
+}
+
+function classProgramSource({ members, initializers }: ClassProgram) {
+  const lines = [
+    ...members.map(memberCode),
+    ...initializers.map(({ place, to }, k) => initializerCode(place, to, k)),
+  ];
+  return `function w() {\n  class C {\n${lines.join('\n')}\n  }\n}\n`;
+}
+
+/** Each scored function's expected complexity: 1, and 1 more if it reaches itself. */
+function classProgramExpected({ members, initializers }: ClassProgram) {
+  const edges = new Map<string, string[]>([
+    [
+      'w',
+      initializers.filter((c) => placeSide(c.place) === members[c.to].side).map((c) => `${c.to}`),
+    ],
+    ...members.map(({ side, calls }, i): [string, string[]] => [
+      `${i}`,
+      calls.filter((to) => to === 'w' || members[to].side === side).map((to) => `${to}`),
+    ]),
+  ]);
+  function cycles(start: string) {
+    const seen = new Set<string>();
+    const queue = [...(edges.get(start) as string[])];
+    while (queue.length > 0) {
+      const next = queue.pop() as string;
+      if (next === start) return true;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(...(edges.get(next) as string[]));
+    }
+    return false;
+  }
+  return sorted([
+    ['w', cycles('w') ? 2 : 1],
+    ...members.map((_, i) => [`w > ${name(i)}`, cycles(`${i}`) ? 2 : 1]),
+    // The twins call nothing.
+    ...members.flatMap((m, i) => (m.twin === 'none' ? [] : [[`w > ${name(i)}`, 1]])),
+  ]);
+}
+
+const classPrograms = fc
+  .record({
+    members: fc.array(
+      fc.record<Member>({
+        side: fc.constantFrom<Side>('instance', 'static'),
+        twin: fc.constantFrom('none', 'before', 'after'),
+        calls: fc.array(fc.oneof(fc.nat({ max: SIZE - 1 }), fc.constant('w' as const)), {
+          maxLength: 3,
+        }),
+      }),
+      { minLength: 1, maxLength: SIZE },
+    ),
+    initializers: fc.array(
+      fc.record({
+        place: fc.constantFrom<Place>('staticBlock', 'staticField', 'instanceField'),
+        to: fc.nat({ max: SIZE - 1 }),
+      }),
+      { maxLength: 3 },
+    ),
+  })
+  // Calls only reach methods that exist.
+  .map(({ members, initializers }) => ({
+    members: members.map((m) => ({
+      ...m,
+      calls: m.calls.map((to) => (to === 'w' ? to : to % members.length)),
+    })),
+    initializers: initializers.map((c) => ({ ...c, to: c.to % members.length })),
+  }));
+
 describe('recursion in generated call graphs', () => {
   it('adds 1 to exactly the functions that reach themselves through real calls', () => {
     fc.assert(
@@ -372,7 +525,19 @@ describe('recursion in generated call graphs', () => {
         const complexity = sorted(functions.map((f) => [f.name, f.complexity]));
         expect(complexity).toEqual(expected(program));
       }),
-      { numRuns: 500 },
+      { numRuns: 1000 },
+    );
+  });
+
+  it('resolves a class’s own this to its static or its instance members, by where it’s written', () => {
+    const counting = { ...COUNT_SEPARATELY, recursion: true };
+    fc.assert(
+      fc.property(classPrograms, (program) => {
+        const { functions } = parse('generated.ts', classProgramSource(program), counting);
+        const complexity = sorted(functions.map((f) => [f.name, f.complexity]));
+        expect(complexity).toEqual(classProgramExpected(program));
+      }),
+      { numRuns: 300 },
     );
   });
 });
