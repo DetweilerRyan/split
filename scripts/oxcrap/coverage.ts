@@ -103,8 +103,8 @@ export function coverageOf(functions: Fn[], file: FileCoverage | undefined) {
   const covered = new Map<Fn, number>();
   for (const fn of functions) {
     const count = counts.get(fn);
-    // Stryker disable next-line ConditionalExpression,EqualityOperator: `statementCounts` only makes a count when it counts a statement, so every count's total is at least 1.
-    if (count && count.total > 0) covered.set(fn, count.run / count.total);
+    // `statementCounts` makes a count only when it counts a statement, so its total is never 0.
+    if (count) covered.set(fn, count.run / count.total);
     else covered.set(fn, called.has(fn) ? 1 : 0);
   }
   return covered;

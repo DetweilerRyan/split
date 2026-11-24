@@ -76,7 +76,6 @@ export function positions(source: string) {
 
 /** The source text of `node`, if it's short enough to read as a name. */
 function text(source: string, node: unknown) {
-  // Stryker disable next-line ConditionalExpression: every caller passes a property the parser always fills with a node (an id, key, left side, callee or attribute name), so the guard never returns.
   if (!isNode(node)) return undefined;
   const value = source.slice(node.start, node.end);
   return value.length <= 40 && !value.includes('\n') ? value : undefined;
@@ -106,9 +105,6 @@ function nameFromParent(source: string, parent: AstNode) {
       return callback(text(source, parent.callee));
     case 'ExportDefaultDeclaration':
       return 'default export';
-    // Stryker disable next-line ConditionalExpression: emptying the default case falls off the end of the function, which returns undefined just the same.
-    default:
-      return undefined;
   }
 }
 
@@ -117,15 +113,13 @@ function callback(callee: string | undefined) {
   return callee ? `${callee} callback` : undefined;
 }
 
-/** The JSX attribute a handler is the value of, as in `onClick={() => …}`. */
+/**
+ * The JSX attribute a handler is the value of, as in `onClick={() => …}`, from the ancestors of a
+ * function in a JSX expression. A JSX child's expression sits in an element or fragment instead,
+ * which has no name.
+ */
 function jsxAttribute(source: string, ancestors: AstNode[]) {
-  // Stryker disable next-line MethodExpression,UnaryOperator: a function in a JSX expression has at least four ancestors, so `slice(2)` and the whole list end in the same two; reversing the whole list in place reorders only ancestors above the function, and the last two a descendant reads never reach back that far.
-  const [container, attribute] = ancestors.slice(-2).reverse();
-  // Stryker disable next-line ConditionalExpression,LogicalOperator,OptionalChaining,BlockStatement: `describe` calls this only when the parent is a JSXExpressionContainer, and the one other place a container sits, a JSX element or fragment's children, has no `name`, so `text` gives undefined anyway.
-  if (container?.type !== 'JSXExpressionContainer' || attribute?.type !== 'JSXAttribute') {
-    return undefined;
-  }
-  return text(source, attribute.name);
+  return text(source, ancestors[ancestors.length - 2].name);
 }
 
 /** What one file's walk needs throughout: its text, how to count, and where each offset is. */
@@ -176,10 +170,10 @@ function record(
 
 /** A function node as a scored `Fn`: its name, complexity and place. */
 function describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: Source): Fn {
-  const parent = ancestors.at(-1);
+  // A function always has a parent: only the Program has none.
+  const parent = ancestors[ancestors.length - 1];
   const own =
-    // Stryker disable next-line OptionalChaining: only the Program has no parent, and it isn't a function.
-    parent?.type === 'JSXExpressionContainer'
+    parent.type === 'JSXExpressionContainer'
       ? (jsxAttribute(source.text, ancestors) ?? '(anonymous)')
       : label(source.text, node, parent);
   return {
@@ -226,9 +220,8 @@ function countRecursion(
 }
 
 /** Whether `node` is passed straight to a call, as `items.forEach(() => …)` passes its callback. */
-function passedToCall(node: AstNode, parent: AstNode | undefined) {
-  // Stryker disable next-line OptionalChaining: every function has a parent; only the Program has none, and it isn't a function.
-  const call = parent?.type === 'CallExpression' || parent?.type === 'NewExpression';
+function passedToCall(node: AstNode, parent: AstNode) {
+  const call = parent.type === 'CallExpression' || parent.type === 'NewExpression';
   // Stryker disable next-line LogicalOperator: only calls and `new` have `arguments`, so `call || …` lets through no other parent.
   return call && Array.isArray(parent.arguments) && parent.arguments.includes(node);
 }

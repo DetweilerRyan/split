@@ -48,10 +48,9 @@ function targetLine(code: string[], comment: Comment, parsed: Parsed) {
   const rest = code[end.line - 1].slice(end.column).trim();
   if (rest !== '' && rest !== '}') return end.line;
   for (let line = end.line + 1; line <= code.length; line++) {
-    // Stryker disable next-line MethodExpression: `trimmed` is only read with all its whitespace removed, so trimming its ends first changes nothing.
-    const trimmed = code[line - 1].trim();
     // A JSX comment, {/* … */}, leaves its braces behind once the comment is blanked.
-    if (trimmed.replace(/\s+/g, '') !== '' && trimmed.replace(/\s+/g, '') !== '{}') return line;
+    const bare = code[line - 1].replace(/\s/g, '');
+    if (bare !== '' && bare !== '{}') return line;
   }
   return undefined;
 }
@@ -135,8 +134,7 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
       problems.push({ ...at, message: `${fn.name} already has a @crap-allow comment.` });
       continue;
     }
-    // Stryker disable next-line MethodExpression: `commentText` already trims the text, and FORMAT's reason starts with a non-space, so there is nothing to trim.
-    const reason = (match[3] ?? '').trim();
+    const reason = match[3] ?? '';
     if (!reason) {
       problems.push({ ...at, message: `The @crap-allow comment for ${fn.name} gives no reason.` });
     }
