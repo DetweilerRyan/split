@@ -73,7 +73,8 @@ describe('IdentityModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     // Outside the dialog is its backdrop, which Playwright sees as the page; `force` taps it anyway.
     await userEvent.click(screen.getByRole('dialog'), { position: { x: -8, y: -8 }, force: true });
-    expect(onClose).toHaveBeenCalledTimes(2);
+    // The browser fires `close` in a task after the tap, so retry until it has.
+    await expect.poll(() => onClose.mock.calls.length).toBe(2);
   });
 
   it('shows nothing while closed', async () => {
