@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
-import { computeReceiptMath } from '../utils/math';
+import { computeReceiptMath } from '../domain/receipt/math';
 import { decodeSeed, encodeSeed, hydrateFromSeed } from './seedCodec';
 import { ReceiptStore } from './useReceiptStore';
 

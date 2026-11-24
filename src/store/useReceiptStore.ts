@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
-import { DEFAULT_CURRENCY, normalizeCurrency } from '../utils/currency';
+import { DEFAULT_CURRENCY, normalizeCurrency } from '../domain/money/currency';
 
 export interface ReceiptItem {
   id: string;

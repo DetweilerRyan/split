@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import type { RoomSnapshot } from '../store/useReceiptStore';
-import { formatMoney } from '../utils/currency';
-import { computeReceiptMath } from '../utils/math';
+import { formatMoney } from '../domain/money/currency';
+import { computeReceiptMath } from '../domain/receipt/math';
 
 interface ParticipantCardsProps {
   snapshot: RoomSnapshot;

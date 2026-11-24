@@ -27,7 +27,7 @@ describe('changedRanges', () => {
     const text = [
       diff('scripts/oxcrap/check.test.ts', ['@@ -1 +1 @@']),
       diff('scripts/oxcrap/features/steps/oxcrap.steps.ts', ['@@ -1 +1 @@']),
-      diff('src/utils/math.ts', ['@@ -1 +1 @@']),
+      diff('src/domain/receipt/math.ts', ['@@ -1 +1 @@']),
       [
         'diff --git a/scripts/oxcrap/old.ts b/scripts/oxcrap/old.ts',
         '--- a/scripts/oxcrap/old.ts',

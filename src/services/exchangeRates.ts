@@ -1,4 +1,4 @@
-import { normalizeCurrency } from './currency';
+import { normalizeCurrency } from '../domain/money/currency';
 
 export interface ExchangeRate {
   base: string;

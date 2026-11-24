@@ -20,10 +20,10 @@ import {
   pendingSeedKey,
   roomPath,
 } from './store/seedCodec';
-import { computeReceiptMath } from './utils/math';
-import { formatMoney, localeCurrency } from './utils/currency';
-import { getExchangeRate } from './utils/exchangeRates';
-import { buildExportText } from './utils/exportText';
+import { computeReceiptMath } from './domain/receipt/math';
+import { formatMoney, localeCurrency } from './domain/money/currency';
+import { getExchangeRate } from './services/exchangeRates';
+import { buildExportText } from './domain/receipt/exportText';
 import { useReceiptStore } from './store/useReceiptStore';
 
 type ItemFilter = 'all' | 'unclaimed' | 'mine';

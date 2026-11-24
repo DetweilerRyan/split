@@ -1,11 +1,11 @@
-import type { RoomSnapshot } from '../store/useReceiptStore';
+import type { RoomSnapshot } from '../../store/useReceiptStore';
 import {
   DEFAULT_CURRENCY,
   currencyExponent,
   fromMinor,
   normalizeCurrency,
   toMinor,
-} from './currency';
+} from '../money/currency';
 
 export interface PersonTotal {
   participant: RoomSnapshot['participants'][number];
