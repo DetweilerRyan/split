@@ -40,7 +40,11 @@ describe('parse', () => {
     ['a callback whose call spans lines', 'items\n  .forEach((n) => n);', '(anonymous)'],
     ['an IIFE', 'const v = (function () { return 1; })();', '(anonymous)'],
     ['an IIFE without brackets', 'const v = function () { return 1; }();', '(anonymous)'],
-    ['a function called with `new`', 'const v = new function () {}();', '(anonymous)'],
+    [
+      'a function constructed with `new` where it is written',
+      'const v = new function () {}();',
+      '(anonymous)',
+    ],
     ['anything else', '[() => 1];', '(anonymous)'],
   ])('labels %s', (_, code, name) => {
     expect(names(code)).toEqual([name]);
