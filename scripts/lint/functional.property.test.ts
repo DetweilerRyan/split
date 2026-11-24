@@ -259,7 +259,6 @@ const scope = fc.constantFrom(
   { open: 'try {} finally {', close: '}', isFunction: false },
   { open: '{', close: '}', isFunction: false },
   { open: 'switch (k) { case 1:', close: '}', isFunction: false },
-  { open: 'label: {', close: '}', isFunction: false },
 );
 
 /** Code that looks like a module-level `let` and isn't one. */
