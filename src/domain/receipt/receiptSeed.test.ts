@@ -15,6 +15,10 @@ describe('validateSeed', () => {
     expect(() => validateSeed(null)).toThrow('Seed must be a JSON object.');
   });
 
+  it('rejects an array, which is an object to typeof but not a JSON object', () => {
+    expect(() => validateSeed([seed])).toThrow('Seed must be a JSON object.');
+  });
+
   it('reports indexed paths and duplicate ids', () => {
     const bad = { ...seed, items: [seed.items[0], { ...seed.items[0] }, { id: 'x', name: 1 }] };
     expect(() => validateSeed(bad)).toThrow(

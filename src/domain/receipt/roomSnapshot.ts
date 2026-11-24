@@ -38,8 +38,9 @@ export interface RoomSnapshot {
 
 /**
  * The id of the participant with this name: `p-` and the name in lower case, with each run of
- * characters other than a to z and 0 to 9 replaced by one hyphen, and none at either end. Two
- * names that differ only in case or in those other characters are the same participant.
+ * characters other than a to z and 0 to 9 replaced by one hyphen, and none at either end. So two
+ * names with the same words in the same order are the same participant, whatever their case and
+ * whichever of those other characters sit between, before or after the words.
  */
 export function participantId(name: string): string {
   return `p-${name
