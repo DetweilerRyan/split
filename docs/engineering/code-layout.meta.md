@@ -15,9 +15,7 @@ Why [code layout](code-layout.md) puts code where it does, where its layers came
 
 - **The owner, in the session on 2026-11-24,** [recorded on #94](https://github.com/DetweilerRyan/split/issues/94#issuecomment-7121899237): "domain may also import from utils".
 - **Plain libraries such as `zod` stay allowed,** because the receipt seed's schema and room ids are zod schemas. What's kept out is UI, Yjs, the sync providers and browser storage, which #94's layers table names.
-- **The package list goes past #94's,** which named `react`, `yjs`, `y-*`, `@liveblocks/*` and `lucide-react`. `react-dom` and `next` are kept out as UI, and browser-storage packages the repository doesn't use today (`idb`, `idb-keyval`, `localforage`, `dexie`) so that one can't arrive under `src/domain/` unnoticed. They were added in #94's third pull request without the owner's input, as the reversible default: dropping a name loosens nothing else.
-- **Server packages are kept out too:** `@vercel/functions`, `mcp-handler`, `@modelcontextprotocol/*` and `dialog-closedby-polyfill` serve the MCP route or patch the browser, so they aren't plain libraries. Added in the review of #94's third pull request.
-- **JSX is refused in `src/domain/`,** by `react/jsx-filename-extension` with no allowed extensions. JSX imports `react/jsx-runtime` with no import statement, so the package ban alone let a `.tsx` file with JSX through, as that review found. Chosen over failing on any `.tsx` file: rev-dep has no rule for a file's existence, and a check in the lint script would be one more script; the oxlint rule keys on the JSX itself.
+- **Which packages each layer keeps out, and why,** is in [dependency direction's sidecar](dependency-direction.meta.md#which-packages-each-override-keeps-out), with the package bans.
 
 ### `src/store/` was split, not moved, and renamed `src/sync/`
 
@@ -34,8 +32,6 @@ Why [code layout](code-layout.md) puts code where it does, where its layers came
 
 - **"New src/services/"** was the owner's answer ([decisions](https://github.com/DetweilerRyan/split/issues/94#issuecomment-7122174375)), for `exchangeRates.ts`, which fetches and caches rates from a service and is neither a business rule nor a helper. The option the owner chose was described there as: `exchangeRates.ts` moves to `src/services/`, which may import `domain/` and `utils/`, but nothing UI or sync.
 - **Not taken:** putting it in `src/store/`, or leaving it in `src/utils/`.
-- **"Nothing UI or sync" covers packages too:** React, Next, `lucide-react`, Yjs, the `y-*` providers and Liveblocks are kept out of `src/services/`. Browser storage stays allowed, since `exchangeRates.ts` caches rates in IndexedDB.
-- **`next/server` is kept out with the rest of `next`.** A service is called from the browser, as `RoomView` calls `exchangeRates.ts`, and `next/server` is the framework's server runtime, so it would tie a service to Next and to the server. The rule's single `next` entry bans it without a list of Next's subpaths.
 
 ### The folder rule lives here
 
@@ -46,12 +42,9 @@ Why [code layout](code-layout.md) puts code where it does, where its layers came
 
 - **`src/server/`, `src/data/` and `src/polyfills/` have no layer.** #94's table didn't place them, and placing them wasn't decided. `src/data/presets.ts` imports a domain type; `src/server/` serves the MCP route.
 - **The UI row has no rule.** UI may import anything above it, so there is nothing to refuse.
-- **Browser storage through globals isn't banned in `src/domain/`.** The ban covers storage packages, but `localStorage`, `sessionStorage` and `indexedDB` are globals, so a domain module could use them and pass lint; the domain row's "no browser storage" holds only for packages. `no-restricted-globals` in the domain override would close it; #94 asked for package bans only.
-- **A `.tsx` file in `src/domain/` without JSX passes.** It can't reach React without an import the ban refuses.
 
 ## What would reopen this
 
 - **A module that fits no row,** such as a second kind of outside service that the UI or sync must call directly.
 - **Sync needing a service,** which `sync-imports-sync-domain-and-utils` refuses today.
-- **A service that must run only on the server,** such as one using `next/server`'s `after()` from a route handler: allow `next/server` in `src/services/`, or give server-only services a folder of their own.
 - **`RoomSnapshot`'s sync fields growing** ([types and schemas](types-and-schemas.meta.md#where-a-type-lives)), which would put sync state in a domain type.

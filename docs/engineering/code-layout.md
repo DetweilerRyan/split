@@ -17,8 +17,8 @@ Folders not in the table, such as `src/server/`, `src/data/` and `src/polyfills/
 ## Where a module goes
 
 - **A business rule, or a type it decides, goes in `src/domain/<subject>/`,** even when only one component uses it today. Add a subject folder when no existing one fits. [Types and schemas](types-and-schemas.md#where-a-type-lives) says where its type lives.
-- **A helper goes in `src/utils/` only if it knows nothing about receipts, money or rooms.** If it would need to import `src/domain/`, it belongs in `src/domain/`.
-- **Code that fetches from or calls an outside service goes in `src/services/`.** Pass it what it needs from the UI or `src/sync/`, rather than importing them.
+- **A helper goes in `src/utils/` only if it knows nothing about receipts, money or rooms,** so it needs nothing [its rule](dependency-direction.md#the-rules) keeps out. One that does belongs in `src/domain/`.
+- **Code that fetches from or calls an outside service goes in `src/services/`.** Pass it what it needs from a layer [its rule](dependency-direction.md#the-rules) keeps out, rather than importing it.
 - **Display code goes beside the UI that uses it,** such as `src/components/connectionStatus.ts` beside `Header`, not in `src/utils/` or `src/domain/`.
 - **A new folder under `src/` that a layer rule should cover** needs a rule, added as [Adding or changing a rule](dependency-direction.md#adding-or-changing-a-rule) says, and a row in the table above.
 
