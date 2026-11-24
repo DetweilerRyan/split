@@ -12,6 +12,27 @@
           "pattern": "scripts/oxcrap/**/*",
           "allow": ["scripts/oxcrap/**/*"],
         },
+        // The layers docs/engineering/code-layout.md lists, from issue #94.
+        {
+          "name": "domain-imports-domain-and-utils",
+          "pattern": "src/domain/**/*",
+          "allow": ["src/domain/**/*", "src/utils/**/*"],
+        },
+        {
+          "name": "utils-imports-utils",
+          "pattern": "src/utils/**/*",
+          "allow": ["src/utils/**/*"],
+        },
+        {
+          "name": "services-imports-services-domain-and-utils",
+          "pattern": "src/services/**/*",
+          "allow": ["src/services/**/*", "src/domain/**/*", "src/utils/**/*"],
+        },
+        {
+          "name": "sync-imports-sync-domain-and-utils",
+          "pattern": "src/sync/**/*",
+          "allow": ["src/sync/**/*", "src/domain/**/*", "src/utils/**/*"],
+        },
       ],
       "unresolvedImportsDetection": { "enabled": true, "reportNonLiteralImports": true },
     },

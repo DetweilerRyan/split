@@ -4,9 +4,15 @@ Some code in this repository may import only from certain places. [rev-dep](http
 
 ## The rules
 
-| Rule                    | Files               | May import                                                                       |
-| :---------------------- | :------------------ | :------------------------------------------------------------------------------- |
-| `oxcrap-self-contained` | `scripts/oxcrap/**` | `scripts/oxcrap/**`, Node built-ins, and npm packages declared in `package.json` |
+| Rule                                         | Files               | May import                                                                                                   |
+| :------------------------------------------- | :------------------ | :----------------------------------------------------------------------------------------------------------- |
+| `oxcrap-self-contained`                      | `scripts/oxcrap/**` | `scripts/oxcrap/**`, Node built-ins, and npm packages declared in `package.json`                             |
+| `domain-imports-domain-and-utils`            | `src/domain/**`     | `src/domain/**`, `src/utils/**`, and npm packages except those `.oxlintrc.json` keeps out                    |
+| `utils-imports-utils`                        | `src/utils/**`      | `src/utils/**` and npm packages                                                                              |
+| `services-imports-services-domain-and-utils` | `src/services/**`   | `src/services/**`, `src/domain/**`, `src/utils/**`, and npm packages except those `.oxlintrc.json` keeps out |
+| `sync-imports-sync-domain-and-utils`         | `src/sync/**`       | `src/sync/**`, `src/domain/**`, `src/utils/**`, and npm packages                                             |
+
+The `src/` rules are the layers in [Code layout](code-layout.md). For `src/domain/` and `src/services/`, a `no-restricted-imports` override in [`.oxlintrc.json`](../../.oxlintrc.json) keeps out the npm packages those layers may not use, which rev-dep can't check. oxlint reports a breach as `eslint(no-restricted-imports)`.
 
 Every import in the repository must also resolve. An import rev-dep can't resolve fails, because no rule could check it. That includes an absolute path, a `file://` URL, an import through a symlinked folder, `import(variable)`, and an npm package `package.json` doesn't declare.
 
@@ -24,6 +30,7 @@ npx rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,o
 ## When it fails
 
 - **`Module Boundary Issues` with `(NOT ALLOWED)`:** a file imports from outside what its rule allows. Change the import: move the code it needs inside the folder, or pass it in as a parameter. Changing what the rule allows changes the rule, so follow [Adding or changing a rule](#adding-or-changing-a-rule).
+- **`eslint(no-restricted-imports)` in `src/domain/` or `src/services/`:** the file imports a package its layer keeps out. Move the code that needs the package to a layer that may use it, as [Code layout](code-layout.md) says.
 - **`Unresolved Imports`:** fix the import so it resolves. Use a relative path or a declared package, not an absolute path or a computed `import()`.
 - **`Config lint` errors:** a rule's pattern matches no files, usually after a folder moved. Update the pattern in `.rev-dep.config.jsonc`.
 
@@ -32,7 +39,7 @@ npx rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,o
 - **A JSON or other asset import.** rev-dep doesn't check where an asset import lands, so `import p from '../../package.json' with { type: 'json' }` passes a rule it breaks.
 - **A file read with `new URL('../…', import.meta.url)`,** `import.meta.resolve()` or a `/// <reference path>`, none of which is an import it follows.
 - **A symlink to a single file,** which counts as inside the folder it sits in.
-- **Which npm packages a folder uses,** as long as `package.json` declares them.
+- **Which npm packages a folder uses,** as long as `package.json` declares them. Only the `.oxlintrc.json` override above checks that, for `src/domain/` and `src/services/`.
 
 ## Adding or changing a rule
 
@@ -40,6 +47,8 @@ npx rev-dep config run --list-all-issues --lint-config-rules orphan-file-globs,o
 2. **Test it in [`rev-dep.config.real.test.ts`](../../rev-dep.config.real.test.ts).** Add one import the rule must refuse for each way out: a parent folder, type-only, re-export, dynamic `import()`, an alias, and a path that goes back up through a folder. Then add one import it must allow. That file runs the real rev-dep with the real config on throwaway files.
 3. **Add the rule to the table above,** and its reasons to the sidecar.
 4. **Run `npm run lint`** on the repository, so the rule's pattern matches real files.
+
+To change which packages `src/domain/` or `src/services/` keeps out, edit that folder's `regex` in `.oxlintrc.json`'s `overrides`. Check it with a throwaway file in the folder that imports each package, and one that imports an allowed package and a relative path, then delete the file.
 
 ## Changing this document
 

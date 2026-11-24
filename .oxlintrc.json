@@ -17,11 +17,49 @@
     "functional/no-classes": "error",
     "functional/no-this": ["error", { "allowInClasses": true }]
   },
+  // The npm packages a layer in docs/engineering/code-layout.md keeps out, from #94. rev-dep checks
+  // which repository files a layer imports, not which packages; dependency-direction.md lists
+  // both. Each regex matches a package and its subpaths, not a relative path such as './y-axis',
+  // which a gitignore-style "y-*" group would.
   "overrides": [
     {
       // A test nests describe, it, fc.property and the callbacks inside by design (#76).
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": { "max-nested-callbacks": "off" }
+    },
+    {
+      // #94: no React, Next, icons, Yjs, sync providers or browser storage in the domain.
+      "files": ["src/domain/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(react|react-dom|next|lucide-react|yjs|y-[^/]+|@liveblocks/[^/]+|idb|idb-keyval|localforage|dexie)(/.*)?$",
+                "message": "src/domain/ imports only src/domain/, src/utils/ and plain libraries such as zod: no UI, sync or browser storage (docs/engineering/code-layout.md)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // #94: services "may import domain/ and utils/, but nothing UI or sync".
+      "files": ["src/services/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(react|react-dom|next|lucide-react|yjs|y-[^/]+|@liveblocks/[^/]+)(/.*)?$",
+                "message": "src/services/ imports no UI or sync packages (docs/engineering/code-layout.md)."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

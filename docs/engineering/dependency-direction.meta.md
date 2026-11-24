@@ -10,6 +10,26 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 - **Why:** so oxCrap can be lifted out into a project of its own ([its README](../../scripts/oxcrap/README.md)).
 - **Node built-ins and npm packages stay allowed.** They aren't repository files. oxCrap needs `node:fs` and its four packages, such as `oxc-parser`.
 
+### The `src/` layers
+
+- **Asked for on [#94](https://github.com/DetweilerRyan/split/issues/94),** to keep the import direction one way between the layers in [code layout](code-layout.md). Why the layers are as they are, with the owner's words, is in [its sidecar](code-layout.meta.md).
+- **`domain-imports-domain-and-utils` and `utils-imports-utils` are the names #94 gave.** The services and sync rules follow the same pattern.
+- **`utils-imports-utils`** keeps domain logic from creeping back into `src/utils/` through a helper that imports it (#94).
+- **`src/sync/` isn't allowed `src/services/`,** since it imported nothing from there when the rule was added ([code layout's sidecar](code-layout.meta.md#srcstore-was-split-not-moved-and-renamed-srcsync)).
+- **The UI folders have no rule:** they may import every layer.
+- **Each test throwaway project holds one file per ruled folder,** because `--lint-config-rules` fails a rule whose pattern matches nothing. A test per folder checks that a missing folder fails.
+
+### Package bans per layer are oxlint's
+
+- **rev-dep can't say which npm packages a folder uses** (see the known gap below), so #94 asked for an oxlint `no-restricted-imports` override for `src/domain/`. The owner's "nothing UI or sync" for `src/services/` ([decisions](https://github.com/DetweilerRyan/split/issues/94#issuecomment-7122174375)) got a second one.
+- **String matching is right here,** unlike for oxCrap's folder rule: a package specifier names the package, so there's no `../` for it to misjudge.
+- **A `regex` per layer, not a gitignore-style `group`.** Tried on oxlint 1.91.0 on 2026-11-24:
+  - **A group's `y-*` also matched the relative path `./y-axis`,** which would ban a file named that way.
+  - **`y-*` and `@liveblocks/*` missed subpaths** such as `y-protocols/awareness` and `@liveblocks/client/internal`, so each needed a second `/**` pattern.
+  - **The regex `^(…)(/.*)?$`** matches each package and its subpaths, and nothing relative.
+- **What the override was checked against,** with throwaway files on 2026-11-24: an import, a subpath, a type-only import, `export … from`, `export * from` and a dynamic `import()` of a banned package each fail; `zod`, `reactive-thing`, `next-intl`, and relative imports of `../money/` and `../../utils/` pass. In `src/services/`, browser-storage packages pass.
+- **Not taken:** a `no-restricted-globals` ban on `localStorage` and `indexedDB` in `src/domain/`. #94 asked for package bans only.
+
 ### rev-dep checks the rules
 
 - **The rule first ran as an oxlint override** in `.oxlintrc.json`, from #64: `import/no-relative-parent-imports` and a `no-restricted-imports` pattern for `@/**`.
@@ -51,7 +71,7 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
   - **It holds for every asset import form, re-tested on 3.3.0:** JSON with and without `with { type: 'json' }`, `require`, a dynamic `import()`, and CSS. `rev-dep debug get-tree-for-cwd` resolves them to the right file but labels them `AssetModule`, and the boundary check skips them. Its README doesn't say so. No one had reported it upstream.
   - **The owner accepted the gap:** "i accept the gap. don't report the issue" ([decision](https://github.com/DetweilerRyan/split/pull/66#issuecomment-7105283194)). Two alternatives had been offered: a narrow oxlint pattern for `../**/*.json`, which brings back string matching, or asking rev-dep upstream for asset boundaries.
 - **`import.meta.resolve()`, `/// <reference path>`, and a symlink to a single file,** found by the same review. None is a normal import.
-- **An npm package that's declared but isn't meant to be used.** rev-dep checks that a package resolves, not which packages a folder may use.
+- **An npm package that's declared but isn't meant to be used.** rev-dep checks that a package resolves, not which packages a folder may use. The oxlint overrides cover this for `src/domain/` and `src/services/` only, and only for the packages they name.
 - **No binary for Windows on ARM,** so `npm run lint` can't run there.
 
 ## Options not taken
@@ -67,5 +87,5 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 ## What would reopen this
 
 - **A rule that must cover JSON or other assets,** or rev-dep starting to check them: revisit the gap above.
-- **A second boundary, such as layers in `src/`:** rev-dep's `moduleBoundaries` and its restricted-imports checks are where to start.
+- **A layer that must ban a package rev-dep could check,** if rev-dep gains per-folder package rules: the oxlint overrides could move into `.rev-dep.config.jsonc`.
 - **rev-dep stalling,** or a platform it has no binary for becoming one the repository needs: dependency-cruiser is the fallback.
