@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { RoomSnapshot } from '../../sync/useReceiptStore';
+import type { RoomSnapshot } from './roomSnapshot';
 import { allocateMinor, computeReceiptMath } from './math';
 
 /** A currency as a receipt might name it, with the code it stands for and its decimals. */

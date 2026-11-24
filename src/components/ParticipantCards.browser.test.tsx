@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { page, type Locator } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import '../index.css';
-import type { RoomSnapshot } from '../sync/useReceiptStore';
+import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
 import { ParticipantCards } from './ParticipantCards';
 
 // Ryan ate €100 and Jameson €37 of a €140 card payment (€3 card tip) with a €10 cash tip, and the

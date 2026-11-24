@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { roomIdSchema } from './seedCodec';
+import { roomIdSchema } from '../domain/room/roomId';
 import { savedIdentityKey } from './savedIdentity';
 
 describe('savedIdentityKey', () => {

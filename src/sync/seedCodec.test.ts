@@ -1,18 +1,15 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   buildIngestUrl,
-  createRoomId,
   decodeRoomId,
   encodeRoomId,
   parseIngestUrl,
   parseRoomHash,
-  parseRoomId,
   parseRoomPath,
   pendingSeedKey,
-  roomIdSchema,
   roomPath,
-  validateSeed,
 } from './seedCodec';
+import { createRoomId, roomIdSchema } from '../domain/room/roomId';
 import { savedIdentityKey, type SavedIdentityKey } from './savedIdentity';
 import { getRoomProvider, indexedDbName } from './yjsProvider';
 
@@ -100,7 +97,6 @@ describe('room IDs, paths and ingest links', () => {
       error:
         'Receipt data failed validation: Invalid seed: cardTipEur must be a finite number; cashTipEur must be a finite number; bankUsd must be a finite number; roster must be an array of strings; items must be an array.',
     });
-    expect(() => validateSeed(null)).toThrow('Seed must be a JSON object.');
   });
 });
 
@@ -113,33 +109,18 @@ const seed = {
   items: [{ id: 'item-0', name: 'Taco (1/2)', en: 'Taco', eur: 5 }],
 };
 
-describe('seed schema and ingest links', () => {
+describe('ingest links', () => {
   it('round-trips a built ingest link through parseIngestUrl', () => {
     const url = buildIngestUrl('https://split.detweiler.me/', seed);
     expect(url.startsWith('https://split.detweiler.me/ingest#ingest=')).toBe(true);
     const parsed = parseIngestUrl(url);
     expect(parsed && 'seed' in parsed && parsed.seed).toEqual(seed);
   });
-
-  it('reports indexed paths and duplicate ids', () => {
-    const bad = { ...seed, items: [seed.items[0], { ...seed.items[0] }, { id: 'x', name: 1 }] };
-    expect(() => validateSeed(bad)).toThrow(
-      /items\[2\]\.name must be a string; items\[2\]\.en must be a string; items\[2\]\.eur must be a finite number; items\[1\]\.id "item-0" is duplicated/,
-    );
-  });
-
-  it('rejects oversized payloads and non-finite amounts', () => {
-    const many = Array.from({ length: 201 }, (_, i) => ({ ...seed.items[0], id: `item-${i}` }));
-    expect(() => validateSeed({ ...seed, items: many })).toThrow(/items must have at most 200/);
-    expect(() => validateSeed({ ...seed, bankUsd: Infinity })).toThrow(
-      /bankUsd must be a finite number/,
-    );
-  });
 });
 
 describe('receipt currency in seeds', () => {
   it('defaults to USD for legacy seeds and keeps an explicit currency', async () => {
-    const { hydrateFromSeed, validateSeed } = await import('./seedCodec');
+    const { hydrateFromSeed } = await import('./seedCodec');
     const { ReceiptStore } = await import('./useReceiptStore');
     const Y = await import('yjs');
     const base = { title: 't', cardTipEur: 0, cashTipEur: 0, bankUsd: 0, roster: [], items: [] };
@@ -151,53 +132,6 @@ describe('receipt currency in seeds', () => {
     const jpy = new Y.Doc();
     hydrateFromSeed(jpy, { ...base, currency: 'jpy' });
     expect(new ReceiptStore(jpy).getSnapshot().currency).toBe('JPY');
-
-    expect(() => validateSeed({ ...base, currency: 'XXXX' })).toThrow(/currency/);
-    expect(validateSeed({ ...base, currency: 'KWD' }).currency).toBe('KWD');
-  });
-});
-
-const uuidRoomId = 'urn:split:room:3f2b1c4d-1111-4222-8333-444455556666';
-
-describe('parseRoomId', () => {
-  it('accepts a UUID room id', () => {
-    expect(parseRoomId(uuidRoomId)).toBe(uuidRoomId);
-  });
-
-  it('accepts a UUID room id in upper case, as the old pattern did', () => {
-    expect(
-      parseRoomId(uuidRoomId.toUpperCase().replace('URN:SPLIT:ROOM:', 'urn:split:room:')),
-    ).not.toBeNull();
-  });
-
-  it.each(['split-a', 'split-k3', 'split-k3x', 'split-k3x9'])(
-    'accepts the generated legacy id %s',
-    (legacy) => {
-      expect(parseRoomId(legacy)).toBe(legacy);
-    },
-  );
-
-  it.each([
-    ['a hand-written legacy id', 'split-legacy'],
-    ['an upper-case legacy id', 'split-K3X9'],
-    ['a legacy prefix with nothing after it', 'split-'],
-    ['an arbitrary string', 'room-1'],
-    ['an empty string', ''],
-    ['an encoded room segment', btoa(uuidRoomId).replace(/=+$/, '')],
-    ['a storage key', `splitsmart-user-${uuidRoomId}`],
-  ])('rejects %s', (_label, value) => {
-    expect(parseRoomId(value)).toBeNull();
-  });
-
-  it('rejects values that are not strings', () => {
-    expect(parseRoomId(null)).toBeNull();
-    expect(parseRoomId(42)).toBeNull();
-  });
-});
-
-describe('roomIdSchema', () => {
-  it('throws on an invalid room id, naming the two accepted forms', () => {
-    expect(() => roomIdSchema.parse('room-1')).toThrow(/urn:split:room:<uuid>.*split-/);
   });
 });
 

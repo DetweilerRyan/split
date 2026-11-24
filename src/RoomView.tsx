@@ -12,14 +12,9 @@ import { Toast, ToastContext } from './components/Toast';
 import { UnclaimedBanner } from './components/UnclaimedBanner';
 import { useActiveIdentity } from './hooks/useActiveIdentity';
 import { useRoomProvider } from './hooks/useRoomProvider';
-import {
-  type ReceiptSeed,
-  type RoomId,
-  createRoomId,
-  hydrateFromSeed,
-  pendingSeedKey,
-  roomPath,
-} from './sync/seedCodec';
+import { hydrateFromSeed, pendingSeedKey, roomPath } from './sync/seedCodec';
+import type { ReceiptSeed } from './domain/receipt/receiptSeed';
+import { type RoomId, createRoomId } from './domain/room/roomId';
 import { computeReceiptMath } from './domain/receipt/math';
 import { formatMoney, localeCurrency } from './domain/money/currency';
 import { getExchangeRate } from './services/exchangeRates';

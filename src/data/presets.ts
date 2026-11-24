@@ -1,4 +1,4 @@
-import type { ReceiptSeed } from '../sync/seedCodec';
+import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 
 export const PRESETS: Record<string, ReceiptSeed> = {
   plitvice: {

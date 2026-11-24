@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { readSavedIdentity, saveIdentity, subscribeToSavedIdentity } from '../sync/savedIdentity';
 import type { RoomProvider } from '../sync/yjsProvider';
-import type { RoomId } from '../sync/seedCodec';
+import type { RoomId } from '../domain/room/roomId';
 
 interface Participant {
   id: string;

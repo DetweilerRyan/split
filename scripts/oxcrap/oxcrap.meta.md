@@ -323,7 +323,7 @@ It checks that each function's complexity, which functions a `@crap-allow` match
 - **Names aren't compared.** A function's name comes from its source text, such as `seed.items.forEach callback`, so a reflow can change it. It only labels a finding. Two callbacks became `(anonymous)` under the 40-column reflow, which this accepts.
 - **The files are read by path, as data.** The test imports nothing from outside oxCrap's folder, but it does depend on this repository's code. A copy of oxCrap lifted out would point it at other code, or drop it.
 - **It found a real limitation.**
-  - **The case:** a `@crap-allow` comment applied only to a function starting on the next code line. When oxfmt wrapped a call so its callback started a line later, the comment in `src/store/seedCodec.ts` detached.
+  - **The case:** a `@crap-allow` comment applied only to a function starting on the next code line. When oxfmt wrapped a call so its callback started a line later, the comment in `src/store/seedCodec.ts` (`src/sync/seedCodec.ts` since #94) detached.
   - **The decision:** the owner chose to widen the match ([decision](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7107043936)): "option 1". When no function starts on that line, the comment applies to the one outermost function in the statement that does. Two such functions stay an error.
   - **The alternative:** keep the rule, and document that a wrapped call can detach a comment.
   - **Narrowed, from an independent review:** at first "statement" meant any statement or declaration. So a comment above `class C {`, an object literal, or `if (x) {` holding one callback matched a function several lines down. Now the fallback applies only to an expression, a variable declaration, a `return` or an export, and only to a function passed straight to a call. That's the case the decision was for.
@@ -376,7 +376,7 @@ It checks that each function's complexity, which functions a `@crap-allow` match
 - **A hook mode inside the CRAP script:** it tied the script to Claude Code, and to running lint and the tests.
 - **A blocking hook:** #63 chose advice inside the session and a gate in CI.
 - **Other ways to enforce the import rule:** in [dependency direction's sidecar](../../docs/engineering/dependency-direction.meta.md#options-not-taken).
-- **Mutation testing:** deferred. Revisit Stryker for `src/domain/receipt/math.ts` (in `src/utils/` until #94) and `src/store/seedCodec.ts` in its own issue.
+- **Mutation testing:** deferred. Revisit Stryker for `src/domain/receipt/math.ts` (in `src/utils/` until #94) and `src/sync/seedCodec.ts` with `src/domain/receipt/receiptSeed.ts` (one `src/store/seedCodec.ts` until #94) in its own issue.
 
 ## What would reopen this
 

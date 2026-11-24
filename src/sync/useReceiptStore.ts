@@ -1,44 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
 import { DEFAULT_CURRENCY, normalizeCurrency } from '../domain/money/currency';
-
-export interface ReceiptItem {
-  id: string;
-  name: string;
-  en: string;
-  eur: number;
-  order: number;
-  claims: Readonly<Record<string, boolean>>;
-}
-
-export interface Participant {
-  id: string;
-  name: string;
-  colorIdx: number;
-}
-
-export interface RoomSnapshot {
-  title: string;
-  address: string;
-  phone: string;
-  website: string;
-  purchasedAt: string;
-  mealType: string;
-  cardTipEur: number;
-  cashTipEur: number;
-  bankUsd: number;
-  currency: string;
-  displayCurrency: string;
-  rate: number;
-  rateDate: string;
-  participants: readonly Participant[];
-  items: readonly ReceiptItem[];
-  connection: {
-    provider: 'Liveblocks' | 'WebRTC';
-    status: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
-  };
-  peers: readonly { id: string; name: string; color?: string }[];
-}
+import {
+  type Participant,
+  type ReceiptItem,
+  type RoomSnapshot,
+  participantId,
+} from '../domain/receipt/roomSnapshot';
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
   process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';
@@ -131,10 +99,7 @@ export class ReceiptStore {
   addParticipant(name: string): Participant | null {
     const trimmed = name.trim();
     if (!trimmed) return null;
-    const id = `p-${trimmed
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')}`;
+    const id = participantId(trimmed);
     if (this.participants.has(id)) return null;
     const participant = new Y.Map<unknown>();
     participant.set('id', id);

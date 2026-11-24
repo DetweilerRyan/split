@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import type { RoomProvider } from '../sync/yjsProvider';
-import { roomIdSchema } from '../sync/seedCodec';
+import { roomIdSchema } from '../domain/room/roomId';
 import { useActiveIdentity } from './useActiveIdentity';
 
 type Identity = Parameters<RoomProvider['setIdentity']>[0];

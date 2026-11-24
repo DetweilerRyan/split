@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RoomSnapshot } from '../../sync/useReceiptStore';
+import type { RoomSnapshot } from './roomSnapshot';
 import { computeReceiptMath } from './math';
 
 describe('receipt currency math', () => {
