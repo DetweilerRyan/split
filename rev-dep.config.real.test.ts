@@ -12,8 +12,20 @@ const config = fileURLToPath(new URL('./.rev-dep.config.jsonc', import.meta.url)
 const revDep = fileURLToPath(new URL('./node_modules/.bin/rev-dep', import.meta.url));
 const directories: string[] = [];
 
-/** A throwaway project holding the real config, the app's `@/` alias and `files`. */
-function check(files: Record<string, string>) {
+/**
+ * One file in each folder a rule covers. rev-dep fails a rule whose pattern matches no files, so a
+ * throwaway project needs them all to pass.
+ */
+const layout: Readonly<Record<string, string>> = {
+  'scripts/oxcrap/keep.ts': 'export const k = 1;\n',
+  'src/domain/keep.ts': 'export const k = 1;\n',
+  'src/utils/keep.ts': 'export const k = 1;\n',
+  'src/services/keep.ts': 'export const k = 1;\n',
+  'src/sync/keep.ts': 'export const k = 1;\n',
+};
+
+/** A throwaway project holding the real config, the app's `@/` alias, `base` and `files`. */
+function check(files: Readonly<Record<string, string>>, base = layout) {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-rev-dep-'));
   directories.push(cwd);
   copyFileSync(config, join(cwd, '.rev-dep.config.jsonc'));
@@ -25,6 +37,7 @@ function check(files: Record<string, string>) {
       devDependencies: { 'oxc-parser': '0.157.0' },
     }),
     'tsconfig.json': JSON.stringify({ compilerOptions: { paths: { '@/*': ['./src/*'] } } }),
+    ...base,
     ...files,
   };
   for (const [path, content] of Object.entries(project)) {
@@ -48,6 +61,37 @@ function check(files: Record<string, string>) {
     },
   );
   return { status: result.status, output: result.stdout + result.stderr };
+}
+
+/** A module under `src/` that a layer's rule refuses or allows, by its path under `src/`. */
+function target(path: string) {
+  return { [`src/${path}.ts`]: 'export const o = 1;\nexport type O = number;\n' };
+}
+
+/**
+ * Each way a file in `src/<layer>/` could import `src/<outside>.ts`, keyed by the importing file:
+ * a parent folder, type-only, a re-export, a dynamic `import()`, the `@/` alias, and a path that
+ * goes back up through a folder.
+ */
+function waysOut(layer: string, outside: string) {
+  return {
+    [`src/${layer}/parent.ts`]: `import { o } from '../${outside}.ts';\nexport const a = o;\n`,
+    [`src/${layer}/typeonly.ts`]: `import type { O } from '../${outside}.ts';\nexport type T = O;\n`,
+    [`src/${layer}/reexport.ts`]: `export { o } from '../${outside}.ts';\n`,
+    [`src/${layer}/dynamic.ts`]: `export function load() {\n  return import('../${outside}.ts');\n}\n`,
+    [`src/${layer}/alias.ts`]: `import { o } from '@/${outside}';\nexport const c = o;\n`,
+    [`src/${layer}/a/b/deep.ts`]: `import { o } from '../b/../../../${outside}.ts';\nexport const d = o;\n`,
+  };
+}
+
+/** Imports from `src/<layer>/` of each of `targets`, one file per import. */
+function importsOf(layer: string, targets: readonly string[]) {
+  return Object.fromEntries(
+    targets.map((path, index) => [
+      `src/${layer}/imports${index}.ts`,
+      `import { o } from '@/${path}';\nexport const i${index} = o;\n`,
+    ]),
+  );
 }
 
 afterEach(() => {
@@ -112,20 +156,89 @@ describe('.rev-dep.config.jsonc', () => {
     expect(status).toBe(0);
   });
 
-  it('fails when the rule matches no files, so it can’t quietly stop applying', () => {
-    const { status, output } = check({ 'scripts/other.ts': 'export const o = 1;\n' });
+  it.each(Object.keys(layout))(
+    'fails when no file matches %s’s rule, so it can’t quietly stop applying',
+    (path) => {
+      const rest = Object.fromEntries(Object.entries(layout).filter(([key]) => key !== path));
+      const { status, output } = check({ 'scripts/other.ts': 'export const o = 1;\n' }, rest);
 
-    expect(status).toBe(1);
-    expect(output).toContain('Config lint: 2 error(s)');
-  });
+      expect(status).toBe(1);
+      expect(output).toContain('Config lint:');
+    },
+  );
 
-  it('leaves files outside scripts/oxcrap/ free to import from anywhere', () => {
+  it('leaves files outside the ruled folders free to import from anywhere', () => {
     const { status } = check({
-      'src/x.ts': 'export const x = 1;\n',
+      ...target('x'),
       'scripts/other.ts': "import { x } from '../src/x.ts';\nexport const o = x;\n",
-      'scripts/oxcrap/keep.ts': 'export const k = 1;\n',
+      'src/components/view.ts':
+        "import { k } from '../sync/keep.ts';\nimport { o } from '../services/api.ts';\nexport const v = [k, o];\n",
+      ...target('services/api'),
     });
 
     expect(status).toBe(0);
+  });
+
+  // The layers in docs/engineering/code-layout.md, from #94. Each refuses `outside` in each way out,
+  // and a direct import of each folder in `refused`.
+  describe.each([
+    {
+      layer: 'domain',
+      outside: 'sync/store',
+      refused: ['services/api', 'components/view', 'hooks/useView', 'server/guard', 'RoomView'],
+      allowed: ['domain/money/currency', 'utils/qr'],
+    },
+    {
+      layer: 'utils',
+      outside: 'domain/money/currency',
+      refused: ['sync/store', 'services/api', 'components/view', 'hooks/useView', 'RoomView'],
+      allowed: ['utils/qr'],
+    },
+    {
+      layer: 'services',
+      outside: 'sync/store',
+      refused: ['components/view', 'hooks/useView', 'server/guard', 'RoomView'],
+      allowed: ['services/cache', 'domain/money/currency', 'utils/qr'],
+    },
+    {
+      layer: 'sync',
+      outside: 'components/view',
+      refused: ['services/api', 'hooks/useView', 'server/guard', 'RoomView'],
+      allowed: ['sync/store', 'domain/money/currency', 'utils/qr'],
+    },
+  ])('src/$layer/', ({ layer, outside, refused, allowed }) => {
+    it(`fails each way it could import src/${outside}.ts`, () => {
+      const { status, output } = check({ ...target(outside), ...waysOut(layer, outside) });
+
+      expect(status).toBe(1);
+      for (const file of ['parent', 'typeonly', 'reexport', 'dynamic', 'alias', 'a/b/deep']) {
+        expect(output).toContain(`src/${layer}/${file}.ts -> src/${outside}.ts (NOT ALLOWED)`);
+      }
+      expect(output).toContain('Module Boundary Issues (6)');
+    });
+
+    it('fails an import of each other folder it may not use', () => {
+      const { status, output } = check({
+        ...Object.assign({}, ...refused.map(target)),
+        ...importsOf(layer, refused),
+      });
+
+      expect(status).toBe(1);
+      for (const [index, path] of refused.entries()) {
+        expect(output).toContain(`src/${layer}/imports${index}.ts -> src/${path}.ts (NOT ALLOWED)`);
+      }
+      expect(output).toContain(`Module Boundary Issues (${refused.length})`);
+    });
+
+    it(`lets it import ${allowed.map((path) => `src/${path.split('/')[0]}/`).join(', ')}`, () => {
+      const { status, output } = check({
+        ...Object.assign({}, ...allowed.map(target)),
+        ...importsOf(layer, allowed),
+        [`src/${layer}/a/b/deep.ts`]: `import { o } from '../b/../../../${allowed[0]}.ts';\nexport const d = o;\n`,
+      });
+
+      expect(output).toContain('All checks passed!');
+      expect(status).toBe(0);
+    });
   });
 });
