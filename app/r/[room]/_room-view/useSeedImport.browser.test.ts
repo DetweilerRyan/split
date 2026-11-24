@@ -106,7 +106,8 @@ describe('useSeedImport', () => {
   it('starts the blank receipt in the currency of the language it is given', async () => {
     const hook = await setup(undefined, 'en-GB');
     await hook.act(() => hook.current().newBlankRoom());
-    const roomId = parseRoomPath(hook.navigate.mock.calls[0][0]);
+    const roomId = parseRoomPath(hook.navigate.mock.calls[0]?.[0] ?? '');
+    expect(roomId).not.toBeNull();
     const pending = window.sessionStorage.getItem(pendingSeedKey(roomId!));
     expect(JSON.parse(pending!)).toMatchObject({ currency: 'GBP' });
   });
