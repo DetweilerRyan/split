@@ -75,10 +75,11 @@ function snapshotOf(r: Receipt): RoomSnapshot {
 
 /**
  * An amount the summary prints, in minor units. A currency amount is printed with exactly its
- * currency's decimals, so its digits alone are the amount in minor units.
+ * currency's decimals, so its digits alone are the amount in minor units. A missing one reads as
+ * NaN, which equals no amount.
  */
-function minorOf(printed: string) {
-  return Number(printed.replaceAll(/\D/g, ''));
+function minorOf(printed: string | undefined) {
+  return Number(printed?.replaceAll(/\D/g, ''));
 }
 
 /** A person's line and the item lines under it, as amounts in the receipt currency's minor units. */
@@ -100,10 +101,14 @@ function readSummary(text: string) {
     }
     const person = new RegExp(`^(${names.join('|')}): (?:.* \\((.*)\\)|(.*))$`).exec(line);
     if (person) {
-      people.push({ name: person[1], totalMinor: minorOf(person[2] ?? person[3]), itemsMinor: [] });
+      people.push({
+        name: person[1] ?? '',
+        totalMinor: minorOf(person[2] ?? person[3]),
+        itemsMinor: [],
+      });
     }
   });
-  const total = /^Total: (.*)$/.exec(lines[lines.length - 1]) as RegExpExecArray;
+  const total = /^Total: (.*)$/.exec(lines.at(-1) ?? '') as RegExpExecArray;
   return { people, totalMinor: minorOf(total[1]) };
 }
 

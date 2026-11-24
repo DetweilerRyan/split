@@ -115,8 +115,8 @@ export function decodeRoomSegment(segment: string): RoomId | null {
 }
 
 export function parseRoomPath(pathname: string): RoomId | null {
-  const match = /^\/r\/([^/]+)\/?$/.exec(pathname);
-  return match ? decodeRoomSegment(match[1]) : null;
+  const segment = /^\/r\/([^/]+)\/?$/.exec(pathname)?.[1];
+  return segment === undefined ? null : decodeRoomSegment(segment);
 }
 
 /** The `sessionStorage` key for a seed waiting to be applied to a room. */
@@ -134,7 +134,7 @@ export function parseRoomHash(hash: string): {
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }
 
-/* @crap-allow CRAP 29.6, complexity 29. Too complex: a branch for each seed field's default, in
+/* @crap-allow CRAP 29.3, complexity 29. Too complex: a branch for each seed field's default, in
    the room's details and in each item, and for whether forceReset overwrites it. Splitting the
    details from the items would bring it within the limits, but that is a change of its own, not
    part of moving the domain logic out of src/store/ (#94). */
@@ -160,8 +160,8 @@ export function hydrateFromSeed(
       title: seed.title,
       ...Object.fromEntries(
         (['address', 'phone', 'website', 'purchasedAt', 'mealType'] as const)
-          .filter((key) => typeof seed[key] === 'string' && seed[key]!.trim())
-          .map((key) => [key, seed[key]!.trim()]),
+          .map((key) => [key, seed[key]?.trim()])
+          .filter(([, value]) => value),
       ),
       cardTipEur: Number(seed.cardTipEur) || 0,
       cashTipEur: Number(seed.cashTipEur) || 0,

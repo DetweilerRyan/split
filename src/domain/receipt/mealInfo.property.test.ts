@@ -72,7 +72,8 @@ function write({
 /** How many days a month has, worked out from the calendar rather than from the code under test. */
 function daysIn(year: number, month: number) {
   const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-  return [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  if (month === 2) return leap ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
 describe('parsePurchasedAt', () => {

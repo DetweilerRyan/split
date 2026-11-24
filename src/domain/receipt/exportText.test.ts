@@ -32,7 +32,9 @@ function receipt(
       en: '',
       eur,
       order,
-      claims: Object.fromEntries(names.map((name) => [name, claimants[order].includes(name)])),
+      claims: Object.fromEntries(
+        names.map((name) => [name, claimants[order]?.includes(name) === true]),
+      ),
     })),
   };
 }

@@ -26,12 +26,12 @@ Given(
       cashTipEur: 0,
       bankUsd: 0,
       roster: [first, second],
-      items: table.hashes().map((row, index) => ({
-        id: `item-${index}`,
-        name: row.item,
-        en: row.item,
-        eur: Number(row.price),
-      })),
+      items: table.hashes().map(({ item, price }, index) => {
+        if (item === undefined || price === undefined) {
+          throw new Error('The receipt table needs an "item" and a "price" column.');
+        }
+        return { id: `item-${index}`, name: item, en: item, eur: Number(price) };
+      }),
     });
   },
 );

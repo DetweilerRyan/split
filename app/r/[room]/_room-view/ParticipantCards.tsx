@@ -18,6 +18,7 @@ export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
       <div className="space-y-3">
         {snapshot.participants.map((participant) => {
           const totals = math.perPerson[participant.id];
+          if (!totals) return null;
           function fmt(amount: number) {
             return formatMoney(amount, math.currency);
           }

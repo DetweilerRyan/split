@@ -281,8 +281,8 @@ describe('RoomView', () => {
     const { button, clipboard } = await renderRoom();
     await button('Copy summary');
     expect(clipboard.writeText).toHaveBeenCalledOnce();
-    expect(clipboard.writeText.mock.calls[0][0]).toContain('Trattoria Da Enzo');
-    expect(clipboard.writeText.mock.calls[0][0]).not.toContain('/r/split-r1');
+    expect(clipboard.writeText.mock.calls[0]?.[0]).toContain('Trattoria Da Enzo');
+    expect(clipboard.writeText.mock.calls[0]?.[0]).not.toContain('/r/split-r1');
   });
 
   it('shows the edit drawer, and the items for editing, while editing from the header', async () => {
@@ -376,7 +376,7 @@ describe('RoomView', () => {
     await button('Seed / presets');
     await button('Blank room');
     expect(navigate).toHaveBeenCalledOnce();
-    expect(parseRoomPath(navigate.mock.calls[0][0])).not.toBeNull();
+    expect(parseRoomPath(navigate.mock.calls[0]?.[0] ?? '')).not.toBeNull();
     await button('Close seed');
     await expect.element(dialog('Seed')).not.toBeInTheDocument();
   });

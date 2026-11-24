@@ -143,7 +143,7 @@ describe('allocateMinor', () => {
         expect(sum(shares)).toBe(total);
         shares.forEach((share, i) => {
           expect(Number.isInteger(share)).toBe(true);
-          expect(Math.abs(share - (total * w[i]) / weightSum)).toBeLessThan(1);
+          expect(Math.abs(share - (total * (w[i] ?? NaN)) / weightSum)).toBeLessThan(1);
         });
       }),
     );
@@ -175,7 +175,7 @@ describe('computeReceiptMath', () => {
           const most = sum(
             claimed.map(({ item, claimants }) => Math.ceil(item.minor / claimants.length)),
           );
-          const subtotal = result.perPerson[id].itemsSubtotalMinor;
+          const subtotal = result.perPerson[id]?.itemsSubtotalMinor;
           expect(subtotal).toBeGreaterThanOrEqual(fewest);
           expect(subtotal).toBeLessThanOrEqual(most);
         });

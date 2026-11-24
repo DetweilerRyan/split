@@ -77,7 +77,7 @@ function statementCounts(functions: readonly Fn[], file: FileCoverage) {
     if (!owner) continue;
     const count = counts.get(owner) ?? { total: 0, run: 0 };
     count.total++;
-    if (file.s[id] > 0) count.run++;
+    if ((file.s[id] ?? 0) > 0) count.run++;
     counts.set(owner, count);
   }
   return counts;
@@ -88,7 +88,7 @@ function calledFunctions(functions: readonly Fn[], file: FileCoverage) {
   const called = new Set<Fn>();
   for (const [id, fn] of Object.entries(file.fnMap)) {
     const owner = innermost(functions, fn.loc);
-    if (owner && file.f[id] > 0) called.add(owner);
+    if (owner && (file.f[id] ?? 0) > 0) called.add(owner);
   }
   return called;
 }

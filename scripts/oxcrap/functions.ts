@@ -73,10 +73,10 @@ export function positions(source: string) {
     let high = lineStarts.length - 1;
     while (low < high) {
       const middle = (low + high + 1) >> 1;
-      if (lineStarts[middle] <= offset) low = middle;
+      if ((lineStarts[middle] ?? Infinity) <= offset) low = middle;
       else high = middle - 1;
     }
-    return { line: low + 1, column: offset - lineStarts[low] };
+    return { line: low + 1, column: offset - (lineStarts[low] ?? 0) };
   };
 }
 
@@ -122,13 +122,17 @@ function callback(callee: string | undefined) {
 }
 
 /**
- * The JSX attribute a handler is the value of, as in `onClick={() => …}`, from the ancestors of a
- * function in a JSX expression. A JSX child's expression sits in an element or fragment instead,
+ * The JSX attribute a handler is the value of, as in `onClick={() => …}`, from the node around a
+ * function's JSX expression. A JSX child's expression sits in an element or fragment instead,
  * which has no name.
  */
-function jsxAttribute(source: string, ancestors: readonly AstNode[]) {
-  return text(source, ancestors[ancestors.length - 2].name);
+function jsxAttribute(source: string, around: AstNode | undefined) {
+  // Stryker disable next-line OptionalChaining: the walk starts below the Program, so a function's ancestors end with it, and a JSX expression's function has at least the expression and the Program around it.
+  return text(source, around?.name);
 }
+
+/** The nodes around one, nearest first: its parent, that one's parent, and so on to the Program. */
+type Ancestors = readonly [AstNode, ...(readonly AstNode[])];
 
 /** What one file's walk needs throughout: its text, how to count, and where each offset is. */
 type Source = {
@@ -147,20 +151,19 @@ type Found = {
 };
 
 /**
- * Adds the functions and simple statements in `node` and below it to `into`, in source order, and
- * returns it. Adding to one list, rather than joining each child's, keeps each level of the tree
+ * Adds the functions and simple statements in `node` and below it to `into`, in source order.
+ * Adding to one list, rather than joining each child's, keeps each level of the tree
  * to one small stack frame, as deeply nested code needs.
  */
 function walk(
   node: AstNode,
-  ancestors: readonly AstNode[],
+  ancestors: Ancestors,
   enclosing: readonly Fn[],
   source: Source,
-  into: Found = { functions: [], statements: [] },
-): Found {
+  into: Found,
+): void {
   const inside = record(node, ancestors, enclosing, source, into);
-  for (const child of children(node)) walk(child, [...ancestors, node], inside, source, into);
-  return into;
+  for (const child of children(node)) walk(child, [node, ...ancestors], inside, source, into);
 }
 
 /**
@@ -169,7 +172,7 @@ function walk(
  */
 function record(
   node: AstNode,
-  ancestors: readonly AstNode[],
+  ancestors: Ancestors,
   enclosing: readonly Fn[],
   source: Source,
   into: Found,
@@ -184,15 +187,14 @@ function record(
 /** A function node as a scored `Fn`: its name, complexity and place. */
 function describe(
   node: AstNode,
-  ancestors: readonly AstNode[],
+  ancestors: Ancestors,
   enclosing: readonly Fn[],
   source: Source,
 ): Fn {
-  // A function always has a parent: only the Program has none.
-  const parent = ancestors[ancestors.length - 1];
+  const [parent, grandparent] = ancestors;
   const own =
     parent.type === 'JSXExpressionContainer'
-      ? (jsxAttribute(source.text, ancestors) ?? '(anonymous)')
+      ? (jsxAttribute(source.text, grandparent) ?? '(anonymous)')
       : label(source.text, node, parent);
   return {
     label: own,
@@ -255,14 +257,16 @@ export function parse(
   imported: Imported = () => undefined,
 ): Parsed {
   const result = parseSync(file, source);
-  if (result.errors.length > 0) {
-    throw new ParseError(`Couldn't parse ${file}: ${result.errors[0].message}`);
-  }
+  const [error] = result.errors;
+  if (error) throw new ParseError(`Couldn't parse ${file}: ${error.message}`);
   const program = result.program as unknown as AstNode;
   const position = positions(source);
   const tables = tablesIn(program, imported).readable;
-  // Stryker disable next-line ArrayDeclaration: the root's ancestors are only ever read from the end, as the parent at `length - 1` and, beside a JSX expression, which is never a top-level node, the attribute at `length - 2`, so an entry at the start is never read.
-  const found = walk(program, [], [], { text: source, counting, position, tables });
+  const found: Found = { functions: [], statements: [] };
+  // The Program is neither a function nor a simple statement, so the walk starts below it.
+  for (const child of children(program)) {
+    walk(child, [program], [], { text: source, counting, position, tables }, found);
+  }
   const enclosing = counting.nestedFunctions === 'enclosing';
   const all = found.functions.map(({ fn }) => fn);
   const scored = enclosing ? all.filter((fn) => fn.parents.length === 0) : all;

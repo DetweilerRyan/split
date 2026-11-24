@@ -63,8 +63,8 @@ describe('parse', () => {
       'example.ts',
       "const s = '€€€';\nfunction f() {\n  return 1;\n}\n",
     ).functions;
-    expect(fn.start).toEqual({ line: 2, column: 0 });
-    expect(fn.end).toEqual({ line: 4, column: 1 });
+    expect(fn?.start).toEqual({ line: 2, column: 0 });
+    expect(fn?.end).toEqual({ line: 4, column: 1 });
   });
 
   it('returns real comments only, not text in strings that looks like one', () => {
@@ -86,13 +86,13 @@ describe('parse', () => {
       'const f = () => 1;',
     ].join('\n');
     const [forEach, promise, called, f] = parse('example.ts', code).functions;
-    expect([forEach, promise, f].map((fn) => [fn.name, fn.passedToCall])).toEqual([
+    expect([forEach, promise, f].map((fn) => [fn?.name, fn?.passedToCall])).toEqual([
       ['items.forEach callback', true],
       ['Promise callback', true],
       ['f', false],
     ]);
     // A function that is itself called isn't passed to the call, so isn't named after it.
-    expect([called.name, called.passedToCall]).toEqual(['(anonymous)', false]);
+    expect([called?.name, called?.passedToCall]).toEqual(['(anonymous)', false]);
   });
 
   it('lists every simple statement, outermost first, and no block, loop or if', () => {

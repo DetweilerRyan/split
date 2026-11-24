@@ -53,6 +53,15 @@ Why the rules in [types and schemas](types-and-schemas.md) are as they are, and 
 - **In-place `.sort` on a local working array stays.** The issue expected `participants.sort(...)` and `items.sort(...)` in the store to become `.toSorted`, but each sorts a local array the function has just built, which decision 3 allows. `toSorted` would also be the app's first ES2023 array method, which older browsers, such as Safari before 16, don't have.
 - **The sweep, on [#69](https://github.com/DetweilerRyan/split/issues/69):** 487 findings when the rule was turned on. The mutable types that remain are each disabled on their line, with a reason: oxCrap's walks, which fill one list or set in place so deeply nested code keeps one stack frame per level, and a function's complexity, which `countRecursion` adds to through `parents`; oxCrap's cache of imported modules; and the provider cache and Liveblocks client on `globalThis`, which `src/sync/yjsProvider.ts` sets and its test deletes.
 
+## Indexed reads and `!`
+
+- **Asked for** on [#119](https://github.com/DetweilerRyan/split/issues/119), under _honest types_ in the [code design principles](code-design-principles.md#6-honest-types-let-the-types-rule-out-states-that-cant-happen): without `noUncheckedIndexedAccess`, `items[i]` is typed as a value even when `i` is past the end, so the type claims a value that may not be there.
+- **Decided by the owner** in the session on 2026-11-24, [recorded on #119](https://github.com/DetweilerRyan/split/issues/119): "Yes, same PR". `typescript/no-non-null-assertion` was turned on outside tests in the same sweep, so the new errors couldn't be silenced with `!`. Tests are exempt, as from `max-nested-callbacks`, but the issue's "don't add `!`" holds for indexed reads in them too.
+- **No casts either,** because [#117](https://github.com/DetweilerRyan/split/issues/117) bans `as` casts in the same round of work.
+- **The sweep:** 114 errors in 30 files when the flag was turned on, counted on `main` at `485386e`; the issue's count of 99 in 26 files was from `4cd7cce`. Most became iteration, destructuring with a check, or `?.` in a test's assertion. Two kept a check for a case that can't happen through `computeReceiptMath`, a participant with no totals in `ParticipantCards` and the export text, because `perPerson` is a record keyed by id; `buildExportText` split its per-person lines into `personLines`, as its `@crap-allow` comment asked once it gained a branch, and lost that comment.
+- **`satisfies` for `PRESETS`:** the annotation `Readonly<Record<string, ReceiptSeed>>` widened its keys to every string, so the tests' `PRESETS.plitvice` read as possibly missing. `satisfies` checks each seed against the same type and keeps the keys.
+- **Vitest's `assert` in tests:** it narrows the type, as `expect(value).toBeDefined()` doesn't, and fails the test with its message when the value is missing.
+
 ## The document's scope
 
 - **Not taken:** a broader `code-conventions.md`, considered on #43. Its "Read when" would match almost every task, and it would collect unrelated rules.

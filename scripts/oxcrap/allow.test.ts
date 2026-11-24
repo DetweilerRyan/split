@@ -70,6 +70,11 @@ describe('findAllows', () => {
     expect(allows(code)).toMatchObject({ allowed: [{ name: 'grade' }], problems: [] });
   });
 
+  it('applies to the function on the next line, not to code before the comment on its own line', () => {
+    const code = `const rate = 1; ${allow}\nfunction grade(n) {}\n`;
+    expect(allows(code)).toMatchObject({ allowed: [{ name: 'grade' }], problems: [] });
+  });
+
   it('applies to a function on the last line of a file with no line break at its end', () => {
     expect(allows(`${allow}\nfunction grade(n) {}`)).toMatchObject({
       allowed: [{ name: 'grade' }],

@@ -13,7 +13,7 @@ const SEPARATELY = COUNT_SEPARATELY;
 
 /** The complexity of the first function in `code`, counted as `counting` says: everything by default. */
 function complexityOf(code: string, counting?: Counting, file = 'example.ts') {
-  return parse(file, code, counting).functions[0].complexity;
+  return parse(file, code, counting).functions[0]?.complexity;
 }
 
 describe('complexity', () => {

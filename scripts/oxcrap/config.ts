@@ -49,8 +49,8 @@ const validate = new Ajv({ allErrors: true }).compile<File>(schema);
 
 /** The line and column of an offset in `text`, both from 1. */
 function lineAndColumn(text: string, offset: number) {
-  const before = text.slice(0, offset).split('\n');
-  return `${before.length}:${before.at(-1)!.length + 1}`;
+  const before = text.slice(0, offset);
+  return `${before.split('\n').length}:${before.length - before.lastIndexOf('\n')}`;
 }
 
 /** One schema error as a sentence about the option it concerns. */
@@ -69,8 +69,8 @@ function describe(error: ErrorObject, path: string) {
 export function parseConfig(text: string, path: string): Partial<Config> {
   const errors: ParseError[] = [];
   const data: unknown = parse(text, errors, { allowTrailingComma: true });
-  if (errors.length > 0) {
-    const [first] = errors;
+  const [first] = errors;
+  if (first) {
     throw new ConfigError(
       `${path} isn't valid JSON at ${lineAndColumn(text, first.offset)}: ${printParseErrorCode(first.error)}.`,
     );

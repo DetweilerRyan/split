@@ -45,14 +45,17 @@ function withoutComments(source: string, comments: readonly Comment[]) {
  */
 function targetLine(code: readonly string[], comment: Comment, parsed: Parsed) {
   const end = parsed.position(comment.end);
-  const rest = code[end.line - 1].slice(end.column).trim();
-  if (rest !== '' && rest !== '}') return end.line;
-  for (let line = end.line + 1; line <= code.length; line++) {
+  // The rest of the comment's own line, then each line after it.
+  const offset = code.slice(end.line - 1).findIndex((text, index) => {
+    if (index === 0) {
+      const rest = text.slice(end.column).trim();
+      return rest !== '' && rest !== '}';
+    }
     // A JSX comment, {/* … */}, leaves its braces behind once the comment is blanked.
-    const bare = code[line - 1].replace(/\s/g, '');
-    if (bare !== '' && bare !== '{}') return line;
-  }
-  return undefined;
+    const bare = text.replace(/\s/g, '');
+    return bare !== '' && bare !== '{}';
+  });
+  return offset === -1 ? undefined : end.line + offset;
 }
 
 /** The outermost of `functions`: those not nested in another of them. */
@@ -88,12 +91,16 @@ function functionFor(
   const [inner] =
     candidates.length === 0 ? functionsAt(target, parsed, parsed.nested).candidates : [];
   if (inner) {
-    const outer = inner.parents[0];
-    return {
-      problem: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
-    };
+    const [outer] = inner.parents;
+    // Stryker disable next-line ConditionalExpression: `inner` is one of `parsed.nested`, the functions with one around them, so `outer` is never undefined and `true` chooses the same.
+    if (outer) {
+      return {
+        problem: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
+      };
+    }
   }
-  if (candidates.length === 0) {
+  const [fn] = candidates;
+  if (!fn) {
     return {
       problem:
         'This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
@@ -104,7 +111,7 @@ function functionFor(
       problem: `${candidates.length} functions ${where} (${candidates.map((fn) => fn.name).join(', ')}), so this @crap-allow comment could mean any of them. Put the function it's for on a line of its own.`,
     };
   }
-  return { fn: candidates[0] };
+  return { fn };
 }
 
 export function findAllows(file: string, source: string, parsed: Parsed) {

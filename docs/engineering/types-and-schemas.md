@@ -1,6 +1,6 @@
 # Types and schemas
 
-Where TypeScript types and zod schemas are defined, how ids and the strings built from them are typed, and how types are kept readonly.
+Where TypeScript types and zod schemas are defined, how ids and the strings built from them are typed, how types are kept readonly, and how an indexed read is handled.
 
 ## Where a type lives
 
@@ -40,6 +40,16 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
   ```
 
   Yjs types such as `Y.Map` and `Y.Doc` aren't checked, so they need no disable.
+
+## Indexed reads and `!`
+
+[`tsconfig.json`](../../tsconfig.json) turns on `noUncheckedIndexedAccess`, so `npm run typecheck` types a read by index or key, such as `items[i]` or `record[key]`, as possibly `undefined`. [`.oxlintrc.json`](../../.oxlintrc.json) turns on `typescript/no-non-null-assertion` outside tests.
+
+- **Restructure so the type proves the value is there,** where it always is: iterate instead of indexing, destructure (`const [first] = items;`) and check what you get, or carry the value along with what you'd have indexed by, as `allocate` in `src/domain/receipt/math.ts` pairs each part with its share.
+- **Otherwise handle the missing case** where you read it: skip it, return early, or throw an error that says what's missing.
+- **Don't silence a read with `!` or a cast,** tests included, though tests may use `!` elsewhere.
+- **In a test, read through `?.`** so the assertion fails when the value is missing, or narrow with Vitest's `assert(value, message)` when the value is passed on.
+- **Let a table with known keys keep them:** write `satisfies Readonly<Record<string, T>>` instead of the annotation `: Readonly<Record<string, T>>`, as `PRESETS` in `src/data/presets.ts` does, so a read of one of its keys isn't possibly `undefined`.
 
 ## Changing this document
 

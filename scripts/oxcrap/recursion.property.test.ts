@@ -292,7 +292,7 @@ function source({ form, stubsFirst, fns }: Program) {
 
 /** Whether `this` reaches function `i`: a field of its name on its own side hides it. */
 function reachable({ form, fns }: Program, i: number) {
-  const hides = fns[i].field === 'sameBefore' || fns[i].field === 'sameAfter';
+  const hides = fns[i]?.field === 'sameBefore' || fns[i]?.field === 'sameAfter';
   return !(hides && (form === 'method' || form === 'static'));
 }
 
@@ -301,15 +301,15 @@ function inCycles(program: Program) {
   const edges = program.fns.map(({ calls }) =>
     calls.filter((c) => c.decoy === 'none' && reachable(program, c.to)).map((c) => c.to),
   );
-  return edges.map((_, start) => {
+  return edges.map((own, start) => {
     const seen = new Set<number>();
-    const queue = [...edges[start]];
+    const queue = [...own];
     while (queue.length > 0) {
       const next = queue.pop() as number;
       if (next === start) return true;
       if (seen.has(next)) continue;
       seen.add(next);
-      queue.push(...edges[next]);
+      queue.push(...(edges[next] ?? []));
     }
     return false;
   });
@@ -341,13 +341,11 @@ function expected(program: Program) {
         program.fns.map((_, i) => [`${named}${name(i)}`, 1]),
       )
     : [];
-  const otherMethods = program.fns
-    .map(({ field }, i) => [field, name(i)])
-    .filter(
-      ([field]) =>
-        field === 'otherMethod' && (program.form === 'method' || program.form === 'static'),
-    )
-    .map(([, fn]) => [fn, 1]);
+  const otherMethods = program.fns.flatMap(({ field }, i) =>
+    field === 'otherMethod' && (program.form === 'method' || program.form === 'static')
+      ? [[name(i), 1]]
+      : [],
+  );
   return sorted([...scored, ...stubs, ...otherMethods]);
 }
 
@@ -468,11 +466,11 @@ function classProgramExpected({ members, initializers }: ClassProgram) {
   const edges = new Map<string, readonly string[]>([
     [
       'w',
-      initializers.filter((c) => placeSide(c.place) === members[c.to].side).map((c) => `${c.to}`),
+      initializers.filter((c) => placeSide(c.place) === members[c.to]?.side).map((c) => `${c.to}`),
     ],
     ...members.map(({ side, calls }, i): readonly [string, readonly string[]] => [
       `${i}`,
-      calls.filter((to) => to === 'w' || members[to].side === side).map((to) => `${to}`),
+      calls.filter((to) => to === 'w' || members[to]?.side === side).map((to) => `${to}`),
     ]),
   ]);
   function cycles(start: string) {

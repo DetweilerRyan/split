@@ -36,13 +36,17 @@
     "oxc/no-barrel-file": ["error", { "threshold": 0 }],
     // The owner's decision (#69): the types we declare are readonly by default, checked level by
     // level. docs/engineering/types-and-schemas.md says what the rule asks for.
-    "readonly/types": "error"
+    "readonly/types": "error",
+    // The owner's decision (#119), for honest types (docs/engineering/code-design-principles.md):
+    // no `!` claims a value the type says may be missing. Test files are exempt below.
+    "typescript/no-non-null-assertion": "error"
   },
   "overrides": [
     {
-      // A test nests describe, it, fc.property and the callbacks inside by design (#76).
+      // A test nests describe, it, fc.property and the callbacks inside by design (#76), and may use
+      // `!` (#119), though not on an indexed read, as docs/engineering/types-and-schemas.md says.
       "files": ["**/*.test.ts", "**/*.test.tsx"],
-      "rules": { "max-nested-callbacks": "off" }
+      "rules": { "max-nested-callbacks": "off", "typescript/no-non-null-assertion": "off" }
     },
     {
       // Contained state (#116): src/sync/ keeps the room's long-lived state, so it may hold some

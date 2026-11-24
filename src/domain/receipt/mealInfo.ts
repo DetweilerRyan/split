@@ -12,8 +12,8 @@ export interface PurchaseTime {
  */
 export function parsePurchasedAt(value: string): PurchaseTime | null {
   const match = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/.exec(value.trim());
-  if (!match) return null;
-  const [, day, time] = match;
+  const [, day, time] = match ?? [];
+  if (day === undefined) return null;
   // Every field is in the format, so the reference date fills none of them.
   const reference = new Date(0);
   const date =

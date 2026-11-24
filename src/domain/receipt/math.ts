@@ -42,18 +42,32 @@ export interface ReceiptMath {
  * and always sums to exactly `total`.
  */
 export function allocateMinor(total: number, weights: readonly number[]): readonly number[] {
-  const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
-  if (weightSum <= 0) return weights.map(() => 0);
-  const exact = weights.map((weight) => (total * weight) / weightSum);
-  const shares = exact.map(Math.floor);
-  let remainder = total - shares.reduce((sum, share) => sum + share, 0);
-  const order = exact
-    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
-    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
-  for (let i = 0; remainder > 0 && i < order.length; i += 1, remainder -= 1) {
-    shares[order[i].index] += 1;
-  }
-  return shares;
+  return allocate(total, weights, (weight) => weight).map(({ share }) => share);
+}
+
+/** Each of `parts` with its share of `total`, split by `weightOf` as allocateMinor splits it. */
+function allocate<T>(
+  total: number,
+  parts: readonly T[],
+  weightOf: (part: T) => number,
+): readonly { readonly part: T; readonly share: number }[] {
+  const weightSum = parts.reduce((sum, part) => sum + weightOf(part), 0);
+  if (weightSum <= 0) return parts.map((part) => ({ part, share: 0 }));
+  const exact = parts.map((part, index) => {
+    const value = (total * weightOf(part)) / weightSum;
+    return { part, index, share: Math.floor(value), fraction: value - Math.floor(value) };
+  });
+  const remainder = total - exact.reduce((sum, { share }) => sum + share, 0);
+  // The `remainder` parts with the largest fractions get one more unit each, then go back in order.
+  return exact
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+    .map(({ part, index, share }, rank) => ({
+      part,
+      index,
+      share: rank < remainder ? share + 1 : share,
+    }))
+    .sort((a, b) => a.index - b.index)
+    .map(({ part, share }) => ({ part, share }));
 }
 
 /** One claimant's share of an item, in minor units of the receipt currency. */
@@ -93,10 +107,15 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   // Filled in place below, as a local working value; ReceiptMath gives callers each total as readonly.
   const perPerson: Record<string, { -readonly [K in keyof PersonTotal]: PersonTotal[K] }> = {};
 
+  const itemShares = snapshot.items.flatMap((item, itemIndex) =>
+    splitItemMinor(item, itemIndex, snapshot.participants, currency),
+  );
   snapshot.participants.forEach((participant) => {
     perPerson[participant.id] = {
       participant,
-      itemsSubtotalMinor: 0,
+      itemsSubtotalMinor: itemShares
+        .filter(({ id }) => id === participant.id)
+        .reduce((sum, { minor }) => sum + minor, 0),
       cardTipShareMinor: 0,
       cashTipShareMinor: 0,
       totalMinor: 0,
@@ -108,24 +127,26 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
     };
   });
 
-  let itemsSubtotalMinor = 0;
-  snapshot.items.forEach((item, itemIndex) => {
-    itemsSubtotalMinor += toMinor(item.eur, currency);
-    splitItemMinor(item, itemIndex, snapshot.participants, currency).forEach(({ id, minor }) => {
-      perPerson[id].itemsSubtotalMinor += minor;
-    });
-  });
-
+  const itemsSubtotalMinor = snapshot.items.reduce(
+    (sum, item) => sum + toMinor(item.eur, currency),
+    0,
+  );
   const people = Object.values(perPerson);
-  const weights = people.map((person) => person.itemsSubtotalMinor);
   const cardTipMinor = toMinor(snapshot.cardTipEur, currency);
   const cashTipMinor = toMinor(snapshot.cashTipEur, currency);
-  const cardShares = allocateMinor(cardTipMinor, weights);
-  const cashShares = allocateMinor(cashTipMinor, weights);
-  people.forEach((person, index) => {
-    person.cardTipShareMinor = cardShares[index];
-    person.cashTipShareMinor = cashShares[index];
-    person.totalMinor = person.itemsSubtotalMinor + cardShares[index] + cashShares[index];
+  allocate(cardTipMinor, people, (person) => person.itemsSubtotalMinor).forEach(
+    ({ part: person, share }) => {
+      person.cardTipShareMinor = share;
+    },
+  );
+  allocate(cashTipMinor, people, (person) => person.itemsSubtotalMinor).forEach(
+    ({ part: person, share }) => {
+      person.cashTipShareMinor = share;
+    },
+  );
+  people.forEach((person) => {
+    person.totalMinor =
+      person.itemsSubtotalMinor + person.cardTipShareMinor + person.cashTipShareMinor;
   });
 
   const cardTotalMinor = itemsSubtotalMinor + cardTipMinor;
@@ -155,13 +176,11 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
       fromMinor(grandMinor, currency) * effectiveRate,
       displayCurrency,
     );
-    const convertedShares = allocateMinor(
-      convertedMinor,
-      people.map((person) => person.totalMinor),
+    allocate(convertedMinor, people, (person) => person.totalMinor).forEach(
+      ({ part: person, share }) => {
+        person.converted = fromMinor(share, displayCurrency);
+      },
     );
-    people.forEach((person, index) => {
-      person.converted = fromMinor(convertedShares[index], displayCurrency);
-    });
   }
 
   people.forEach((person) => {
