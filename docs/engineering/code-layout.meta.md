@@ -56,7 +56,23 @@ Why [code layout](code-layout.md) puts code where it does, where its layers came
   - **`IngestEntry` went to `app/ingest/_ingest-entry/`,** and `index.css` beside `app/layout.tsx`, which imports it, as Next puts global CSS.
 - **Display code beside its UI** was already a rule, from #94. This one generalises it, so it folds in.
 - **The `@/` alias from `app/` into `src/`** was a reversible default, chosen without the owner's input on #108: the relative path from `app/r/[room]/_room-view/` is four folders up. tsconfig, Vitest and rev-dep already resolved it. Within a folder, imports stay relative, as everywhere else.
-- **Not enforced:** nothing stops code outside a private folder importing its parts. rev-dep limits what a folder imports, not who imports from it, and an oxlint pattern would be string matching, which [dependency direction](dependency-direction.meta.md) turned down. Review holds it until there's a second such folder.
+- **Not enforced:** nothing stops code outside a private folder importing its parts. rev-dep's rules limit what a folder imports, not who imports from it, and an oxlint pattern would be string matching, which [dependency direction](dependency-direction.meta.md) turned down. Review holds it until there's a second such folder. The owner kept it so on [#118](https://github.com/DetweilerRyan/split/issues/118), which checks only the other direction, [below](#shared-folders-are-checked).
+
+### Shared folders are checked
+
+[`scripts/check-shared-folders.ts`](../../scripts/check-shared-folders.ts), in `npm run lint`, fails a module in `src/components/` or `src/hooks/` that isn't imported from two or more folders. Before it, only review stopped a module one route uses from going there. Asked for on [#118](https://github.com/DetweilerRyan/split/issues/118), with the owner's choices [recorded there](https://github.com/DetweilerRyan/split/issues/118#issuecomment-7146409983):
+
+- **A second user is "Another folder":** two importers in one folder count as one user. The other option was any second module, which would let a route's own two components share code through `src/components/`.
+- **Imports into a private `_` folder from outside it stay left to review,** as on #112, so the check doesn't look at them.
+- **Tests aren't users,** so a test importing a module doesn't keep it in a shared folder. A test is a file whose name holds `.test.`, as [testing conventions](testing-conventions.md#which-project-a-test-belongs-in) name them. Nothing under `e2e/` imports from the two folders, so its files aren't counted as tests; one that did would count as a user.
+
+Choices #118 didn't settle:
+
+- **Each file below the two folders is checked,** in any subfolder, except `.gitkeep`, tests, and the parts in a private `_` folder there. A component with private parts gets such a folder, by the rule in code layout, and its parts have one user by design. Not taken: checking only the files directly in the two folders, which a plain subfolder would get around.
+- **The folder is the importer's own folder,** not its route, so `app/RoomApp.tsx` (`app/`) and `app/ingest/_ingest-entry/IngestEntry.tsx` are two, as #118 expected for `RoomEntry`.
+- **rev-dep finds the importers,** one `rev-dep imported-by --file` per module, so imports resolve as [dependency direction](dependency-direction.md)'s rules do: through `@/`, relative paths, type-only imports, re-exports and dynamic `import()`. Reading rev-dep's whole graph instead would be one call, but with one module today each call takes about a tenth of a second. A rev-dep error fails the check with its output, rather than passing a module it couldn't look at.
+- **No sidecar of its own:** the script's reasons are this rule's, so they live here.
+- **Its tests:** [`check-shared-folders.test.ts`](../../scripts/check-shared-folders.test.ts) covers which files are checked and what counts as a user, and [`check-shared-folders.real.test.ts`](../../scripts/check-shared-folders.real.test.ts) runs the script with the real rev-dep on throwaway projects. Each failing case was checked to fail with its rule broken: counting one folder as enough, and counting tests.
 
 ### The folder rule lives here
 

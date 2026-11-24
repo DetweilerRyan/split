@@ -239,6 +239,11 @@ Researched on 2026-11-24, at the owner's request, "do some web reserach on the p
 - **_Least power_ and _deep modules_ split a set of cases by where it varies:** a closed set handled in one module stays a `switch`, and one whose `switch` recurs across modules, or with a second implementation of those cases outside the module, becomes an interface. So open-closed and _least power_ each have their own ground, and neither is an exception to the other. The first wording split by whether the set is closed, which contradicted _deep modules_' own rule.
 - **Functions over classes is _contained state_'s,** not _least power_'s, though the owner's reason on #81 touches both: "stateful OOP" is about state, and "less dynamic" about power. One home keeps it from being stated twice.
 
+## Earned complexity's enforcement
+
+- **"Keep code beside its one user" is checked for the shared UI folders.** `npm run lint` fails a module in `src/components/` or `src/hooks/` that isn't imported from two or more folders, leaving tests out, since #118. What counts as a user, and why, is in [code layout's sidecar](code-layout.meta.md#shared-folders-are-checked).
+- **The rest is review's.** Whether a layer, option, parameter or injection point has a current use is judgment no tool here measures.
+
 ## How the document is written
 
 Researched on [agentpatterns.ai](https://agentpatterns.ai/instructions/) on 2026-11-24, at the owner's request, "to make sure that agents are not overly encoumbered by vegue rules and that as the agent models grow more powerful they remain empowered with clarity from the docs". These are the site's summaries of the studies it cites, not the studies themselves.
