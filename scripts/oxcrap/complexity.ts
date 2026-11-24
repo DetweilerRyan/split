@@ -93,6 +93,7 @@ export const COUNT_SEPARATELY: Counting = {
 export function children(node: AstNode): AstNode[] {
   const found: AstNode[] = [];
   for (const [key, value] of Object.entries(node)) {
+    // Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral: these keys hold a string and two numbers, which the checks below never take as children, so skipping them only saves work.
     if (key === 'type' || key === 'start' || key === 'end') continue;
     if (Array.isArray(value)) {
       for (const item of value) if (isNode(item)) found.push(item);
@@ -121,6 +122,7 @@ function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
       // 1 each, or with `sequence`, the outermost operator of an expression counts its runs, in
       // source order, and the rest add 0.
       if (counting.logicalOperators === 'each') return 1;
+      // Stryker disable next-line OptionalChaining: `complexity` passes every node a parent, the function or a node, so `parent` is never undefined here.
       return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
     case 'BreakStatement':
     case 'ContinueStatement':
@@ -156,6 +158,7 @@ function operatorRuns(node: AstNode) {
     }
   }
   walk(node);
+  // Stryker disable next-line ConditionalExpression: at i === 0, operators[-1] is undefined, never an operator, so the comparison alone is already true there.
   return operators.filter((op, i) => i === 0 || operators[i - 1] !== op).length;
 }
 

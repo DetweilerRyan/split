@@ -1,5 +1,6 @@
 import { posix } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { CODE_FILES } from './config.ts';
 import { type Host, isUrl, outcome, outside, resolveImport, run, USAGE } from './run.ts';
 
 // run.ts over files in memory. The feature contract in features/ checks the real program end to
@@ -253,6 +254,92 @@ describe('run', () => {
     expect(scored.stderr[0]).toContain('coverage 100%');
   });
 
+  it('honours a @crap-allow comment, and reports a problem with one', () => {
+    const allowed = `// @crap-allow CRAP 156, complexity 12. Kept as it is.\n${branchy('grade', 12)}`;
+    const { files, times } = project({ '/repo/src/grade.ts': allowed });
+    const args = ['--coverage', 'coverage.json', 'src'];
+    expect(oxcrap(args, files, times).status).toBe(0);
+    const noReason = allowed.replace(' Kept as it is.', '');
+    expect(oxcrap(args, { ...files, '/repo/src/grade.ts': noReason }, times).stderr).toEqual([
+      'CRAP findings:\n- src/grade.ts:1 The @crap-allow comment for grade gives no reason.',
+    ]);
+  });
+
+  it('matches each file to its own coverage', () => {
+    const { files, times } = project({ '/repo/src/rank.ts': branchy('rank', 6) }, [
+      '/repo/src/rank.ts',
+    ]);
+    expect(oxcrap(['--coverage', 'coverage.json', 'src'], files, times).stderr).toEqual([
+      expect.stringMatching(/^CRAP findings:\n- src\/grade\.ts:1 grade: CRAP 156, [^\n]*$/),
+    ]);
+  });
+
+  it('compares paths without case letter by letter, so ß isn’t SS', () => {
+    const { files, times } = project({}, ['/repo/src/grade.ts']);
+    const strasse = {
+      '/repo/src/straße.ts': files['/repo/src/grade.ts'],
+      '/repo/coverage.json': files['/repo/coverage.json'].replace(
+        '/repo/src/grade.ts',
+        '/repo/src/STRASSE.ts',
+      ),
+    };
+    const scored = run(['--coverage', 'coverage.json', 'src'], {
+      ...host(strasse, times),
+      caseInsensitive: true,
+    });
+    expect(scored.stderr).toEqual([
+      'The coverage report at coverage.json covers none of the 1 files being scored. Is it the report for this code, written from this folder?',
+    ]);
+  });
+
+  it('asks the host for a folder’s code files, and passes a file named outright apart', () => {
+    const { files, times } = project();
+    const findFiles = vi.fn(host(files, times).findFiles);
+    run(['--coverage', 'coverage.json', 'src'], { ...host(files, times), findFiles });
+    run(['--coverage', 'coverage.json', 'src/grade.ts'], { ...host(files, times), findFiles });
+    expect(findFiles.mock.calls).toEqual([
+      ['/repo', [`src/${CODE_FILES}`], expect.any(Array), []],
+      ['/repo', [], expect.any(Array), ['src/grade.ts']],
+    ]);
+  });
+
+  it('names the one file a report is older than', () => {
+    const { files, times } = project();
+    expect(
+      oxcrap(['--coverage', 'coverage.json', 'src'], files, { ...times, '/repo/src/grade.ts': 3 })
+        .stderr,
+    ).toEqual([
+      'The coverage report at coverage.json is older than src/grade.ts. Run the tests again, so it covers the code as it is.',
+    ]);
+  });
+
+  it('refuses paths given on the command line that hold nothing to score', () => {
+    const { files, times } = project({ '/repo/lib/grade.test.ts': branchy('check', 2) });
+    expect(oxcrap(['--coverage', 'coverage.json', 'lib'], files, times).stderr).toEqual([
+      'No files to score: nothing matches the paths given that "ignorePatterns" leaves in.',
+    ]);
+  });
+
+  it('scores a file whose relative import names no file', () => {
+    const grade = `import { KINDS } from './missing';\n${branchy('grade', 2)}`;
+    const { files, times } = project({ '/repo/src/grade.ts': grade });
+    expect(oxcrap(['--coverage', 'coverage.json', 'src'], files, times).status).toBe(0);
+  });
+
+  it('reads a module once however many scored files import it', () => {
+    function importer(name: string) {
+      return `import { KINDS } from '../lib/kinds';\nexport function ${name}(k: string) {\n  return KINDS.has(k);\n}\n`;
+    }
+    const { files, times } = project({
+      '/repo/lib/kinds.ts': "export const KINDS = new Set(['a']);\n",
+      '/repo/src/grade.ts': importer('grade'),
+      '/repo/src/rank.ts': importer('rank'),
+    });
+    const read = vi.fn(host(files, times).read);
+    run(['--coverage', 'coverage.json', 'src'], { ...host(files, times), read });
+    expect(read.mock.calls.filter(([path]) => path === '/repo/lib/kinds.ts')).toHaveLength(1);
+  });
+
   it('reports a message for anything thrown that isn’t an Error', () => {
     const broken: Host = {
       ...host({}),
@@ -271,6 +358,9 @@ describe('resolveImport', () => {
     '/repo/src/both.ts': '',
     '/repo/src/both/index.ts': '',
     '/repo/src/view.tsx': '',
+    '/repo/src/kinds.json.ts': '',
+    '/repo/src/shape.ts': '',
+    '/repo/src/shape.mts': '',
   });
 
   it.each([
@@ -280,6 +370,8 @@ describe('resolveImport', () => {
     ['./view.jsx', '/repo/src/view.tsx'],
     ['./lib', '/repo/src/lib/index.ts'],
     ['./both', '/repo/src/both.ts'],
+    ['./kinds.json.js', '/repo/src/kinds.json.ts'],
+    ['./shape.mjs', '/repo/src/shape.mts'],
     ['../src/kinds', '/repo/src/kinds.ts'],
     ['./missing', undefined],
   ])('%s from src/grade.ts is %s', (from, expected) => {
@@ -298,6 +390,7 @@ describe('outside', () => {
     ['src', false],
     ['..x/a.ts', false],
     ['a..b', false],
+    ['src/c:x', false],
   ])('%s → %s', (path, expected) => {
     expect(outside(path)).toBe(expected);
   });
@@ -307,11 +400,15 @@ describe('isUrl and outcome', () => {
   it('tells a URL from a path', () => {
     expect(isUrl('https://example.com')).toBe(true);
     expect(isUrl('docs/help.md')).toBe(false);
+    expect(isUrl('docs/https://example.com')).toBe(false);
   });
 
   it('prints the help line only with findings and a help value', () => {
     const finding = { file: 'a.ts', line: 1, message: 'm' };
     expect(outcome([finding], undefined).stderr).toEqual(['CRAP findings:\n- a.ts:1 m']);
+    expect(outcome([finding, { ...finding, line: 2 }], undefined).stderr).toEqual([
+      'CRAP findings:\n- a.ts:1 m\n- a.ts:2 m',
+    ]);
     expect(outcome([], 'HELP.md')).toEqual({
       status: 0,
       stdout: ['No CRAP findings.'],

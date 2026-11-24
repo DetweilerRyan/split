@@ -22,6 +22,7 @@ function describe(s: Scored) {
 }
 
 function order(a: Finding, b: Finding) {
+  // Stryker disable next-line EqualityOperator: the files differ by here, so `<=` is the same as `<`.
   return a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1;
 }
 
