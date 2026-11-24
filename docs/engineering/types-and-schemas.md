@@ -51,6 +51,16 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
 - **In a test, read through `?.`** so the assertion fails when the value is missing, or narrow with Vitest's `assert(value, message)` when the value is passed on.
 - **Let a table with known keys keep them:** write `satisfies Readonly<Record<string, T>>` instead of the annotation `: Readonly<Record<string, T>>`, as `PRESETS` in `src/data/presets.ts` does, so a read of one of its keys isn't possibly `undefined`.
 
+## Checked, not asserted
+
+`npm run lint` reports a type assertion, `x as T` or `<T>x`, outside tests, with oxlint's `typescript/consistent-type-assertions`. [`.oxlintrc.json`](../../.oxlintrc.json) turns it on, and exempts `*.test.*` files, `e2e/` and oxCrap's feature contract. `as const` is allowed.
+
+- **Parse a value from outside the program with a zod schema,** as _honest types_ says: JSON, storage, a peer's state or a library's `any`. Check only what the code reads, so the parse refuses no more than the code did.
+- **Narrow with a type guard,** a function returning `value is T` that checks what `T` claims, or a predicate passed to `every` or `filter`.
+- **Write `satisfies T`** where the cast only checked a shape, and **a type annotation**, `const x: T = value`, where `value` is already assignable to `T`.
+- **In oxCrap, read an oxc-parser AST field through `complexity.ts`'s parsers,** since oxCrap imports no zod: `parseNode`, `parseNodes`, `parseList` and `parseName` for a field the parser always fills, which throw if it doesn't, and `isNode` and `isNamed` for one it may not.
+- **When no check is possible,** such as a library's declared type that's wrong, disable the rule on that line with a reason, as [`AGENTS.md`](../../AGENTS.md#definition-of-done) requires.
+
 ## Changing this document
 
 The reasons for these rules and the decisions behind them are in [types-and-schemas.meta.md](types-and-schemas.meta.md). Read it only when changing or questioning a rule here.

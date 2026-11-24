@@ -3,19 +3,23 @@
 const MAX_KEYS = 1000;
 const hits = new Map<string, readonly number[]>();
 
+/** Drops the keys with no hits in the window, and the oldest if every key still has some. */
+function makeRoom(windowMs: number, now: number) {
+  for (const [k, times] of hits) {
+    if (times.every((time) => now - time >= windowMs)) hits.delete(k);
+  }
+  // Still full of active keys: drop the oldest rather than grow without bound.
+  const oldest = hits.keys().next();
+  if (hits.size >= MAX_KEYS && !oldest.done) hits.delete(oldest.value);
+}
+
 export function isRateLimited(
   key: string,
   limit = 30,
   windowMs = 60_000,
   now = Date.now(),
 ): boolean {
-  if (hits.size >= MAX_KEYS) {
-    for (const [k, times] of hits) {
-      if (times.every((time) => now - time >= windowMs)) hits.delete(k);
-    }
-    // Still full of active keys: drop the oldest rather than grow without bound.
-    if (hits.size >= MAX_KEYS) hits.delete(hits.keys().next().value as string);
-  }
+  if (hits.size >= MAX_KEYS) makeRoom(windowMs, now);
   const recent = (hits.get(key) ?? []).filter((time) => now - time < windowMs);
   const limited = recent.length >= limit;
   if (!limited) recent.push(now);

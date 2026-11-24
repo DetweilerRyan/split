@@ -3,7 +3,19 @@
 // function, read with a runtime key, counts like a switch; and a membership test, `.has`,
 // `.includes` or `in`, counts like an `||` chain. A table of plain values only decides which value
 // comes back, so reading it counts nothing. Why is in oxcrap.meta.md, "Lookup tables count".
-import { type AstNode, children, type Counting, isFunctionType, isNode } from './complexity.ts';
+import {
+  type AstNode,
+  children,
+  type Counting,
+  isFunctionType,
+  isNamed,
+  isNode,
+  type Named,
+  parseList,
+  parseName,
+  parseNode,
+  parseNodes,
+} from './complexity.ts';
 import { shadowedUses } from './recursion.ts';
 
 /** A static table: what holds it, how many entries, and whether any entry holds a function. */
@@ -57,17 +69,19 @@ function unwrap(node: unknown): unknown {
 function literalElements(node: unknown): readonly AstNode[] | undefined {
   const array = unwrap(node);
   if (!isNode(array) || array.type !== 'ArrayExpression') return undefined;
-  const elements = array.elements as readonly unknown[];
-  const fixed = elements.every((element) => isNode(element) && element.type !== 'SpreadElement');
-  return fixed ? (elements as readonly AstNode[]) : undefined;
+  const elements = parseList(array.elements);
+  const fixed = elements.every(
+    (element): element is AstNode => isNode(element) && element.type !== 'SpreadElement',
+  );
+  return fixed ? elements : undefined;
 }
 
 /** The names of the functions a module declares at its top level, by declaration or `const`. */
 function functionNames(program: AstNode): ReadonlySet<string> {
   const names = new Set<string>();
   for (const statement of topLevel(program)) {
-    if (statement.type === 'FunctionDeclaration' && isNode(statement.id)) {
-      names.add(statement.id.name as string);
+    if (statement.type === 'FunctionDeclaration' && isNamed(statement.id)) {
+      names.add(statement.id.name);
     }
     for (const [name, value] of constants(statement)) if (isFunction(value)) names.add(name);
   }
@@ -88,15 +102,11 @@ function holdsFunction(node: unknown, functions: ReadonlySet<string>): boolean {
   if (isFunction(value)) return true;
   switch (value.type) {
     case 'Identifier':
-      return functions.has(value.name as string);
+      return functions.has(parseName(value));
     case 'ObjectExpression':
-      return (value.properties as readonly AstNode[]).some((p) =>
-        holdsFunction(p.value, functions),
-      );
+      return parseNodes(value.properties).some((p) => holdsFunction(p.value, functions));
     case 'ArrayExpression':
-      return (value.elements as readonly unknown[]).some((element) =>
-        holdsFunction(element, functions),
-      );
+      return parseList(value.elements).some((element) => holdsFunction(element, functions));
     default:
       return false;
   }
@@ -119,16 +129,14 @@ function tableOf(init: unknown, functions: ReadonlySet<string>): Table | undefin
     }
     case 'CallExpression':
       // `Object.freeze({…})` is the table it freezes.
-      return isFreeze(value)
-        ? tableOf((value.arguments as readonly unknown[])[0], functions)
-        : undefined;
+      return isFreeze(value) ? tableOf(parseList(value.arguments)[0], functions) : undefined;
   }
   return undefined;
 }
 
 /** Whether `call` is `Object.freeze(…)`. */
 function isFreeze(call: AstNode) {
-  const callee = call.callee as AstNode;
+  const callee = parseNode(call.callee);
   return (
     isNode(callee.object) &&
     callee.object.name === 'Object' &&
@@ -141,21 +149,19 @@ function isFreeze(call: AstNode) {
 function collectionOf(expression: AstNode, functions: ReadonlySet<string>): Table | undefined {
   const callee = expression.callee;
   const name = isNode(callee) ? callee.name : undefined;
-  const elements = literalElements((expression.arguments as readonly unknown[])[0]);
+  const elements = literalElements(parseList(expression.arguments)[0]);
   if (!elements) return undefined;
   if (name === 'Set') return { kind: 'set', entries: elements.length, dispatch: false };
   if (name !== 'Map') return undefined;
   const pairs = elements.map((element) => literalElements(element));
-  if (!pairs.every((pair) => pair?.length === 2)) return undefined;
-  const dispatch = (pairs as readonly (readonly AstNode[])[]).some((pair) =>
-    holdsFunction(pair[1], functions),
-  );
+  if (!pairs.every((pair): pair is readonly AstNode[] => pair?.length === 2)) return undefined;
+  const dispatch = pairs.some((pair) => holdsFunction(pair[1], functions));
   return { kind: 'map', entries: elements.length, dispatch };
 }
 
 /** An object literal with no spread, whose size is fixed. */
 function objectOf(object: AstNode, functions: ReadonlySet<string>): Table | undefined {
-  const properties = object.properties as readonly AstNode[];
+  const properties = parseNodes(object.properties);
   if (properties.some((property) => property.type !== 'Property')) return undefined;
   const dispatch = properties.some((property) => holdsFunction(property.value, functions));
   return { kind: 'object', entries: properties.length, dispatch };
@@ -166,7 +172,7 @@ function objectOf(object: AstNode, functions: ReadonlySet<string>): Table | unde
  * and an expression statement or `export =` as its expression.
  */
 function topLevel(program: AstNode): readonly AstNode[] {
-  return (program.body as readonly AstNode[]).map((statement) => {
+  return parseNodes(program.body).map((statement) => {
     // Only an export has a `declaration`, and only `x;` or `export = x` an `expression` node.
     const inner = statement.declaration ?? statement.expression;
     return isNode(inner) ? inner : statement;
@@ -177,9 +183,9 @@ function topLevel(program: AstNode): readonly AstNode[] {
 function constants(statement: AstNode): readonly (readonly [string, unknown])[] {
   // Only a VariableDeclaration has a `kind` of 'const'.
   if (statement.kind !== 'const') return [];
-  return (statement.declarations as readonly AstNode[]).flatMap((declarator) =>
-    isNode(declarator.id) && declarator.id.type === 'Identifier'
-      ? [[declarator.id.name as string, declarator.init] as readonly [string, unknown]]
+  return parseNodes(statement.declarations).flatMap((declarator) =>
+    isNamed(declarator.id) && declarator.id.type === 'Identifier'
+      ? [[declarator.id.name, declarator.init] as const]
       : [],
   );
 }
@@ -203,18 +209,18 @@ function addition(
 /** `T.k = v` or `T[k] = v`: the table's name and the value. */
 function assigned(assignment: AstNode) {
   // Only a MemberExpression has an `object`.
-  const target = assignment.left as AstNode;
-  if (!isNode(target.object)) return undefined;
-  return { name: target.object.name as string, value: assignment.right };
+  const target = parseNode(assignment.left);
+  if (!isNamed(target.object)) return undefined;
+  return { name: target.object.name, value: assignment.right };
 }
 
 /** `T.set(k, v)` or `T.add(x)`: the table's name and the value. */
 function added(call: AstNode) {
   // Only a MemberExpression has an `object`.
-  const callee = call.callee as AstNode;
-  if (!isNode(callee.object)) return undefined;
-  const name = callee.object.name as string;
-  const args = call.arguments as readonly unknown[];
+  const callee = parseNode(call.callee);
+  if (!isNamed(callee.object)) return undefined;
+  const name = callee.object.name;
+  const args = parseList(call.arguments);
   switch (isNode(callee.property) ? callee.property.name : undefined) {
     case 'set':
       return { name, value: args[1] };
@@ -226,17 +232,18 @@ function added(call: AstNode) {
 
 /** The names a module imports from relative paths. */
 function importsOf(program: AstNode): readonly Import[] {
-  return (program.body as readonly AstNode[]).flatMap((statement) => {
+  return parseNodes(program.body).flatMap((statement) => {
     if (statement.type !== 'ImportDeclaration' || !isNode(statement.source)) return [];
-    const from = statement.source.value as string;
+    const from = String(statement.source.value);
     if (!/^\.\.?(\/|$)/.test(from)) return [];
-    // Only an ImportSpecifier has an `imported` name: a default or namespace import has none.
-    return (statement.specifiers as readonly AstNode[]).flatMap((specifier) =>
-      isNode(specifier.imported) && isNode(specifier.local)
+    // Only an ImportSpecifier has an `imported` name: a default or namespace import has none, and
+    // nor does a string, as in `import { 'a-b' as c }`.
+    return parseNodes(statement.specifiers).flatMap((specifier) =>
+      isNamed(specifier.imported) && isNamed(specifier.local)
         ? [
             {
-              local: specifier.local.name as string,
-              imported: specifier.imported.name as string,
+              local: specifier.local.name,
+              imported: specifier.imported.name,
               from,
             },
           ]
@@ -247,7 +254,7 @@ function importsOf(program: AstNode): readonly Import[] {
 
 /** The tables a module exports, by the name another module imports them as. */
 function exportsOf(program: AstNode, own: Tables, functions: ReadonlySet<string>): Exports {
-  const names = (program.body as readonly AstNode[]).flatMap(exportedNames);
+  const names = parseNodes(program.body).flatMap(exportedNames);
   const tables = new Map<string, Table>();
   const exportedFunctions = new Set<string>();
   for (const [local, name] of names) {
@@ -264,12 +271,12 @@ function exportedNames(statement: AstNode): readonly (readonly [string, string])
   const declared: [string, string][] = isNode(declaration)
     ? declaredNames(declaration).map((name) => [name, name])
     : [];
-  const specified = (statement.specifiers as readonly AstNode[]).map(
-    (specifier) =>
-      [(specifier.local as AstNode).name, (specifier.exported as AstNode).name] as readonly [
-        string,
-        string,
-      ],
+  // Without a `from`, what's exported is a local, so it has a name. What it's exported as has none
+  // when it's a string, as in `export { T as 'a-b' }`.
+  const specified = parseNodes(statement.specifiers).flatMap((specifier) =>
+    isNamed(specifier.exported)
+      ? [[parseName(specifier.local), specifier.exported.name] as const]
+      : [],
   );
   return [...declared, ...specified];
 }
@@ -277,8 +284,7 @@ function exportedNames(statement: AstNode): readonly (readonly [string, string])
 /** The names an exported declaration declares: a function's, or its `const`s. */
 function declaredNames(declaration: AstNode): readonly string[] {
   // An exported function declaration always has a name.
-  if (declaration.type === 'FunctionDeclaration')
-    return [(declaration.id as AstNode).name as string];
+  if (declaration.type === 'FunctionDeclaration') return [parseName(declaration.id)];
   return constants(declaration).map(([name]) => name);
 }
 /** A module's static tables: `const`s built from literals, with what its top level adds to them. */
@@ -355,22 +361,22 @@ function mutatedInFunctions(
   const inside = inFunction || isFunctionType(node.type);
   const changed = inside ? mutatedName(node) : undefined;
   // A local of the same name is another object.
-  if (changed && !shadowed.has(changed)) into.add(changed.name as string);
+  if (changed && !shadowed.has(changed)) into.add(changed.name);
   for (const child of children(node)) mutatedInFunctions(child, shadowed, into, inside);
   return into;
 }
 
 /** The name, as written, of the object `node` changes an entry of, if it does. */
-function mutatedName(node: AstNode): AstNode | undefined {
+function mutatedName(node: AstNode): Named | undefined {
   switch (node.type) {
     case 'AssignmentExpression':
-      return objectName(node.left as AstNode);
+      return objectName(parseNode(node.left));
     case 'UpdateExpression':
-      return objectName(node.argument as AstNode);
+      return objectName(parseNode(node.argument));
     case 'UnaryExpression':
-      return node.operator === 'delete' ? objectName(node.argument as AstNode) : undefined;
+      return node.operator === 'delete' ? objectName(parseNode(node.argument)) : undefined;
     case 'CallExpression':
-      return mutatorCallee(node.callee as AstNode);
+      return mutatorCallee(parseNode(node.callee));
   }
   return undefined;
 }
@@ -379,16 +385,16 @@ function mutatedName(node: AstNode): AstNode | undefined {
  * The name a member expression reads from, through casts: `T` in `(T as X)[k]`. Any other node has
  * no `object`, so it names nothing.
  */
-function objectName(node: AstNode): AstNode | undefined {
-  const object = unwrap((unwrap(node) as AstNode).object);
+function objectName(node: AstNode): Named | undefined {
+  const object = unwrap(parseNode(unwrap(node)).object);
   // Stryker disable next-line ConditionalExpression: any other object has no `name`, so it names no table and no local, and adds nothing the caller keeps.
-  return isNode(object) && object.type === 'Identifier' ? object : undefined;
+  return isNamed(object) && object.type === 'Identifier' ? object : undefined;
 }
 
 /** The object a call changes through one of its methods, as `T` in `T.set(k, v)`. */
-function mutatorCallee(callee: AstNode): AstNode | undefined {
-  if (!isNode(callee.property)) return undefined;
-  return isMutator(callee.property.name as string) ? objectName(callee) : undefined;
+function mutatorCallee(callee: AstNode): Named | undefined {
+  if (!isNamed(callee.property)) return undefined;
+  return isMutator(callee.property.name) ? objectName(callee) : undefined;
 }
 
 /** Whether a method changes the Set, Map or array it's called on. */
@@ -421,7 +427,7 @@ function isMutator(method: string) {
 function staticKey(node: unknown): boolean {
   if (!isNode(node)) return true;
   if (node.type === 'Literal') return true;
-  return node.type === 'TemplateLiteral' && (node.expressions as readonly unknown[]).length === 0;
+  return node.type === 'TemplateLiteral' && parseList(node.expressions).length === 0;
 }
 
 /** What a membership test over `entries` adds, as the `||` chain it stands for would. */
@@ -440,13 +446,13 @@ function dispatch(entries: number, counting: Counting) {
 /** The table an expression names, if it's one of `tables`. Only an Identifier has a `name`. */
 function tableNamed(node: unknown, readable: Readable): Table | undefined {
   const value = unwrap(node);
-  if (!isNode(value) || readable.shadowed.has(value)) return undefined;
-  return readable.tables.get(value.name as string);
+  if (!isNamed(value) || readable.shadowed.has(value)) return undefined;
+  return readable.tables.get(value.name);
 }
 
 /** What a method call on a table adds: `.has` and `.includes` as membership, `.get` as dispatch. */
 function methodAdds(call: AstNode, readable: Readable, counting: Counting) {
-  const callee = call.callee as AstNode;
+  const callee = parseNode(call.callee);
   const table = tableNamed(callee.object, readable);
   if (!table || !isNode(callee.property)) return 0;
   switch (callee.property.name) {
@@ -463,7 +469,7 @@ function methodAdds(call: AstNode, readable: Readable, counting: Counting) {
 
 /** `T.get(k)` on a dispatch Map, with a runtime key, counts as the switch it stands for. */
 function getAdds(call: AstNode, table: Table, counting: Counting) {
-  const key = (call.arguments as readonly unknown[])[0];
+  const key = parseList(call.arguments)[0];
   if (table.kind !== 'map' || !table.dispatch || staticKey(key)) return 0;
   return dispatch(table.entries, counting);
 }
@@ -474,7 +480,7 @@ function getAdds(call: AstNode, table: Table, counting: Counting) {
  */
 function callAdds(call: AstNode, readable: Readable, counting: Counting) {
   // A callee other than a member has no `object`, so methodAdds finds no table in it.
-  const callee = call.callee as AstNode;
+  const callee = parseNode(call.callee);
   if (!callee.computed) return methodAdds(call, readable, counting);
   if (staticKey(callee.property)) return 0;
   return tableNamed(callee.object, readable)?.dispatch ? 0 : 1;

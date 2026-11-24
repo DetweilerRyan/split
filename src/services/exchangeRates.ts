@@ -1,14 +1,25 @@
+import { z } from 'zod';
 import { normalizeCurrency } from '../domain/money/currency';
 
-export interface ExchangeRate {
-  readonly base: string;
-  readonly quote: string;
-  readonly rate: number;
-  /** Publication date of the rate (YYYY-MM-DD) as reported by the provider. */
-  readonly date: string;
-  /** Epoch ms when the rate was fetched. */
-  readonly fetchedAt: number;
-}
+/** A rate as it's cached in IndexedDB, which gives back whatever it was given. */
+const exchangeRateSchema = z
+  .object({
+    base: z.string(),
+    quote: z.string(),
+    rate: z.number(),
+    /** Publication date of the rate (YYYY-MM-DD) as reported by the provider. */
+    date: z.string(),
+    /** Epoch ms when the rate was fetched. */
+    fetchedAt: z.number(),
+  })
+  .readonly();
+export type ExchangeRate = z.infer<typeof exchangeRateSchema>;
+
+/** What the rate provider answers, checked only as far as getExchangeRate reads it. */
+const rateResponseSchema = z.object({
+  date: z.unknown(),
+  rates: z.record(z.string(), z.unknown()).optional(),
+});
 
 const DB_NAME = 'splitsmart-rates';
 const STORE = 'rates';
@@ -35,7 +46,7 @@ async function readCache(key: string): Promise<ExchangeRate | null> {
   return new Promise((resolve) => {
     try {
       const request = db.transaction(STORE).objectStore(STORE).get(key);
-      request.onsuccess = () => resolve((request.result as ExchangeRate | undefined) ?? null);
+      request.onsuccess = () => resolve(exchangeRateSchema.safeParse(request.result).data ?? null);
       request.onerror = () => resolve(null);
     } catch {
       resolve(null);
@@ -80,10 +91,7 @@ export async function getExchangeRate(
   try {
     const response = await fetch(`${API}?base=${base}&symbols=${quote}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = (await response.json()) as {
-      readonly date?: string;
-      readonly rates?: Readonly<Record<string, number>>;
-    };
+    const data = rateResponseSchema.parse(await response.json());
     const rate = data.rates?.[quote];
     if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error('No rate');
     const fresh: ExchangeRate = {

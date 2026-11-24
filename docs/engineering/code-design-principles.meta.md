@@ -311,6 +311,10 @@ Asked for on [#116](https://github.com/DetweilerRyan/split/issues/116): the chec
 - **A named re-export,** such as `export { a } from './a'`, isn't a barrel to `oxc/no-barrel-file`, which counts only `export *`. A module of only named re-exports is a pass-through that review has to catch.
 - **A module-level `const` holding a mutable object,** such as a `Map` that functions change, is state too. Review has to catch it.
 
+## No type assertions
+
+- **Lint enforces part of _honest types_** since [#117](https://github.com/DetweilerRyan/split/issues/117): `typescript/consistent-type-assertions` reports `x as T` outside tests, since an assertion claims a type without the parse the principle asks for. [Types and schemas](types-and-schemas.md#checked-not-asserted) owns what to write instead, and [its sidecar](types-and-schemas.meta.md#checked-not-asserted) the decisions.
+
 ## What would reopen this
 
 - **A principle an agent follows unprompted.** As models grow more capable, a principle they apply without being told becomes an instruction that only costs attention. Remove it then, and keep the rules its owning documents enforce.

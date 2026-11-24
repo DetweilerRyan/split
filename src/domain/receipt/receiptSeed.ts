@@ -12,6 +12,8 @@ function text(max = MAX_TEXT) {
     .max(max, { error: `must be at most ${max} characters` });
 }
 const amount = z.number({ error: 'must be a finite number' });
+/** An item's id, read on its own to find duplicates even when the rest of the item is invalid. */
+const withId = z.object({ id: z.string() });
 const currencyCode = z
   .string({ error: 'must be an ISO 4217 currency code' })
   .refine(isValidCurrency, { error: 'must be an ISO 4217 currency code' });
@@ -114,8 +116,8 @@ export const receiptSeedSchema = immutable(
               if (!Array.isArray(items)) return;
               const seen = new Set<string>();
               items.forEach((item, index) => {
-                const id = (item as { readonly id?: unknown } | null)?.id;
-                if (typeof id !== 'string') return;
+                const id = withId.safeParse(item).data?.id;
+                if (id === undefined) return;
                 if (seen.has(id))
                   ctx.addIssue({
                     code: 'custom',
