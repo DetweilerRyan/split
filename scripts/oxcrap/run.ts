@@ -97,6 +97,7 @@ class Run {
   readConfig(path: string | undefined): Partial<Config> {
     if (!path) return {};
     const options = parseConfig(this.host.read(path), this.shown(path));
+    // Stryker disable next-line ArrayDeclaration: the mutant's ["Stryker was here"] holds no path outside the folder, so `find` still finds nothing.
     const escaping = (options.files ?? []).find(outside);
     if (escaping) {
       throw new Error(
@@ -186,6 +187,7 @@ class Run {
       Object.entries(report).map(([path, file]) => [this.pathKey(path), file]),
     );
     const covered = sources.filter((path) => byPath.has(this.pathKey(path))).length;
+    // Stryker disable next-line ConditionalExpression,EqualityOperator: `score` stops before this when there are no files to score, so `sources` is never empty here.
     if (sources.length > 0 && covered === 0) {
       throw new Error(
         `The coverage report at ${this.shown(reportPath)} covers none of the ${sources.length} files being scored. Is it the report for this code, written from this folder?`,
@@ -238,6 +240,7 @@ class Run {
     const given = positionals.length > 0 ? this.pathsFor(root, positionals) : undefined;
     const config = merge(fromFile, { files: given?.globs });
     const coverage = this.coveragePath(values.coverage, config.coverage, root);
+    // Stryker disable next-line StringLiteral: only a config file can give `helpUrl`, so with no config file this name is never shown.
     const named = configPath ? `"helpUrl" in ${this.shown(configPath)}` : 'the config';
     const help = this.helpFrom(values['help-url'], config.helpUrl, root, named);
     const files = this.host.findFiles(

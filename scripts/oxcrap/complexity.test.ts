@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { COUNT_ALL, COUNT_SEPARATELY, type Counting } from './complexity.ts';
+import {
+  COUNT_ALL,
+  COUNT_SEPARATELY,
+  type Counting,
+  complexity,
+  isFunctionType,
+  isNode,
+} from './complexity.ts';
 import { parse } from './functions.ts';
 
 /** Counting as before #74, for the tests that pin it. */
@@ -117,6 +124,14 @@ describe('complexity', () => {
     expect(complexityOf('function f(a = b ? 1 : 2) { return a; }', SEPARATELY)).toBe(2);
   });
 
+  it('leaves out an arrow function’s body when that body is itself a function scored on its own', () => {
+    const { functions } = parse('example.ts', 'const f = () => (n) => (n ? 1 : 2);', SEPARATELY);
+    expect(functions.map((fn) => [fn.name, fn.complexity])).toEqual([
+      ['f', 1],
+      ['f > (anonymous)', 2],
+    ]);
+  });
+
   it('leaves out the branches of a nested function when each is scored on its own', () => {
     const { functions } = parse(
       'example.ts',
@@ -146,5 +161,59 @@ describe('complexity', () => {
         'view.tsx',
       ),
     ).toBe(2);
+  });
+});
+
+describe('isNode', () => {
+  it('is true only for an object with a string type, as every AST node has', () => {
+    expect(isNode({ type: 'Identifier', start: 0, end: 1 })).toBe(true);
+    // A template's `value` and a regular expression's `regex` are objects, but not nodes.
+    expect(isNode({ raw: 'a', cooked: 'a' })).toBe(false);
+    expect(isNode({ type: 1 })).toBe(false);
+    expect(isNode(null)).toBe(false);
+    expect(isNode('Identifier')).toBe(false);
+  });
+});
+
+describe('isFunctionType', () => {
+  it('is true for the three function node types, and false for any other', () => {
+    expect(
+      ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'].map(isFunctionType),
+    ).toEqual([true, true, true]);
+    expect(isFunctionType('IfStatement')).toBe(false);
+  });
+});
+
+describe('complexity of a hand-built node', () => {
+  it('counts what `also` adds for each node, and nothing without it', () => {
+    const fn = {
+      type: 'FunctionDeclaration',
+      start: 0,
+      end: 0,
+      body: { type: 'BlockStatement', start: 0, end: 0, body: [] },
+    };
+    expect(complexity(fn)).toBe(1);
+    expect(complexity(fn, COUNT_ALL, (node) => (node.type === 'BlockStatement' ? 2 : 0))).toBe(3);
+  });
+
+  it('counts a switch with no list of cases as one with none', () => {
+    const fn = {
+      type: 'FunctionDeclaration',
+      start: 0,
+      end: 0,
+      body: { type: 'SwitchStatement', start: 0, end: 0 },
+    };
+    expect(complexity(fn, { ...COUNT_ALL, switchCases: 'once' })).toBe(1);
+  });
+
+  it('counts the runs of a logical expression missing an operand from what it has', () => {
+    const name = { type: 'Identifier', start: 0, end: 0, name: 'a' };
+    const fn = {
+      type: 'FunctionDeclaration',
+      start: 0,
+      end: 0,
+      body: { type: 'LogicalExpression', start: 0, end: 0, operator: '&&', left: name },
+    };
+    expect(complexity(fn, { ...COUNT_ALL, logicalOperators: 'sequence' })).toBe(2);
   });
 });

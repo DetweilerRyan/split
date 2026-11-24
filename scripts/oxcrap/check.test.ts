@@ -108,4 +108,39 @@ describe('check', () => {
     );
     expect(findings.map((f) => f.line)).toEqual([5, 30]);
   });
+
+  it('orders findings by file before line', () => {
+    const inB = { ...scored('b', 12, 0, 5), file: 'src/b.ts' };
+    const inA = scored('a', 12, 0, 30);
+    const inC = { ...scored('c', 12, 0, 1), file: 'src/c.ts' };
+    expect(check([inB, inA, inC], new Map(), limits).map((f) => [f.file, f.line])).toEqual([
+      ['src/a.ts', 30],
+      ['src/b.ts', 5],
+      ['src/c.ts', 1],
+    ]);
+  });
+
+  it('passes a fully tested function at the complexity limit', () => {
+    expect(check([scored('a', 10, 1)], new Map(), limits)).toEqual([]);
+  });
+
+  it('reports a @crap-allow comment’s problem at the comment, not at its function', () => {
+    const s = scored('a', 4, 0, 10);
+    const allow = { ...allowFor(20, 4, 8), file: 'src/allowed.ts' };
+    expect(check([s], new Map([[s.fn, allow]]), limits)).toEqual([
+      {
+        file: 'src/allowed.ts',
+        line: 8,
+        message:
+          "a: CRAP 20, complexity 4, coverage 0%. It's within the limits now, so delete its @crap-allow comment.",
+      },
+    ]);
+  });
+
+  it('fails a @crap-allow comment whose CRAP matches but whose complexity doesn’t', () => {
+    const s = scored('a', 12, 0);
+    expect(messages(check([s], new Map([[s.fn, allowFor(156, 13)]]), limits))).toEqual([
+      'a: CRAP 156, complexity 12, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 13. Update the comment to `// @crap-allow CRAP 156, complexity 12.`, and check its reason still holds.',
+    ]);
+  });
 });
