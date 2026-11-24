@@ -218,7 +218,6 @@ export class ReceiptStore {
   }
 }
 
-// @crap-allow CRAP 56, complexity 7. Debt from before nested functions, default values and ?. counted (#74): no tests yet.
 export function useReceiptStore(store: ReceiptStore | null): RoomSnapshot {
   return useSyncExternalStore(
     store?.subscribe ?? (() => () => undefined),

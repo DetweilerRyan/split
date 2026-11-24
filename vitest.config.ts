@@ -72,6 +72,13 @@ export default defineConfig({
         extends: true,
         // Bundle these before the first test. Found partway through a run instead, Vite
         // reloads the page and loads a second copy of React.
+        // There is no `process` in the browser. Next replaces each `process.env.NEXT_PUBLIC_*` the
+        // app reads with its value when it builds, so the store and providers can be imported here,
+        // as if built with neither set: no Liveblocks key, and the default signaling servers.
+        define: {
+          'process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY': 'undefined',
+          'process.env.NEXT_PUBLIC_WEBRTC_SIGNALING_URLS': 'undefined',
+        },
         optimizeDeps: {
           include: [
             'react',
@@ -79,6 +86,13 @@ export default defineConfig({
             'react-dom/client',
             'react/jsx-dev-runtime',
             'lucide-react',
+            'next/navigation',
+            'qrcode-generator',
+            'yjs',
+            'y-indexeddb',
+            'y-webrtc',
+            '@liveblocks/client',
+            '@liveblocks/yjs',
           ],
         },
         test: {

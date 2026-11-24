@@ -33,6 +33,13 @@ Why [code layout](code-layout.md) puts code where it does, where its layers came
 - **"New src/services/"** was the owner's answer ([decisions](https://github.com/DetweilerRyan/split/issues/94#issuecomment-7122174375)), for `exchangeRates.ts`, which fetches and caches rates from a service and is neither a business rule nor a helper. The option the owner chose was described there as: `exchangeRates.ts` moves to `src/services/`, which may import `domain/` and `utils/`, but nothing UI or sync.
 - **Not taken:** putting it in `src/store/`, or leaving it in `src/utils/`.
 
+### Hooks per concern, in `src/hooks/`
+
+- **"Hooks per concern":** the owner's answer on [#93](https://github.com/DetweilerRyan/split/issues/93) for splitting `RoomView`: `useIdentity`, `useSeedImport`, `useSharing`, `useExchangeRate`, `useToast` and so on, each a function of its inputs, with `RoomView` composing them and rendering.
+- **They go in `src/hooks/`,** beside `useActiveIdentity` and `useRoomProvider`, which were already there. #93 didn't name a folder, so this was the reversible default.
+- **Inputs are arguments** so that each hook is tested with fakes, as [testing conventions](testing-conventions.md#replacing-external-dependencies) prefer, and so the owner's "each hook and component" are tested on their own.
+- **Not taken:** components that own their dialog's state, the other option #93 offered.
+
 ### The folder rule lives here
 
 - **"New code-layout.md":** a procedure of its own, with an index row and this sidecar, while the import rules stay rows in [dependency direction](dependency-direction.md) ([decisions](https://github.com/DetweilerRyan/split/issues/94#issuecomment-7122174375)).
