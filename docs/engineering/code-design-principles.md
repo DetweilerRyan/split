@@ -66,7 +66,7 @@ An abstraction made before its second use is a guess, and a wrong one costs more
 
 ## 5. Give each module a small interface over a lot of behaviour
 
-A module earns its place by carrying complexity its callers would otherwise carry, as a [deep module](testing-conventions.md#feature-contracts-for-deep-modules) does.
+A module earns its place by carrying complexity its callers would otherwise carry. A deep module is one whose small interface hides much more logic than the interface shows. It might be a program with a command line, or a simplified abstraction over complex code that callers use through a few functions.
 
 - **Test a module by imagining it deleted.** If its complexity would reappear in each caller, it's earning its place. If the complexity would vanish with it, it's a pass-through: fold it into its caller.
 - **Its interface is everything a caller relies on:** its exports and types, and also the invariants it keeps and the errors it can raise. Test it through that interface. A test that has to reach past it means the module has the wrong shape.
