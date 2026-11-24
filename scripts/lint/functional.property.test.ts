@@ -59,31 +59,85 @@ const statement = fc.constantFrom<Code>(
   { code: "const saidID = 'this';", classes: 0, thises: 0 },
   { code: 'thisValue;', classes: 0, thises: 0 },
   { code: '// this.value', classes: 0, thises: 0 },
+  // `typeof this` only names a type, so it reads nothing at run time.
+  { code: 'let typedID: typeof this;', classes: 0, thises: 0 },
+  { code: 'let fieldID: typeof this.value;', classes: 0, thises: 0 },
 );
 const body = fc.array(statement, { maxLength: 3 }).map(join);
 
-/** A class, in one of the places a class can be written, with a method holding `body`. */
-const classCode = fc
-  .tuple(name, heritage, body, fc.constantFrom('declaration', 'export', 'expression', 'argument'))
-  .map(([n, { clause, error }, inner, place]): Code => {
-    const members = `{\n  method() {\n${inner.code}\n  }\n}`;
-    const classes = error ? 0 : 1;
-    switch (place) {
-      case 'declaration':
-        return { code: `class ${n}ID${clause} ${members}`, classes, thises: inner.thises };
-      case 'export':
-        return { code: `export class ${n}ID${clause} ${members}`, classes, thises: inner.thises };
-      case 'expression':
-        return { code: `const ${n}ID = class${clause} ${members};`, classes, thises: inner.thises };
-      default:
-        return { code: `use(class${clause} ${members});`, classes, thises: inner.thises };
-    }
-  });
+/** The member of a class that holds a body. */
+const member = fc.constantFrom('method', 'field', 'static block', 'constructor', 'getter');
+
+/** A class's members, with `inner` in the member `held`. A derived class calls `super()` first. */
+function membersOf(held: string, inner: string, derived: boolean): string {
+  switch (held) {
+    case 'method':
+      return `{\n  method() {\n${inner}\n  }\n}`;
+    case 'field':
+      return `{\n  value = () => {\n${inner}\n  };\n}`;
+    case 'static block':
+      return `{\n  static {\n${inner}\n  }\n}`;
+    case 'constructor':
+      return `{\n  constructor() {\n${derived ? 'super();\n' : ''}${inner}\n  }\n}`;
+    default:
+      return `{\n  get value() {\n${inner}\n    return 1;\n  }\n}`;
+  }
+}
+
+/** A class with `members`, written in `place`. */
+function classIn(place: string, n: string, clause: string, members: string): string {
+  switch (place) {
+    case 'declaration':
+      return `class ${n}ID${clause} ${members}`;
+    case 'export':
+      return `export class ${n}ID${clause} ${members}`;
+    case 'export default':
+      return `export default class${clause} ${members}`;
+    case 'expression':
+      return `const ${n}ID = class${clause} ${members};`;
+    case 'argument':
+      return `use(class${clause} ${members});`;
+    case 'namespace':
+      return `namespace SpaceID {\n  class ${n}${clause} ${members}\n}`;
+    case 'function':
+      return `function holdID() {\n  class ${n}${clause} ${members}\n}`;
+    default:
+      // Nested in another class, which is reported too.
+      return `class OuterID {\n  static Inner = class${clause} ${members};\n}`;
+  }
+}
+
+/** A class written in one of `places`, with a member holding a generated body. */
+function classAt(places: fc.Arbitrary<string>): fc.Arbitrary<Code> {
+  return fc
+    .tuple(places, name, heritage, body, member)
+    .map(([place, n, { clause, error }, inner, held]) => ({
+      code: classIn(place, n, clause, membersOf(held, inner.code, clause !== '')),
+      classes: (error ? 0 : 1) + (place === 'nested' ? 1 : 0),
+      thises: inner.thises,
+    }));
+}
+
+const placedClass = classAt(
+  fc.constantFrom(
+    'declaration',
+    'export',
+    'expression',
+    'argument',
+    'namespace',
+    'function',
+    'nested',
+  ),
+);
+/** A module may have only one `export default`, so a program has at most one of these. */
+const defaultClass = classAt(fc.constant('export default'));
 
 /** Top-level code that's neither a class nor `this`, though it looks like one. */
 const lookAlike = fc.constantFrom<Code>(
   { code: 'function typedID(this: Window) {}', classes: 0, thises: 0 },
   { code: 'interface ChainID { next(): this }', classes: 0, thises: 0 },
+  { code: 'type SelfID = { m(): typeof this };', classes: 0, thises: 0 },
+  { code: 'function pickID(this: A, y: typeof this.x) {}', classes: 0, thises: 0 },
   { code: "const klassID = { className: 'row' };", classes: 0, thises: 0 },
   { code: 'function StoreID() { return {}; }', classes: 0, thises: 0 },
 );
@@ -95,8 +149,14 @@ const functionCode = body.map((inner) => ({
 }));
 
 const program = fc
-  .array(fc.oneof(classCode, lookAlike, functionCode, statement), { minLength: 1, maxLength: 4 })
-  .map(join);
+  .tuple(
+    fc.array(fc.oneof(placedClass, lookAlike, functionCode, statement), {
+      minLength: 1,
+      maxLength: 4,
+    }),
+    fc.option(defaultClass, { nil: undefined }),
+  )
+  .map(([parts, last]) => join(last ? [...parts, last] : parts));
 
 /** Checks that `rule` reports `count` problems in `code`. */
 function reports(
