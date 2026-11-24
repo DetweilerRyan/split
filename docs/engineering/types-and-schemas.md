@@ -26,15 +26,9 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
 
 ## Readonly by default
 
-`npm run lint` checks these rules with `readonly/types`, a local rule in [`scripts/lint/readonly.ts`](../../scripts/lint/readonly.ts). [`.oxlintrc.json`](../../.oxlintrc.json) loads it under `jsPlugins` and turns it on under `rules`. They apply to every type in `app/`, `src/`, `scripts/` and `e2e/`, tests included, wherever it's written: an alias, an interface, a parameter, a return type, a type argument, a cast or a module-level variable.
+`npm run lint` checks every type in `app/`, `src/`, `scripts/` and `e2e/`, tests included, with `readonly/types`, a local rule in [`scripts/lint/readonly.ts`](../../scripts/lint/readonly.ts). [`.oxlintrc.json`](../../.oxlintrc.json) loads it under `jsPlugins` and turns it on under `rules`.
 
-- **Write each type readonly:**
-  - `readonly T[]` and `readonly [A, B]`, not `T[]` and `[A, B]`;
-  - `ReadonlyArray<T>`, `ReadonlyMap<K, V>` and `ReadonlySet<T>`, not `Array`, `Map` and `Set`;
-  - `Readonly<Record<K, V>>`, not `Record<K, V>`;
-  - `readonly` on each property and index signature of an object type or interface, and on each mapped type, or the object type wrapped in `Readonly<…>`.
-- **Make each level readonly on its own.** `Readonly<…>` reaches only the top level of its argument, through a union or an intersection: in `Readonly<{ a: { b: string } }>`, `b` still needs `readonly`, and a `Map` or `Set` inside is still mutable.
-- **A variable declared inside a function may have a mutable type,** as a working value: `const out: string[] = []`, then `out.push(…)`. Return it as a readonly type. A type alias, a type argument or a cast inside a function is still checked.
+- **Write each type readonly, level by level, as the rule requires.** [Its README](../../scripts/lint/readonly.md) lists what it reports and what to write instead, and allows a mutable working value in a variable declared inside a function.
 - **Don't change a readonly value in place.** Build a new one with `map`, `filter`, spread or a sorted copy.
 - **Give a zod schema that owns a type `.readonly()`** on each object and array, so `z.infer` gives a readonly type. In `src/domain/receipt/receiptSeed.ts`, `immutable` does it for the seed, whose JSON Schema the MCP tool serves.
 - **Write a module-level constant built from literals `as const`.** When a library's parameter takes a mutable array, pass it a copy, as in `[...signalingUrls]`.

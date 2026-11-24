@@ -1,7 +1,7 @@
 // A local oxlint JS plugin that makes the types we declare readonly by default. `.oxlintrc.json`
 // loads it through "jsPlugins" and turns on its rule as `readonly/types`. What the rule asks of
-// code is in docs/engineering/types-and-schemas.md; why it is as it is, and what it doesn't check,
-// is in that document's sidecar. Read the sidecar only when changing or questioning the rule.
+// code, and what it doesn't check, is in readonly.md beside this file; why it works as it does is
+// in readonly.meta.md. Read the sidecar only when changing or questioning the rule.
 // Node, and so oxlint, runs this as TypeScript by stripping the types, so use only syntax that
 // erases: no enums, namespaces or parameter properties.
 import type { RuleTester } from 'oxlint/plugins-dev';
