@@ -85,3 +85,48 @@ tester.run('no-this', noThis, {
     { code: 'this;', errors: [{ messageId: 'noThis' }] },
   ],
 });
+
+const inClasses = [{ allowInClasses: true }];
+
+tester.run('no-this, with allowInClasses', noThis, {
+  valid: [
+    'class S { m() { return this.x; } }',
+    'class S { constructor() { this.x = 1; } }',
+    'class S { get x() { return this.y; } set x(v) { this.y = v; } }',
+    'class S { static make() { return new this(); } }',
+    'class S { #read() { return this.x; } }',
+    'class S { x = this.y; }',
+    'class S { read = () => this.x; }',
+    'class S { static { this.count = 0; } }',
+    'class S { accessor x = this.y; }',
+    'class S { m() { return items.map((i) => this.f(i)); } }',
+    'const S = class { m() { return this; } };',
+    'class NotFound extends Error { constructor() { super(); this.name = "NotFound"; } }',
+    'class Outer { m() { return class { n() { return this; } }; } }',
+  ].map((code) => ({ code, options: inClasses })),
+  invalid: [
+    'function f() { return this; }',
+    'const read = () => this.value;',
+    'this;',
+    'const o = { m() { return this.x; } };',
+    'class S { m() { return function () { return this; }; } }',
+    'class S { m() { function inner() { return this; } } }',
+    'class S { [this.key]() {} }',
+    'class S { [this.key] = 1; }',
+    'class S { @log(this) m() {} }',
+    'class S extends this.Base {}',
+    'class S { m = function () { return this; }; }',
+    'class S { [function () { return this; }]() {} }',
+  ].map((code) => ({ code, options: inClasses, errors: [{ messageId: 'noThis' }] })),
+});
+
+tester.run('no-this, with allowInClasses off', noThis, {
+  valid: [],
+  invalid: [
+    {
+      code: 'class S { m() { return this.x; } }',
+      options: [{ allowInClasses: false }],
+      errors: [{ messageId: 'noThis' }],
+    },
+  ],
+});

@@ -1,5 +1,5 @@
 // A local oxlint JS plugin that keeps the code functional: it bans classes, except Error
-// subclasses, and `this`. `.oxlintrc.json` loads it through "jsPlugins" and turns on its rules as
+// subclasses, and `this`, which its allowInClasses option allows inside the classes that are kept. `.oxlintrc.json` loads it through "jsPlugins" and turns on its rules as
 // `functional/no-classes` and `functional/no-this`. The rule is in docs/engineering/README.md's
 // "Code style"; why it, and this plugin, are as they are is in docs/engineering/README.meta.md.
 // Read that only when changing or questioning the plugin.
@@ -67,19 +67,64 @@ export const noClasses: Rule = {
   },
 };
 
+/** A node on the way up from a `this`, as far as `bindsToClass` needs to see it. */
+type Ancestor = ThisNode['parent'];
+
+/** Whether `fn`, a function, is the body of a class's method, constructor or accessor. */
+function isClassMethod(fn: Ancestor): boolean {
+  return fn.parent?.type === 'MethodDefinition' && fn.parent.value === fn;
+}
+
+/**
+ * Whether a `this` reads the class it's written in: the scope it binds to is a class's method,
+ * constructor, accessor, field value or static block. A `function` binds its own `this`, so one
+ * inside a method doesn't read the class; an arrow function binds none, so one does. A `this` in a
+ * computed key, a decorator or an `extends` clause reads the scope around the class.
+ */
+function bindsToClass(node: ThisNode): boolean {
+  let child: Ancestor = node;
+  let parent: Ancestor | null = node.parent;
+  while (parent) {
+    if (parent.type === 'FunctionExpression' || parent.type === 'FunctionDeclaration') {
+      return isClassMethod(parent);
+    }
+    if (parent.type === 'StaticBlock') return true;
+    if (parent.type === 'PropertyDefinition' || parent.type === 'AccessorProperty') {
+      if (parent.value === child) return true;
+    }
+    child = parent;
+    parent = parent.parent;
+  }
+  return false;
+}
+
+/** Whether `no-this`'s options, as `.oxlintrc.json` gives them, turn on `allowInClasses`. */
+function allowsInClasses(options: readonly unknown[]): boolean {
+  return Reflect.get(Object(options[0]), 'allowInClasses') === true;
+}
+
 export const noThis: Rule = {
   meta: {
     type: 'problem',
-    docs: { description: 'Disallow `this`' },
+    docs: { description: 'Disallow `this`, or with allowInClasses, `this` outside a class' },
     messages: {
       noThis: `Take what a function needs as a parameter, or close over it, rather than reading \`this\`: ${WHY}.`,
     },
-    schema: [],
+    schema: [
+      {
+        type: 'object',
+        properties: { allowInClasses: { type: 'boolean' } },
+        additionalProperties: false,
+      },
+    ],
   },
   create(context) {
+    const inClasses = allowsInClasses(context.options);
     return {
       ThisExpression(node) {
-        if (!inTypeQuery(node)) context.report({ node, messageId: 'noThis' });
+        if (inTypeQuery(node)) return;
+        if (inClasses && bindsToClass(node)) return;
+        context.report({ node, messageId: 'noThis' });
       },
     };
   },
