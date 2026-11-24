@@ -6,6 +6,17 @@
   "rules": {
     // The owner's rule (#81): "always use the function syntax for named functions. only use
     // lambdas when passing a function as data."
-    "func-style": ["error", "declaration", { "allowArrowFunctions": false }]
-  }
+    "func-style": ["error", "declaration", { "allowArrowFunctions": false }],
+    // The owner's decision (#76): "Tighter, tests exempt". Test files are exempt from
+    // max-nested-callbacks in the override below.
+    "max-depth": ["error", 3],
+    "max-nested-callbacks": ["error", 3]
+  },
+  "overrides": [
+    {
+      // A test nests describe, it, fc.property and the callbacks inside by design (#76).
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": { "max-nested-callbacks": "off" }
+    }
+  ]
 }
