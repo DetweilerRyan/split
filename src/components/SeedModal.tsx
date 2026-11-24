@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import { PRESETS } from '../data/presets';
-import { type ReceiptSeed, decodeSeed } from '../sync/seedCodec';
+import { decodeSeed } from '../sync/seedCodec';
+import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 
 interface SeedModalProps {
   open: boolean;

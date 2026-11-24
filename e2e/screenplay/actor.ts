@@ -1,5 +1,5 @@
 import { devices, type Browser, type Page } from '@playwright/test';
-import type { ReceiptSeed } from '../../src/sync/seedCodec';
+import type { ReceiptSeed } from '../../src/domain/receipt/receiptSeed';
 import { connectToMcpServer, type McpSession, type ToolResult } from './mcp';
 
 /** Something an actor does, made of interactions with the abilities the actor has. */

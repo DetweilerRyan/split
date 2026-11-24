@@ -1,4 +1,4 @@
-import type { ReceiptItem } from '../sync/useReceiptStore';
+import type { ReceiptItem } from '../domain/receipt/roomSnapshot';
 import { formatMoney } from '../domain/money/currency';
 
 interface UnclaimedBannerProps {

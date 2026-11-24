@@ -92,4 +92,4 @@ The owner had the survivors split into three batches, each worked by a subagent 
 ## What would reopen this
 
 - **Running it in CI, or in the Stop hook,** once changed-lines runs prove fast. The first full run took 78 s.
-- **The app,** after oxCrap. `src/domain/receipt/math.ts` (in `src/utils/` until #94) and `src/store/seedCodec.ts` were named first in #64.
+- **The app,** after oxCrap. `src/domain/receipt/math.ts` (in `src/utils/` until #94) and `src/store/seedCodec.ts` (split on #94 into `src/sync/seedCodec.ts`, `src/domain/receipt/receiptSeed.ts` and `src/domain/room/roomId.ts`) were named first in #64.

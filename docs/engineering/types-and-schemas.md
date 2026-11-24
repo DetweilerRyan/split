@@ -4,9 +4,10 @@ Where TypeScript types and zod schemas are defined, and how ids and the strings 
 
 ## Where a type lives
 
-- **Define a type or schema in the module that creates or holds the state it describes,** and export it from there. `RoomSnapshot` lives in `src/sync/useReceiptStore.ts`, which builds it. `receiptSeedSchema` and `RoomId` live in `src/sync/seedCodec.ts`, which parses and creates them.
-- **Don't create a file only to hold types or schemas,** and don't add a shared types folder.
-- **A type that many modules use still lives with its state.** Import it with `import type`, so the importer doesn't load the module's runtime code.
+- **Define a domain type or schema in `src/domain/<subject>/`,** beside the rules about it, and export it from there. A domain type is the receipt's shape, or a value a business rule decides, such as which strings are room ids. The code that builds or holds its state, such as the sync layer in `src/sync/`, imports it. `RoomSnapshot` lives in `src/domain/receipt/roomSnapshot.ts`, and `src/sync/useReceiptStore.ts` builds it. `receiptSeedSchema` lives in `src/domain/receipt/receiptSeed.ts`, and `RoomId` in `src/domain/room/roomId.ts`.
+- **Define any other type or schema in the module that creates or holds the state it describes,** and export it from there, as `src/sync/yjsProvider.ts` does `RoomProvider`.
+- **Don't create a file only to hold types or schemas,** and don't add a shared types folder. A domain module holds its types with the rules about them, as `roomId.ts` holds `RoomId` with its parsing and creation.
+- **A type that many modules use still has the one home above.** Import it with `import type`, so the importer doesn't load the module's runtime code.
 
 ## A schema owns its type
 

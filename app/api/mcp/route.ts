@@ -1,7 +1,8 @@
 import { createMcpHandler } from 'mcp-handler';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { buildIngestUrl, receiptSeedSchema } from '../../../src/sync/seedCodec';
+import { buildIngestUrl } from '../../../src/sync/seedCodec';
+import { receiptSeedSchema } from '../../../src/domain/receipt/receiptSeed';
 import { guardMcp } from '../../../src/server/mcpGuard';
 
 const SKILL_URI = 'skill://receipt-generation/SKILL.md';
