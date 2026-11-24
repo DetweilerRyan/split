@@ -36,7 +36,9 @@ describe('ModalDialog', () => {
     const { dialog, onClose } = await renderDialog();
     await expect.element(dialog).toBeVisible();
     await userEvent.keyboard('{Escape}');
-    expect(onClose).toHaveBeenCalledOnce();
+    // The browser fires `close` in a task after the key press, so retry until it has.
+    await expect.poll(() => onClose.mock.calls.length).toBe(1);
+    await expect.element(dialog).not.toBeInTheDocument();
   });
 
   it('closes on a tap outside it, not on one inside it', async () => {
@@ -46,7 +48,7 @@ describe('ModalDialog', () => {
     // Outside the dialog is its backdrop, which Playwright sees as the page; `force` taps it anyway.
     await userEvent.click(dialog, { position: { x: -8, y: -8 }, force: true });
     await expect.element(dialog).not.toBeInTheDocument();
-    expect(onClose).toHaveBeenCalledOnce();
+    await expect.poll(() => onClose.mock.calls.length).toBe(1);
   });
 
   it('shows the room’s toast inside itself, above its backdrop', async () => {
