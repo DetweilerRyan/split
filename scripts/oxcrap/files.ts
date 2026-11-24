@@ -7,11 +7,11 @@ import ignore from 'ignore';
 
 /** A file or folder the search finds, as fs.globSync gives one with `withFileTypes`. */
 export type Entry = {
-  name: string;
+  readonly name: string;
   /** The folder it's in, absolute or from the search's `cwd`. */
-  parentPath: string;
-  isFile: () => boolean;
-  isDirectory: () => boolean;
+  readonly parentPath: string;
+  readonly isFile: () => boolean;
+  readonly isDirectory: () => boolean;
 };
 
 /**
@@ -20,8 +20,12 @@ export type Entry = {
  */
 export type Glob = (
   patterns: readonly string[],
-  options: { cwd: string; withFileTypes: true; exclude: (entry: Entry) => boolean },
-) => Entry[];
+  options: {
+    readonly cwd: string;
+    readonly withFileTypes: true;
+    readonly exclude: (entry: Entry) => boolean;
+  },
+) => readonly Entry[];
 
 function posix(path: string) {
   return path.split(sep).join('/');

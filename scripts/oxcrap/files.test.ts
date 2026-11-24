@@ -18,7 +18,9 @@ function withFolders(path: string) {
  * fs.globSync over `paths`, files from its cwd, in memory. Like Node's, it gives folders as well
  * as files, gives each its folder from the cwd, and doesn't search a folder `exclude` is true for.
  * Patterns are matched with Node's `path.matchesGlob`. Unlike Node's, it asks `exclude` about every
- * folder, even one a pattern names outright, such as `features` in `features/*.ts`.
+ * folder, even one a pattern names outright, such as `features` in `features/*.ts`; and it finds a
+ * dotfile inside a dot folder only when the pattern matches it, while Node's `**\/.*` also searches
+ * a dot folder it matched, finding `.next/cache/.tsbuildinfo`.
  */
 function inMemory(paths: readonly string[]): Glob {
   const inFolder = new Map<string, [string, Entry][]>();

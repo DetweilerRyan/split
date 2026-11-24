@@ -97,8 +97,7 @@ class Run {
   readConfig(path: string | undefined): Partial<Config> {
     if (!path) return {};
     const options = parseConfig(this.host.read(path), this.shown(path));
-    // Stryker disable next-line ArrayDeclaration: the mutant's ["Stryker was here"] holds no path outside the folder, so `find` still finds nothing.
-    const escaping = (options.files ?? []).find(outside);
+    const escaping = options.files?.find(outside);
     if (escaping) {
       throw new Error(
         `${this.shown(path)}: "files" can't reach outside the config's folder, as "${escaping}" does. Move the config up to a folder that holds the files.`,
@@ -187,8 +186,8 @@ class Run {
       Object.entries(report).map(([path, file]) => [this.pathKey(path), file]),
     );
     const covered = sources.filter((path) => byPath.has(this.pathKey(path))).length;
-    // Stryker disable next-line ConditionalExpression,EqualityOperator: `score` stops before this when there are no files to score, so `sources` is never empty here.
-    if (sources.length > 0 && covered === 0) {
+    // `score` has stopped already when there are no files to score.
+    if (covered === 0) {
       throw new Error(
         `The coverage report at ${this.shown(reportPath)} covers none of the ${sources.length} files being scored. Is it the report for this code, written from this folder?`,
       );

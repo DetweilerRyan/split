@@ -92,9 +92,7 @@ export const COUNT_SEPARATELY: Counting = {
 /** The child nodes of `node`, in source order. */
 export function children(node: AstNode): AstNode[] {
   const found: AstNode[] = [];
-  for (const [key, value] of Object.entries(node)) {
-    // Stryker disable next-line ConditionalExpression,LogicalOperator,StringLiteral: these keys hold a string and two numbers, which the checks below never take as children, so skipping them only saves work.
-    if (key === 'type' || key === 'start' || key === 'end') continue;
+  for (const value of Object.values(node)) {
     if (Array.isArray(value)) {
       for (const item of value) if (isNode(item)) found.push(item);
     } else if (isNode(value)) {
@@ -105,14 +103,14 @@ export function children(node: AstNode): AstNode[] {
 }
 
 /** How many paths a node adds, under `counting`. */
-// @crap-allow CRAP 34, complexity 34. One dispatch over the node types that add paths, each case a line: splitting it would scatter one idea, and a lookup table would count its cases the same (#82).
-function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
+// @crap-allow CRAP 32, complexity 32. One dispatch over the node types that add paths, each case a line: splitting it would scatter one idea, and a lookup table would count its cases the same (#82).
+function adds(node: AstNode, parent: AstNode, counting: Counting) {
   if (BRANCHES.has(node.type)) return 1;
   switch (node.type) {
     case 'SwitchStatement':
       // Once for the whole switch, if it has a case beyond `default:`, which adds no path.
       return counting.switchCases === 'once' &&
-        ((node.cases as AstNode[] | undefined) ?? []).some((c) => c.test !== null)
+        (node.cases as AstNode[]).some((c) => c.test !== null)
         ? 1
         : 0;
     case 'SwitchCase':
@@ -122,8 +120,7 @@ function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
       // 1 each, or with `sequence`, the outermost operator of an expression counts its runs, in
       // source order, and the rest add 0.
       if (counting.logicalOperators === 'each') return 1;
-      // Stryker disable next-line OptionalChaining: `complexity` passes every node a parent, the function or a node, so `parent` is never undefined here.
-      return parent?.type === 'LogicalExpression' ? 0 : operatorRuns(node);
+      return parent.type === 'LogicalExpression' ? 0 : operatorRuns(node);
     case 'BreakStatement':
     case 'ContinueStatement':
       return counting.labelledJumps && node.label ? 1 : 0;
@@ -148,18 +145,17 @@ function adds(node: AstNode, parent: AstNode | undefined, counting: Counting) {
  */
 function operatorRuns(node: AstNode) {
   const operators: string[] = [];
-  function walk(n: unknown) {
-    if (!isNode(n)) return;
-    if (n.type === 'ParenthesizedExpression') walk(n.expression);
+  function walk(n: AstNode) {
+    if (n.type === 'ParenthesizedExpression') walk(n.expression as AstNode);
     else if (n.type === 'LogicalExpression') {
-      walk(n.left);
+      walk(n.left as AstNode);
       operators.push(n.operator as string);
-      walk(n.right);
+      walk(n.right as AstNode);
     }
   }
   walk(node);
-  // Stryker disable next-line ConditionalExpression: at i === 0, operators[-1] is undefined, never an operator, so the comparison alone is already true there.
-  return operators.filter((op, i) => i === 0 || operators[i - 1] !== op).length;
+  // operators[-1] is undefined, so the first operator always starts a run.
+  return operators.filter((op, i) => operators[i - 1] !== op).length;
 }
 
 /**
@@ -167,16 +163,12 @@ function operatorRuns(node: AstNode) {
  * count too when `counting.nestedFunctions` is `enclosing`, and not when it's `own`. `also` counts
  * what this file can't see on its own, such as reads of the module's lookup tables.
  */
-export function complexity(
-  fn: AstNode,
-  counting: Counting = COUNT_ALL,
-  also: (node: AstNode) => number = () => 0,
-) {
+export function complexity(fn: AstNode, counting: Counting, also: (node: AstNode) => number) {
   let count = 1;
   function enters(child: AstNode) {
     return counting.nestedFunctions === 'enclosing' || !isFunctionType(child.type);
   }
-  function visit(node: AstNode, parent: AstNode | undefined) {
+  function visit(node: AstNode, parent: AstNode) {
     count += adds(node, parent, counting) + also(node);
     // Parentheses don't break a run of operators, so a child of them sees what's outside them.
     const own = node.type === 'ParenthesizedExpression' ? parent : node;

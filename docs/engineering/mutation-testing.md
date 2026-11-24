@@ -4,7 +4,7 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
 
 ## What it runs
 
-- **The code:** `scripts/oxcrap/**/*.ts`, without its tests, `features/` and `oxcrap.ts`, as [`stryker.config.json`](../../stryker.config.json) sets. `oxcrap.ts` only connects `run.ts` and `files.ts` to the real file system.
+- **The code:** `scripts/oxcrap/**/*.ts`, without its tests, `features/` and `oxcrap.ts`, as [`stryker.config.json`](../../stryker.config.json) sets.
 - **The tests:** the tooling unit and property tests, from [`vitest.tooling.config.ts`](../../vitest.tooling.config.ts); per mutant, Stryker runs only those that reach it. No `.real.test.ts` and no feature contract runs, so code only those reach shows as "no coverage", not as surviving.
 
 ## Running it
