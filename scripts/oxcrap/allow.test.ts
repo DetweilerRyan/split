@@ -44,6 +44,44 @@ describe('findAllows', () => {
     });
   });
 
+  it('reads a doc comment’s reason, without the stars that start its lines', () => {
+    const block =
+      '/**\n * @crap-allow CRAP 156, complexity 12. One branch per row of\n *the rate table.\n */';
+    expect(allows(`${block}\nfunction grade(n) {}\n`)).toMatchObject({
+      allowed: [{ name: 'grade', reason: 'One branch per row of the rate table.', lastLine: 4 }],
+      problems: [],
+    });
+  });
+
+  it('keeps a star inside the reason, and closes up runs of spaces in it', () => {
+    const comment = '// @crap-allow CRAP 156, complexity 12. Rows  times   2 * 3 rates.';
+    expect(allows(`${comment}\nfunction grade(n) {}\n`).allowed[0]).toMatchObject({
+      reason: 'Rows times 2 * 3 rates.',
+    });
+  });
+
+  it('applies to a function on the same line as the comment, after it', () => {
+    const code = '/* @crap-allow CRAP 156, complexity 12. A reason. */ const grade = (n) => n;\n';
+    expect(allows(code)).toMatchObject({ allowed: [{ name: 'grade' }], problems: [] });
+  });
+
+  it('applies across spaces after a block comment, to the function on the next line', () => {
+    const code = '/* @crap-allow CRAP 156, complexity 12. A reason. */   \nfunction grade(n) {}\n';
+    expect(allows(code)).toMatchObject({ allowed: [{ name: 'grade' }], problems: [] });
+  });
+
+  it('applies to a function on the last line of a file with no line break at its end', () => {
+    expect(allows(`${allow}\nfunction grade(n) {}`)).toMatchObject({
+      allowed: [{ name: 'grade' }],
+      problems: [],
+    });
+  });
+
+  it('applies to the function on the next line, not to code further down', () => {
+    const code = `${allow}\nfunction grade(n) {}\nexport const rates = 'a line long enough to reach past the comment';\n`;
+    expect(allows(code)).toMatchObject({ allowed: [{ name: 'grade' }], problems: [] });
+  });
+
   it('applies across a lint directive and a doc comment, keeping the directive out of the reason', () => {
     const code = `${allow}\n// oxlint-disable-next-line eslint/no-unused-vars\n/** Grades. */\nfunction grade(n) {}\n`;
     expect(allows(code).allowed[0]).toMatchObject({
@@ -144,6 +182,32 @@ describe('findAllows', () => {
     ]);
   });
 
+  it('fails a comment at the end of a file, with no code below it', () => {
+    expect(allows(`function grade(n) {}\n${allow}\n`).problems).toEqual([
+      '2: This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
+    ]);
+  });
+
+  it.each([
+    ['below it', `${allow}\nconst total = 1;\nitems.forEach((item) => use(item));\n`, '1'],
+    ['above it', `items.forEach((item) => use(item));\n${allow}\nconst total = 1;\n`, '2'],
+  ])(
+    'fails a comment above a statement with no function, whatever is passed to a call %s',
+    (_, code, line) => {
+      expect(allows(code).problems).toEqual([
+        `${line}: This @crap-allow comment isn’t directly above a function. Move it there, or delete it.`,
+      ]);
+    },
+  );
+
+  it('fails a comment above a declaration whose function starts lower down, not matching a callback inside it', () => {
+    // With no semicolon, the declaration ends where its function does.
+    const code = `${allow}\nconst grade =\n  () => {\n    items.forEach((item) => use(item));\n  }\n`;
+    expect(allows(code).problems).toEqual([
+      '1: This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
+    ]);
+  });
+
   it('fails a comment above a statement with no function in it', () => {
     expect(allows(`${allow}\nconst total = items\n  .length;\n`).problems).toEqual([
       '1: This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
@@ -154,6 +218,13 @@ describe('findAllows', () => {
     expect(
       allows(`${allow}\nconst grade = (n) => [n].map((m) => m);\n`).allowed.map((a) => a.name),
     ).toEqual(['grade']);
+  });
+
+  it('matches a function nested on the same line to the outer one it counts towards', () => {
+    expect(allows(`${allow}\nconst grade = (n) => [n].map((m) => m);\n`, COUNT_ALL)).toMatchObject({
+      allowed: [{ name: 'grade' }],
+      problems: [],
+    });
   });
 
   it('fails a second comment for the same function', () => {

@@ -63,6 +63,7 @@ export function positions(source: string) {
   }
   return (offset: number): Position => {
     let low = 0;
+    // Stryker disable next-line ArithmeticOperator: a `high` past the last line start only probes entries that don't exist, and `undefined <= offset` is false, so the search narrows back to the same line.
     let high = lineStarts.length - 1;
     while (low < high) {
       const middle = (low + high + 1) >> 1;
@@ -75,6 +76,7 @@ export function positions(source: string) {
 
 /** The source text of `node`, if it's short enough to read as a name. */
 function text(source: string, node: unknown) {
+  // Stryker disable next-line ConditionalExpression: every caller passes a property the parser always fills with a node (an id, key, left side, callee or attribute name), so the guard never returns.
   if (!isNode(node)) return undefined;
   const value = source.slice(node.start, node.end);
   return value.length <= 40 && !value.includes('\n') ? value : undefined;
@@ -83,6 +85,7 @@ function text(source: string, node: unknown) {
 /** A label for a function, from its own name or what it's assigned or passed to. */
 export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
   const own = fn.id;
+  // Stryker disable next-line ConditionalExpression: a function's `id`, when there is one, is always an Identifier, whose `name` is always a string.
   if (isNode(own) && typeof own.name === 'string') return own.name;
   return (parent && nameFromParent(source, parent)) ?? '(anonymous)';
 }
@@ -103,6 +106,7 @@ function nameFromParent(source: string, parent: AstNode) {
       return callback(text(source, parent.callee));
     case 'ExportDefaultDeclaration':
       return 'default export';
+    // Stryker disable next-line ConditionalExpression: emptying the default case falls off the end of the function, which returns undefined just the same.
     default:
       return undefined;
   }
@@ -115,7 +119,9 @@ function callback(callee: string | undefined) {
 
 /** The JSX attribute a handler is the value of, as in `onClick={() => …}`. */
 function jsxAttribute(source: string, ancestors: AstNode[]) {
+  // Stryker disable next-line MethodExpression,UnaryOperator: a function in a JSX expression has at least four ancestors, so `slice(2)` and the whole list end in the same two; reversing the whole list in place reorders only ancestors above the function, and the last two a descendant reads never reach back that far.
   const [container, attribute] = ancestors.slice(-2).reverse();
+  // Stryker disable next-line ConditionalExpression,LogicalOperator,OptionalChaining,BlockStatement: `describe` calls this only when the parent is a JSXExpressionContainer, and the one other place a container sits, a JSX element or fragment's children, has no `name`, so `text` gives undefined anyway.
   if (container?.type !== 'JSXExpressionContainer' || attribute?.type !== 'JSXAttribute') {
     return undefined;
   }
@@ -172,6 +178,7 @@ function record(
 function describe(node: AstNode, ancestors: AstNode[], enclosing: Fn[], source: Source): Fn {
   const parent = ancestors.at(-1);
   const own =
+    // Stryker disable next-line OptionalChaining: only the Program has no parent, and it isn't a function.
     parent?.type === 'JSXExpressionContainer'
       ? (jsxAttribute(source.text, ancestors) ?? '(anonymous)')
       : label(source.text, node, parent);
@@ -210,6 +217,7 @@ function countRecursion(
     },
     (node) => {
       const fn = byNode.get(node);
+      // Stryker disable next-line ConditionalExpression,LogicalOperator: with `own` counting every function is scored; with `enclosing`, `callerOf` gives every call to an outermost function, so an unscored nested one never calls out and can't be in a cycle, whether calls reach it or not.
       return fn && scoredSet.has(fn) ? fn : undefined;
     },
   );
@@ -219,7 +227,9 @@ function countRecursion(
 
 /** Whether `node` is passed straight to a call, as `items.forEach(() => …)` passes its callback. */
 function passedToCall(node: AstNode, parent: AstNode | undefined) {
+  // Stryker disable next-line OptionalChaining: every function has a parent; only the Program has none, and it isn't a function.
   const call = parent?.type === 'CallExpression' || parent?.type === 'NewExpression';
+  // Stryker disable next-line LogicalOperator: only calls and `new` have `arguments`, so `call || …` lets through no other parent.
   return call && Array.isArray(parent.arguments) && parent.arguments.includes(node);
 }
 
@@ -241,6 +251,7 @@ export function parse(
   const program = result.program as unknown as AstNode;
   const position = positions(source);
   const tables = tablesIn(program, imported).readable;
+  // Stryker disable next-line ArrayDeclaration: the root's ancestors are only ever read from the end, by `at(-1)` and `slice(-2)` beside a JSX expression, which is never a top-level node, so an entry at the start is never read.
   const found = walk(program, [], [], { text: source, counting, position, tables });
   const enclosing = counting.nestedFunctions === 'enclosing';
   const all = found.functions.map(({ fn }) => fn);
