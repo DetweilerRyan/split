@@ -41,15 +41,41 @@ export interface RoomSnapshot {
 }
 
 /**
- * The id of the participant with this name: `p-` and the name in lower case, with each run of
- * characters other than a to z and 0 to 9 replaced by one hyphen, and none at either end. So two
- * names with the same words in the same order are the same participant, whatever their case and
- * whichever of those other characters sit between, before or after the words.
+ * The id of the participant with this name, or `null` when the name has no letter or digit in any
+ * script, so it names nobody.
+ *
+ * The id is `p-` and the name's words joined by hyphens. The name is first put in Unicode's NFKC
+ * form and lower-cased, so the ways a keyboard can write the same letters (`é` as one character or
+ * as `e` and an accent, fullwidth `Ｊ` or `J`, upper or lower case) give the same id. A word is a
+ * letter or digit, in any script, and the letters, digits and combining marks that follow it, so
+ * accents and the vowel signs of scripts such as Devanagari stay in their word. Every other
+ * character separates words. So two names with the same words in the same order are the same
+ * participant, whatever their case and whichever of those other characters sit between, before or
+ * after the words.
+ *
+ * A participant stored before this rule keeps the id it was stored with, which may differ from
+ * this; `findParticipant` still finds it by its name.
  */
-export function participantId(name: string): string {
-  return `p-${name
-    .trim()
+export function participantId(name: string): string | null {
+  const words = name
+    .normalize('NFKC')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')}`;
+    .match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu);
+  return words ? `p-${words.join('-')}` : null;
+}
+
+/**
+ * The participant this name stands for, if one is on the bill: the one whose id is the name's, or
+ * whose own name gives the same id, which finds a participant stored under an older id rule.
+ */
+export function findParticipant<P extends Pick<Participant, 'id' | 'name'>>(
+  participants: Iterable<P>,
+  name: string,
+): P | undefined {
+  const id = participantId(name);
+  if (id === null) return undefined;
+  for (const participant of participants) {
+    if (participant.id === id || participantId(participant.name) === id) return participant;
+  }
+  return undefined;
 }

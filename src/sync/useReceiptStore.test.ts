@@ -70,3 +70,41 @@ describe('Yjs synchronization and seed hydration', () => {
     docB.destroy();
   });
 });
+
+describe('adding a participant', () => {
+  it('returns the colour it stores for each participant', () => {
+    const store = new ReceiptStore(new Y.Doc());
+    const added = ['Alex', 'Sam', 'Jamie'].map((name) => store.addParticipant(name));
+    expect(added).toEqual(store.getSnapshot().participants);
+    expect(added.map((participant) => participant?.colorIdx)).toEqual([0, 1, 2]);
+  });
+
+  it('refuses a name with no letter or digit, and adds nobody', () => {
+    const store = new ReceiptStore(new Y.Doc());
+    expect(store.addParticipant('!!!')).toBeNull();
+    expect(store.getSnapshot().participants).toEqual([]);
+  });
+
+  it('gives names in different non-Latin scripts different participants', () => {
+    const store = new ReceiptStore(new Y.Doc());
+    store.addParticipant('李');
+    store.addParticipant('Мария');
+    expect(store.getSnapshot().participants.map(({ id, name }) => ({ id, name }))).toEqual([
+      { id: 'p-李', name: '李' },
+      { id: 'p-мария', name: 'Мария' },
+    ]);
+  });
+
+  it('refuses the name of a participant stored under an older id, and keeps their id', () => {
+    const doc = new Y.Doc();
+    const jose = new Y.Map<unknown>();
+    jose.set('id', 'p-jos');
+    jose.set('name', 'José');
+    jose.set('colorIdx', 0);
+    doc.getMap<Y.Map<unknown>>('participants').set('p-jos', jose);
+    const store = new ReceiptStore(doc);
+
+    expect(store.addParticipant('josé')).toBeNull();
+    expect(store.getSnapshot().participants).toEqual([{ id: 'p-jos', name: 'José', colorIdx: 0 }]);
+  });
+});

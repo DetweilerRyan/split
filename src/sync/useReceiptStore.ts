@@ -5,8 +5,10 @@ import {
   type Participant,
   type ReceiptItem,
   type RoomSnapshot,
+  findParticipant,
   participantId,
 } from '../domain/receipt/roomSnapshot';
+import { storedParticipants } from './storedParticipants';
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
   process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';
@@ -96,17 +98,22 @@ export class ReceiptStore {
     });
   }
 
+  /**
+   * Adds a participant with this name, and returns it. Returns `null`, and adds nobody, when the
+   * name has no letter or digit, or when it stands for a participant already on the bill.
+   */
   addParticipant(name: string): Participant | null {
     const trimmed = name.trim();
-    if (!trimmed) return null;
     const id = participantId(trimmed);
-    if (this.participants.has(id)) return null;
+    if (id === null || this.participants.has(id)) return null;
+    if (findParticipant(storedParticipants(this.participants), trimmed)) return null;
+    const colorIdx = this.participants.size % 7;
     const participant = new Y.Map<unknown>();
     participant.set('id', id);
     participant.set('name', trimmed);
-    participant.set('colorIdx', this.participants.size % 7);
+    participant.set('colorIdx', colorIdx);
     this.participants.set(id, participant);
-    return { id, name: trimmed, colorIdx: this.participants.size % 7 };
+    return { id, name: trimmed, colorIdx };
   }
 
   removeParticipant(id: string): void {

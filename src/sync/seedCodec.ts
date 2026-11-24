@@ -2,8 +2,9 @@ import LZString from 'lz-string';
 import * as Y from 'yjs';
 import { isValidCurrency, normalizeCurrency } from '../domain/money/currency';
 import { type ReceiptSeed, validateSeed } from '../domain/receipt/receiptSeed';
-import { participantId } from '../domain/receipt/roomSnapshot';
+import { findParticipant, participantId } from '../domain/receipt/roomSnapshot';
 import { type RoomId, createRoomId, isUuidRoomId, parseRoomId } from '../domain/room/roomId';
+import { storedParticipants } from './storedParticipants';
 
 export interface HydrationOptions {
   readonly forceReset?: boolean;
@@ -133,7 +134,7 @@ export function parseRoomHash(hash: string): {
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }
 
-/* @crap-allow CRAP 33.1, complexity 30. Too complex: a branch for each seed field's default, in
+/* @crap-allow CRAP 29.6, complexity 29. Too complex: a branch for each seed field's default, in
    the room's details and in each item, and for whether forceReset overwrites it. Splitting the
    details from the items would bring it within the limits, but that is a change of its own, not
    part of moving the domain logic out of src/store/ (#94). */
@@ -177,15 +178,7 @@ export function hydrateFromSeed(
       if (forceReset || !meta.has(key)) meta.set(key, value);
     }
 
-    seed.roster.forEach((name, index) => {
-      const id = participantId(name);
-      if (participants.has(id)) return;
-      const participant = new Y.Map<unknown>();
-      participant.set('id', id);
-      participant.set('name', name.trim());
-      participant.set('colorIdx', index % 7);
-      participants.set(id, participant);
-    });
+    addRoster(participants, seed.roster);
 
     seed.items.forEach((item, index) => {
       const id = item.id || `item-${index}`;
@@ -208,5 +201,23 @@ export function hydrateFromSeed(
       existing.set('eur', Number(item.eur) || 0);
       items.set(id, existing);
     });
+  });
+}
+
+/**
+ * Adds each roster name as a participant, coloured by its place in the roster. Skips a name with
+ * no letter or digit, and a name that stands for a participant already in the room, including one
+ * stored under an older id.
+ */
+function addRoster(participants: Y.Map<Y.Map<unknown>>, roster: readonly string[]): void {
+  roster.forEach((name, index) => {
+    const id = participantId(name);
+    if (id === null || participants.has(id)) return;
+    if (findParticipant(storedParticipants(participants), name)) return;
+    const participant = new Y.Map<unknown>();
+    participant.set('id', id);
+    participant.set('name', name.trim());
+    participant.set('colorIdx', index % 7);
+    participants.set(id, participant);
   });
 }

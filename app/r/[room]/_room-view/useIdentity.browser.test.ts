@@ -7,8 +7,8 @@ import { useIdentity } from './useIdentity';
 
 const roomId = roomIdSchema.parse('split-r1');
 
-async function setup(names: readonly string[]) {
-  const store = new ReceiptStore(new Y.Doc());
+async function setup(names: readonly string[], doc = new Y.Doc()) {
+  const store = new ReceiptStore(doc);
   names.forEach((name) => store.addParticipant(name));
   const provider = { store, setIdentity: vi.fn() };
   const showToast = vi.fn();
@@ -69,6 +69,31 @@ describe('useIdentity', () => {
     expect(hook.showToast).toHaveBeenCalledExactlyOnceWith('Enter a participant name.');
     expect(hook.participantNames()).toEqual(['Alex']);
     expect(hook.current().pickerOpen).toBe(true);
+  });
+
+  it('asks for a letter or number when you join with a name that has neither', async () => {
+    const hook = await setup(['Alex']);
+    await hook.act(() => hook.current().openPicker());
+    await hook.act(() => hook.current().add('!!!'));
+    expect(hook.showToast).toHaveBeenCalledExactlyOnceWith(
+      'Enter a name with at least one letter or number.',
+    );
+    expect(hook.participantNames()).toEqual(['Alex']);
+    expect(hook.current().pickerOpen).toBe(true);
+  });
+
+  it('makes you a participant stored under an older id when you join with their name', async () => {
+    const doc = new Y.Doc();
+    const jose = new Y.Map<unknown>();
+    jose.set('id', 'p-jos');
+    jose.set('name', 'José');
+    jose.set('colorIdx', 0);
+    doc.getMap<Y.Map<unknown>>('participants').set('p-jos', jose);
+    const hook = await setup([], doc);
+    await hook.act(() => hook.current().add('José'));
+    expect(hook.participantNames()).toEqual(['José']);
+    expect(hook.current().activeId).toBe('p-jos');
+    expect(hook.showToast).not.toHaveBeenCalled();
   });
 
   it('removes a participant, and moves you to the first one left when it was you', async () => {
