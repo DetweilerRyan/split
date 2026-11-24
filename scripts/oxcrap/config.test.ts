@@ -128,13 +128,13 @@ describe('configuration_schema.json', () => {
   });
 
   it('gives the same defaults as the code', () => {
-    expect(schema.properties.files.default).toEqual(DEFAULTS.files);
-    expect(schema.properties.ignorePatterns.default).toEqual(DEFAULTS.ignorePatterns);
-    expect(schema.properties.limits.properties?.crap.default).toBe(DEFAULTS.limits.crap);
-    expect(schema.properties.limits.properties?.complexity.default).toBe(
+    expect(schema.properties.files?.default).toEqual(DEFAULTS.files);
+    expect(schema.properties.ignorePatterns?.default).toEqual(DEFAULTS.ignorePatterns);
+    expect(schema.properties.limits?.properties?.crap?.default).toBe(DEFAULTS.limits.crap);
+    expect(schema.properties.limits?.properties?.complexity?.default).toBe(
       DEFAULTS.limits.complexity,
     );
-    const counting = schema.properties.counting.properties!;
+    const counting = schema.properties.counting?.properties ?? {};
     expect(
       Object.fromEntries(Object.entries(counting).map(([name, option]) => [name, option.default])),
     ).toEqual(DEFAULTS.counting);

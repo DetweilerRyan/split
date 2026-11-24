@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { coverageOf, type FileCoverage, newerThan, parseReport } from './coverage.ts';
 import { COUNT_ALL, COUNT_SEPARATELY, type Counting } from './complexity.ts';
 import { parse } from './functions.ts';
@@ -118,6 +118,7 @@ describe('coverageOf', () => {
       f: {},
     };
     const [f] = parse('example.ts', source, SEPARATELY).functions;
+    assert(f, 'the source has a function');
     expect(f.start).toEqual(at(2, 17));
     expect(coverageOf([f], file).get(f)).toBe(1);
   });

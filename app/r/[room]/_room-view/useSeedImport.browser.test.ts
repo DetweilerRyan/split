@@ -69,7 +69,7 @@ describe('useSeedImport', () => {
     const saved = new Map<string, string>();
     const hook = await setup({ setItem: (key, value) => saved.set(key, value) });
     await hook.act(() => hook.current().newBlankRoom());
-    const roomId = parseRoomPath(hook.navigate.mock.calls[0][0]);
+    const roomId = parseRoomPath(hook.navigate.mock.calls[0]?.[0] ?? '');
     expect(saved.has(pendingSeedKey(roomId!))).toBe(true);
     expect(window.sessionStorage.length).toBe(0);
   });
@@ -82,14 +82,14 @@ describe('useSeedImport', () => {
     });
     await hook.act(() => hook.current().newBlankRoom());
     expect(hook.navigate).toHaveBeenCalledOnce();
-    expect(parseRoomPath(hook.navigate.mock.calls[0][0])).not.toBeNull();
+    expect(parseRoomPath(hook.navigate.mock.calls[0]?.[0] ?? '')).not.toBeNull();
   });
 
   it('goes to a new room, with a blank receipt in the local currency waiting in sessionStorage', async () => {
     const hook = await setup();
     await hook.act(() => hook.current().newBlankRoom());
     expect(hook.navigate).toHaveBeenCalledOnce();
-    const roomId = parseRoomPath(hook.navigate.mock.calls[0][0]);
+    const roomId = parseRoomPath(hook.navigate.mock.calls[0]?.[0] ?? '');
     expect(roomId).not.toBeNull();
     const pending = window.sessionStorage.getItem(pendingSeedKey(roomId!));
     expect(JSON.parse(pending!)).toEqual({

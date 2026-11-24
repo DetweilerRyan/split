@@ -80,7 +80,7 @@ const textFields: readonly TextField[] = [
     max,
     set: (s: ReceiptSeed, value: string) => ({
       ...s,
-      items: [{ ...s.items[0], [key]: value }, ...s.items.slice(1)],
+      items: s.items.map((item, index) => (index === 0 ? { ...item, [key]: value } : item)),
     }),
   })),
 ];
@@ -113,18 +113,19 @@ describe('validateSeed', () => {
 
   it('names the later of two items that share an id, wherever they are', () => {
     const withDuplicate = seedWith({ minLength: 1, maxLength: MAX_ITEMS - 1 }).chain((s) =>
-      fc.integer({ min: 0, max: s.items.length - 1 }).chain((original) =>
-        fc.record({
-          seed: fc.constant(s),
-          original: fc.constant(original),
-          copyAt: fc.integer({ min: original + 1, max: s.items.length }),
-          copy: item,
-        }),
-      ),
+      fc
+        .constantFrom(...s.items.map(({ id }, original) => ({ id, original })))
+        .chain(({ id, original }) =>
+          fc.record({
+            seed: fc.constant(s),
+            id: fc.constant(id),
+            copyAt: fc.integer({ min: original + 1, max: s.items.length }),
+            copy: item,
+          }),
+        ),
     );
     fc.assert(
-      fc.property(withDuplicate, ({ seed: given, original, copyAt, copy }) => {
-        const id = given.items[original].id;
+      fc.property(withDuplicate, ({ seed: given, id, copyAt, copy }) => {
         const items = [
           ...given.items.slice(0, copyAt),
           { ...copy, id },

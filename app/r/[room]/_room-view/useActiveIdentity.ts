@@ -35,11 +35,12 @@ export function useActiveIdentity(
   function isParticipant(id: string | null) {
     return id !== null && participants.some((person) => person.id === id);
   }
+  const [firstParticipant] = participants;
   let activeId: string | null = null;
   if (isParticipant(chosenId)) {
     activeId = chosenId;
-  } else if (participants.length > 0) {
-    activeId = isParticipant(savedId) ? savedId : participants[0].id;
+  } else if (firstParticipant) {
+    activeId = isParticipant(savedId) ? savedId : firstParticipant.id;
   }
 
   useEffect(() => {

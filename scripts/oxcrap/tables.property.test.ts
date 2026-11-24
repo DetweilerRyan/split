@@ -235,9 +235,10 @@ function addition(test: Case) {
 
 /** The top-level statement that adds the table's last entry, if the literal doesn't hold it. */
 function lastEntry(test: Case) {
-  if (test.added === 'literal') return [];
   const i = test.names.length - 1;
-  const add = addOf(test, test.names[i], i);
+  const name = test.names[i];
+  if (test.added === 'literal' || name === undefined) return [];
+  const add = addOf(test, name, i);
   const statement = {
     statement: `${add};`,
     exportAssignment: `export = ${add};`,

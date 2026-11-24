@@ -27,7 +27,7 @@ describe('Yjs synchronization and seed hydration', () => {
     doc.getMap<Y.Map<unknown>>('items').get('item-0')?.set('name', 'Updated item');
 
     expect(listener).toHaveBeenCalled();
-    expect(store.getSnapshot().items[0].name).toBe('Updated item');
+    expect(store.getSnapshot().items[0]?.name).toBe('Updated item');
     doc.destroy();
   });
 
@@ -64,8 +64,8 @@ describe('Yjs synchronization and seed hydration', () => {
     expect(snapshotA.items.find((item) => item.id === 'item-1')?.claims['p-sam']).toBe(true);
 
     const math = computeReceiptMath(snapshotA);
-    expect(math.perPerson['p-alex'].itemsSubtotal).toBe(3);
-    expect(math.perPerson['p-sam'].itemsSubtotal).toBe(9);
+    expect(math.perPerson['p-alex']?.itemsSubtotal).toBe(3);
+    expect(math.perPerson['p-sam']?.itemsSubtotal).toBe(9);
     docA.destroy();
     docB.destroy();
   });

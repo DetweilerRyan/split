@@ -261,13 +261,13 @@ const statement = fc.oneof(
 
 /** The statements one after another, each with its own names and its reports on its own lines. */
 function join(parts: readonly Code[]): Code {
-  const starts = parts.map((_, i) =>
-    parts.slice(0, i).reduce((lines, part) => lines + part.code.split('\n').length, 1),
-  );
+  function start(i: number) {
+    return parts.slice(0, i).reduce((lines, part) => lines + part.code.split('\n').length, 1);
+  }
   return {
     code: parts.map((part, i) => part.code.replaceAll('ID', `_${i}`)).join('\n'),
     reports: parts.flatMap((part, i) =>
-      part.reports.map(({ messageId, line }) => ({ messageId, line: starts[i] + line })),
+      part.reports.map(({ messageId, line }) => ({ messageId, line: start(i) + line })),
     ),
   };
 }

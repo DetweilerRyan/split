@@ -1,6 +1,7 @@
 import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 
-export const PRESETS: Readonly<Record<string, ReceiptSeed>> = {
+// Its keys are known, so a test that reads one gets a seed, not a seed that may be missing.
+export const PRESETS = {
   plitvice: {
     title: 'Konoba Lička Kuća — Plitvice',
     cardTipEur: 0,
@@ -56,4 +57,4 @@ export const PRESETS: Readonly<Record<string, ReceiptSeed>> = {
       },
     ],
   },
-};
+} satisfies Readonly<Record<string, ReceiptSeed>>;

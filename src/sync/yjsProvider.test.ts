@@ -206,8 +206,8 @@ describe('room sync provider selection', () => {
       status: 'connecting',
     });
     expect(provider.store.getSnapshot().peers).toEqual([{ id: '1', name: 'Same person' }]);
-    expect(provider.doc).toBe(mocks.IndexeddbPersistence.mock.calls[0][1]);
-    expect(provider.doc).toBe(mocks.WebrtcProvider.mock.calls[0][1]);
+    expect(provider.doc).toBe(mocks.IndexeddbPersistence.mock.calls[0]?.[1]);
+    expect(provider.doc).toBe(mocks.WebrtcProvider.mock.calls[0]?.[1]);
     onWebrtcStatus?.({ connected: true });
     expect(provider.store.getSnapshot().connection.status).toBe('connected');
     onWebrtcStatus?.({ connected: false });
@@ -269,7 +269,7 @@ describe('room sync provider selection', () => {
     const { getRoomProvider } = await import('./yjsProvider');
     const provider = await getRoomProvider(roomIdSchema.parse('split-sig'));
     provider.doc.destroy();
-    return mocks.WebrtcProvider.mock.calls[0][2].signaling;
+    return mocks.WebrtcProvider.mock.calls[0]?.[2].signaling;
   }
 
   it('signals through the public servers when no signaling URLs are configured', async () => {

@@ -60,7 +60,15 @@ const participantColors = [
   '#c026d3',
 ] as const;
 
-// @crap-allow CRAP 24, complexity 24. Debt from before the CRAP check (#63): too complex.
+/** A WebRTC provider for the room's document, with the awareness it shares peers' states through. */
+function connectWebrtc(roomId: RoomId, doc: Y.Doc) {
+  const webrtc = new WebrtcProvider(webrtcRoomName(roomId), doc, {
+    signaling: [...signalingUrls],
+  });
+  return { awareness: webrtc.awareness, webrtc };
+}
+
+// @crap-allow CRAP 22, complexity 22. Too complex: it sets up the room's document, storage, Liveblocks or WebRTC, connection status and presence in one place, each with branches of its own. Split the Liveblocks and the WebRTC setup into functions of their own when either next changes.
 async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
   const liveblocksRoom = liveblocksApiKey
     ? (providerRegistry.__splitLiveblocksClient ??= createClient({
@@ -101,12 +109,9 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
   } else {
     store.setConnection({ provider: connectionProvider, status: 'connecting' });
   }
-  const webrtc = liveblocks
-    ? null
-    : new WebrtcProvider(webrtcRoomName(roomId), doc, {
-        signaling: [...signalingUrls],
-      });
-  const awareness = liveblocks?.awareness ?? webrtc!.awareness;
+  const { awareness, webrtc } = liveblocks
+    ? { awareness: liveblocks.awareness, webrtc: null }
+    : connectWebrtc(roomId, doc);
 
   function updatePeers() {
     const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().entries()).map(

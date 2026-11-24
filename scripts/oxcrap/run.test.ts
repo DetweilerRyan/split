@@ -50,8 +50,9 @@ function host(
     exists: (path) => path in files || folders.has(path),
     isDirectory: (path) => folders.has(path),
     read: (path) => {
-      if (!(path in files)) throw new Error(`no file ${path}`);
-      return files[path];
+      const text = files[path];
+      if (text === undefined) throw new Error(`no file ${path}`);
+      return text;
     },
     modified: (path) => times[path] ?? 1,
     realpath: (path) => path,
@@ -183,9 +184,9 @@ describe('run', () => {
   it('scores only a single file named on the command line', () => {
     const { files, times } = project({ '/repo/src/rank.ts': branchy('rank', 12) });
     const scored = oxcrap(['--coverage', 'coverage.json', 'src/grade.ts'], files, times);
-    const listed = scored.stderr[0].split('\n').slice(1);
+    const listed = scored.stderr[0]?.split('\n').slice(1);
     expect(listed).toHaveLength(1);
-    expect(listed[0]).toMatch(/^- src\/grade\.ts:1 grade: /);
+    expect(listed?.[0]).toMatch(/^- src\/grade\.ts:1 grade: /);
   });
 
   it('scores only the code files in a folder named on the command line', () => {
@@ -195,9 +196,9 @@ describe('run', () => {
       '/repo/src/notes.md': '# Notes',
     });
     const scored = oxcrap(['--coverage', 'coverage.json', 'src'], files, times);
-    const listed = scored.stderr[0].split('\n').slice(1);
+    const listed = scored.stderr[0]?.split('\n').slice(1);
     expect(listed).toHaveLength(1);
-    expect(listed[0]).toMatch(/^- src\/grade\.ts:1 grade: /);
+    expect(listed?.[0]).toMatch(/^- src\/grade\.ts:1 grade: /);
   });
 
   it('refuses a missing report, one older than the code, and one covering none of it', () => {
