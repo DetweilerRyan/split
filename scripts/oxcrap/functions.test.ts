@@ -33,6 +33,8 @@ describe('parse', () => {
     ],
     ['a JSX handler, by its attribute', 'const v = <button onClick={() => 1} />;', 'onClick'],
     ['a function written as a JSX child', 'const v = <div>{() => 1}</div>;', '(anonymous)'],
+    ['a function written as a fragment’s child', 'const v = <>{() => 1}</>;', '(anonymous)'],
+    ['a JSX handler, by its namespaced attribute', 'const v = <a b:c={() => 1} />;', 'b:c'],
     ['a name of 40 characters, in full', `const ${'a'.repeat(40)} = () => 1;`, 'a'.repeat(40)],
     ['a name longer than 40 characters', `const ${'a'.repeat(41)} = () => 1;`, '(anonymous)'],
     ['a callback whose call spans lines', 'items\n  .forEach((n) => n);', '(anonymous)'],

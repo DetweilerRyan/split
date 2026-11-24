@@ -66,8 +66,6 @@ function outermost(functions: Fn[]) {
  * so a call a formatter wrapped, with its callback on the line below, still counts.
  */
 function functionsAt(line: number | undefined, parsed: Parsed, among = parsed.functions) {
-  // Stryker disable next-line ConditionalExpression,StringLiteral: with no line, no function or statement is on it, so the rest of the function finds no candidates as well; and `where` is only shown with two candidates or more.
-  if (line === undefined) return { candidates: [], where: '' };
   const starting = outermost(among.filter((fn) => fn.start.line === line));
   if (starting.length > 0) return { candidates: starting, where: `start on line ${line}` };
   // Statements are listed outermost first, so this is the widest one starting on the line.
