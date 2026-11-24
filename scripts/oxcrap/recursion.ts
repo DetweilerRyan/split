@@ -4,17 +4,20 @@
 //   parameter or a local of the same name hides it. A default value sees the parameters and the
 //   scopes around the function, not the body's locals;
 // - `this.f()` or `this.#f()` to a method or function-valued field of that name in the class
-//   around the call, unless a non-arrow function in between rebinds `this`. An instance field
-//   hides a method of the same name, so if it holds no function, the call reaches none.
+//   around the call, unless a non-arrow function in between rebinds `this`. In a static method,
+//   field or block, `this` is the class and reaches its static members; anywhere else in the class
+//   it's the instance and reaches the rest. A field hides a method of the same name on its side,
+//   so if it holds no function, the call reaches none.
 // Calls through other objects, variables or files aren't followed. Why is in oxcrap.meta.md.
 import { type AstNode, children, isFunctionType, isNode } from './complexity.ts';
 
 /** A scope's names, each bound to the function it names, or to null for anything else. */
 type Scope = Map<string, AstNode | null>;
 /**
- * What `this.f()` reaches in a class, by name, with `#` before a private one: a method or a
- * function-valued field, or null for an instance field that holds no function. Members with a
- * computed or literal key are under undefined, which no call is to.
+ * What `this.f()` reaches from an instance's or a class's `this`, by name, with `#` before a
+ * private one: a method or a function-valued field, or null for a member that holds no function,
+ * such as a field or an accessor. Members with a computed or literal key, and static blocks, are
+ * under undefined, which no call is to.
  */
 type Members = Map<string | undefined, AstNode | null>;
 
@@ -195,23 +198,27 @@ function redeclaredByVar(scope: Scope, block: AstNode) {
   for (const [name, value] of vars) if (scope.has(name)) scope.set(name, value);
 }
 
-/** What `this.f()` reaches in a class body, by name. */
-function classMembers(body: AstNode): Members {
-  const members: Members = new Map();
+/**
+ * What `this.f()` reaches in a class body, by name: `instance` from an instance's `this`, in an
+ * instance method or field, and `statics` from the class's, in a static method, field or block.
+ */
+function classMembers(body: AstNode): { instance: Members; statics: Members } {
+  const instance: Members = new Map();
+  const statics: Members = new Map();
   const all = body.body as AstNode[];
-  // An instance field is set on the instance, so it hides a method of its name wherever it's
-  // written: the instance fields go again at the end.
-  for (const member of [...all, ...all.filter(isInstanceField)]) {
+  // A field is defined on the instance or the class after the methods are, so it hides a method of
+  // its name wherever it's written: the fields go again at the end.
+  for (const member of [...all, ...all.filter(isField)]) {
     const name = member.computed ? undefined : memberName(member.key);
     const value = functionValue(member.value);
-    if (value || isInstanceField(member)) members.set(name, value);
+    (member.static ? statics : instance).set(name, value);
   }
-  return members;
+  return { instance, statics };
 }
 
-/** Whether a class member is a field of each instance, rather than a method or a static member. */
-function isInstanceField(member: AstNode) {
-  return member.type === 'PropertyDefinition' && !member.static;
+/** Whether a class member is a field, rather than a method or a static block. */
+function isField(member: AstNode) {
+  return member.type === 'PropertyDefinition';
 }
 
 /**
@@ -335,12 +342,32 @@ function callsOf(call: AstNode, context: Context): Call[] {
   return [...named, ...viaThis].map((to) => ({ from: context.fn, to }));
 }
 
-/** Adds the calls in a class's members to `into`, each with the class's methods and fields as its `this`. */
+/**
+ * Adds the calls in a class's members to `into`. A static member's or static block's `this` is the
+ * class, and any other member's is the instance.
+ */
 function callsInClass(body: AstNode, context: Context, into: Call[]): Call[] {
-  const own = classMembers(body);
-  // A method's or field's function gets the class as its `this`. callsIn hands it on through
-  // parentheses around the function, and opens a static block's scope.
-  for (const member of body.body as AstNode[]) callsIn(member, context, own, into);
+  const { instance, statics } = classMembers(body);
+  for (const member of body.body as AstNode[]) {
+    const self = member.static || member.type === 'StaticBlock' ? statics : instance;
+    callsInMember(member, context, self, into);
+  }
+  return into;
+}
+
+/**
+ * Adds the calls in a class member to `into`, with `self` as the `this` of its value or static
+ * block. callsIn hands `self` on through parentheses around a method's or field's function, and
+ * opens a static block's scope.
+ */
+function callsInMember(member: AstNode, context: Context, self: Members, into: Call[]) {
+  if (member.type === 'StaticBlock') return callsIn(member, { ...context, self }, self, into);
+  for (const child of children(member)) {
+    // Only the value runs with the class's `this`. A computed key and decorators run where the
+    // class is written, with the `this` around it.
+    if (child === member.value) callsIn(child, { ...context, self }, self, into);
+    else callsIn(child, context, null, into);
+  }
   return into;
 }
 

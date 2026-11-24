@@ -273,6 +273,97 @@ describe('recursion', () => {
     expect(complexities(code)).toEqual(expected);
   });
 
+  // A static member's `this` is the class; any other member's is the instance.
+  it.each([
+    // 1, the condition, and the recursion.
+    [
+      'a static method past an instance field of the same name',
+      'class A { m = 1; static m(n) { return n ? this.m(n - 1) : 0; } }',
+      [['m', 3]],
+    ],
+    [
+      'a static method past an instance field’s function of the same name',
+      'class A { m = (n) => 0; static m(n) { return n ? this.m(n - 1) : 0; } }',
+      [
+        ['m', 1],
+        ['m', 3],
+      ],
+    ],
+    [
+      'an instance method past a static method of the same name',
+      'class A { static m() { return 0; } m() { return this.m(); } }',
+      [
+        ['m', 1],
+        ['m', 2],
+      ],
+    ],
+    [
+      'a static method past an instance method of the same name',
+      'class A { static m() { return this.m(); } m() { return 0; } }',
+      [
+        ['m', 2],
+        ['m', 1],
+      ],
+    ],
+    [
+      'neither of an instance and a static method calling the other through this',
+      'class A { g() { return this.s(); } static s() { return this.g(); } }',
+      [
+        ['g', 1],
+        ['s', 1],
+      ],
+    ],
+    [
+      'a static method hidden by a static field of the same name',
+      'class A { static m() { return this.m(); } static m = 1; }',
+      [['m', 1]],
+    ],
+    [
+      'an inner class’s static block, which is that class',
+      'class A { m() { return class { static { this.m(); } }; } }',
+      [['m', 1]],
+    ],
+    [
+      'an inner class’s field, which is its instance',
+      'class A { m() { return class { x = this.m(); }; } }',
+      [['m', 1]],
+    ],
+    [
+      'an inner class’s computed key, which is the this around it',
+      'class A { m() { return class { [this.m()]() {} }; } }',
+      [['m', 2]],
+    ],
+  ])('resolves this in %s', (_, code, expected) => {
+    const scored = parse('example.ts', code).functions.map((fn) => [fn.name, fn.complexity]);
+    expect(scored).toEqual(expected);
+  });
+
+  // With nested functions scored apart, f calls g through the class's this, and g calls f.
+  it.each([
+    [
+      'a static block to a static method',
+      'function f() { class B { static { this.g(); } static g() { f(); } } }',
+      { f: 2, 'f > g': 2 },
+    ],
+    [
+      'a static field to a static method',
+      'function f() { class B { static x = this.g(); static g() { f(); } } }',
+      { f: 2, 'f > g': 2 },
+    ],
+    [
+      'an instance field to an instance method',
+      'function f() { class B { x = this.g(); g() { f(); } } }',
+      { f: 2, 'f > g': 2 },
+    ],
+    [
+      'a static block, not to an instance method',
+      'function f() { class B { static { this.g(); } g() { f(); } } }',
+      { f: 1, 'f > g': 1 },
+    ],
+  ])('resolves this from %s', (_, code, expected) => {
+    expect(complexities(code, { ...COUNT_SEPARATELY, recursion: true })).toEqual(expected);
+  });
+
   it('resolves this to a field’s function, not the method of the same name it hides', () => {
     const code = 'class A { m() { return 1; } m = () => this.m(); }';
     const scored = parse('example.ts', code).functions.map((fn) => [fn.name, fn.complexity]);
