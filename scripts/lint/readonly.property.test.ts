@@ -3,12 +3,13 @@ import { RuleTester } from 'oxlint/plugins-dev';
 import { describe, it } from 'vitest';
 import { types } from './readonly.ts';
 
-// Random programs from a small grammar that knows what it writes: how many mutable types the rule
-// must report. Types nest, so each level is checked on its own; they're wrapped in `Readonly<…>`,
-// which makes only its argument's top level readonly; and they're written in each place a type
-// can go, including a local variable's annotation, where the rule allows them. Look-alikes, such
-// as `ReadonlyArray`, a qualified `ns.Map` and strings and comments that read like types, must
-// never be reported. The code is only parsed, never run.
+// Random programs from a small grammar that knows what it writes: which problem the rule must
+// report for each mutable type, on which line, in source order. Types nest, so each level is
+// checked on its own; they're wrapped in `Readonly<…>`, which makes only its argument's top level
+// readonly; and they're written in each place a type can go, including a local variable's
+// annotation, where the rule allows them. Look-alikes, such as `ReadonlyArray`, a qualified
+// `ns.Map` and strings and comments that read like types, must never be reported. The code is
+// only parsed, never run.
 
 // RuleTester reports through the test runner it's given. Run its cases in place, so a failing
 // case throws inside the property and fast-check can shrink it.
@@ -20,97 +21,109 @@ RuleTester.it = inPlace;
 const tester = new RuleTester({ languageOptions: { parserOptions: { lang: 'ts' } } });
 
 /**
- * A type expression: its code, how many problems the rule must report in it, and how many of
- * those are at its top level where `Readonly<…>` would make them readonly.
+ * A problem the rule must report in a type: its message, and whether it's at the type's top level
+ * where `Readonly<…>` would make it readonly.
  */
-type Ty = { readonly code: string; readonly count: number; readonly wrappable: number };
+type Problem = { readonly id: string; readonly top: boolean };
 
-/** A type with no problems of its own around `inner`. */
-function around(code: string, inner: Ty): Ty {
-  return { code, count: inner.count, wrappable: 0 };
+/**
+ * A type expression: its code, and the problems in it in source order. Each reported node starts
+ * with a token of its own, before the types inside it, so the order is the code's.
+ */
+type Ty = { readonly code: string; readonly problems: readonly Problem[] };
+
+/** The problems in `inners`, none of them at the top level any more. */
+function inside(inners: readonly Ty[]): readonly Problem[] {
+  return inners.flatMap((inner) => inner.problems.map(({ id }) => ({ id, top: false })));
 }
 
-/** A type that is mutable at its top level, and that `Readonly<…>` makes readonly, or not. */
-function mutable(code: string, inners: readonly Ty[], wrappable: boolean): Ty {
-  const count = inners.reduce((sum, inner) => sum + inner.count, 0) + 1;
-  return { code, count, wrappable: wrappable ? 1 : 0 };
+/** A type with no problem of its own around `inners`. */
+function around(code: string, inners: readonly Ty[]): Ty {
+  return { code, problems: inside(inners) };
 }
 
-/** A type that is readonly at its top level, with whatever its parts hold. */
-function readonly(code: string, inners: readonly Ty[]): Ty {
-  return { code, count: inners.reduce((sum, inner) => sum + inner.count, 0), wrappable: 0 };
+/** A type that is mutable at its top level, which `Readonly<…>` makes readonly, or doesn't. */
+function mutable(code: string, id: string, inners: readonly Ty[], wrappable: boolean): Ty {
+  return { code, problems: [{ id, top: wrappable }, ...inside(inners)] };
 }
 
 const leaf = fc.constantFrom<Ty>(
-  { code: 'string', count: 0, wrappable: 0 },
-  { code: 'number', count: 0, wrappable: 0 },
-  { code: 'Items[number]', count: 0, wrappable: 0 },
-  { code: 'keyof Items', count: 0, wrappable: 0 },
+  { code: 'string', problems: [] },
+  { code: 'number', problems: [] },
+  { code: 'Items[number]', problems: [] },
+  { code: 'keyof Items', problems: [] },
 );
 
 /** One type built around `e` and `f`, in one of the forms the rule decides. */
 function formOf(form: number, e: Ty, f: Ty): Ty {
   switch (form) {
     case 0:
-      return mutable(`(${e.code})[]`, [e], true);
+      return mutable(`(${e.code})[]`, 'list', [e], true);
     case 1:
-      return readonly(`readonly (${e.code})[]`, [e]);
+      return around(`readonly (${e.code})[]`, [e]);
     case 2:
-      return mutable(`[${e.code}, ${f.code}]`, [e, f], true);
+      return mutable(`[${e.code}, ${f.code}]`, 'list', [e, f], true);
     case 3:
-      return readonly(`readonly [first: ${e.code}, ...rest: readonly (${f.code})[]]`, [e, f]);
+      return around(`readonly [first: ${e.code}, ...rest: readonly (${f.code})[]]`, [e, f]);
     case 4:
-      return mutable(`Array<${e.code}>`, [e], true);
+      return mutable(`Array<${e.code}>`, 'array', [e], true);
     case 5:
-      return mutable(`Map<string, ${e.code}>`, [e], false);
+      return mutable(`Map<string, ${e.code}>`, 'map', [e], false);
     case 6:
-      return mutable(`Set<${e.code}>`, [e], false);
+      return mutable(`Set<${e.code}>`, 'set', [e], false);
     case 7:
-      return mutable(`Record<string, ${e.code}>`, [e], true);
+      return mutable(`Record<string, ${e.code}>`, 'record', [e], true);
     case 8:
-      return mutable(`{ a: ${e.code}; readonly b: ${f.code}; m(): void }`, [e, f], true);
+      return mutable(
+        `{ a: ${e.code}; readonly b: ${f.code}; m(): void }`,
+        'property',
+        [e, f],
+        true,
+      );
     case 9:
-      return readonly(`{ readonly a?: ${e.code}; m(x: ${f.code}): void }`, [e, f]);
+      return around(`{ readonly a?: ${e.code}; m(x: ${f.code}): void }`, [e, f]);
     case 10:
-      return mutable(`{ [key: string]: ${e.code} }`, [e], true);
+      return mutable(`{ [key: string]: ${e.code} }`, 'index', [e], true);
     case 11:
-      return readonly(`{ readonly [key: string]: ${e.code} }`, [e]);
+      return around(`{ readonly [key: string]: ${e.code} }`, [e]);
     case 12:
-      return mutable(`{ [K in Keys]: ${e.code} }`, [e], true);
+      return mutable(`{ [K in Keys]: ${e.code} }`, 'mapped', [e], true);
     case 13:
-      return mutable(`{ -readonly [K in Keys]: ${e.code} }`, [e], true);
+      return mutable(`{ -readonly [K in Keys]: ${e.code} }`, 'mapped', [e], true);
     case 14:
-      return readonly(`{ readonly [K in Keys]: ${e.code} }`, [e]);
+      return around(`{ readonly [K in Keys]: ${e.code} }`, [e]);
     case 15:
-      return {
-        code: `(${e.code}) | (${f.code})`,
-        count: e.count + f.count,
-        wrappable: e.wrappable + f.wrappable,
-      };
+      // A union keeps its members' top levels, which `Readonly<…>` reaches through it.
+      return { code: `(${e.code}) | (${f.code})`, problems: [...e.problems, ...f.problems] };
     // Function types, whose parameters are identifiers and patterns inside the type.
     case 16:
-      return readonly(`(x: ${e.code}) => ${f.code}`, [e, f]);
+      return around(`(x: ${e.code}) => ${f.code}`, [e, f]);
     case 17:
-      return readonly(`(...rest: readonly (${e.code})[]) => void`, [e]);
+      return around(`(...rest: readonly (${e.code})[]) => void`, [e]);
     case 18:
-      return readonly(`({ a }: ${e.code}, [b]: ${f.code}) => void`, [e, f]);
+      return around(`({ a }: ${e.code}, [b]: ${f.code}) => void`, [e, f]);
     // Look-alikes: readonly kinds, and names that only look like the mutable ones.
     case 19:
-      return around(`ReadonlyArray<${e.code}>`, e);
+      return around(`ReadonlyArray<${e.code}>`, [e]);
     case 20:
-      return around(`ReadonlyMap<string, ${e.code}>`, e);
+      return around(`ReadonlyMap<string, ${e.code}>`, [e]);
     case 21:
-      return around(`ReadonlySet<${e.code}>`, e);
+      return around(`ReadonlySet<${e.code}>`, [e]);
     case 22:
-      return around(`ns.Map<string, ${e.code}>`, e);
+      return around(`ns.Map<string, ${e.code}>`, [e]);
     case 23:
-      return around(`WeakMap<object, ${e.code}>`, e);
+      return around(`WeakMap<object, ${e.code}>`, [e]);
     case 24:
       // `keyof` is a type operator too, but only `readonly` makes the array readonly.
-      return { code: `keyof (${e.code})[]`, count: e.count + 1, wrappable: 0 };
+      return mutable(`keyof (${e.code})[]`, 'list', [e], false);
     default:
-      return around(`MyArray<${e.code}>`, e);
+      return around(`MyArray<${e.code}>`, [e]);
   }
+}
+
+/** `t`'s problems below its top level, as `Readonly<…>` leaves them. */
+function belowTop(t: Ty): readonly Problem[] {
+  return t.problems.filter((problem) => !problem.top);
 }
 
 /**
@@ -118,18 +131,17 @@ function formOf(form: number, e: Ty, f: Ty): Ty {
  * union or an intersection, but not through another generic such as `Promise`.
  */
 function wrapped(wrapper: number, t: Ty): Ty {
-  const unwrapped = t.count - t.wrappable;
   switch (wrapper) {
     case 0:
       return t;
     case 1:
-      return { code: `Readonly<${t.code}>`, count: unwrapped, wrappable: 0 };
+      return { code: `Readonly<${t.code}>`, problems: belowTop(t) };
     case 2:
-      return { code: `Readonly<(${t.code}) | null>`, count: unwrapped, wrappable: 0 };
+      return { code: `Readonly<(${t.code}) | null>`, problems: belowTop(t) };
     case 3:
-      return { code: `Readonly<Items & (${t.code})>`, count: unwrapped, wrappable: 0 };
+      return { code: `Readonly<Items & (${t.code})>`, problems: belowTop(t) };
     default:
-      return around(`Readonly<Promise<${t.code}>>`, t);
+      return around(`Readonly<Promise<${t.code}>>`, [t]);
   }
 }
 
@@ -148,68 +160,115 @@ function typeAt(depth: number): fc.Arbitrary<Ty> {
 }
 const type = typeAt(3);
 
-/** A statement, and how many problems the rule must report in it. */
-type Code = { readonly code: string; readonly count: number };
+/** A problem the rule must report in a statement, with its line in the statement, from 0. */
+type Report = { readonly messageId: string; readonly line: number };
+
+/** A statement, and the problems the rule must report in it, in order. */
+type Code = { readonly code: string; readonly reports: readonly Report[] };
+
+/** `t`'s problems, as reports on `line` of a statement, once for each time `t` is written there. */
+function on(line: number, t: Ty, times = 1): readonly Report[] {
+  const once = t.problems.map(({ id }) => ({ messageId: id, line }));
+  return Array.from({ length: times }, () => once).flat();
+}
 
 /** `t` written in one of the places a type can go, as a statement. */
 function placed(place: number, t: Ty): Code {
   switch (place) {
     case 0:
-      return { code: `type TID = ${t.code};`, count: t.count };
+      return { code: `type TID = ${t.code};`, reports: on(0, t) };
     case 1:
-      return { code: `interface IID { a: ${t.code}; readonly b: number }`, count: t.count + 1 };
+      return {
+        code: `interface IID { a: ${t.code}; readonly b: number }`,
+        reports: [{ messageId: 'property', line: 0 }, ...on(0, t)],
+      };
     case 2:
-      return { code: `function fID(p: ${t.code}): ${t.code} {}`, count: t.count * 2 };
+      return { code: `function fID(p: ${t.code}): ${t.code} {}`, reports: on(0, t, 2) };
     case 3:
-      return { code: `let vID: ${t.code};`, count: t.count };
+      return { code: `let vID: ${t.code};`, reports: on(0, t) };
     case 4:
-      return { code: `function gID<P extends ${t.code}>() {}`, count: t.count };
+      return { code: `function gID<P extends ${t.code}>() {}`, reports: on(0, t) };
     case 5:
-      return { code: `function gID() {\n  type LID = ${t.code};\n}`, count: t.count };
+      return { code: `function gID() {\n  type LID = ${t.code};\n}`, reports: on(1, t) };
     case 6:
-      return { code: `function gID() {\n  return h<${t.code}>();\n}`, count: t.count };
+      return { code: `function gID() {\n  return h<${t.code}>();\n}`, reports: on(1, t) };
     case 7:
-      return { code: `function gID() {\n  const k = (p: ${t.code}) => p;\n}`, count: t.count };
+      return { code: `function gID() {\n  const k = (p: ${t.code}) => p;\n}`, reports: on(1, t) };
     // A local function's return type is no variable's annotation, though a declarator holds it.
     case 8:
-      return { code: `function gID() {\n  const k = (): ${t.code} => h();\n}`, count: t.count };
+      return { code: `function gID() {\n  const k = (): ${t.code} => h();\n}`, reports: on(1, t) };
     // A variable declared inside a function may be a working value, whatever its type.
     case 9:
-      return { code: `function gID() {\n  const lID: ${t.code} = h();\n}`, count: 0 };
+      return { code: `function gID() {\n  const lID: ${t.code} = h();\n}`, reports: [] };
     case 10:
-      return { code: `const gID = () => {\n  let lID: ${t.code};\n};`, count: 0 };
+      return { code: `const gID = () => {\n  let lID: ${t.code};\n};`, reports: [] };
     case 11:
-      return { code: `const gID = function () {\n  const lID: ${t.code} = h();\n};`, count: 0 };
+      return { code: `const gID = function () {\n  const lID: ${t.code} = h();\n};`, reports: [] };
     case 12:
       // A function type's parameters are identifiers, patterns and rest elements in the type.
       return {
         code: `function gID() {\n  const lID: (x: ${t.code}, { a }: ${t.code}, [b]: ${t.code}, ...c: ${t.code}) => void = h();\n}`,
-        count: 0,
+        reports: [],
       };
+    case 13:
+      return { code: `function gID() {\n  const [lID]: [${t.code}] = h();\n}`, reports: [] };
+    // A class's fields, parameters and return types are checked; a field needs no `readonly`.
+    case 14:
+      return {
+        code: `class CID { f: ${t.code}; readonly g: ${t.code}; m(p: ${t.code}): void {} }`,
+        reports: on(0, t, 3),
+      };
+    // A cast or `satisfies` writes a type, at the top level or in a function, but annotates no variable.
+    case 15:
+      return { code: `const cID = h() as ${t.code};`, reports: on(0, t) };
+    case 16:
+      return {
+        code: `function gID() {\n  const lID = h() satisfies ${t.code};\n}`,
+        reports: on(1, t),
+      };
+    // `declare` writes types with no code, and is checked the same.
+    case 17:
+      return { code: `declare const dID: ${t.code};`, reports: on(0, t) };
+    case 18:
+      return { code: `declare function dID(p: ${t.code}): void;`, reports: on(0, t) };
+    case 19:
+      return {
+        code: `declare module 'mID' {\n  interface IID { a: ${t.code} }\n}`,
+        reports: [{ messageId: 'property', line: 1 }, ...on(1, t)],
+      };
+    // An overload's signature is checked; its body's local variables are working values.
     default:
-      return { code: `function gID() {\n  const [lID]: [${t.code}] = h();\n}`, count: 0 };
+      return {
+        code: `function oID(p: ${t.code}): void;\nfunction oID(p: unknown) {\n  const lID: ${t.code} = h();\n}`,
+        reports: on(0, t),
+      };
   }
 }
 
 /** Code that only looks like a mutable type. */
 const lookAlike = fc.constantFrom<Code>(
-  { code: "const sID = 'string[] and Map<string, number>';", count: 0 },
-  { code: '// type CID = { a: string[] };', count: 0 },
-  { code: 'const mID = new Map<string, number>();', count: 0 },
-  { code: 'const xsID = Array.from([1]);', count: 0 },
-  { code: 'interface MID { m(): void; (x: number): string }', count: 0 },
+  { code: "const sID = 'string[] and Map<string, number>';", reports: [] },
+  { code: '// type CID = { a: string[] };', reports: [] },
+  { code: 'const mID = new Map<string, number>();', reports: [] },
+  { code: 'const xsID = Array.from([1]);', reports: [] },
+  { code: 'interface MID { m(): void; (x: number): string }', reports: [] },
 );
 
 const statement = fc.oneof(
-  fc.tuple(fc.integer({ min: 0, max: 13 }), type).map(([place, t]) => placed(place, t)),
+  fc.tuple(fc.integer({ min: 0, max: 20 }), type).map(([place, t]) => placed(place, t)),
   lookAlike,
 );
 
-/** The statements one after another, each with its own names. */
+/** The statements one after another, each with its own names and its reports on its own lines. */
 function join(parts: readonly Code[]): Code {
+  const starts = parts.map((_, i) =>
+    parts.slice(0, i).reduce((lines, part) => lines + part.code.split('\n').length, 1),
+  );
   return {
     code: parts.map((part, i) => part.code.replaceAll('ID', `_${i}`)).join('\n'),
-    count: parts.reduce((sum, part) => sum + part.count, 0),
+    reports: parts.flatMap((part, i) =>
+      part.reports.map(({ messageId, line }) => ({ messageId, line: starts[i] + line })),
+    ),
   };
 }
 const program = fc.array(statement, { minLength: 1, maxLength: 4 }).map(join);
@@ -217,9 +276,9 @@ const program = fc.array(statement, { minLength: 1, maxLength: 4 }).map(join);
 describe('the readonly rule, on generated programs', () => {
   it('reports each mutable type, level by level, outside a local variable’s annotation', () => {
     fc.assert(
-      fc.property(program, ({ code, count }) => {
-        if (count === 0) tester.run('types', types, { valid: [code], invalid: [] });
-        else tester.run('types', types, { valid: [], invalid: [{ code, errors: count }] });
+      fc.property(program, ({ code, reports }) => {
+        if (reports.length === 0) tester.run('types', types, { valid: [code], invalid: [] });
+        else tester.run('types', types, { valid: [], invalid: [{ code, errors: [...reports] }] });
       }),
       // Each run parses a few lines, so 500 cost little, and reach the rarer form and wrapper pairs.
       { numRuns: 500 },

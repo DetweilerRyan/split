@@ -412,13 +412,13 @@ function graphOf<Fn>(
   callerOf: (node: AstNode) => Fn | undefined,
   scoredAt: (node: AstNode) => Fn | undefined,
 ) {
-  const edges = new Map<Fn, ReadonlySet<Fn>>();
+  const edges: Map<Fn, Set<Fn>> = new Map();
   for (const { from, to } of calls) {
     const source = from ? callerOf(from) : undefined;
     const target = to ? scoredAt(to) : undefined;
     // Stryker disable next-line ConditionalExpression: an edge from undefined, or one to it, can't close a cycle while the other check stays, since undefined is then only ever a source or only ever a target.
     if (source === undefined || target === undefined) continue;
-    edges.set(source, new Set(edges.get(source)).add(target));
+    edges.set(source, (edges.get(source) ?? new Set<Fn>()).add(target));
   }
   return edges;
 }

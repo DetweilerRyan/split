@@ -22,6 +22,20 @@ export interface PersonTotal {
   readonly converted: number | null;
 }
 
+/** A receipt's totals, as computeReceiptMath works them out from a snapshot. */
+export interface ReceiptMath {
+  readonly currency: string;
+  readonly exponent: number;
+  readonly displayCurrency: string | null;
+  readonly itemsSubtotal: number;
+  readonly cardTotal: number;
+  readonly grandTotal: number;
+  readonly effectiveRate: number | null;
+  readonly isEstimatedRate: boolean;
+  /** Each participant's totals, by participant id. */
+  readonly perPerson: Readonly<Record<string, PersonTotal>>;
+}
+
 /**
  * Splits `total` (integer minor units) across `weights` proportionally using the
  * largest-remainder method. Ties go to the lowest index, so the result is deterministic
@@ -43,10 +57,10 @@ export function allocateMinor(total: number, weights: readonly number[]): readon
 }
 
 // @crap-allow CRAP 16, complexity 16. Debt from before the CRAP check (#63): too complex.
-export function computeReceiptMath(snapshot: RoomSnapshot) {
+export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   const currency = normalizeCurrency(snapshot.currency ?? DEFAULT_CURRENCY);
   const exp = currencyExponent(currency);
-  // Filled in place below, as a local working value; callers get each total as readonly.
+  // Filled in place below, as a local working value; ReceiptMath gives callers each total as readonly.
   const perPerson: Record<string, { -readonly [K in keyof PersonTotal]: PersonTotal[K] }> = {};
 
   snapshot.participants.forEach((participant) => {
@@ -147,6 +161,3 @@ export function computeReceiptMath(snapshot: RoomSnapshot) {
     perPerson,
   };
 }
-
-/** What `computeReceiptMath` works out for a receipt. */
-export type ReceiptMath = ReturnType<typeof computeReceiptMath>;
