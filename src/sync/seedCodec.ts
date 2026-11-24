@@ -1,7 +1,7 @@
 import LZString from 'lz-string';
 import * as Y from 'yjs';
 import { isValidCurrency, normalizeCurrency } from '../domain/money/currency';
-import { type ReceiptSeed, validateSeed } from '../domain/receipt/receiptSeed';
+import { type ReceiptSeed, receiptSeedSchema, validateSeed } from '../domain/receipt/receiptSeed';
 import { findParticipant, participantId } from '../domain/receipt/roomSnapshot';
 import { type RoomId, createRoomId, isUuidRoomId, parseRoomId } from '../domain/room/roomId';
 import { storedParticipants } from './storedParticipants';
@@ -56,9 +56,7 @@ export function decodeSeed(value: string | null): ReceiptSeed | null {
       ? content
       : LZString.decompressFromEncodedURIComponent(content);
     if (!json) return null;
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- it checks only that `items` is an array, as SeedModal's comment says. Parsing the whole seed would refuse seeds it takes today, a change of behaviour for the owner to decide (#117).
-    const seed = JSON.parse(json) as ReceiptSeed;
-    return seed && typeof seed === 'object' && Array.isArray(seed.items) ? seed : null;
+    return receiptSeedSchema.safeParse(JSON.parse(json)).data ?? null;
   } catch {
     return null;
   }

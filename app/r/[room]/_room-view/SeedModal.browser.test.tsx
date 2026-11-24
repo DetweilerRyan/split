@@ -65,13 +65,25 @@ describe('SeedModal', () => {
     alert.mockRestore();
   });
 
+  it('says it could not parse a seed that the seed schema refuses, and imports nothing', async () => {
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const { screen, field, onImport } = await renderModal();
+    await userEvent.fill(field, JSON.stringify({ title: 'No roster', items: [] }));
+    await userEvent.click(screen.getByRole('button', { name: 'Import seed' }));
+    expect(alert).toHaveBeenCalledExactlyOnceWith(
+      'Could not parse seed JSON, compressed seed, or room link.',
+    );
+    expect(onImport).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
   it('says it could not parse a seed that fails to import', async () => {
     const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const { screen, field, onImport } = await renderModal();
     onImport.mockImplementation(() => {
       throw new TypeError("Cannot read properties of undefined (reading 'forEach')");
     });
-    await userEvent.fill(field, JSON.stringify({ title: 'No roster', items: [] }));
+    await userEvent.fill(field, JSON.stringify(plitvice));
     await userEvent.click(screen.getByRole('button', { name: 'Import seed' }));
     expect(alert).toHaveBeenCalledExactlyOnceWith(
       'Could not parse seed JSON, compressed seed, or room link.',
