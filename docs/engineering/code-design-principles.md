@@ -4,7 +4,18 @@ Six principles for deciding how code is shaped here. Each says how to decide, wi
 
 Apply them to the code your task writes or changes. Don't reshape other code to fit them unless the task asks.
 
-## 1. Keep essential logic apart from accidental machinery
+| #   | Name                                                                                       | Principle                                                  |
+| :-- | :----------------------------------------------------------------------------------------- | :--------------------------------------------------------- |
+| 1   | [Core and shell](#1-core-and-shell-keep-essential-logic-apart-from-accidental-machinery)   | Keep essential logic apart from accidental machinery       |
+| 2   | [Contained state](#2-contained-state-keep-state-minimal-immutable-and-contained)           | Keep state minimal, immutable and contained                |
+| 3   | [Least power](#3-least-power-use-the-least-powerful-construct-that-does-the-job)           | Use the least powerful construct that does the job         |
+| 4   | [Earned complexity](#4-earned-complexity-pay-for-complexity-only-when-a-use-needs-it)      | Pay for complexity only when a use needs it                |
+| 5   | [Deep modules](#5-deep-modules-give-each-module-a-small-interface-over-a-lot-of-behaviour) | Give each module a small interface over a lot of behaviour |
+| 6   | [Honest types](#6-honest-types-let-the-types-rule-out-states-that-cant-happen)             | Let the types rule out states that can't happen            |
+
+Refer to a principle by its name.
+
+## 1. Core and shell: keep essential logic apart from accidental machinery
 
 Essential logic is the business rule itself: how a receipt splits, rounds and converts. Test it by asking whether the rule would exist with no React, no Yjs and no network. If it would, it's essential.
 
@@ -23,23 +34,22 @@ const share = itemShare(item);
 
 Where code goes is in [Code layout](code-layout.md), and what each layer may import is in [Dependency direction](dependency-direction.md). How to pass a fake in a test is in [Testing conventions](testing-conventions.md#replacing-external-dependencies).
 
-## 2. Keep state minimal, immutable and contained
+## 2. Contained state: keep state minimal, immutable and contained
 
 State is what makes code hard to follow, so keep as little of it as the task allows.
 
 - **Don't store a value you can compute from other state.** Derive it where it's read, unless a reader needs a stable cached value, as the snapshot `ReceiptStore` gives `useSyncExternalStore` does.
-- **Write functions over plain data, not classes, and don't use `this`.** Keep state in a function's parameters, or in a factory that closes over it and returns an object of functions, as `createActor` in [`e2e/screenplay/actor.ts`](../../e2e/screenplay/actor.ts) does. An `Error` subclass may be a class. `npm run lint` enforces this through the local oxlint plugin [`scripts/lint/functional.ts`](../../scripts/lint/functional.ts).
-- **State that must outlive a call belongs in the shell** of principle 1, behind one module, as `ReceiptStore` holds the room's Yjs document.
-- **`ReceiptStore` keeps its class,** as the owner decided on [#83](https://github.com/DetweilerRyan/split/issues/83). Keeping any other class needs the owner's approval. Disable `functional/no-classes` on the class's line, with the reason.
+- **Write functions over plain data, not classes, and don't use `this`.** Keep state in a function's parameters, or in a factory that closes over it and returns an object of functions, as `createActor` in [`e2e/screenplay/actor.ts`](../../e2e/screenplay/actor.ts) does. An `Error` subclass may be a class. Any other class needs the owner's approval, as `ReceiptStore`'s had on [#83](https://github.com/DetweilerRyan/split/issues/83). `npm run lint` enforces this through the local oxlint plugin [`scripts/lint/functional.ts`](../../scripts/lint/functional.ts).
+- **State that must outlive a call belongs in the shell** of _core and shell_, behind one module, as `ReceiptStore` holds the room's Yjs document.
 
 How each type is kept readonly, how to build a changed value, and the working value a function may change in place are in [Types and schemas](types-and-schemas.md#readonly-by-default).
 
-## 3. Use the least powerful construct that does the job
+## 3. Least power: use the least powerful construct that does the job
 
 The less a construct can do, the more a reader and a tool can tell about what it does.
 
 - **Reach for the weakest form that works:** a value or plain data, then a pure function, then a `switch` or a chain of conditions, then a function or an interface passed in. A registry, dynamic dispatch, `Proxy`, `eval` and calls through computed property names come last, only when nothing weaker works.
-- **Write a closed set of cases as a discriminated union, and handle it with an exhaustive `switch`** that ends in a `never` check, so the compiler names every `switch` a new case has to reach.
+- **Handle a closed set of cases with an exhaustive `switch`** over its discriminated union, as _honest types_ writes it, ending in a `never` check, so the compiler names every `switch` a new case has to reach.
 - **Don't turn a `switch` or a chain of conditions into a lookup table to shorten it or to pass a CRAP limit,** whether it's a `Map`, an object or a `Set` read at run time, and whether or not it's called a registry. It hides the branches from a reader without removing them. A table of plain values, such as region codes to currencies, is data, not branches, so it's fine.
 - **Use a registry rarely,** a table of handlers looked up by a key at run time. It's the most dynamic construct here, so the problem has to need it: cases added at run time by code the module can't know about, which an interface passed in can't serve. Say in a comment beside it why nothing weaker works.
 - **Prefer declarative config and plain data to code that builds the same thing at run time,** but never in place of branches, as the rule above says.
@@ -62,7 +72,7 @@ switch (action.kind) {
 }
 ```
 
-## 4. Pay for complexity only when a use needs it
+## 4. Earned complexity: pay for complexity only when a use needs it
 
 An abstraction made before its second use is a guess, and a wrong one costs more to undo than duplication does.
 
@@ -70,22 +80,23 @@ An abstraction made before its second use is a guess, and a wrong one costs more
 - **Keep code beside its one user.** [Code layout](code-layout.md) says where that is, and when the code moves. Two similar pieces of code are cheaper than the wrong shared one.
 - **Default each option to the simple case,** so a caller that doesn't need it passes nothing, as oxCrap's `counting` options do. [Its README](../../scripts/oxcrap/README.md) lists their defaults.
 
-## 5. Give each module a small interface over a lot of behaviour
+## 5. Deep modules: give each module a small interface over a lot of behaviour
 
 A module earns its place by carrying complexity its callers would otherwise carry. A deep module is one whose small interface hides much more logic than the interface shows. It might be a program with a command line, or a simplified abstraction over complex code that callers use through a few functions.
 
-- **Test a module by imagining it deleted.** If its complexity would reappear in each caller, it's earning its place. If the complexity would vanish with it, it's a pass-through: fold it into its caller. A shell module that only performs effects is principle 1's, and stays.
-- **Give a module one reason to change** (single responsibility). It hides one concern, so a change to that concern touches it, and changes to other concerns don't. If you can't name its concern without "and", it has two.
+- **Test a module by imagining it deleted.** If its complexity would reappear in each caller, it's earning its place. If the complexity would vanish with it, it's a pass-through: fold it into its caller. A shell module that only performs effects belongs to _core and shell_, and stays.
+- **Gather what changes for the same reason, and separate what changes for different reasons** (single responsibility). A reason is whoever asks for the change, such as the receipt's rules, how a room syncs, or how a screen looks. If two of them would each ask for changes to one module, split it along that line. This is about modules, not about a function doing one thing.
 - **Its interface is everything a caller relies on:** its exports and types, and also the invariants it keeps and the errors it can raise. Test it through that interface. A test of the module that has to reach past its interface means the module has the wrong shape.
 - **Anything that implements an interface keeps its whole contract,** not only its types, and that includes a fake in a test (Liskov substitution).
-- **Put a stable interface where variation is real,** and pass the implementation in (open-closed, read as protected variation). Variation is real when there are two or more implementations. Move a closed set from principle 3's `switch` to an interface when the same `switch` over the same union recurs in two or more modules, or when a second implementation lives outside the module. `RoomProvider` shows both sides: callers depend on its interface, which tests fake, and inside `createProvider` a plain condition picks the backend from a closed set.
+- **Put a stable interface where variation is real,** and pass the implementation in (open-closed, read as protected variation). Variation is real when there are two or more implementations. Move a closed set from _least power_'s `switch` to an interface when the same `switch` over the same union recurs in two or more modules, or when a second implementation lives outside the module. `RoomProvider` shows both sides: callers depend on its interface, which tests fake, and inside `createProvider` a plain condition picks the backend from a closed set.
 - **An error says what went wrong and what to do about it.** Whoever reads it, a person or an agent, acts on its words.
 
-## 6. Let the types rule out states that can't happen
+## 6. Honest types: let the types rule out states that can't happen
 
 A value that can't be invalid needs no check where it's used.
 
-- **Write alternatives as a discriminated union,** not as booleans and optional fields that could contradict each other.
+- **Write alternatives as a discriminated union,** with a discriminator field, such as `status` or `kind`, that names which case a value is. Don't use booleans and optional fields that could contradict each other. Use a union even for two cases, so a third can be added without changing the shape.
+- **Don't pass a boolean that picks what a function does** (a flag argument). Write two functions, or pass a member of a union whose name says which.
 - **Parse input where it enters the program,** into a type that guarantees it's valid, and pass that type on, rather than checking the raw value again where it's used. [Types and schemas](types-and-schemas.md#ids-and-the-strings-built-from-them) says how, for ids.
 
 ```ts
@@ -101,9 +112,9 @@ type Rate =
 
 ## When two principles pull apart
 
-- **Principle 1 wins over principle 4 for a business rule,** which goes in `src/domain/` even with one user, as [Code layout](code-layout.md) says.
-- **Principles 3 and 5 split a set of cases by whether it's closed.** A closed set the module owns is a union with a `switch`. A real point of variation is an interface. A registry comes after both, as principle 3 says.
-- **Passing an effect in, as principle 1 asks, isn't a parameter or an injection point that principle 4 counts.** An injection point lets a caller swap a whole part, as `RoomView`'s `parts` do, by the owner's exception in [Testing conventions](testing-conventions.md#writing-component-and-hook-tests). Add one only when principle 4's test is met.
+- **Core and shell wins over earned complexity for a business rule,** which goes in `src/domain/` even with one user, as [Code layout](code-layout.md) says.
+- **Least power and deep modules split a set of cases by whether it's closed.** A closed set the module owns is a union with a `switch`. A real point of variation is an interface. A registry comes after both, as _least power_ says.
+- **Passing an effect in, as core and shell asks, isn't a parameter or an injection point that earned complexity counts.** An injection point lets a caller swap a whole part, as `RoomView`'s `parts` do, by the owner's exception in [Testing conventions](testing-conventions.md#writing-component-and-hook-tests). Add one only when _earned complexity_'s test is met.
 
 ## Changing this document
 

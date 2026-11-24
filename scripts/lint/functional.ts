@@ -1,9 +1,9 @@
 // A local oxlint JS plugin that keeps the code functional: it bans classes, except Error
 // subclasses, and `this`, which its allowInClasses option allows inside the classes that are
 // kept. `.oxlintrc.json` loads it through "jsPlugins" and turns on its rules as
-// `functional/no-classes` and `functional/no-this`. The rule is principle 2 of
-// docs/engineering/code-design-principles.md; why it, and this plugin, are as they are is in that
-// document's sidecar. Read the sidecar only when changing or questioning the plugin.
+// `functional/no-classes` and `functional/no-this`. The rule is the "contained state" principle
+// in docs/engineering/code-design-principles.md; why it, and this plugin, are as they are is in
+// that document's sidecar. Read the sidecar only when changing or questioning the plugin.
 // Node, and so oxlint, runs this as TypeScript by stripping the types, so use only syntax that
 // erases: no enums, namespaces or parameter properties.
 import type { RuleTester } from 'oxlint/plugins-dev';
