@@ -10,7 +10,7 @@ Essential logic is the business rule itself: how a receipt splits, rounds and co
 
 - **Write essential logic as pure functions over plain data, in `src/domain/`,** named in the words users use, such as receipt, item, claim, participant and share.
 - **Keep accidental machinery in the shell:** UI, sync, storage and outside services. A condition in the shell is one that wouldn't exist without them, such as whether a request failed or a dialog is open. Any other condition is essential logic.
-- **Keep effects out of the code that decides.** The shell performs them, and passes their results, or the effect itself, in as arguments. Pure essential logic then needs no fakes, and the rest is tested with plain fakes.
+- **Keep effects out of the code that decides.** The shell performs them, and passes their results, or the effect itself, in as arguments: only the part the code uses, as `useActiveIdentity` takes only its provider's `setIdentity`. Pure essential logic then needs no fakes, and the rest is tested with plain fakes.
 - **A business decision your change adds or edits in a component or hook goes in the domain,** and the UI calls it.
 
 ```ts
@@ -39,7 +39,7 @@ How each type is kept readonly, how to build a changed value, and the working va
 The less a construct can do, the more a reader and a tool can tell about what it does.
 
 - **Reach for the weakest form that works:** a value or plain data, then a pure function, then a `switch` or a chain of conditions, then a function passed in. Dynamic dispatch, `Proxy`, `eval` and calls through computed property names come last, only when nothing weaker works.
-- **Don't turn a `switch` or a chain of conditions into a lookup table.** It hides the branches from a reader, and oxCrap still counts them. [CRAP score](crap.md#responding-to-a-finding) says what counts as one.
+- **Don't turn a `switch` or a chain of conditions into a lookup table,** a `Map`, object or `Set` read at run time. It hides the branches from a reader without removing them. A table of plain values, such as region codes to currencies, is data, not branches, so it's fine.
 - **Prefer declarative config and plain data to code that builds the same thing at run time,** but never in place of branches, as the rule above says.
 
 ```ts
