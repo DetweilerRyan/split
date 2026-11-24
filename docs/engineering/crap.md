@@ -29,6 +29,10 @@ All three run oxCrap on a fresh report, so they print the same findings.
 - **When a function's numbers change, update its comment by hand,** and check the reason still holds.
 - **Replace a stand-in reason when you work on its function.** The comments added when the check started say "Debt from before the CRAP check (#63)", and those added when everything that branches started counting say "Debt from before nested functions, default values and ?. counted (#74)". Each is followed by "no tests yet" or "too complex". Give the real reason, or bring the function within the limits and delete the comment.
 
+## Showing a finding in another document
+
+- **Show oxCrap's output with an invented function in an invented file,** such as `grade` in `src/grade.ts`, as oxCrap's README does, never a real one. Where a real function's numbers are kept is in [single source of truth](../prose/single-source-of-truth.md#rules)'s owner table.
+
 ## Changing this document
 
 The reasons for this procedure and for oxCrap, their sources, and the options not taken are in [`scripts/oxcrap/oxcrap.meta.md`](../../scripts/oxcrap/oxcrap.meta.md). Read it only when changing or questioning a rule here.
