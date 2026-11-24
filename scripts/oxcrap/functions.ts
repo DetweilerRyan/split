@@ -128,7 +128,7 @@ type Source = {
   counting: Counting;
   position: (offset: number) => Position;
   /** The lookup tables the module can read, own and imported, and the uses a local hides. */
-  tables: Readable;
+  readonly tables: Readable;
 };
 /** What a walk finds: each function with the node it came from, and the simple statements. */
 type Found = { functions: { fn: Fn; node: AstNode }[]; statements: Parsed['statements'] };

@@ -20,18 +20,18 @@ type Kind = 'object' | 'map' | 'set' | 'array' | 'in';
 type Placement = 'same' | 'importedTable' | 'importedHandlers';
 type Cast = 'none' | 'any' | 'record' | 'parens' | 'nonNull';
 type Decoy = {
-  where: 'main' | 'other';
-  does: 'read' | 'changeOther' | 'changeTable';
-  form: number;
+  readonly where: 'main' | 'other';
+  readonly does: 'read' | 'changeOther' | 'changeTable';
+  readonly form: number;
 };
 type Shadow = 'none' | 'param' | 'local' | 'hoistedVar' | 'siblingBlock';
 type Case = {
-  names: string[];
-  kind: Kind;
-  placement: Placement;
-  cast: Cast;
-  decoys: Decoy[];
-  shadow: Shadow;
+  readonly names: readonly string[];
+  readonly kind: Kind;
+  readonly placement: Placement;
+  readonly cast: Cast;
+  readonly decoys: readonly Decoy[];
+  readonly shadow: Shadow;
 };
 
 const countings: fc.Arbitrary<Counting> = fc.record({
@@ -48,7 +48,7 @@ const countings: fc.Arbitrary<Counting> = fc.record({
 /** 1 to 8 distinct keys, as identifiers so they work as object keys and strings alike. */
 const keys = fc.uniqueArray(fc.stringMatching(/^k[a-z0-9]{0,5}$/), { minLength: 1, maxLength: 8 });
 
-const CHANGES_TO_TABLE = [
+const CHANGES_TO_TABLE: readonly string[] = [
   '(T as any)[x] = 1;',
   'T[x] = 1;',
   '(T as any).k0 = 1;',
@@ -59,7 +59,11 @@ const CHANGES_TO_TABLE = [
   '(T as any).push(x);',
   '(T as any).clear();',
 ];
-const CHANGES_TO_OTHER = ['other.set(x, 1);', 'other[x] = 1;', 'delete other[x];'];
+const CHANGES_TO_OTHER: readonly string[] = [
+  'other.set(x, 1);',
+  'other[x] = 1;',
+  'delete other[x];',
+];
 
 const cases: fc.Arbitrary<Case> = fc.record({
   names: keys,
@@ -193,12 +197,12 @@ function changesTable(test: Case) {
   );
 }
 
-function switchVersion(names: string[]) {
+function switchVersion(names: readonly string[]) {
   const cases = names.map((name, i) => `    case '${name}': return h${i}();`).join('\n');
   return `export function run(k: string) {\n  switch (k) {\n${cases}\n  }\n  return -1;\n}`;
 }
 
-function chainVersion(names: string[]) {
+function chainVersion(names: readonly string[]) {
   return `export function run(k: string) { return ${names.map((name) => `k === '${name}'`).join(' || ')}; }`;
 }
 

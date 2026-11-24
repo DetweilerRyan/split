@@ -262,7 +262,16 @@ class Run {
 }
 
 /** The extensions and index files a relative import may leave off, in the order tried. */
-const IMPORT_ENDINGS = ['', '.ts', '.tsx', '.mts', '.js', '.mjs', '/index.ts', '/index.tsx'];
+const IMPORT_ENDINGS: readonly string[] = [
+  '',
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.js',
+  '.mjs',
+  '/index.ts',
+  '/index.tsx',
+];
 
 /**
  * The file a relative import in `importer` names, or nothing if there's none. A `.js` name also
