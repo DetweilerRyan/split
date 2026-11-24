@@ -63,6 +63,8 @@ export const EMPTY_SNAPSHOT: RoomSnapshot = {
   peers: [],
 };
 
+// oxlint-disable functional/no-this -- the class below reads its Yjs maps and listeners through `this` throughout, so the rule is off for its body only, and back on after it.
+// oxlint-disable-next-line functional/no-classes -- it wraps Yjs's own stateful types (a Y.Doc and its Y.Maps) for useSyncExternalStore, as the owner decided on #83.
 export class ReceiptStore {
   private readonly meta: Y.Map<unknown>;
   private readonly participants: Y.Map<Y.Map<unknown>>;
@@ -251,6 +253,7 @@ export class ReceiptStore {
     };
   }
 }
+// oxlint-enable functional/no-this
 
 // @crap-allow CRAP 56, complexity 7. Debt from before nested functions, default values and ?. counted (#74): no tests yet.
 export function useReceiptStore(store: ReceiptStore | null): RoomSnapshot {

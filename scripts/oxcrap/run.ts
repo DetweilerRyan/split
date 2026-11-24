@@ -57,210 +57,209 @@ export function isUrl(value: string) {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
 }
 
-/** One run of oxCrap, over a host. */
-class Run {
-  constructor(host: Host) {
-    this.host = host;
-  }
+/** A path as the person running oxCrap would write it: from the current directory. */
+function shown(host: Host, path: string) {
+  return toPosix(relative(host.cwd, path)) || '.';
+}
 
-  readonly host: Host;
+/** A path from the current directory, made absolute. */
+function here(host: Host, path: string) {
+  return resolve(host.cwd, path);
+}
 
-  /** A path as the person running oxCrap would write it: from the current directory. */
-  shown(path: string) {
-    return toPosix(relative(this.host.cwd, path)) || '.';
-  }
+/**
+ * A path as a key both sides of a coverage lookup agree on: real (symlinks resolved, as a test
+ * run sees it), with `/` between folders, and in one case where paths aren't case-sensitive.
+ */
+function pathKey(host: Host, path: string) {
+  const key = toPosix(host.realpath(path));
+  return host.caseInsensitive ? key.toLowerCase() : key;
+}
 
-  /** A path from the current directory, made absolute. */
-  here(path: string) {
-    return resolve(this.host.cwd, path);
-  }
+/** The config file to read: the one `-c` names, else the first default name in this folder. */
+function configFile(host: Host, given: string | undefined) {
+  if (!given) return CONFIG_NAMES.map((name) => here(host, name)).find(host.exists);
+  const path = here(host, given);
+  if (!host.exists(path)) throw new Error(`No config file at ${given}.`);
+  if (host.isDirectory(path)) throw new Error(`${given} is a folder, not a config file.`);
+  return path;
+}
 
-  /**
-   * A path as a key both sides of a coverage lookup agree on: real (symlinks resolved, as a test
-   * run sees it), with `/` between folders, and in one case where paths aren't case-sensitive.
-   */
-  pathKey(path: string) {
-    const key = toPosix(this.host.realpath(path));
-    return this.host.caseInsensitive ? key.toLowerCase() : key;
-  }
-
-  /** The config file to read: the one `-c` names, else the first default name in this folder. */
-  configFile(given: string | undefined) {
-    if (!given) return CONFIG_NAMES.map((name) => this.here(name)).find(this.host.exists);
-    const path = this.here(given);
-    if (!this.host.exists(path)) throw new Error(`No config file at ${given}.`);
-    if (this.host.isDirectory(path)) throw new Error(`${given} is a folder, not a config file.`);
-    return path;
-  }
-
-  /** The config's options, refusing `files` that reach outside its folder. */
-  readConfig(path: string | undefined): Partial<Config> {
-    if (!path) return {};
-    const options = parseConfig(this.host.read(path), this.shown(path));
-    const escaping = options.files?.find(outside);
-    if (escaping) {
-      throw new Error(
-        `${this.shown(path)}: "files" can't reach outside the config's folder, as "${escaping}" does. Move the config up to a folder that holds the files.`,
-      );
-    }
-    return options;
-  }
-
-  /**
-   * The paths given on the command line, from `root`: a glob for each folder's code files, and
-   * each file as it is.
-   */
-  pathsFor(root: string, paths: string[]) {
-    const globs: string[] = [];
-    const named: string[] = [];
-    for (const path of paths) {
-      const from = this.pathFrom(root, path);
-      if (!this.host.isDirectory(this.here(path))) named.push(from);
-      else globs.push(from ? `${from}/${CODE_FILES}` : CODE_FILES);
-    }
-    return { globs, named };
-  }
-
-  /** One command-line path, from `root`, refused when it's missing, outside, or a glob. */
-  pathFrom(root: string, path: string) {
-    const absolute = this.here(path);
-    if (!this.host.exists(absolute)) throw new Error(`No file or folder at ${path}.`);
-    const from = toPosix(relative(root, absolute));
-    if (outside(from)) {
-      throw new Error(`${path} is outside ${this.shown(root)}, the folder oxCrap scores.`);
-    }
-    // Node's glob has no way to escape these that works on every platform.
-    if (this.host.isDirectory(absolute) && /[*?[\]{}()!+@]/.test(from)) {
-      throw new Error(`${path} has a glob character in its name; list it in "files" instead.`);
-    }
-    return from;
-  }
-
-  /** The coverage report's path: `--coverage` from here, or the config's from its folder. */
-  coveragePath(given: string | undefined, configured: string | undefined, root: string) {
-    if (given) return this.here(given);
-    if (configured) return resolve(root, configured);
+/** The config's options, refusing `files` that reach outside its folder. */
+function readConfig(host: Host, path: string | undefined): Partial<Config> {
+  if (!path) return {};
+  const options = parseConfig(host.read(path), shown(host, path));
+  const escaping = options.files?.find(outside);
+  if (escaping) {
     throw new Error(
-      `${USAGE}\nGive the coverage report with --coverage, or as "coverage" in ${CONFIG_NAMES[0]}.`,
+      `${shown(host, path)}: "files" can't reach outside the config's folder, as "${escaping}" does. Move the config up to a folder that holds the files.`,
     );
   }
+  return options;
+}
 
-  /**
-   * The help to print under findings, as commitlint's helpUrl is: a URL as it is, or a path, which
-   * must exist, shown from the current directory. `--help-url` is read from here; the config's
-   * `helpUrl` from the config's folder, which `from` names.
-   */
-  helpFrom(given: string | undefined, configured: string | undefined, root: string, from: string) {
-    const value = given ?? configured;
-    if (!value || isUrl(value)) return value;
-    const path = given ? this.here(given) : resolve(root, value);
-    if (!this.host.exists(path)) {
-      throw new Error(
-        `No help file at ${this.shown(path)}, which ${given ? '--help-url' : from} names.`,
-      );
-    }
-    return this.shown(path);
+/**
+ * The paths given on the command line, from `root`: a glob for each folder's code files, and
+ * each file as it is.
+ */
+function pathsFor(host: Host, root: string, paths: string[]) {
+  const globs: string[] = [];
+  const named: string[] = [];
+  for (const path of paths) {
+    const from = pathFrom(host, root, path);
+    if (!host.isDirectory(here(host, path))) named.push(from);
+    else globs.push(from ? `${from}/${CODE_FILES}` : CODE_FILES);
   }
+  return { globs, named };
+}
 
-  /** The report at `path`, refused when it's missing or older than any of `files`. */
-  readReport(path: string, files: string[]): Report {
-    if (!this.host.exists(path)) {
-      throw new Error(
-        `No coverage report at ${this.shown(path)}. Run the tests with coverage first; a run whose tests fail may write none.`,
-      );
-    }
-    const times = files.map((file) => ({ file: this.shown(file), time: this.host.modified(file) }));
-    const stale = newerThan(this.host.modified(path), times);
-    if (stale.length > 0) {
-      const more = stale.length > 1 ? ` and ${stale.length - 1} more` : '';
-      throw new Error(
-        `The coverage report at ${this.shown(path)} is older than ${stale[0]}${more}. Run the tests again, so it covers the code as it is.`,
-      );
-    }
-    return parseReport(this.host.read(path), this.shown(path));
+/** One command-line path, from `root`, refused when it's missing, outside, or a glob. */
+function pathFrom(host: Host, root: string, path: string) {
+  const absolute = here(host, path);
+  if (!host.exists(absolute)) throw new Error(`No file or folder at ${path}.`);
+  const from = toPosix(relative(root, absolute));
+  if (outside(from)) {
+    throw new Error(`${path} is outside ${shown(host, root)}, the folder oxCrap scores.`);
   }
+  // Node's glob has no way to escape these that works on every platform.
+  if (host.isDirectory(absolute) && /[*?[\]{}()!+@]/.test(from)) {
+    throw new Error(`${path} has a glob character in its name; list it in "files" instead.`);
+  }
+  return from;
+}
 
-  /** Each file's coverage, by the key `pathKey` gives, refusing a report that covers none. */
-  coverageByPath(sources: string[], report: Report, reportPath: string) {
-    const byPath = new Map(
-      Object.entries(report).map(([path, file]) => [this.pathKey(path), file]),
+/** The coverage report's path: `--coverage` from here, or the config's from its folder. */
+function coveragePath(
+  host: Host,
+  given: string | undefined,
+  configured: string | undefined,
+  root: string,
+) {
+  if (given) return here(host, given);
+  if (configured) return resolve(root, configured);
+  throw new Error(
+    `${USAGE}\nGive the coverage report with --coverage, or as "coverage" in ${CONFIG_NAMES[0]}.`,
+  );
+}
+
+/**
+ * The help to print under findings, as commitlint's helpUrl is: a URL as it is, or a path, which
+ * must exist, shown from the current directory. `--help-url` is read from here; the config's
+ * `helpUrl` from the config's folder, which `from` names.
+ */
+function helpFrom(
+  host: Host,
+  given: string | undefined,
+  configured: string | undefined,
+  root: string,
+  from: string,
+) {
+  const value = given ?? configured;
+  if (!value || isUrl(value)) return value;
+  const path = given ? here(host, given) : resolve(root, value);
+  if (!host.exists(path)) {
+    throw new Error(
+      `No help file at ${shown(host, path)}, which ${given ? '--help-url' : from} names.`,
     );
-    const covered = sources.filter((path) => byPath.has(this.pathKey(path))).length;
-    // `score` has stopped already when there are no files to score.
-    if (covered === 0) {
-      throw new Error(
-        `The coverage report at ${this.shown(reportPath)} covers none of the ${sources.length} files being scored. Is it the report for this code, written from this folder?`,
-      );
-    }
-    return byPath;
   }
+  return shown(host, path);
+}
 
-  /** Every finding in `sources`: the @crap-allow comments' problems, then the scores'. */
-  findings(sources: string[], report: Report, reportPath: string, config: Config) {
-    const byPath = this.coverageByPath(sources, report, reportPath);
-    const scored: Scored[] = [];
-    const allowed = new Map<Fn, Allow>();
-    const problems: Finding[] = [];
-    // Each imported module's exports, read once however many files import it.
-    const modules = new Map<string, Exports>();
-    for (const path of sources) {
-      const file = this.shown(path);
-      const source = this.host.read(path);
-      const parsed = parse(file, source, config.counting, (from) =>
-        exportsAt(this.host, resolveImport(this.host, path, from), modules),
-      );
-      const coverage = coverageOf(parsed.functions, byPath.get(this.pathKey(path)));
-      for (const fn of parsed.functions) {
-        const share = coverage.get(fn) ?? 0;
-        scored.push({ fn, file, coverage: share, crap: crapOf(fn.complexity, share) });
-      }
-      const allows = findAllows(file, source, parsed);
-      for (const [fn, allow] of allows.allowed) allowed.set(fn, allow);
-      problems.push(...allows.problems);
-    }
-    return [...problems, ...check(scored, allowed, config.limits)];
-  }
-
-  /** The whole run: options, config, files and report, then the findings to print. */
-  score(args: string[]): Outcome {
-    const { values, positionals } = parseArgs({
-      args,
-      allowPositionals: true,
-      options: {
-        config: { type: 'string', short: 'c' },
-        coverage: { type: 'string' },
-        'help-url': { type: 'string' },
-      },
-    });
-    const configPath = this.configFile(values.config);
-    // Paths in a config are read from its folder; paths on the command line from this one.
-    const root = configPath ? dirname(configPath) : this.host.cwd;
-    const fromFile = this.readConfig(configPath);
-    const given = positionals.length > 0 ? this.pathsFor(root, positionals) : undefined;
-    const config = merge(fromFile, { files: given?.globs });
-    const coverage = this.coveragePath(values.coverage, config.coverage, root);
-    // Stryker disable next-line StringLiteral: only a config file can give `helpUrl`, so with no config file this name is never shown.
-    const named = configPath ? `"helpUrl" in ${this.shown(configPath)}` : 'the config';
-    const help = this.helpFrom(values['help-url'], config.helpUrl, root, named);
-    const files = this.host.findFiles(
-      root,
-      config.files,
-      config.ignorePatterns,
-      given?.named ?? [],
+/** The report at `path`, refused when it's missing or older than any of `files`. */
+function readReport(host: Host, path: string, files: string[]): Report {
+  if (!host.exists(path)) {
+    throw new Error(
+      `No coverage report at ${shown(host, path)}. Run the tests with coverage first; a run whose tests fail may write none.`,
     );
-    if (files.scored.length === 0) {
-      const where = configPath ? `"files" in ${this.shown(configPath)}` : 'the paths given';
-      throw new Error(
-        `No files to score: nothing matches ${where} that "ignorePatterns" leaves in.`,
-      );
-    }
-    function absolute(file: string) {
-      return isAbsolute(file) ? file : join(root, file);
-    }
-    const report = this.readReport(coverage, files.matched.map(absolute));
-    const problems = this.findings(files.scored.map(absolute), report, coverage, config);
-    return outcome(problems, help);
   }
+  const times = files.map((file) => ({ file: shown(host, file), time: host.modified(file) }));
+  const stale = newerThan(host.modified(path), times);
+  if (stale.length > 0) {
+    const more = stale.length > 1 ? ` and ${stale.length - 1} more` : '';
+    throw new Error(
+      `The coverage report at ${shown(host, path)} is older than ${stale[0]}${more}. Run the tests again, so it covers the code as it is.`,
+    );
+  }
+  return parseReport(host.read(path), shown(host, path));
+}
+
+/** Each file's coverage, by the key `pathKey` gives, refusing a report that covers none. */
+function coverageByPath(host: Host, sources: string[], report: Report, reportPath: string) {
+  const byPath = new Map(Object.entries(report).map(([path, file]) => [pathKey(host, path), file]));
+  const covered = sources.filter((path) => byPath.has(pathKey(host, path))).length;
+  // `score` has stopped already when there are no files to score.
+  if (covered === 0) {
+    throw new Error(
+      `The coverage report at ${shown(host, reportPath)} covers none of the ${sources.length} files being scored. Is it the report for this code, written from this folder?`,
+    );
+  }
+  return byPath;
+}
+
+/** Every finding in `sources`: the @crap-allow comments' problems, then the scores'. */
+function findings(
+  host: Host,
+  sources: string[],
+  report: Report,
+  reportPath: string,
+  config: Config,
+) {
+  const byPath = coverageByPath(host, sources, report, reportPath);
+  const scored: Scored[] = [];
+  const allowed = new Map<Fn, Allow>();
+  const problems: Finding[] = [];
+  // Each imported module's exports, read once however many files import it.
+  const modules = new Map<string, Exports>();
+  for (const path of sources) {
+    const file = shown(host, path);
+    const source = host.read(path);
+    const parsed = parse(file, source, config.counting, (from) =>
+      exportsAt(host, resolveImport(host, path, from), modules),
+    );
+    const coverage = coverageOf(parsed.functions, byPath.get(pathKey(host, path)));
+    for (const fn of parsed.functions) {
+      const share = coverage.get(fn) ?? 0;
+      scored.push({ fn, file, coverage: share, crap: crapOf(fn.complexity, share) });
+    }
+    const allows = findAllows(file, source, parsed);
+    for (const [fn, allow] of allows.allowed) allowed.set(fn, allow);
+    problems.push(...allows.problems);
+  }
+  return [...problems, ...check(scored, allowed, config.limits)];
+}
+
+/** The whole run: options, config, files and report, then the findings to print. */
+function score(host: Host, args: string[]): Outcome {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      config: { type: 'string', short: 'c' },
+      coverage: { type: 'string' },
+      'help-url': { type: 'string' },
+    },
+  });
+  const configPath = configFile(host, values.config);
+  // Paths in a config are read from its folder; paths on the command line from this one.
+  const root = configPath ? dirname(configPath) : host.cwd;
+  const fromFile = readConfig(host, configPath);
+  const given = positionals.length > 0 ? pathsFor(host, root, positionals) : undefined;
+  const config = merge(fromFile, { files: given?.globs });
+  const coverage = coveragePath(host, values.coverage, config.coverage, root);
+  // Stryker disable next-line StringLiteral: only a config file can give `helpUrl`, so with no config file this name is never shown.
+  const named = configPath ? `"helpUrl" in ${shown(host, configPath)}` : 'the config';
+  const help = helpFrom(host, values['help-url'], config.helpUrl, root, named);
+  const files = host.findFiles(root, config.files, config.ignorePatterns, given?.named ?? []);
+  if (files.scored.length === 0) {
+    const where = configPath ? `"files" in ${shown(host, configPath)}` : 'the paths given';
+    throw new Error(`No files to score: nothing matches ${where} that "ignorePatterns" leaves in.`);
+  }
+  function absolute(file: string) {
+    return isAbsolute(file) ? file : join(root, file);
+  }
+  const report = readReport(host, coverage, files.matched.map(absolute));
+  const problems = findings(host, files.scored.map(absolute), report, coverage, config);
+  return outcome(problems, help);
 }
 
 /** The extensions and index files a relative import may leave off, in the order tried. */
@@ -306,7 +305,7 @@ export function outcome(problems: Finding[], help: string | undefined): Outcome 
 /** Runs oxCrap with `args` over `host`. A problem that stops the run is printed, with status 1. */
 export function run(args: string[], host: Host): Outcome {
   try {
-    return new Run(host).score(args);
+    return score(host, args);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { status: 1, stdout: [], stderr: [message] };

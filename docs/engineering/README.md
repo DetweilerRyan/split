@@ -17,6 +17,11 @@ How work on this repository gets done: writing and testing code, choosing depend
 | [Mutation testing](mutation-testing.md)             | When oxCrap's code (`scripts/oxcrap/`) changes and the definition of done passes; before running `npm run test:mutation`, or handling a surviving mutant                                                                                   |
 | [CI](ci.md)                                         | Before changing `.github/workflows/`, updating `playwright`, `@playwright/test` or a GitHub Action, or when a pull request's CI run fails                                                                                                  |
 
+## Code style
+
+- **Write functions over plain data, not classes, and don't use `this`.** Keep state in a function's parameters, or in a factory that closes over it and returns an object of functions, as `createActor` in [`e2e/screenplay/actor.ts`](../../e2e/screenplay/actor.ts) does. An `Error` subclass may be a class. `npm run lint` enforces this through the local oxlint plugin [`scripts/lint/functional.ts`](../../scripts/lint/functional.ts).
+- **Keep a class only with the owner's approval,** for one that wraps a library's own stateful objects. `ReceiptStore` is the one so far. Disable `functional/no-classes` on its line, and `functional/no-this` for the class body only, with `// oxlint-disable` before it and `// oxlint-enable` after it, each with a reason. That is the one exception to disabling a rule only on the line it flags.
+
 ## Adding a procedure
 
 1. Write it as `docs/engineering/<topic>.md` (lowercase, hyphenated), one topic per file. A procedure for a stage of a piece of work, from starting it to cleaning up after its merge, goes in `docs/engineering/workflow/` instead; its [index](workflow/README.md#adding-a-procedure) says how.
@@ -24,3 +29,7 @@ How work on this repository gets done: writing and testing code, choosing depend
 3. Don't add it to `AGENTS.md`; this index is the pointer. The exception is a boundary the owner has asked to have loaded in every session, which gets one line in `AGENTS.md`'s boundaries that links to the procedure.
 4. Follow [single source of truth](../prose/single-source-of-truth.md): link to rules that live elsewhere instead of restating them.
 5. Keep the procedure to instructions. Put its reasons, sources and the decisions behind it in a `docs/engineering/<topic>.meta.md` sidecar, linked from a final "Changing this document" section, as [Reasons live in a `.meta.md` sidecar](../prose/single-source-of-truth.md#reasons-live-in-a-metamd-sidecar) says. Don't give the sidecar an index row.
+
+## Changing this document
+
+The reasons for the code-style rules, and the decisions behind them, are in [README.meta.md](README.meta.md). Read it only when changing or questioning a rule here.

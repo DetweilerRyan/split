@@ -34,36 +34,48 @@ const cli = fileURLToPath(new URL('../../oxcrap.ts', import.meta.url));
  * no git and no package.json, created on first use and deleted after the scenario; and running
  * the check in it.
  */
-export class Actor {
-  #folder: string | undefined;
-  readonly #others: string[] = [];
-  readonly #notes = new Map<keyof Notes, Notes[keyof Notes]>();
-
-  constructor(readonly name: string) {}
-
-  attemptsTo(...tasks: Task[]): void {
-    for (const task of tasks) task(this);
-  }
-
-  answer<T>(question: Question<T>): T {
-    return question(this);
-  }
-
+export interface Actor {
+  readonly name: string;
+  readonly attemptsTo: (...tasks: Task[]) => void;
+  readonly answer: <T>(question: Question<T>) => T;
   /** The actor's project folder. */
-  get project(): string {
-    this.#folder ??= mkdtempSync(join(tmpdir(), 'oxcrap-feature-'));
-    return this.#folder;
+  readonly project: string;
+  /** Another throwaway folder, outside the project, deleted with it. */
+  readonly elsewhere: () => string;
+  /** Runs the check with `args`, from `cwd` (the project folder by default). */
+  readonly runsTheCheck: (args: string[], cwd?: string) => Run;
+  readonly remember: <K extends keyof Notes>(key: K, value: Notes[K]) => void;
+  readonly recall: <K extends keyof Notes>(key: K) => Notes[K];
+  readonly has: (key: keyof Notes) => boolean;
+  readonly exit: () => void;
+}
+
+/** A new actor called `name`, whose folders and notes are their own. */
+export function createActor(name: string): Actor {
+  let folder: string | undefined;
+  const others: string[] = [];
+  const notes = new Map<keyof Notes, Notes[keyof Notes]>();
+
+  function attemptsTo(...tasks: Task[]): void {
+    for (const task of tasks) task(actor);
   }
 
-  /** Another throwaway folder, outside the project, deleted with it. */
-  elsewhere(): string {
-    const folder = mkdtempSync(join(tmpdir(), 'oxcrap-feature-elsewhere-'));
-    this.#others.push(folder);
+  function answer<T>(question: Question<T>): T {
+    return question(actor);
+  }
+
+  function project(): string {
+    folder ??= mkdtempSync(join(tmpdir(), 'oxcrap-feature-'));
     return folder;
   }
 
-  /** Runs the check with `args`, from `cwd` (the project folder by default). */
-  runsTheCheck(args: string[], cwd = this.project): Run {
+  function elsewhere(): string {
+    const other = mkdtempSync(join(tmpdir(), 'oxcrap-feature-elsewhere-'));
+    others.push(other);
+    return other;
+  }
+
+  function runsTheCheck(args: string[], cwd = project()): Run {
     const result = spawnSync(process.execPath, [cli, ...args], {
       cwd,
       encoding: 'utf8',
@@ -73,22 +85,38 @@ export class Actor {
     return { status: result.status, output: `${result.stdout}${result.stderr}` };
   }
 
-  remember<K extends keyof Notes>(key: K, value: Notes[K]): void {
-    this.#notes.set(key, value);
+  function remember<K extends keyof Notes>(key: K, value: Notes[K]): void {
+    notes.set(key, value);
   }
 
-  recall<K extends keyof Notes>(key: K): Notes[K] {
-    if (!this.#notes.has(key)) throw new Error(`${this.name} doesn't remember a ${key}.`);
-    return this.#notes.get(key) as Notes[K];
+  function recall<K extends keyof Notes>(key: K): Notes[K] {
+    if (!notes.has(key)) throw new Error(`${name} doesn't remember a ${key}.`);
+    return notes.get(key) as Notes[K];
   }
 
-  has(key: keyof Notes): boolean {
-    return this.#notes.has(key);
+  function has(key: keyof Notes): boolean {
+    return notes.has(key);
   }
 
-  exit(): void {
-    for (const folder of [this.#folder, ...this.#others]) {
-      if (folder) rmSync(folder, { recursive: true, force: true });
+  function exit(): void {
+    for (const each of [folder, ...others]) {
+      if (each) rmSync(each, { recursive: true, force: true });
     }
   }
+
+  const actor: Actor = {
+    name,
+    attemptsTo,
+    answer,
+    get project() {
+      return project();
+    },
+    elsewhere,
+    runsTheCheck,
+    remember,
+    recall,
+    has,
+    exit,
+  };
+  return actor;
 }

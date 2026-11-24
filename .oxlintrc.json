@@ -3,6 +3,8 @@
   // jsx-a11y is oxlint's own port of eslint-plugin-jsx-a11y's rules, chosen over adding ESLint
   // and that plugin in https://github.com/DetweilerRyan/split/issues/67.
   "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import", "jsx-a11y"],
+  // The repository's own rules, in scripts/lint/functional.ts.
+  "jsPlugins": ["./scripts/lint/functional.ts"],
   "rules": {
     // The owner's rule (#81): "always use the function syntax for named functions. only use
     // lambdas when passing a function as data."
@@ -10,7 +12,10 @@
     // The owner's decision (#76): "Tighter, tests exempt". Test files are exempt from
     // max-nested-callbacks in the override below.
     "max-depth": ["error", 3],
-    "max-nested-callbacks": ["error", 3]
+    "max-nested-callbacks": ["error", 3],
+    // The owner's decision (#83): ban classes, except Error subclasses, and `this`.
+    "functional/no-classes": "error",
+    "functional/no-this": "error"
   },
   "overrides": [
     {
