@@ -20,6 +20,7 @@ Every fact in this repository is written in one place, its **owner**, and everyt
 | How an agent extracts a receipt and makes a room link                              | [`skills/receipt-generation/SKILL.md`](../../skills/receipt-generation/SKILL.md) |
 | The Docker Sandbox kit and dev container                                           | [`.sbx-kits/splitsmart/README.md`](../../.sbx-kits/splitsmart/README.md)         |
 | Sandbox credentials                                                                | [`docs/sandbox/secrets.md`](../sandbox/secrets.md)                               |
+| A function's CRAP score, and why it may stay over the limits                       | Its `@crap-allow` comment, or a `.meta.md` sidecar                               |
 | Tool settings                                                                      | The config file itself, with a comment saying why where the format allows one    |
 | Why a config or a script is as it is, when that's longer than a comment            | Its `.meta.md` sidecar, such as `.gplintrc.meta.md`                              |
 | Writing conventions like this one                                                  | `docs/prose/`                                                                    |

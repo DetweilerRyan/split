@@ -23,7 +23,7 @@ The app is `src/`, `app/`, `vitest.config.ts`, `vitest.config.browser.test.ts`, 
 ```text
 `npm run oxcrap:app` reports:
 CRAP findings:
-- src/domain/receipt/math.ts:45 computeReceiptMath: CRAP 15, complexity 15, coverage 97%, but its @crap-allow comment says CRAP 14, complexity 14. Update the comment to `// @crap-allow CRAP 15, complexity 15.`, and check its reason still holds.
+- src/rate.ts:1 rate: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12. Update the comment to `// @crap-allow CRAP 182, complexity 13.`, and check its reason still holds.
 
 Get help: docs/engineering/crap.md
 

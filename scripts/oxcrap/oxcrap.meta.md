@@ -346,6 +346,16 @@ It checks that each function's complexity, which functions a `@crap-allow` match
 - **Why fast-check rather than a seeded generator:** shrinking. With catch clauses no longer counted, it reduced a failure to `try {} catch {}`. Counting a switch's `default:` failed too.
 - **Cost:** 500 runs, one per drawn combination of the counting options, in about 0.2 s. The reformatting checks run under the default counting and with each function on its own, 242 cases in about 4 s, so `npm run test:tooling` went from about 12 s to 12.9 s.
 
+### A finding is recorded only in its comment or a sidecar
+
+- **The owner, on [#104](https://github.com/DetweilerRyan/split/pull/104#discussion_r4682943348),** 2026-11-24, about `scripts/stop-hook.md`'s example, which quoted `computeReceiptMath`'s real finding: "the crap findings should not be restated here. they're in the code as crap-allow comments. this is in violation of a SST rule. write an issue to clean this up. the only records of crap findings should be in the code or in meta.md files". That became [#111](https://github.com/DetweilerRyan/split/issues/111).
+- **Decided on #111** ([recorded](https://github.com/DetweilerRyan/split/issues/111#issuecomment-7140433362)):
+  - **"Both, split by fact":** where a finding is recorded is a row in [single source of truth](../../docs/prose/single-source-of-truth.md)'s owner table, and how to show one in another document is an instruction in [`crap.md`](../../docs/engineering/crap.md). Not taken: either document alone.
+  - **"No, review only":** no lint check. One was offered that would fail a Markdown file, outside a sidecar, with a line in oxCrap's finding format whose path exists in the repository.
+  - **"No, PRs may report figures":** a pull request's description is a snapshot of the change for review, so `crap.md`'s step that reports an allowed function in the pull request's verification stays.
+- **Why an invented example:** a real function's figures are already in its comment, so a copy elsewhere goes stale when the function changes. #104 had to update the example's path when `computeReceiptMath` moved.
+- **The search that found it,** on 2026-11-24: across every Markdown file outside a sidecar, for each real `@crap-allow`ed function's name, and for figures next to a real source path. `stop-hook.md`'s example was the only one. oxCrap's README and `.feature` files already used invented functions.
+
 ## How it works
 
 - **`oxc-parser` gives functions, their places and the file's comments in one parse.** Offsets are UTF-16, as JavaScript strings are, and lines and columns come from them in `positions`.
