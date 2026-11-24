@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateSeed } from './receiptSeed';
+import { receiptSeedSchema, validateSeed } from './receiptSeed';
 
 const seed = {
   title: 'Taverna',
@@ -8,7 +8,7 @@ const seed = {
   bankUsd: 0,
   roster: [],
   items: [{ id: 'item-0', name: 'Taco (1/2)', en: 'Taco', eur: 5 }],
-};
+} as const;
 
 describe('validateSeed', () => {
   it('rejects a seed that is not a JSON object', () => {
@@ -32,6 +32,34 @@ describe('validateSeed', () => {
     expect(() => validateSeed({ ...seed, bankUsd: Infinity })).toThrow(
       /bankUsd must be a finite number/,
     );
+  });
+
+  it('gives a frozen seed whose type is readonly at each level', () => {
+    const parsed = validateSeed({ ...seed, roster: ['Ana'] });
+    expect(() => {
+      // @ts-expect-error The seed's fields are readonly.
+      parsed.title = 'x';
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error Its roster is a readonly array.
+      parsed.roster.push('Ben');
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error Its items are a readonly array.
+      parsed.items.push(seed.items[0]);
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error Each item's fields are readonly.
+      parsed.items[0].eur = 1;
+    }).toThrow(TypeError);
+  });
+
+  it('describes the MCP tool input with no readOnly mark, which would tell a client not to send it', () => {
+    const json = JSON.stringify(
+      receiptSeedSchema['~standard'].jsonSchema.input({ target: 'draft-2020-12' }),
+    );
+    expect(json).toContain('"roster"');
+    expect(json).not.toContain('readOnly');
   });
 
   it('rejects an unknown currency and keeps a known one', () => {

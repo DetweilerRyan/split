@@ -3,18 +3,17 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 // The plugin as `npm run lint` runs it: the real oxlint with the repository's .oxlintrc.json, on a
 // throwaway file. functional.test.ts covers the rules' cases; this covers loading them.
 const oxlint = fileURLToPath(new URL('../../node_modules/oxlint/bin/oxlint', import.meta.url));
 const config = fileURLToPath(new URL('../../.oxlintrc.json', import.meta.url));
-const directories: string[] = [];
 
 /** oxlint's one-line-per-problem output for `source`, linted as a file of its own. */
 function lint(source: string) {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-lint-'));
-  directories.push(cwd);
+  onTestFinished(() => rmSync(cwd, { recursive: true }));
   writeFileSync(join(cwd, 'code.ts'), source);
   const result = spawnSync(
     process.execPath,
@@ -29,10 +28,6 @@ function lint(source: string) {
     problems: result.stdout.split('\n').filter((l) => l.includes('[')),
   };
 }
-
-afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
-});
 
 describe('the repository lint config', () => {
   it('reports a class and a `this` through the functional plugin', () => {

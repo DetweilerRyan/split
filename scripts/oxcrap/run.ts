@@ -14,26 +14,30 @@ import type { Exports } from './tables.ts';
 /** What oxCrap needs from the world outside it. Paths it's given are absolute. */
 export type Host = {
   /** The current directory, which command-line paths are read from and output is shown from. */
-  cwd: string;
+  readonly cwd: string;
   /** Whether paths are compared without case, as on Windows. */
-  caseInsensitive: boolean;
-  exists: (path: string) => boolean;
-  isDirectory: (path: string) => boolean;
-  read: (path: string) => string;
-  modified: (path: string) => number;
+  readonly caseInsensitive: boolean;
+  readonly exists: (path: string) => boolean;
+  readonly isDirectory: (path: string) => boolean;
+  readonly read: (path: string) => string;
+  readonly modified: (path: string) => number;
   /** The path with symlinks resolved, or the path itself when it can't be. */
-  realpath: (path: string) => string;
+  readonly realpath: (path: string) => string;
   /** The files `globs` pick out from `root`, as files.ts finds them, and its .gitignore. */
-  findFiles: (
+  readonly findFiles: (
     root: string,
-    globs: string[],
-    ignorePatterns: string[],
-    named: string[],
-  ) => { matched: string[]; scored: string[] };
+    globs: readonly string[],
+    ignorePatterns: readonly string[],
+    named: readonly string[],
+  ) => { readonly matched: readonly string[]; readonly scored: readonly string[] };
 };
 
 /** What a run prints, and the status it exits with. */
-export type Outcome = { status: number; stdout: string[]; stderr: string[] };
+export type Outcome = {
+  readonly status: number;
+  readonly stdout: readonly string[];
+  readonly stderr: readonly string[];
+};
 
 export const USAGE =
   'Usage: node scripts/oxcrap/oxcrap.ts [-c <config>] [--coverage <report>] [--help-url <url>] [<path>...]';
@@ -102,7 +106,7 @@ function readConfig(host: Host, path: string | undefined): Partial<Config> {
  * The paths given on the command line, from `root`: a glob for each folder's code files, and
  * each file as it is.
  */
-function pathsFor(host: Host, root: string, paths: string[]) {
+function pathsFor(host: Host, root: string, paths: readonly string[]) {
   const globs: string[] = [];
   const named: string[] = [];
   for (const path of paths) {
@@ -166,7 +170,7 @@ function helpFrom(
 }
 
 /** The report at `path`, refused when it's missing or older than any of `files`. */
-function readReport(host: Host, path: string, files: string[]): Report {
+function readReport(host: Host, path: string, files: readonly string[]): Report {
   if (!host.exists(path)) {
     throw new Error(
       `No coverage report at ${shown(host, path)}. Run the tests with coverage first; a run whose tests fail may write none.`,
@@ -184,7 +188,12 @@ function readReport(host: Host, path: string, files: string[]): Report {
 }
 
 /** Each file's coverage, by the key `pathKey` gives, refusing a report that covers none. */
-function coverageByPath(host: Host, sources: string[], report: Report, reportPath: string) {
+function coverageByPath(
+  host: Host,
+  sources: readonly string[],
+  report: Report,
+  reportPath: string,
+) {
   const byPath = new Map(Object.entries(report).map(([path, file]) => [pathKey(host, path), file]));
   const covered = sources.filter((path) => byPath.has(pathKey(host, path))).length;
   // `score` has stopped already when there are no files to score.
@@ -199,7 +208,7 @@ function coverageByPath(host: Host, sources: string[], report: Report, reportPat
 /** Every finding in `sources`: the @crap-allow comments' problems, then the scores'. */
 function findings(
   host: Host,
-  sources: string[],
+  sources: readonly string[],
   report: Report,
   reportPath: string,
   config: Config,
@@ -229,7 +238,7 @@ function findings(
 }
 
 /** The whole run: options, config, files and report, then the findings to print. */
-function score(host: Host, args: string[]): Outcome {
+function score(host: Host, args: readonly string[]): Outcome {
   const { values, positionals } = parseArgs({
     args,
     allowPositionals: true,
@@ -287,6 +296,7 @@ export function resolveImport(host: Host, importer: string, from: string) {
 }
 
 /** What the module at `path` exports, read once into `modules`. */
+// oxlint-disable-next-line readonly/types -- `modules` is the cache exportsAt fills, so each module is read once.
 function exportsAt(host: Host, path: string | undefined, modules: Map<string, Exports>) {
   if (!path) return undefined;
   if (!modules.has(path)) modules.set(path, moduleExports(path, host.read(path)));
@@ -294,7 +304,7 @@ function exportsAt(host: Host, path: string | undefined, modules: Map<string, Ex
 }
 
 /** What to print for `problems`, and the status: 1 with findings, 0 without. */
-export function outcome(problems: Finding[], help: string | undefined): Outcome {
+export function outcome(problems: readonly Finding[], help: string | undefined): Outcome {
   if (problems.length === 0) return { status: 0, stdout: ['No CRAP findings.'], stderr: [] };
   const lines = problems.map((f) => `- ${f.file}:${f.line} ${f.message}`);
   const stderr = [`CRAP findings:\n${lines.join('\n')}`];
@@ -303,7 +313,7 @@ export function outcome(problems: Finding[], help: string | undefined): Outcome 
 }
 
 /** Runs oxCrap with `args` over `host`. A problem that stops the run is printed, with status 1. */
-export function run(args: string[], host: Host): Outcome {
+export function run(args: readonly string[], host: Host): Outcome {
   try {
     return score(host, args);
   } catch (error) {

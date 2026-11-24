@@ -107,7 +107,7 @@ const seed = {
   bankUsd: 0,
   roster: [],
   items: [{ id: 'item-0', name: 'Taco (1/2)', en: 'Taco', eur: 5 }],
-};
+} as const;
 
 describe('ingest links', () => {
   it('round-trips a built ingest link through parseIngestUrl', () => {

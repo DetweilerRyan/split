@@ -3,7 +3,7 @@ import type { Allow } from './allow.ts';
 import { check, crapOf, type Scored } from './check.ts';
 import type { Fn } from './functions.ts';
 
-const limits = { crap: 30, complexity: 10 };
+const limits = { crap: 30, complexity: 10 } as const;
 
 function scored(name: string, complexity: number, coverage: number, line = 1): Scored {
   const fn = {

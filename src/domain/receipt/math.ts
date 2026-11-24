@@ -8,18 +8,18 @@ import {
 } from '../money/currency';
 
 export interface PersonTotal {
-  participant: RoomSnapshot['participants'][number];
-  itemsSubtotalMinor: number;
-  cardTipShareMinor: number;
-  cashTipShareMinor: number;
-  totalMinor: number;
+  readonly participant: RoomSnapshot['participants'][number];
+  readonly itemsSubtotalMinor: number;
+  readonly cardTipShareMinor: number;
+  readonly cashTipShareMinor: number;
+  readonly totalMinor: number;
   /** Amounts in major units of the receipt currency. */
-  itemsSubtotal: number;
-  cardTipShare: number;
-  cashTipShare: number;
-  total: number;
+  readonly itemsSubtotal: number;
+  readonly cardTipShare: number;
+  readonly cashTipShare: number;
+  readonly total: number;
   /** Total in display-currency major units, or null when no conversion applies. */
-  converted: number | null;
+  readonly converted: number | null;
 }
 
 /**
@@ -27,7 +27,7 @@ export interface PersonTotal {
  * largest-remainder method. Ties go to the lowest index, so the result is deterministic
  * and always sums to exactly `total`.
  */
-export function allocateMinor(total: number, weights: number[]): number[] {
+export function allocateMinor(total: number, weights: readonly number[]): readonly number[] {
   const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
   if (weightSum <= 0) return weights.map(() => 0);
   const exact = weights.map((weight) => (total * weight) / weightSum);
@@ -46,7 +46,8 @@ export function allocateMinor(total: number, weights: number[]): number[] {
 export function computeReceiptMath(snapshot: RoomSnapshot) {
   const currency = normalizeCurrency(snapshot.currency ?? DEFAULT_CURRENCY);
   const exp = currencyExponent(currency);
-  const perPerson: Record<string, PersonTotal> = {};
+  // Filled in place below, as a local working value; callers get each total as readonly.
+  const perPerson: Record<string, { -readonly [K in keyof PersonTotal]: PersonTotal[K] }> = {};
 
   snapshot.participants.forEach((participant) => {
     perPerson[participant.id] = {

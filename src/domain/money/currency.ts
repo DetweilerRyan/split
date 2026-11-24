@@ -36,9 +36,9 @@ const COMMON_CURRENCIES = [
   'JOD',
   'OMR',
   'TND',
-];
+] as const;
 
-const REGION_CURRENCIES: Record<string, string> = {
+const REGION_CURRENCIES: Readonly<Record<string, string>> = {
   US: 'USD',
   GB: 'GBP',
   JP: 'JPY',
@@ -145,10 +145,10 @@ export function localeCurrency(language?: string): string {
   }
 }
 
-export function listCurrencies(): string[] {
+export function listCurrencies(): readonly string[] {
   try {
     const supported = (
-      Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+      Intl as unknown as { readonly supportedValuesOf?: (key: string) => readonly string[] }
     ).supportedValuesOf?.('currency');
     if (supported?.length) return supported;
   } catch {}

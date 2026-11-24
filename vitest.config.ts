@@ -11,8 +11,8 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // browser projects count towards the coverage report oxCrap reads: `npm test` runs `real` in a
 // second pass with coverage off, as docs/engineering/crap.md says. The tooling tests, in scripts/
 // and of root tooling config, are vitest.tooling.config.ts's, which `npm run test:tooling` runs.
-const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'];
-const realTests = ['**/*.real.test.ts'];
+const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'] as const;
+const realTests = ['**/*.real.test.ts'] as const;
 // Branch worktrees live inside the checkout (docs/engineering/workflow/starting-work.md). Without this, a
 // run from one checkout also runs every worktree's copy of the tests.
 const ignored = [
@@ -64,7 +64,7 @@ export default defineConfig({
         test: {
           name: 'real',
           environment: 'node',
-          include: realTests,
+          include: [...realTests],
           exclude: ignored,
         },
       },
@@ -90,7 +90,7 @@ export default defineConfig({
         },
         test: {
           name: 'browser',
-          include: browserTests,
+          include: [...browserTests],
           exclude: ignored,
           browser: {
             enabled: true,

@@ -4,10 +4,10 @@ import { ModalDialog } from './ModalDialog';
 import { qrSvgPath } from '../utils/qr';
 
 interface ShareModalProps {
-  open: boolean;
-  url: string;
-  onClose: () => void;
-  onCopy: () => void;
+  readonly open: boolean;
+  readonly url: string;
+  readonly onClose: () => void;
+  readonly onCopy: () => void;
 }
 
 export function ShareModal({ open, url, onClose, onCopy }: ShareModalProps) {

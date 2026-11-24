@@ -12,7 +12,7 @@ type Rule = Parameters<RuleTester['run']>[1];
 
 /** A class node, as oxlint's visitors are given it. */
 type ClassNode = Parameters<
-  NonNullable<ReturnType<Extract<Rule, { create: unknown }>['create']>['ClassDeclaration']>
+  NonNullable<ReturnType<Extract<Rule, { readonly create: unknown }>['create']>['ClassDeclaration']>
 >[0];
 
 const WHY = 'functions over stateful classes, as the owner decided on DetweilerRyan/split#81';
@@ -28,7 +28,7 @@ function superName(superClass: ClassNode['superClass']): string | undefined {
 
 /** A `this` node, as oxlint's visitors are given it. */
 type ThisNode = Parameters<
-  NonNullable<ReturnType<Extract<Rule, { create: unknown }>['create']>['ThisExpression']>
+  NonNullable<ReturnType<Extract<Rule, { readonly create: unknown }>['create']>['ThisExpression']>
 >[0];
 
 /**

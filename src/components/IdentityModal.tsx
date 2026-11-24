@@ -4,13 +4,13 @@ import { ModalDialog } from './ModalDialog';
 import type { Participant } from '../domain/receipt/roomSnapshot';
 
 interface IdentityModalProps {
-  open: boolean;
-  participants: readonly Participant[];
-  activeId: string | null;
-  onClose: () => void;
-  onSelect: (id: string) => void;
-  onAdd: (name: string) => void;
-  onRemove: (id: string) => void;
+  readonly open: boolean;
+  readonly participants: readonly Participant[];
+  readonly activeId: string | null;
+  readonly onClose: () => void;
+  readonly onSelect: (id: string) => void;
+  readonly onAdd: (name: string) => void;
+  readonly onRemove: (id: string) => void;
 }
 
 export function IdentityModal({

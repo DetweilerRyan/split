@@ -3,8 +3,8 @@
   // jsx-a11y is oxlint's own port of eslint-plugin-jsx-a11y's rules, chosen over adding ESLint
   // and that plugin in https://github.com/DetweilerRyan/split/issues/67.
   "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import", "jsx-a11y"],
-  // The repository's own rules, in scripts/lint/functional.ts.
-  "jsPlugins": ["./scripts/lint/functional.ts"],
+  // The repository's own rules, in scripts/lint/functional.ts and scripts/lint/readonly.ts.
+  "jsPlugins": ["./scripts/lint/functional.ts", "./scripts/lint/readonly.ts"],
   "rules": {
     // The owner's rule (#81): "always use the function syntax for named functions. only use
     // lambdas when passing a function as data."
@@ -15,7 +15,10 @@
     "max-nested-callbacks": ["error", 3],
     // The owner's decision (#83): ban classes, except Error subclasses, and `this`.
     "functional/no-classes": "error",
-    "functional/no-this": ["error", { "allowInClasses": true }]
+    "functional/no-this": ["error", { "allowInClasses": true }],
+    // The owner's decision (#69): the types we declare are readonly by default, checked level by
+    // level. docs/engineering/types-and-schemas.md says what the rule asks for.
+    "readonly/types": "error"
   },
   "overrides": [
     {

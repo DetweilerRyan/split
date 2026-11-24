@@ -1,6 +1,6 @@
 export interface PurchaseTime {
-  date: Date;
-  hasTime: boolean;
+  readonly date: Date;
+  readonly hasTime: boolean;
 }
 
 export function parsePurchasedAt(value: string): PurchaseTime | null {

@@ -3,11 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 const script = fileURLToPath(new URL('./check-unused-steps.ts', import.meta.url));
 const nodeModules = fileURLToPath(new URL('../node_modules', import.meta.url));
-const directories: string[] = [];
 
 const config = `import { defineConfig } from '@playwright/test';
 import { defineBddConfig } from 'playwright-bdd';
@@ -23,9 +22,9 @@ const feature = `Feature: Split a bill
 const claimStep = `When('{word} claims {string}', async () => {});`;
 
 /** A playwright-bdd project in a temporary folder, using this repository's packages. */
-function project(steps: string[]) {
+function project(steps: readonly string[]) {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-steps-'));
-  directories.push(cwd);
+  onTestFinished(() => rmSync(cwd, { recursive: true }));
   symlinkSync(nodeModules, join(cwd, 'node_modules'), 'dir');
   writeFileSync(join(cwd, 'playwright.config.ts'), config);
   mkdirSync(join(cwd, 'features'));
@@ -38,17 +37,17 @@ function project(steps: string[]) {
   return cwd;
 }
 
-function run(cwd: string, env: Record<string, string> = {}, args: string[] = []) {
+function run(
+  cwd: string,
+  env: Readonly<Record<string, string>> = {},
+  args: readonly string[] = [],
+) {
   return spawnSync(process.execPath, [script, ...args], {
     cwd,
     encoding: 'utf8',
     env: { ...process.env, ...env },
   });
 }
-
-afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
-});
 
 describe('check-unused-steps', () => {
   it('passes when every step definition is used', () => {

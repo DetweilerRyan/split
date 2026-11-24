@@ -1,15 +1,15 @@
 // Reads the `@crap-allow` comments in a parsed file and matches each to the function it's above.
 import type { Comment, Fn, Parsed } from './functions.ts';
 
-export type Finding = { file: string; line: number; message: string };
+export type Finding = { readonly file: string; readonly line: number; readonly message: string };
 export type Allow = {
-  file: string;
+  readonly file: string;
   /** The comment's first and last lines. */
-  line: number;
-  lastLine: number;
-  crap: number;
-  complexity: number;
-  reason: string;
+  readonly line: number;
+  readonly lastLine: number;
+  readonly crap: number;
+  readonly complexity: number;
+  readonly reason: string;
 };
 
 export const FORM = '`// @crap-allow CRAP <score>, complexity <n>. <reason>`';
@@ -27,7 +27,7 @@ export function commentText(comment: Comment) {
 }
 
 /** `source` with every comment blanked to spaces, keeping line breaks, so only code is left. */
-function withoutComments(source: string, comments: Comment[]) {
+function withoutComments(source: string, comments: readonly Comment[]) {
   // Stryker disable next-line StringLiteral: text before line 1 only shifts what `targetLine` reads after a comment on line 1 further left, into the comment's own blanks, since a @crap-allow comment FORMAT accepts is over 30 characters long.
   let code = '';
   let from = 0;
@@ -43,7 +43,7 @@ function withoutComments(source: string, comments: Comment[]) {
  * The line a comment points at: the first line after it with code on it, skipping lines that hold
  * only other comments, such as a lint directive or a JSX `{/* … *\/}`.
  */
-function targetLine(code: string[], comment: Comment, parsed: Parsed) {
+function targetLine(code: readonly string[], comment: Comment, parsed: Parsed) {
   const end = parsed.position(comment.end);
   const rest = code[end.line - 1].slice(end.column).trim();
   if (rest !== '' && rest !== '}') return end.line;
@@ -56,7 +56,7 @@ function targetLine(code: string[], comment: Comment, parsed: Parsed) {
 }
 
 /** The outermost of `functions`: those not nested in another of them. */
-function outermost(functions: Fn[]) {
+function outermost(functions: readonly Fn[]) {
   return functions.filter((fn) => !functions.some((other) => fn.parents.includes(other)));
 }
 
@@ -80,9 +80,9 @@ function functionsAt(line: number | undefined, parsed: Parsed, among = parsed.fu
 /** The one function a comment is for, or the problem that stops it being matched to one. */
 function functionFor(
   comment: Comment,
-  code: string[],
+  code: readonly string[],
   parsed: Parsed,
-): { fn: Fn } | { problem: string } {
+): { readonly fn: Fn } | { readonly problem: string } {
   const target = targetLine(code, comment, parsed);
   const { candidates, where } = functionsAt(target, parsed);
   const [inner] =

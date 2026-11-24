@@ -30,7 +30,8 @@ export function writesFunction(path: string, name: string, complexity: number, a
 export function runsTests(path: string, covered: string): Task {
   return (actor) => {
     if (covered !== 'all' && covered !== 'none') throw new Error(`"${covered}" isn't all or none.`);
-    const runs = actor.has('coverage') ? actor.recall('coverage') : new Map<string, Covered>();
+    const before = actor.has('coverage') ? actor.recall('coverage') : undefined;
+    const runs = new Map<string, Covered>(before);
     runs.set(path, covered as Covered);
     actor.remember('coverage', runs);
     const report: Record<string, unknown> = {};
@@ -102,7 +103,7 @@ export function linksTheProject(name: string): Task {
  */
 export function runsTheCheck(
   commandLine: string,
-  where: { in?: string; inTheOtherFolder?: boolean } = {},
+  where: { readonly in?: string; readonly inTheOtherFolder?: boolean } = {},
 ): Task {
   return (actor) => {
     const [program, ...args] = commandLine.split(/\s+/).filter(Boolean);

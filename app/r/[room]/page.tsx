@@ -5,7 +5,7 @@ import { decodeRoomSegment } from '../../../src/sync/seedCodec';
 import { RoomView } from '../../RoomApp';
 
 export default function RoomPage() {
-  const { room } = useParams<{ room: string }>();
+  const { room } = useParams<{ readonly room: string }>();
   const roomId = decodeRoomSegment(room);
   if (!roomId) redirect('/');
   return <RoomView key={roomId} roomId={roomId} />;

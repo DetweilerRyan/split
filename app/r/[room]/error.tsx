@@ -1,6 +1,6 @@
 'use client';
 
-export default function RoomError({ error }: { error: Error }) {
+export default function RoomError({ error }: { readonly error: Error }) {
   return (
     <main className="mx-auto max-w-xl p-8 text-center text-rose-700">
       <p>{error.message}</p>

@@ -3,7 +3,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 // The package bans in .oxlintrc.json's overrides for src/domain/ and src/services/, from #94, which
 // docs/engineering/dependency-direction.md describes. An override's globs match paths relative to
@@ -12,12 +12,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 const config = fileURLToPath(new URL('./.oxlintrc.json', import.meta.url));
 const plugins = fileURLToPath(new URL('./scripts/lint', import.meta.url));
 const oxlint = fileURLToPath(new URL('./node_modules/oxlint/bin/oxlint', import.meta.url));
-const directories: string[] = [];
 
 /** The `[rule]` of each problem oxlint reports in `files`, as `path:line [rule]`. */
 function lint(files: Readonly<Record<string, string>>) {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-oxlint-'));
-  directories.push(cwd);
+  onTestFinished(() => rmSync(cwd, { recursive: true }));
   copyFileSync(config, join(cwd, '.oxlintrc.json'));
   mkdirSync(join(cwd, 'scripts'));
   symlinkSync(plugins, join(cwd, 'scripts/lint'));
@@ -56,10 +55,6 @@ function refusals(folder: string, packages: readonly string[]) {
     .map((_, index) => `${folder}/imports${index}.ts:1 [eslint(no-restricted-imports)]`)
     .toSorted();
 }
-
-afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
-});
 
 const ui = ['react', 'react/jsx-runtime', 'react-dom/client', 'next', 'next/link', 'lucide-react'];
 const sync = [

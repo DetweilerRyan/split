@@ -4,12 +4,15 @@ import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
 import { currencyExponent, currencyLabel, listCurrencies } from '../domain/money/currency';
 
 interface EditReceiptDrawerProps {
-  snapshot: RoomSnapshot;
-  onMeta: (key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd', value: string | number) => void;
-  onCurrency: (code: string) => void;
-  onDisplayCurrency: (code: string, force?: boolean) => void;
-  onRate: (rate: number) => void;
-  onAddItem: (name: string, en: string, eur: number) => void;
+  readonly snapshot: RoomSnapshot;
+  readonly onMeta: (
+    key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd',
+    value: string | number,
+  ) => void;
+  readonly onCurrency: (code: string) => void;
+  readonly onDisplayCurrency: (code: string, force?: boolean) => void;
+  readonly onRate: (rate: number) => void;
+  readonly onAddItem: (name: string, en: string, eur: number) => void;
 }
 
 // @crap-allow CRAP 152.8, complexity 12. Debt from before the CRAP check (#63): no tests yet.

@@ -10,9 +10,11 @@ import { ReceiptStore } from './useReceiptStore';
 import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
 
 export interface RoomProvider {
-  doc: Y.Doc;
-  store: ReceiptStore;
-  setIdentity: (identity: { id: string; name: string; colorIdx: number } | null) => void;
+  readonly doc: Y.Doc;
+  readonly store: ReceiptStore;
+  readonly setIdentity: (
+    identity: { readonly id: string; readonly name: string; readonly colorIdx: number } | null,
+  ) => void;
 }
 
 /** The IndexedDB database a room's document is persisted in. */
@@ -29,7 +31,9 @@ export function webrtcRoomName(roomId: RoomId): WebrtcRoomName {
 }
 
 type ProviderRegistry = typeof globalThis & {
+  // oxlint-disable-next-line readonly/types -- a global cache, set on first use, that getRoomProvider adds to and removes from in place.
   __splitRoomProviders?: Map<RoomId, Promise<RoomProvider>>;
+  // oxlint-disable-next-line readonly/types -- a global slot, set on first use, so every room shares one Liveblocks client.
   __splitLiveblocksClient?: ReturnType<typeof createClient>;
 };
 
@@ -38,7 +42,7 @@ const providers =
   providerRegistry.__splitRoomProviders ??
   (providerRegistry.__splitRoomProviders = new Map<RoomId, Promise<RoomProvider>>());
 const liveblocksApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim();
-const publicSignalingUrls = ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'];
+const publicSignalingUrls = ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'] as const;
 const configuredSignalingUrls = (process.env.NEXT_PUBLIC_WEBRTC_SIGNALING_URLS ?? '')
   .split(',')
   .map((url) => url.trim())
@@ -54,7 +58,7 @@ const participantColors = [
   '#7c3aed',
   '#0891b2',
   '#c026d3',
-];
+] as const;
 
 // @crap-allow CRAP 24, complexity 24. Debt from before the CRAP check (#63): too complex.
 async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
@@ -100,14 +104,16 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
   const webrtc = liveblocks
     ? null
     : new WebrtcProvider(webrtcRoomName(roomId), doc, {
-        signaling: signalingUrls,
+        signaling: [...signalingUrls],
       });
   const awareness = liveblocks?.awareness ?? webrtc!.awareness;
 
   function updatePeers() {
     const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().entries()).map(
       ([clientId, state]) => {
-        const user = (state as { user?: { name?: string; color?: string } }).user;
+        const user = (
+          state as { readonly user?: { readonly name?: string; readonly color?: string } }
+        ).user;
         return {
           id: String(clientId),
           name: user?.name || 'Guest',

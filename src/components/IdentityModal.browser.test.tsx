@@ -4,8 +4,8 @@ import { render } from 'vitest-browser-react';
 import '../index.css';
 import { IdentityModal } from './IdentityModal';
 
-const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 };
-const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 };
+const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 } as const;
+const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 } as const;
 
 async function renderModal(props: Partial<Parameters<typeof IdentityModal>[0]> = {}) {
   const handlers = { onClose: vi.fn(), onSelect: vi.fn(), onAdd: vi.fn(), onRemove: vi.fn() };

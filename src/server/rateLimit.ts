@@ -1,7 +1,7 @@
 // Best-effort per-instance limiter; serverless instances each keep their own window.
 // The Vercel Firewall rule is the real, global per-IP enforcement.
 const MAX_KEYS = 1000;
-const hits = new Map<string, number[]>();
+const hits = new Map<string, readonly number[]>();
 
 export function isRateLimited(
   key: string,

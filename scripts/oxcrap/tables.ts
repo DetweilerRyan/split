@@ -57,13 +57,13 @@ function unwrap(node: unknown): unknown {
 function literalElements(node: unknown): readonly AstNode[] | undefined {
   const array = unwrap(node);
   if (!isNode(array) || array.type !== 'ArrayExpression') return undefined;
-  const elements = array.elements as unknown[];
+  const elements = array.elements as readonly unknown[];
   const fixed = elements.every((element) => isNode(element) && element.type !== 'SpreadElement');
-  return fixed ? (elements as AstNode[]) : undefined;
+  return fixed ? (elements as readonly AstNode[]) : undefined;
 }
 
 /** The names of the functions a module declares at its top level, by declaration or `const`. */
-function functionNames(program: AstNode): Set<string> {
+function functionNames(program: AstNode): ReadonlySet<string> {
   const names = new Set<string>();
   for (const statement of topLevel(program)) {
     if (statement.type === 'FunctionDeclaration' && isNode(statement.id)) {
@@ -90,9 +90,13 @@ function holdsFunction(node: unknown, functions: ReadonlySet<string>): boolean {
     case 'Identifier':
       return functions.has(value.name as string);
     case 'ObjectExpression':
-      return (value.properties as AstNode[]).some((p) => holdsFunction(p.value, functions));
+      return (value.properties as readonly AstNode[]).some((p) =>
+        holdsFunction(p.value, functions),
+      );
     case 'ArrayExpression':
-      return (value.elements as unknown[]).some((element) => holdsFunction(element, functions));
+      return (value.elements as readonly unknown[]).some((element) =>
+        holdsFunction(element, functions),
+      );
     default:
       return false;
   }
@@ -115,7 +119,9 @@ function tableOf(init: unknown, functions: ReadonlySet<string>): Table | undefin
     }
     case 'CallExpression':
       // `Object.freeze({…})` is the table it freezes.
-      return isFreeze(value) ? tableOf((value.arguments as unknown[])[0], functions) : undefined;
+      return isFreeze(value)
+        ? tableOf((value.arguments as readonly unknown[])[0], functions)
+        : undefined;
   }
 }
 
@@ -134,13 +140,13 @@ function isFreeze(call: AstNode) {
 function collectionOf(expression: AstNode, functions: ReadonlySet<string>): Table | undefined {
   const callee = expression.callee;
   const name = isNode(callee) ? callee.name : undefined;
-  const elements = literalElements((expression.arguments as unknown[])[0]);
+  const elements = literalElements((expression.arguments as readonly unknown[])[0]);
   if (!elements) return undefined;
   if (name === 'Set') return { kind: 'set', entries: elements.length, dispatch: false };
   if (name !== 'Map') return undefined;
   const pairs = elements.map((element) => literalElements(element));
   if (!pairs.every((pair) => pair?.length === 2)) return undefined;
-  const dispatch = (pairs as (readonly AstNode[])[]).some((pair) =>
+  const dispatch = (pairs as readonly (readonly AstNode[])[]).some((pair) =>
     holdsFunction(pair[1], functions),
   );
   return { kind: 'map', entries: elements.length, dispatch };
@@ -148,7 +154,7 @@ function collectionOf(expression: AstNode, functions: ReadonlySet<string>): Tabl
 
 /** An object literal with no spread, whose size is fixed. */
 function objectOf(object: AstNode, functions: ReadonlySet<string>): Table | undefined {
-  const properties = object.properties as AstNode[];
+  const properties = object.properties as readonly AstNode[];
   if (properties.some((property) => property.type !== 'Property')) return undefined;
   const dispatch = properties.some((property) => holdsFunction(property.value, functions));
   return { kind: 'object', entries: properties.length, dispatch };
@@ -159,7 +165,7 @@ function objectOf(object: AstNode, functions: ReadonlySet<string>): Table | unde
  * and an expression statement or `export =` as its expression.
  */
 function topLevel(program: AstNode): readonly AstNode[] {
-  return (program.body as AstNode[]).map((statement) => {
+  return (program.body as readonly AstNode[]).map((statement) => {
     // Only an export has a `declaration`, and only `x;` or `export = x` an `expression` node.
     const inner = statement.declaration ?? statement.expression;
     return isNode(inner) ? inner : statement;
@@ -167,12 +173,12 @@ function topLevel(program: AstNode): readonly AstNode[] {
 }
 
 /** The `const` names a statement declares with a value, and those values. */
-function constants(statement: AstNode): [string, unknown][] {
+function constants(statement: AstNode): readonly (readonly [string, unknown])[] {
   // Only a VariableDeclaration has a `kind` of 'const'.
   if (statement.kind !== 'const') return [];
-  return (statement.declarations as AstNode[]).flatMap((declarator) =>
+  return (statement.declarations as readonly AstNode[]).flatMap((declarator) =>
     isNode(declarator.id) && declarator.id.type === 'Identifier'
-      ? [[declarator.id.name as string, declarator.init] as [string, unknown]]
+      ? [[declarator.id.name as string, declarator.init] as readonly [string, unknown]]
       : [],
   );
 }
@@ -181,7 +187,9 @@ function constants(statement: AstNode): [string, unknown][] {
  * An entry a top-level expression adds to one of `tables`: `T.set(k, v)`, `T.add(x)`, or
  * `T.k = v`, as a statement or exported. Returns the table's name and the value added, or nothing.
  */
-function addition(expression: AstNode): { name: string; value: unknown } | undefined {
+function addition(
+  expression: AstNode,
+): { readonly name: string; readonly value: unknown } | undefined {
   switch (expression.type) {
     case 'AssignmentExpression':
       return assigned(expression);
@@ -204,7 +212,7 @@ function added(call: AstNode) {
   const callee = call.callee as AstNode;
   if (!isNode(callee.object)) return undefined;
   const name = callee.object.name as string;
-  const args = call.arguments as unknown[];
+  const args = call.arguments as readonly unknown[];
   switch (isNode(callee.property) ? callee.property.name : undefined) {
     case 'set':
       return { name, value: args[1] };
@@ -215,12 +223,12 @@ function added(call: AstNode) {
 
 /** The names a module imports from relative paths. */
 function importsOf(program: AstNode): readonly Import[] {
-  return (program.body as AstNode[]).flatMap((statement) => {
+  return (program.body as readonly AstNode[]).flatMap((statement) => {
     if (statement.type !== 'ImportDeclaration' || !isNode(statement.source)) return [];
     const from = statement.source.value as string;
     if (!/^\.\.?(\/|$)/.test(from)) return [];
     // Only an ImportSpecifier has an `imported` name: a default or namespace import has none.
-    return (statement.specifiers as AstNode[]).flatMap((specifier) =>
+    return (statement.specifiers as readonly AstNode[]).flatMap((specifier) =>
       isNode(specifier.imported) && isNode(specifier.local)
         ? [
             {
@@ -236,7 +244,7 @@ function importsOf(program: AstNode): readonly Import[] {
 
 /** The tables a module exports, by the name another module imports them as. */
 function exportsOf(program: AstNode, own: Tables, functions: ReadonlySet<string>): Exports {
-  const names = (program.body as AstNode[]).flatMap(exportedNames);
+  const names = (program.body as readonly AstNode[]).flatMap(exportedNames);
   const tables = new Map<string, Table>();
   const exportedFunctions = new Set<string>();
   for (const [local, name] of names) {
@@ -247,15 +255,18 @@ function exportsOf(program: AstNode, own: Tables, functions: ReadonlySet<string>
   return { tables, functions: exportedFunctions };
 }
 /** The names one statement exports, local then exported: `export const T`, `export { T as U }`. */
-function exportedNames(statement: AstNode): [string, string][] {
+function exportedNames(statement: AstNode): readonly (readonly [string, string])[] {
   if (statement.type !== 'ExportNamedDeclaration' || statement.source) return [];
   const declaration = statement.declaration;
   const declared: [string, string][] = isNode(declaration)
     ? declaredNames(declaration).map((name) => [name, name])
     : [];
-  const specified = (statement.specifiers as AstNode[]).map(
+  const specified = (statement.specifiers as readonly AstNode[]).map(
     (specifier) =>
-      [(specifier.local as AstNode).name, (specifier.exported as AstNode).name] as [string, string],
+      [(specifier.local as AstNode).name, (specifier.exported as AstNode).name] as readonly [
+        string,
+        string,
+      ],
   );
   return [...declared, ...specified];
 }
@@ -272,7 +283,7 @@ export function tablesIn(program: AstNode, imported: Imported = () => undefined)
   const imports = importsOf(program);
   const ownFunctions = functionNames(program);
   const functions = new Set([...ownFunctions, ...importedFunctions(imports, imported)]);
-  const own = staticTables(program, functions);
+  const own = new Map(staticTables(program, functions));
   const tables = new Map<string, Table>();
   for (const { local, imported: name, from } of imports) {
     const table = imported(from)?.tables.get(name);
@@ -301,7 +312,10 @@ function importedFunctions(imports: readonly Import[], imported: Imported): read
 }
 
 /** The module's `const` tables built from literals, with what its top level adds to them. */
-function staticTables(program: AstNode, functions: ReadonlySet<string>): Map<string, Table> {
+function staticTables(
+  program: AstNode,
+  functions: ReadonlySet<string>,
+): ReadonlyMap<string, Table> {
   const own = new Map<string, Table>();
   const statements = topLevel(program);
   for (const statement of statements) {
@@ -331,6 +345,7 @@ function staticTables(program: AstNode, functions: ReadonlySet<string>): Map<str
 function mutatedInFunctions(
   node: AstNode,
   shadowed: ReadonlySet<AstNode>,
+  // oxlint-disable-next-line readonly/types -- the set the walk adds to in place, so each level of the tree takes one stack frame.
   into: Set<string>,
   inFunction = false,
 ): ReadonlySet<string> {
@@ -402,7 +417,7 @@ function isMutator(method: string) {
 function staticKey(node: unknown): boolean {
   if (!isNode(node)) return true;
   if (node.type === 'Literal') return true;
-  return node.type === 'TemplateLiteral' && (node.expressions as unknown[]).length === 0;
+  return node.type === 'TemplateLiteral' && (node.expressions as readonly unknown[]).length === 0;
 }
 
 /** What a membership test over `entries` adds, as the `||` chain it stands for would. */
@@ -444,7 +459,7 @@ function methodAdds(call: AstNode, readable: Readable, counting: Counting) {
 
 /** `T.get(k)` on a dispatch Map, with a runtime key, counts as the switch it stands for. */
 function getAdds(call: AstNode, table: Table, counting: Counting) {
-  const key = (call.arguments as unknown[])[0];
+  const key = (call.arguments as readonly unknown[])[0];
   if (table.kind !== 'map' || !table.dispatch || staticKey(key)) return 0;
   return dispatch(table.entries, counting);
 }

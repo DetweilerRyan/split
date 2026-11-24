@@ -112,7 +112,7 @@ function reformat(file: string, source: string) {
   return result.stdout;
 }
 
-const transforms: [string, (file: string, source: string) => string][] = [
+const transforms: readonly (readonly [string, (file: string, source: string) => string])[] = [
   ['a blank line before every line', (file, source) => insertLines(file, source, '')],
   [
     'an unrelated comment before every line',

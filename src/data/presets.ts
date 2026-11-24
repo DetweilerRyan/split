@@ -1,6 +1,6 @@
 import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 
-export const PRESETS: Record<string, ReceiptSeed> = {
+export const PRESETS: Readonly<Record<string, ReceiptSeed>> = {
   plitvice: {
     title: 'Konoba Lička Kuća — Plitvice',
     cardTipEur: 0,

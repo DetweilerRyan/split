@@ -7,8 +7,12 @@ import { changedRanges } from './mutation.ts';
 // oxCrap mutates with ones it doesn't, paths with spaces (which git ends with a tab), files with
 // no hunks, and hunks that only delete.
 
-type Hunk = { start: number; count: number };
-type File = { path: string; kind: 'mutated' | 'test' | 'feature' | 'outside'; hunks: Hunk[] };
+type Hunk = { readonly start: number; readonly count: number };
+type File = {
+  readonly path: string;
+  readonly kind: 'mutated' | 'test' | 'feature' | 'outside';
+  readonly hunks: readonly Hunk[];
+};
 
 const segment = fc.stringMatching(/^[a-z][a-z0-9 _-]{0,8}$/).map((s) => s.trimEnd() || 'x');
 function pathOf(kind: File['kind'], name: string) {
@@ -34,7 +38,7 @@ const file: fc.Arbitrary<File> = fc
   })
   .map(({ kind, name, hunks }) => ({ path: pathOf(kind, name), kind, hunks }));
 
-function render(files: File[]) {
+function render(files: readonly File[]) {
   return files
     .flatMap(({ path, hunks }) => [
       `diff --git a/${path} b/${path}`,

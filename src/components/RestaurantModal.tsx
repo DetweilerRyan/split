@@ -6,17 +6,17 @@ import { mapsLink, parseWebsiteLink, phoneLink } from '../domain/receipt/restaur
 import type { RoomId } from '../domain/room/roomId';
 
 interface RestaurantModalProps {
-  open: boolean;
-  snapshot: RoomSnapshot;
-  roomId: RoomId;
-  onClose: () => void;
+  readonly open: boolean;
+  readonly snapshot: RoomSnapshot;
+  readonly roomId: RoomId;
+  readonly onClose: () => void;
 }
 
 interface DetailRow {
-  icon: typeof MapPin;
-  label: string;
-  value: string;
-  link?: URL | null;
+  readonly icon: typeof MapPin;
+  readonly label: string;
+  readonly value: string;
+  readonly link?: URL | null;
 }
 
 /** The restaurant details the receipt has, in the order the dialog lists them. */

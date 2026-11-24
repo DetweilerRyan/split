@@ -14,7 +14,7 @@ function branchy(name: string, complexity: number) {
 }
 
 /** A coverage report covering `files` (absolute paths), all or none of each. */
-function report(files: Record<string, string>, covered: string[] = []) {
+function report(files: Readonly<Record<string, string>>, covered: readonly string[] = []) {
   const entries = Object.entries(files).map(([path, source]) => {
     const statementMap: Record<string, unknown> = {};
     const s: Record<string, number> = {};
@@ -36,7 +36,10 @@ function report(files: Record<string, string>, covered: string[] = []) {
  * otherwise. Folders are the parents of the files, and `findFiles` returns every code file under
  * `root` that isn't a test, plus `named`.
  */
-function host(files: Record<string, string>, times: Record<string, number> = {}): Host {
+function host(
+  files: Readonly<Record<string, string>>,
+  times: Readonly<Record<string, number>> = {},
+): Host {
   const folders = new Set<string>();
   for (const path of Object.keys(files)) {
     for (let dir = posix.dirname(path); dir !== '/'; dir = posix.dirname(dir)) folders.add(dir);
@@ -64,7 +67,7 @@ function host(files: Record<string, string>, times: Record<string, number> = {})
 }
 
 /** The usual project: one function over the limits, a report covering none of it, newer. */
-function project(extra: Record<string, string> = {}, covered: string[] = []) {
+function project(extra: Readonly<Record<string, string>> = {}, covered: readonly string[] = []) {
   const code = { '/repo/src/grade.ts': branchy('grade', 12), ...extra };
   const codeOnly = Object.fromEntries(Object.entries(code).filter(([p]) => p.endsWith('.ts')));
   return {
@@ -73,7 +76,11 @@ function project(extra: Record<string, string> = {}, covered: string[] = []) {
   };
 }
 
-function oxcrap(args: string[], files: Record<string, string>, times?: Record<string, number>) {
+function oxcrap(
+  args: readonly string[],
+  files: Readonly<Record<string, string>>,
+  times?: Readonly<Record<string, number>>,
+) {
   return run(args, host(files, times));
 }
 

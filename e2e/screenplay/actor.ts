@@ -9,8 +9,8 @@ export type Question<T> = (actor: Actor) => T;
 
 /** What an actor can remember between steps. */
 export interface Notes {
-  receipt: ReceiptSeed;
-  toolResult: ToolResult;
+  readonly receipt: ReceiptSeed;
+  readonly toolResult: ToolResult;
 }
 
 // SplitSmart is designed for phones first, so every actor browses on one.
@@ -27,7 +27,7 @@ function isLocal(url: URL): boolean {
  */
 export interface Actor {
   readonly name: string;
-  readonly attemptsTo: (...tasks: Task[]) => Promise<void>;
+  readonly attemptsTo: (...tasks: readonly Task[]) => Promise<void>;
   readonly answer: <T>(question: Question<T>) => T;
   readonly browseTheWeb: () => Promise<Page>;
   /** The browser page, for questions; throws if the actor never opened one. */
@@ -44,7 +44,7 @@ export function createActor(name: string, browser: Browser, baseURL: string): Ac
   let mcp: McpSession | undefined;
   const notes = new Map<keyof Notes, Notes[keyof Notes]>();
 
-  async function attemptsTo(...tasks: Task[]): Promise<void> {
+  async function attemptsTo(...tasks: readonly Task[]): Promise<void> {
     for (const task of tasks) await task(actor);
   }
 

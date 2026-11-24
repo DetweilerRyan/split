@@ -18,19 +18,24 @@ const cli =
   process.env.BDDGEN_CLI ??
   fileURLToPath(new URL('../node_modules/playwright-bdd/dist/cli/index.js', import.meta.url));
 
-const args = process.argv.slice(2);
-const configs: (string | undefined)[] = [];
-for (let i = 0; i < args.length; i++) {
-  if ((args[i] === '-c' || args[i] === '--config') && args[i + 1]) configs.push(args[++i]);
-  else {
-    console.error(
-      `Unknown argument ${args[i]}. Usage: node scripts/check-unused-steps.ts [-c <config>]...`,
-    );
-    process.exit(1);
+/** The configs the arguments name, or `undefined` alone when they name none. */
+function configsIn(args: readonly string[]): readonly (string | undefined)[] {
+  const configs: (string | undefined)[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === '-c' || args[i] === '--config') && args[i + 1]) configs.push(args[++i]);
+    else {
+      console.error(
+        `Unknown argument ${args[i]}. Usage: node scripts/check-unused-steps.ts [-c <config>]...`,
+      );
+      process.exit(1);
+    }
   }
+  // With no -c, bddgen reads playwright.config.ts in the current directory.
+  if (configs.length === 0) configs.push(undefined);
+  return configs;
 }
-// With no -c, bddgen reads playwright.config.ts in the current directory.
-if (configs.length === 0) configs.push(undefined);
+
+const configs = configsIn(process.argv.slice(2));
 
 for (const config of configs) {
   const name = config ?? 'playwright.config.ts';

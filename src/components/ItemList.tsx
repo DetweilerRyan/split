@@ -4,16 +4,20 @@ import { formatMoney } from '../domain/money/currency';
 import { ItemRow } from './ItemRow';
 
 interface ItemListProps {
-  items: readonly ReceiptItem[];
-  participants: readonly Participant[];
-  activeId: string | null;
-  editing: boolean;
-  currency: string;
-  filter: 'all' | 'unclaimed' | 'mine';
-  onClaim: (itemId: string, participantId: string) => void;
-  onClaimAll: (itemId: string, participants: readonly Participant[], claimed: boolean) => void;
-  onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
-  onDelete: (itemId: string) => void;
+  readonly items: readonly ReceiptItem[];
+  readonly participants: readonly Participant[];
+  readonly activeId: string | null;
+  readonly editing: boolean;
+  readonly currency: string;
+  readonly filter: 'all' | 'unclaimed' | 'mine';
+  readonly onClaim: (itemId: string, participantId: string) => void;
+  readonly onClaimAll: (
+    itemId: string,
+    participants: readonly Participant[],
+    claimed: boolean,
+  ) => void;
+  readonly onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
+  readonly onDelete: (itemId: string) => void;
 }
 
 export function ItemList(props: ItemListProps) {

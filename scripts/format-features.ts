@@ -20,7 +20,7 @@ const check = args.includes('--check');
 const paths = args.filter((arg) => arg !== '--check');
 if (paths.length === 0) paths.push('e2e/features');
 
-function featureFiles(path: string): string[] {
+function featureFiles(path: string): readonly string[] {
   if (!statSync(path).isDirectory()) return path.endsWith('.feature') ? [path] : [];
   return readdirSync(path, { recursive: true, encoding: 'utf8' })
     .filter((entry) => entry.endsWith('.feature'))
@@ -47,21 +47,27 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-const unformatted: string[] = [];
-for (const file of files) {
-  const source = readFileSync(file, 'utf8');
-  let formatted: string;
-  try {
-    formatted = format(source);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`${relative(process.cwd(), file)}: ${message}`);
-    process.exit(1);
+/** The files that weren't formatted, each written formatted unless only checking. */
+function formatAll(files: readonly string[]): readonly string[] {
+  const unformatted: string[] = [];
+  for (const file of files) {
+    const source = readFileSync(file, 'utf8');
+    let formatted: string;
+    try {
+      formatted = format(source);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`${relative(process.cwd(), file)}: ${message}`);
+      process.exit(1);
+    }
+    if (formatted === source) continue;
+    unformatted.push(file);
+    if (!check) writeFileSync(file, formatted);
   }
-  if (formatted === source) continue;
-  unformatted.push(file);
-  if (!check) writeFileSync(file, formatted);
+  return unformatted;
 }
+
+const unformatted = formatAll(files);
 
 if (check && unformatted.length > 0) {
   for (const file of unformatted) console.error(`Not formatted: ${relative(process.cwd(), file)}`);

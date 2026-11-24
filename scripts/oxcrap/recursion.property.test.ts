@@ -48,8 +48,8 @@ type Nearby = 'none' | 'siblingBlock' | 'nestedParam' | 'staticVar';
 type Field = 'none' | 'sameBefore' | 'sameAfter' | 'other' | 'otherMethod';
 /** A call in a function's body: to another function, or a decoy that must not count. */
 type Call = {
-  to: number;
-  decoy:
+  readonly to: number;
+  readonly decoy:
     | 'none'
     | 'shadowed'
     | 'otherObject'
@@ -57,12 +57,12 @@ type Call = {
     | 'otherPrivacy'
     | 'innerStatic'
     | 'innerField';
-  via: Via;
-  hiding: Hiding;
-  nearby: Nearby;
+  readonly via: Via;
+  readonly hiding: Hiding;
+  readonly nearby: Nearby;
 };
-type Fn = { calls: Call[]; field: Field };
-type Program = { form: Form; stubsFirst: boolean; fns: Fn[] };
+type Fn = { readonly calls: readonly Call[]; readonly field: Field };
+type Program = { readonly form: Form; readonly stubsFirst: boolean; readonly fns: readonly Fn[] };
 
 const SIZE = 5;
 function name(i: number) {
@@ -245,7 +245,7 @@ function withField(form: Form, field: Field, method: string, name: string) {
  * with: a private one for a public method, a public one for a private method, and for a static
  * method, an instance one and a private static one.
  */
-function stubKinds(form: Form): [string, string][] {
+function stubKinds(form: Form): readonly (readonly [string, string])[] {
   switch (form) {
     case 'method':
       return [['#', '#']];
@@ -260,7 +260,7 @@ function stubKinds(form: Form): [string, string][] {
 }
 
 /** A class of the methods, with stubs of each one's name that `this` mustn't reach. */
-function classSource(form: Form, stubsFirst: boolean, methods: string[]) {
+function classSource(form: Form, stubsFirst: boolean, methods: readonly string[]) {
   const stubs = stubKinds(form).flatMap(([declared]) =>
     methods.map((_, i) => `  ${declared}${name(i)}() { return 0; }`),
   );
@@ -316,7 +316,7 @@ function inCycles(program: Program) {
 }
 
 /** The branches a function's calls add of their own, apart from recursion. */
-function branches(calls: Call[]) {
+function branches(calls: readonly Call[]) {
   return calls.reduce((sum, c) => {
     if (c.decoy === 'shadowed') return sum + hidingBranches(c.hiding);
     return c.decoy === 'none' ? sum + viaBranches(c.via) : sum;
@@ -324,7 +324,7 @@ function branches(calls: Call[]) {
 }
 
 /** A list of scored functions as `name complexity` lines, in one order, to compare. */
-function sorted(scored: (string | number)[][]) {
+function sorted(scored: readonly (readonly (string | number)[])[]) {
   return scored.map(([fn, complexity]) => `${fn} ${complexity}`).sort();
 }
 
@@ -417,8 +417,15 @@ type Side = 'instance' | 'static';
 /** Where in the class a call that runs as `w`'s code is written. */
 type Place = 'staticBlock' | 'staticField' | 'instanceField';
 /** A method: its side, a twin of its name on the other side, and what it calls. */
-type Member = { side: Side; twin: 'none' | 'before' | 'after'; calls: (number | 'w')[] };
-type ClassProgram = { members: Member[]; initializers: { place: Place; to: number }[] };
+type Member = {
+  readonly side: Side;
+  readonly twin: 'none' | 'before' | 'after';
+  readonly calls: readonly (number | 'w')[];
+};
+type ClassProgram = {
+  readonly members: readonly Member[];
+  readonly initializers: readonly { readonly place: Place; readonly to: number }[];
+};
 
 /** The side a place's `this` is: the class's for static code, an instance's otherwise. */
 function placeSide(place: Place): Side {
@@ -458,25 +465,25 @@ function classProgramSource({ members, initializers }: ClassProgram) {
 
 /** Each scored function's expected complexity: 1, and 1 more if it reaches itself. */
 function classProgramExpected({ members, initializers }: ClassProgram) {
-  const edges = new Map<string, string[]>([
+  const edges = new Map<string, readonly string[]>([
     [
       'w',
       initializers.filter((c) => placeSide(c.place) === members[c.to].side).map((c) => `${c.to}`),
     ],
-    ...members.map(({ side, calls }, i): [string, string[]] => [
+    ...members.map(({ side, calls }, i): readonly [string, readonly string[]] => [
       `${i}`,
       calls.filter((to) => to === 'w' || members[to].side === side).map((to) => `${to}`),
     ]),
   ]);
   function cycles(start: string) {
     const seen = new Set<string>();
-    const queue = [...(edges.get(start) as string[])];
+    const queue = [...(edges.get(start) as readonly string[])];
     while (queue.length > 0) {
       const next = queue.pop() as string;
       if (next === start) return true;
       if (seen.has(next)) continue;
       seen.add(next);
-      queue.push(...(edges.get(next) as string[]));
+      queue.push(...(edges.get(next) as readonly string[]));
     }
     return false;
   }

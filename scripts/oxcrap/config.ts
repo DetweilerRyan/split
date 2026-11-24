@@ -7,29 +7,29 @@ import { type ParseError, parse, printParseErrorCode, visit } from 'jsonc-parser
 import { COUNT_ALL, type Counting } from './complexity.ts';
 import schema from './configuration_schema.json' with { type: 'json' };
 
-export type Limits = { crap: number; complexity: number };
+export type Limits = { readonly crap: number; readonly complexity: number };
 export type Config = {
   /** Globs of the files to score, from the config's folder. */
-  files: string[];
+  readonly files: readonly string[];
   /** gitignore-style patterns left out of scoring. A folder that matches isn't searched at all. */
-  ignorePatterns: string[];
-  limits: Limits;
+  readonly ignorePatterns: readonly string[];
+  readonly limits: Limits;
   /** What counts towards complexity beyond the fixed branches. Everything, by default. */
-  counting: Counting;
+  readonly counting: Counting;
   /** The istanbul JSON coverage report, from the config's folder. */
-  coverage?: string;
+  readonly coverage?: string;
   /** Where to get help when there are findings: a URL, or a path from the config's folder. */
-  helpUrl?: string;
+  readonly helpUrl?: string;
 };
 /** What a config file holds, once the schema has checked it. */
 type File = Partial<Omit<Config, 'limits' | 'counting'>> & {
-  limits?: Partial<Limits>;
-  counting?: Partial<Counting>;
-  $schema?: string;
+  readonly limits?: Partial<Limits>;
+  readonly counting?: Partial<Counting>;
+  readonly $schema?: string;
 };
 
 /** The names oxCrap looks for in the current directory when no config is given, in order. */
-export const CONFIG_NAMES = ['.oxcraprc.json', '.oxcraprc.jsonc'];
+export const CONFIG_NAMES = ['.oxcraprc.json', '.oxcraprc.jsonc'] as const;
 
 export const CODE_FILES = '**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}';
 
@@ -57,7 +57,7 @@ function lineAndColumn(text: string, offset: number) {
 function describe(error: ErrorObject, path: string) {
   const option = error.instancePath.slice(1).replaceAll('/', '.');
   if (error.keyword === 'additionalProperties') {
-    const name = (error.params as { additionalProperty: string }).additionalProperty;
+    const name = (error.params as { readonly additionalProperty: string }).additionalProperty;
     return option
       ? `${path}: "${option}" has no option "${name}".`
       : `${path} has no option "${name}". The options are ${OPTIONS.join(', ')}.`;
@@ -89,7 +89,7 @@ export function parseConfig(text: string, path: string): Partial<Config> {
   if (!validate(data)) {
     // Ajv always sets `errors` when validation fails.
     throw new ConfigError(
-      (validate.errors as ErrorObject[]).map((error) => describe(error, path)).join('\n'),
+      (validate.errors as readonly ErrorObject[]).map((error) => describe(error, path)).join('\n'),
     );
   }
   const { $schema: _, limits, counting, ...rest } = data;
@@ -101,7 +101,7 @@ export function parseConfig(text: string, path: string): Partial<Config> {
 }
 
 /** A config's options over the defaults, and then the command line's over both. */
-export function merge(...layers: Partial<Config>[]): Config {
+export function merge(...layers: readonly Partial<Config>[]): Config {
   return Object.assign(
     {},
     DEFAULTS,

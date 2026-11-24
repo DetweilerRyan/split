@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { changedRanges } from './mutation.ts';
 
-function diff(file: string, hunks: string[]) {
+function diff(file: string, hunks: readonly string[]) {
   return [`diff --git a/${file} b/${file}`, `--- a/${file}`, `+++ b/${file}`, ...hunks].join('\n');
 }
 

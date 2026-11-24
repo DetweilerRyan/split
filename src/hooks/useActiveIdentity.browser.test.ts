@@ -5,10 +5,10 @@ import { roomIdSchema } from '../domain/room/roomId';
 import { useActiveIdentity } from './useActiveIdentity';
 
 type Identity = Parameters<RoomProvider['setIdentity']>[0];
-type Person = { id: string; name: string; colorIdx: number };
+type Person = { readonly id: string; readonly name: string; readonly colorIdx: number };
 
-const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 };
-const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 };
+const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 } as const;
+const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 } as const;
 const roomId = roomIdSchema.parse('split-r1');
 const storageKey = 'splitsmart-user-split-r1';
 

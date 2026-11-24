@@ -11,22 +11,22 @@ import { parse } from './functions.ts';
 
 /** What a piece of code adds, by kind: each kind is counted, or not, as an option says. */
 type Tally = {
-  branches: number;
-  defaults: number;
-  optional: number;
+  readonly branches: number;
+  readonly defaults: number;
+  readonly optional: number;
   /** Non-default `case`s, and the `switch`es they're in. */
-  cases: number;
-  switches: number;
+  readonly cases: number;
+  readonly switches: number;
   /** `&&`, `||` and `??` operators, and the runs of the same operator they form. */
-  operators: number;
-  sequences: number;
+  readonly operators: number;
+  readonly sequences: number;
   /** `break` and `continue` to a label. */
-  jumps: number;
+  readonly jumps: number;
   /** Calls of the function being scored, `subject()`. */
-  recursion: number;
+  readonly recursion: number;
 };
 /** A piece of code, what it adds itself, and what the functions nested in it hold. */
-type Code = { code: string; own: Tally; nested: Tally };
+type Code = { readonly code: string; readonly own: Tally; readonly nested: Tally };
 
 const NONE: Tally = {
   branches: 0,
@@ -39,7 +39,7 @@ const NONE: Tally = {
   jumps: 0,
   recursion: 0,
 };
-function add(...tallies: Tally[]): Tally {
+function add(...tallies: readonly Tally[]): Tally {
   return Object.fromEntries(
     Object.keys(NONE).map((kind) => [
       kind,
@@ -54,7 +54,7 @@ function leaf(code: string, tally: Partial<Tally> = {}): Code {
     nested: NONE,
   };
 }
-function join(parts: Code[]): Code {
+function join(parts: readonly Code[]): Code {
   return {
     code: parts.map((part) => part.code).join('\n'),
     own: add(...parts.map((part) => part.own)),
@@ -62,7 +62,7 @@ function join(parts: Code[]): Code {
   };
 }
 /** `code` wrapped around `inner`, adding `branches` of its own. */
-function wrap(code: string, branches: number, ...inner: Code[]): Code {
+function wrap(code: string, branches: number, ...inner: readonly Code[]): Code {
   return {
     code,
     own: add({ ...NONE, branches }, ...inner.map((part) => part.own)),
@@ -78,7 +78,7 @@ function nest(code: string, inner: Code, defaults = 0): Code {
   };
 }
 
-const { statements } = fc.letrec<{ statement: Code; statements: Code }>((tie) => {
+const { statements } = fc.letrec<{ readonly statement: Code; readonly statements: Code }>((tie) => {
   const body = tie('statements');
   return {
     statements: fc.array(tie('statement'), { maxLength: 3 }).map(join),

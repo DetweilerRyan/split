@@ -3,12 +3,12 @@ import { Toast } from './Toast';
 
 interface ModalDialogProps {
   /** The id of the heading that names the dialog. */
-  labelledBy: string;
+  readonly labelledBy: string;
   /** Classes added to the `modal-card` ones. */
-  className?: string;
+  readonly className?: string;
   /** Called when the person closes the dialog with Escape or by tapping outside it. */
-  onClose: () => void;
-  children: ReactNode;
+  readonly onClose: () => void;
+  readonly children: ReactNode;
 }
 
 /**

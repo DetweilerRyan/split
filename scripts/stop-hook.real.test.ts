@@ -3,10 +3,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 const script = fileURLToPath(new URL('./stop-hook.ts', import.meta.url));
-const directories: string[] = [];
 
 // Fakes of the npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when a file
 // named tests-fail exists, `test:tooling` when tooling-fails exists, and `oxcrap:app` and
@@ -18,21 +17,21 @@ const scripts = {
     "node -e \"const fs = require('fs'); if (fs.existsSync('tooling-fails')) { console.log('FAIL the tool'); process.exit(1) }\"",
   'oxcrap:app': 'node fake-crap.mjs',
   'oxcrap:tooling': 'node fake-crap.mjs',
-};
+} as const;
 const fakeCrap = `import { existsSync, readFileSync } from 'node:fs';
 const read = (file, otherwise) => (existsSync(file) ? readFileSync(file, 'utf8') : otherwise);
 console.log(read('crap-output', 'No CRAP findings.'));
 process.exit(Number(read('crap-status', '0')));
 `;
 
-function write(cwd: string, files: Record<string, string>) {
+function write(cwd: string, files: Readonly<Record<string, string>>) {
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(cwd, path)), { recursive: true });
     writeFileSync(join(cwd, path), content);
   }
 }
 
-function git(cwd: string, ...args: string[]) {
+function git(cwd: string, ...args: readonly string[]) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stderr);
 }
@@ -40,7 +39,7 @@ function git(cwd: string, ...args: string[]) {
 /** A git repository on `main` with the fake npm scripts, checked out on a branch `work`. */
 function repository() {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-stop-hook-test-'));
-  directories.push(cwd);
+  onTestFinished(() => rmSync(cwd, { recursive: true }));
   write(cwd, {
     'package.json': JSON.stringify({ scripts }),
     'fake-crap.mjs': fakeCrap,
@@ -54,7 +53,7 @@ function repository() {
   return cwd;
 }
 
-function hook(cwd: string, input: object, env: Record<string, string> = {}) {
+function hook(cwd: string, input: object, env: Readonly<Record<string, string>> = {}) {
   const result = spawnSync(process.execPath, [script], {
     cwd,
     input: JSON.stringify({ cwd, ...input }),
@@ -66,10 +65,6 @@ function hook(cwd: string, input: object, env: Record<string, string> = {}) {
     : undefined;
   return { status: result.status, stdout: result.stdout, context };
 }
-
-afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
-});
 
 describe('stop-hook', () => {
   it('gives Claude the CRAP check’s findings as additional context, and exits 0', () => {

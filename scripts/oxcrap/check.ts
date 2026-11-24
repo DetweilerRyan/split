@@ -4,7 +4,12 @@ import type { Allow, Finding } from './allow.ts';
 import type { Limits } from './config.ts';
 import type { Fn } from './functions.ts';
 
-export type Scored = { fn: Fn; file: string; coverage: number; crap: number };
+export type Scored = {
+  readonly fn: Fn;
+  readonly file: string;
+  readonly coverage: number;
+  readonly crap: number;
+};
 
 /** CRAP: complexity² × (1 − coverage)³ + complexity, with coverage from 0 to 1. */
 export function crapOf(complexity: number, coverage: number) {
@@ -31,7 +36,7 @@ function order(a: Finding, b: Finding) {
  * current numbers, and a comment fails when its numbers don't match its function or its function
  * is within the limits.
  */
-export function check(scored: Scored[], allowed: Map<Fn, Allow>, limits: Limits) {
+export function check(scored: readonly Scored[], allowed: ReadonlyMap<Fn, Allow>, limits: Limits) {
   // The score is compared as it's printed and written in @crap-allow comments: to one decimal place.
   function overLimit(s: Scored) {
     return round(s.crap) > limits.crap || s.fn.complexity > limits.complexity;
