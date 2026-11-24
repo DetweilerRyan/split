@@ -12,10 +12,9 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 
 ### The `src/` layers
 
-- **Asked for on [#94](https://github.com/DetweilerRyan/split/issues/94),** to keep the import direction one way between the layers in [code layout](code-layout.md). Why the layers are as they are, with the owner's words, is in [its sidecar](code-layout.meta.md).
+- **Asked for on [#94](https://github.com/DetweilerRyan/split/issues/94),** to keep the import direction one way between the layers in [code layout](code-layout.md). Why the layers are as they are, with the owner's words, is in [its sidecar](code-layout.meta.md), including why `src/sync/` isn't allowed `src/services/`.
 - **`domain-imports-domain-and-utils` and `utils-imports-utils` are the names #94 gave.** The services and sync rules follow the same pattern.
 - **`utils-imports-utils`** keeps domain logic from creeping back into `src/utils/` through a helper that imports it (#94).
-- **`src/sync/` isn't allowed `src/services/`,** since it imported nothing from there when the rule was added ([code layout's sidecar](code-layout.meta.md#srcstore-was-split-not-moved-and-renamed-srcsync)).
 - **The UI folders have no rule:** they may import every layer.
 - **Each test throwaway project holds one file per ruled folder,** because `--lint-config-rules` fails a rule whose pattern matches nothing. A test per folder checks that a missing folder fails.
 - **It also holds a file in every other folder a rule's `allow` could be widened to,** such as `src/server/` and `app/`, and each boundary test asserts the config lint passed. A widened rule then fails on the import it lets through, not on a glob matching nothing. Checked in #94's review by widening the domain rule to `src/server/**/*`: only the boundary assertion for `src/server/guard.ts` failed.
@@ -29,8 +28,16 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
   - **`y-*` and `@liveblocks/*` missed subpaths** such as `y-protocols/awareness` and `@liveblocks/client/internal`, so each needed a second `/**` pattern.
   - **The regex `^(…)(/.*)?$`** matches each package and its subpaths, and nothing relative.
 - **[`oxlintrc.real.test.ts`](../../oxlintrc.real.test.ts) tests the overrides** with the real oxlint: each banned package and subpath, a type-only import, `export … from`, `export * from` and a dynamic `import()` fail, and look-alike names and relative paths pass. An override's `files` globs match paths relative to the config, so the test copies the config into its throwaway project and links `scripts/lint/` for the repository's plugin. Dropping a package or the JSX rule from the config fails it.
-- **JSX in `src/domain/` is refused** by `react/jsx-filename-extension` with no allowed extensions, because JSX imports `react/jsx-runtime` implicitly ([code layout's sidecar](code-layout.meta.md#srcdomain-may-import-srcutils-and-plain-libraries)).
-- **Not taken:** a `no-restricted-globals` ban on `localStorage` and `indexedDB` in `src/domain/`. #94 asked for package bans only.
+- **JSX is refused in `src/domain/`,** by `react/jsx-filename-extension` with no allowed extensions. JSX imports `react/jsx-runtime` with no import statement, so the package ban alone let a `.tsx` file with JSX through, as the review of #94's third pull request found. Chosen over failing on any `.tsx` file: rev-dep has no rule for a file's existence, and a check in the lint script would be one more script; the oxlint rule keys on the JSX itself.
+
+### Which packages each override keeps out
+
+- **`src/domain/`:** UI, Yjs, the sync providers and browser storage, which [code layout's sidecar](code-layout.meta.md#srcdomain-may-import-srcutils-and-plain-libraries) says the layer is free of.
+  - **The list goes past #94's,** which named `react`, `yjs`, `y-*`, `@liveblocks/*` and `lucide-react`. `react-dom` and `next` are kept out as UI, and browser-storage packages the repository doesn't use today (`idb`, `idb-keyval`, `localforage`, `dexie`) so that one can't arrive under `src/domain/` unnoticed. They were added in #94's third pull request without the owner's input, as the reversible default: dropping a name loosens nothing else.
+  - **Server packages are kept out too:** `@vercel/functions`, `mcp-handler`, `@modelcontextprotocol/*` and `dialog-closedby-polyfill` serve the MCP route or patch the browser, so they aren't plain libraries. Added in the review of #94's third pull request.
+- **`src/services/`:** nothing UI or sync, as the owner's choice of `src/services/` was described ([code layout's sidecar](code-layout.meta.md#srcservices-for-code-at-the-edge)).
+  - **Packages:** React, Next, `lucide-react`, Yjs, the `y-*` providers and Liveblocks are kept out of `src/services/`. Browser storage stays allowed, since `exchangeRates.ts` caches rates in IndexedDB.
+  - **`next/server` is kept out with the rest of `next`.** A service is called from the browser, as `RoomView` calls `exchangeRates.ts`, and `next/server` is the framework's server runtime, so it would tie a service to Next and to the server. The rule's single `next` entry bans it without a list of Next's subpaths.
 
 ### rev-dep checks the rules
 
@@ -73,6 +80,8 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
   - **It holds for every asset import form, re-tested on 3.3.0:** JSON with and without `with { type: 'json' }`, `require`, a dynamic `import()`, and CSS. `rev-dep debug get-tree-for-cwd` resolves them to the right file but labels them `AssetModule`, and the boundary check skips them. Its README doesn't say so. No one had reported it upstream.
   - **The owner accepted the gap:** "i accept the gap. don't report the issue" ([decision](https://github.com/DetweilerRyan/split/pull/66#issuecomment-7105283194)). Two alternatives had been offered: a narrow oxlint pattern for `../**/*.json`, which brings back string matching, or asking rev-dep upstream for asset boundaries.
 - **`import.meta.resolve()`, `/// <reference path>`, and a symlink to a single file,** found by the same review. None is a normal import.
+- **Browser storage through globals isn't banned in `src/domain/`.** The ban covers storage packages, but `localStorage`, `sessionStorage` and `indexedDB` are globals, so a domain module could use them and pass lint; the domain row's "no browser storage" holds only for packages. `no-restricted-globals` in the domain override would close it; #94 asked for package bans only, so it wasn't added.
+- **A `.tsx` file in `src/domain/` without JSX passes.** It can't reach React without an import the ban refuses.
 - **An npm package that's declared but isn't meant to be used.** rev-dep checks that a package resolves, not which packages a folder may use. The oxlint overrides cover this for `src/domain/` and `src/services/` only, and only for the packages they name.
 - **No binary for Windows on ARM,** so `npm run lint` can't run there.
 
@@ -90,4 +99,5 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
 
 - **A rule that must cover JSON or other assets,** or rev-dep starting to check them: revisit the gap above.
 - **A layer that must ban a package rev-dep could check,** if rev-dep gains per-folder package rules: the oxlint overrides could move into `.rev-dep.config.jsonc`.
+- **A service that must run only on the server,** such as one using `next/server`'s `after()` from a route handler: allow `next/server` in `src/services/`, or give server-only services a folder of their own.
 - **rev-dep stalling,** or a platform it has no binary for becoming one the repository needs: dependency-cruiser is the fallback.
