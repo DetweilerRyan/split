@@ -50,7 +50,21 @@ describe('the repository lint config', () => {
     expect(lint('export class NotFound extends Error {}\n')).toEqual({ status: 0, problems: [] });
   });
 
-  it('honours a disable comment for the rest of a block, as ReceiptStore uses', () => {
+  it('honours a disable comment on the next line only, as ReceiptStore uses', () => {
+    const source = [
+      '// oxlint-disable-next-line functional/no-classes -- a reason',
+      'export class Kept {}',
+      '// oxlint-disable-next-line functional/no-this -- a reason',
+      'export function a() { return this; }',
+      'export function b() { return this; }',
+      '',
+    ].join('\n');
+    expect(lint(source).problems).toEqual([
+      expect.stringMatching(/^code\.ts:5:30: .*\[Error\/functional\(no-this\)\]$/),
+    ]);
+  });
+
+  it('honours a disable comment for the rest of a block', () => {
     const source = [
       '// oxlint-disable functional/no-this -- a reason',
       'export function a() { return this; }',

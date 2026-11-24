@@ -26,6 +26,21 @@ function superName(superClass: ClassNode['superClass']): string | undefined {
   return undefined;
 }
 
+/** A `this` node, as oxlint's visitors are given it. */
+type ThisNode = Parameters<
+  NonNullable<ReturnType<Extract<Rule, { create: unknown }>['create']>['ThisExpression']>
+>[0];
+
+/**
+ * Whether a `this` is in a type, as in `typeof this` or `typeof this.x`, which only names a type
+ * and reads nothing at run time.
+ */
+function inTypeQuery(node: ThisNode): boolean {
+  let parent = node.parent;
+  while (parent.type === 'TSQualifiedName') parent = parent.parent;
+  return parent.type === 'TSTypeQuery';
+}
+
 /** Whether a class extends `Error` or a class whose name ends in `Error`. */
 function extendsError(superClass: ClassNode['superClass']): boolean {
   return superName(superClass)?.endsWith('Error') ?? false;
@@ -64,7 +79,7 @@ export const noThis: Rule = {
   create(context) {
     return {
       ThisExpression(node) {
-        context.report({ node, messageId: 'noThis' });
+        if (!inTypeQuery(node)) context.report({ node, messageId: 'noThis' });
       },
     };
   },
