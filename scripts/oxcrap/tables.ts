@@ -90,9 +90,7 @@ function holdsFunction(node: unknown, functions: ReadonlySet<string>): boolean {
     case 'Identifier':
       return functions.has(value.name as string);
     case 'ObjectExpression':
-      return (value.properties as AstNode[]).some(
-        (p) => p.method === true || holdsFunction(p.value, functions),
-      );
+      return (value.properties as AstNode[]).some((p) => holdsFunction(p.value, functions));
     case 'ArrayExpression':
       return (value.elements as unknown[]).some((element) => holdsFunction(element, functions));
     default:
@@ -118,17 +116,13 @@ function tableOf(init: unknown, functions: ReadonlySet<string>): Table | undefin
     case 'CallExpression':
       // `Object.freeze({…})` is the table it freezes.
       return isFreeze(value) ? tableOf((value.arguments as unknown[])[0], functions) : undefined;
-    default:
-      return undefined;
   }
 }
 
 /** Whether `call` is `Object.freeze(…)`. */
 function isFreeze(call: AstNode) {
-  const callee = call.callee;
+  const callee = call.callee as AstNode;
   return (
-    isNode(callee) &&
-    callee.type === 'MemberExpression' &&
     isNode(callee.object) &&
     callee.object.name === 'Object' &&
     isNode(callee.property) &&
@@ -146,7 +140,9 @@ function collectionOf(expression: AstNode, functions: ReadonlySet<string>): Tabl
   if (name !== 'Map') return undefined;
   const pairs = elements.map((element) => literalElements(element));
   if (!pairs.every((pair) => pair?.length === 2)) return undefined;
-  const dispatch = pairs.some((pair) => holdsFunction(pair?.[1], functions));
+  const dispatch = (pairs as (readonly AstNode[])[]).some((pair) =>
+    holdsFunction(pair[1], functions),
+  );
   return { kind: 'map', entries: elements.length, dispatch };
 }
 
@@ -154,9 +150,7 @@ function collectionOf(expression: AstNode, functions: ReadonlySet<string>): Tabl
 function objectOf(object: AstNode, functions: ReadonlySet<string>): Table | undefined {
   const properties = object.properties as AstNode[];
   if (properties.some((property) => property.type !== 'Property')) return undefined;
-  const dispatch = properties.some(
-    (property) => property.method === true || holdsFunction(property.value, functions),
-  );
+  const dispatch = properties.some((property) => holdsFunction(property.value, functions));
   return { kind: 'object', entries: properties.length, dispatch };
 }
 
@@ -171,7 +165,8 @@ function topLevel(program: AstNode): readonly AstNode[] {
 
 /** The `const` names a statement declares with a value, and those values. */
 function constants(statement: AstNode): [string, unknown][] {
-  if (statement.type !== 'VariableDeclaration' || statement.kind !== 'const') return [];
+  // Only a VariableDeclaration has a `kind` of 'const'.
+  if (statement.kind !== 'const') return [];
   return (statement.declarations as AstNode[]).flatMap((declarator) =>
     isNode(declarator.id) && declarator.id.type === 'Identifier'
       ? [[declarator.id.name as string, declarator.init] as [string, unknown]]
@@ -191,26 +186,22 @@ function addition(statement: AstNode): { name: string; value: unknown } | undefi
       return assigned(expression);
     case 'CallExpression':
       return added(expression);
-    default:
-      return undefined;
   }
 }
 
 /** `T.k = v` or `T[k] = v`: the table's name and the value. */
 function assigned(assignment: AstNode) {
-  const target = assignment.left;
-  if (!isNode(target) || target.type !== 'MemberExpression' || !isNode(target.object)) {
-    return undefined;
-  }
+  // Only a MemberExpression has an `object`.
+  const target = assignment.left as AstNode;
+  if (!isNode(target.object)) return undefined;
   return { name: target.object.name as string, value: assignment.right };
 }
 
 /** `T.set(k, v)` or `T.add(x)`: the table's name and the value. */
 function added(call: AstNode) {
-  const callee = call.callee;
-  if (!isNode(callee) || callee.type !== 'MemberExpression' || !isNode(callee.object)) {
-    return undefined;
-  }
+  // Only a MemberExpression has an `object`.
+  const callee = call.callee as AstNode;
+  if (!isNode(callee.object)) return undefined;
   const name = callee.object.name as string;
   const args = call.arguments as unknown[];
   switch (isNode(callee.property) ? callee.property.name : undefined) {
@@ -218,8 +209,6 @@ function added(call: AstNode) {
       return { name, value: args[1] };
     case 'add':
       return { name, value: args[0] };
-    default:
-      return undefined;
   }
 }
 
@@ -229,8 +218,9 @@ function importsOf(program: AstNode): readonly Import[] {
     if (statement.type !== 'ImportDeclaration' || !isNode(statement.source)) return [];
     const from = statement.source.value as string;
     if (!/^\.\.?(\/|$)/.test(from)) return [];
+    // Only an ImportSpecifier has an `imported` name: a default or namespace import has none.
     return (statement.specifiers as AstNode[]).flatMap((specifier) =>
-      specifier.type === 'ImportSpecifier' && isNode(specifier.imported) && isNode(specifier.local)
+      isNode(specifier.imported) && isNode(specifier.local)
         ? [
             {
               local: specifier.local.name as string,
@@ -262,16 +252,16 @@ function exportedNames(statement: AstNode): [string, string][] {
   const declared: [string, string][] = isNode(declaration)
     ? declaredNames(declaration).map((name) => [name, name])
     : [];
-  const specified = ((statement.specifiers as AstNode[]) ?? []).flatMap((specifier) =>
-    isNode(specifier.local) && isNode(specifier.exported)
-      ? [[specifier.local.name as string, specifier.exported.name as string] as [string, string]]
-      : [],
+  const specified = (statement.specifiers as AstNode[]).map(
+    (specifier) =>
+      [(specifier.local as AstNode).name, (specifier.exported as AstNode).name] as [string, string],
   );
   return [...declared, ...specified];
 }
 
 /** The names an exported declaration declares: a function's, or its `const`s. */
 function declaredNames(declaration: AstNode): readonly string[] {
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: the other declarations with an `id`, such as a class, an interface or an enum, name neither a table nor a function, so exportsOf drops what this would return for them.
   if (declaration.type === 'FunctionDeclaration' && isNode(declaration.id)) {
     return [declaration.id.name as string];
   }
@@ -356,31 +346,29 @@ function mutatedInFunctions(
 function mutatedName(node: AstNode): AstNode | undefined {
   switch (node.type) {
     case 'AssignmentExpression':
-      return objectName(node.left);
+      return objectName(node.left as AstNode);
     case 'UpdateExpression':
-      return objectName(node.argument);
+      return objectName(node.argument as AstNode);
     case 'UnaryExpression':
-      return node.operator === 'delete' ? objectName(node.argument) : undefined;
+      return node.operator === 'delete' ? objectName(node.argument as AstNode) : undefined;
     case 'CallExpression':
-      return mutatorCallee(node.callee);
-    default:
-      return undefined;
+      return mutatorCallee(node.callee as AstNode);
   }
 }
 
-/** The name a member expression reads from, through casts: `T` in `(T as X)[k]`. */
-function objectName(node: unknown): AstNode | undefined {
-  const member = unwrap(node);
-  if (!isNode(member) || member.type !== 'MemberExpression') return undefined;
-  const object = unwrap(member.object);
+/**
+ * The name a member expression reads from, through casts: `T` in `(T as X)[k]`. Any other node has
+ * no `object`, so it names nothing.
+ */
+function objectName(node: AstNode): AstNode | undefined {
+  const object = unwrap((unwrap(node) as AstNode).object);
+  // Stryker disable next-line ConditionalExpression: any other object has no `name`, so it names no table and no local, and adds nothing the caller keeps.
   return isNode(object) && object.type === 'Identifier' ? object : undefined;
 }
 
 /** The object a call changes through one of its methods, as `T` in `T.set(k, v)`. */
-function mutatorCallee(callee: unknown): AstNode | undefined {
-  if (!isNode(callee) || callee.type !== 'MemberExpression' || !isNode(callee.property)) {
-    return undefined;
-  }
+function mutatorCallee(callee: AstNode): AstNode | undefined {
+  if (!isNode(callee.property)) return undefined;
   return isMutator(callee.property.name as string) ? objectName(callee) : undefined;
 }
 
@@ -402,6 +390,7 @@ function isMutator(method: string) {
     case 'fill':
     case 'copyWithin':
       return true;
+    // Stryker disable next-line ConditionalExpression: an empty default returns undefined, which the only caller treats as false.
     default:
       return false;
   }
@@ -421,15 +410,15 @@ function membership(entries: number, counting: Counting) {
 
 /** What a dispatch over `entries` adds, as the switch it stands for would. */
 function dispatch(entries: number, counting: Counting) {
+  // A dispatch table holds a function in at least one entry.
   if (counting.switchCases === 'each') return entries;
-  return entries > 0 ? 1 : 0;
+  return 1;
 }
 
-/** The table an expression names, if it's one of `tables`. */
+/** The table an expression names, if it's one of `tables`. Only an Identifier has a `name`. */
 function tableNamed(node: unknown, readable: Readable): Table | undefined {
   const value = unwrap(node);
-  if (!isNode(value) || value.type !== 'Identifier' || readable.shadowed.has(value))
-    return undefined;
+  if (!isNode(value) || readable.shadowed.has(value)) return undefined;
   return readable.tables.get(value.name as string);
 }
 
@@ -462,8 +451,8 @@ function getAdds(call: AstNode, table: Table, counting: Counting) {
  * key, `x[k]()` or `this[name]()`, unless `x` is a dispatch table, whose read counts already.
  */
 function callAdds(call: AstNode, readable: Readable, counting: Counting) {
-  const callee = call.callee;
-  if (!isNode(callee) || callee.type !== 'MemberExpression') return 0;
+  // A callee other than a member has no `object`, so methodAdds finds no table in it.
+  const callee = call.callee as AstNode;
   if (!callee.computed) return methodAdds(call, readable, counting);
   if (staticKey(callee.property)) return 0;
   return tableNamed(callee.object, readable)?.dispatch ? 0 : 1;
