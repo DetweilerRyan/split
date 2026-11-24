@@ -12,7 +12,6 @@ interface SeedModalProps {
   onBlankRoom: () => void;
 }
 
-// @crap-allow CRAP 56, complexity 7. Debt from before the CRAP check (#63): no tests yet.
 export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: SeedModalProps) {
   const [text, setText] = useState('');
   const [forceReset, setForceReset] = useState(true);
@@ -30,7 +29,9 @@ export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: Se
         input.includes('#') ? input.slice(input.indexOf('#') + 1) : input,
       );
       const seed = decodeSeed(urlParams.get('seed') ?? input);
-      if (!seed || !Array.isArray(seed.items)) throw new Error('Invalid seed');
+      if (!seed) throw new Error('Invalid seed');
+      // decodeSeed checks only that `items` is an array, so a seed missing other fields, such as
+      // `roster`, throws while it's imported.
       onImport(seed, forceReset);
     } catch {
       window.alert('Could not parse seed JSON, compressed seed, or room link.');

@@ -11,42 +11,50 @@ interface RestaurantModalProps {
   onClose: () => void;
 }
 
-// @crap-allow CRAP 240, complexity 15. Debt from before the CRAP check (#63): no tests yet.
+interface DetailRow {
+  icon: typeof MapPin;
+  label: string;
+  value: string;
+  href?: string | null;
+}
+
+/** A link for the receipt's website: as written when it has a scheme, over https when it's a bare domain. */
+function websiteHref(website: string) {
+  if (/^https?:\/\//i.test(website)) return website;
+  return /^[^\s@]+\.[^\s@]+$/.test(website) ? `https://${website}` : null;
+}
+
+/** The restaurant details the receipt has, in the order the dialog lists them. */
+function detailRows(snapshot: RoomSnapshot) {
+  const rows: DetailRow[] = [];
+  const purchase = parsePurchasedAt(snapshot.purchasedAt);
+  if (purchase) {
+    const { day, time } = formatPurchaseTime(purchase);
+    rows.push({ icon: CalendarDays, label: 'When', value: time ? `${day} · ${time}` : day });
+  }
+  if (snapshot.mealType) rows.push({ icon: Utensils, label: 'Meal', value: snapshot.mealType });
+  if (snapshot.address) {
+    const query = encodeURIComponent(`${snapshot.title} ${snapshot.address}`);
+    rows.push({
+      icon: MapPin,
+      label: 'Address',
+      value: snapshot.address,
+      href: `https://www.google.com/maps/search/?api=1&query=${query}`,
+    });
+  }
+  if (snapshot.phone) {
+    const href = `tel:${snapshot.phone.replace(/[^\d+]/g, '')}`;
+    rows.push({ icon: Phone, label: 'Phone', value: snapshot.phone, href });
+  }
+  const website = snapshot.website.trim();
+  if (website)
+    rows.push({ icon: Globe, label: 'Website', value: website, href: websiteHref(website) });
+  return rows;
+}
+
 export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantModalProps) {
   if (!open) return null;
-  const purchase = parsePurchasedAt(snapshot.purchasedAt);
-  const when = purchase ? formatPurchaseTime(purchase) : null;
-  const website = snapshot.website.trim();
-  const websiteHref = /^https?:\/\//i.test(website)
-    ? website
-    : /^[^\s@]+\.[^\s@]+$/.test(website) && !website.includes('@')
-      ? `https://${website}`
-      : null;
-  const mapsHref = snapshot.address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${snapshot.title} ${snapshot.address}`)}`
-    : null;
-
-  const rows = [
-    when && {
-      icon: CalendarDays,
-      label: 'When',
-      value: `${when.day}${when.time ? ` · ${when.time}` : ''}`,
-    },
-    snapshot.mealType && { icon: Utensils, label: 'Meal', value: snapshot.mealType },
-    snapshot.address && { icon: MapPin, label: 'Address', value: snapshot.address, href: mapsHref },
-    snapshot.phone && {
-      icon: Phone,
-      label: 'Phone',
-      value: snapshot.phone,
-      href: `tel:${snapshot.phone.replace(/[^\d+]/g, '')}`,
-    },
-    website && { icon: Globe, label: 'Website', value: website, href: websiteHref },
-  ].filter(Boolean) as {
-    icon: typeof MapPin;
-    label: string;
-    value: string;
-    href?: string | null;
-  }[];
+  const rows = detailRows(snapshot);
 
   return (
     <ModalDialog labelledBy="restaurant-title" onClose={onClose}>
