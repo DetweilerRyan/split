@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { Doc } from 'yjs';
-import { localeCurrency } from '../domain/money/currency';
-import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
-import { createRoomId } from '../domain/room/roomId';
-import { hydrateFromSeed, pendingSeedKey, roomPath } from '../sync/seedCodec';
+import { localeCurrency } from '@/domain/money/currency';
+import type { ReceiptSeed } from '@/domain/receipt/receiptSeed';
+import { createRoomId } from '@/domain/room/roomId';
+import { hydrateFromSeed, pendingSeedKey, roomPath } from '@/sync/seedCodec';
 
 /**
  * The seed dialog: whether it's open, importing a seed or a preset into the room's document, and

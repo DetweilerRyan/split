@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import '../index.css';
-import { computeReceiptMath } from '../domain/receipt/math';
-import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
-import { EMPTY_SNAPSHOT } from '../sync/useReceiptStore';
+import '@/index.css';
+import { computeReceiptMath } from '@/domain/receipt/math';
+import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import { EMPTY_SNAPSHOT } from '@/sync/useReceiptStore';
 import { ReceiptSummary } from './ReceiptSummary';
 
 // €15.50 of items and a €2 card tip: €17.50 on the card.

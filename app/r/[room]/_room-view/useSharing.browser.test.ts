@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
-import { buildExportText } from '../domain/receipt/exportText';
-import { roomIdSchema } from '../domain/room/roomId';
-import { EMPTY_SNAPSHOT } from '../sync/useReceiptStore';
+import { buildExportText } from '@/domain/receipt/exportText';
+import { roomIdSchema } from '@/domain/room/roomId';
+import { EMPTY_SNAPSHOT } from '@/sync/useReceiptStore';
 import { type CopyTarget, type SiteLocation, useSharing } from './useSharing';
 
 const roomId = roomIdSchema.parse('split-r1');

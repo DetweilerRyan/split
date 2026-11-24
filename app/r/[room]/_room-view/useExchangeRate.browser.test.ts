@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import * as Y from 'yjs';
-import { ReceiptStore, useReceiptStore } from '../sync/useReceiptStore';
+import { ReceiptStore, useReceiptStore } from '@/sync/useReceiptStore';
 import { type FetchRate, useExchangeRate } from './useExchangeRate';
 
 function fetchesRate(rate: number, date: string) {

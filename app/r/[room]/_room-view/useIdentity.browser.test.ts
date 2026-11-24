@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import * as Y from 'yjs';
-import { roomIdSchema } from '../domain/room/roomId';
-import { ReceiptStore, useReceiptStore } from '../sync/useReceiptStore';
+import { roomIdSchema } from '@/domain/room/roomId';
+import { ReceiptStore, useReceiptStore } from '@/sync/useReceiptStore';
 import { useIdentity } from './useIdentity';
 
 const roomId = roomIdSchema.parse('split-r1');
