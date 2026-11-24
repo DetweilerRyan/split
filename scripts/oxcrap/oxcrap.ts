@@ -7,10 +7,16 @@
 // This file only connects run.ts to the real file system and the process; run.ts does the work.
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
-import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { findFiles, gitignoreIn } from './files.ts';
+import { existsSync, globSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { findFiles } from './files.ts';
 import { type Host, run } from './run.ts';
+
+/** The .gitignore in `root`, if there is one, as text the `ignore` package takes. */
+function gitignoreIn(root: string) {
+  const path = join(root, '.gitignore');
+  return existsSync(path) ? readFileSync(path, 'utf8') : '';
+}
 
 const host: Host = {
   cwd: process.cwd(),
@@ -27,7 +33,7 @@ const host: Host = {
     }
   },
   findFiles: (root, globs, ignorePatterns, named) =>
-    findFiles(root, globs, ignorePatterns, named, gitignoreIn(root)),
+    findFiles(globSync, root, globs, ignorePatterns, named, gitignoreIn(root)),
 };
 
 const { status, stdout, stderr } = run(process.argv.slice(2), host);

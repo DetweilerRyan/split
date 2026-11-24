@@ -219,6 +219,7 @@ The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap
   - **An excluded folder isn't searched.** With `**/node_modules/**` excluded, a search of this repository fell from 131 ms over 4,980 files to 3 ms.
   - **It replaced a hand-written `glob.ts`.** An earlier version of this note said wrongly that Node's glob wasn't stable in Node 22, without checking which 22 release.
   - **`exclude` is a function asking `ignore` about each folder,** so a folder `ignorePatterns` matches isn't searched, while ignored files, such as tests, are left out of scoring but still count against the coverage report.
+  - **`files.ts` is given `fs.globSync`, and `oxcrap.ts` reads the `.gitignore`,** so the pruning, the split between the `.gitignore` and `ignorePatterns`, and `matched` against `scored` have unit tests over files in memory. The owner chose it on [#79](https://github.com/DetweilerRyan/split/issues/79#issuecomment-7118031362): "Unit-test files.ts, exclude oxcrap.ts". Passing the real `globSync` in, rather than matching a listing by hand, keeps the glob semantics Node's. Those have quirks a hand-written match could miss: `**` skips dotfiles, a symlink is neither a file nor searched, and a folder a pattern names outright isn't always offered to `exclude`.
   - **A single file named on the command line is passed through as it is,** not as a pattern. A folder whose name has glob characters is refused, because Node's glob has no escape that works on every platform.
 - **The limits moved from constants in `check.ts` into the config,** with 30 and 10 as defaults in `config.ts`. This repository's [`.oxcraprc.json`](../../.oxcraprc.json) sets them explicitly, so a change to them shows up as a change to that file.
 
@@ -275,10 +276,10 @@ The owner asked to "nest it into it's own folder scripts/crap/ and decompose the
 | [`allow.ts`](allow.ts)           | Reads `@crap-allow` comments and matches them to functions                                      | [`allow.test.ts`](allow.test.ts)                                                                         |
 | [`coverage.ts`](coverage.ts)     | Reads a report; finds files newer than it; shares statements out to functions                   | [`coverage.test.ts`](coverage.test.ts)                                                                   |
 | [`config.ts`](config.ts)         | Reads a config with `jsonc-parser`, checks it against the schema with `ajv`; holds the defaults | [`config.test.ts`](config.test.ts)                                                                       |
-| [`files.ts`](files.ts)           | Finds the files a config's globs pick out, with `fs.globSync`                                   | [the features](features/)                                                                                |
+| [`files.ts`](files.ts)           | Finds the files a config's globs pick out, with the `fs.globSync` it's given                    | [`files.test.ts`](files.test.ts)                                                                         |
 | [`check.ts`](check.ts)           | The rules, on plain data                                                                        | [`check.test.ts`](check.test.ts)                                                                         |
 
-- **Every module but `oxcrap.ts` takes plain values,** such as source text, a config's text or a coverage report's text. Only `oxcrap.ts` and `files.ts` read the file system, and nothing runs a program.
+- **Every module but `oxcrap.ts` takes plain values,** such as source text, a config's text or a coverage report's text. Only `oxcrap.ts` reads the file system, and nothing runs a program.
 - **[`../stop-hook.ts`](../stop-hook.ts) is outside this folder** because it's the project's hook, not part of the CRAP script. [`../stop-hook.real.test.ts`](../stop-hook.real.test.ts) tests it with fake npm scripts.
 - **The modules import each other with `.ts` extensions,** which Node needs to run them by stripping types. So `tsconfig.json` sets `allowImportingTsExtensions`, which `noEmit` permits.
 
