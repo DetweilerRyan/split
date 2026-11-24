@@ -2,7 +2,7 @@ import { CalendarDays, Globe, MapPin, Phone, Utensils, X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import type { RoomSnapshot } from '../store/useReceiptStore';
 import { formatPurchaseTime, parsePurchasedAt } from '../utils/mealInfo';
-import { parseWebsiteLink } from '../utils/websiteLink';
+import { mapsLink, parseWebsiteLink, phoneLink } from '../domain/receipt/restaurantLinks';
 import type { RoomId } from '../store/seedCodec';
 
 interface RestaurantModalProps {
@@ -19,14 +19,6 @@ interface DetailRow {
   link?: URL | null;
 }
 
-/** A Google Maps search for the restaurant. */
-function mapsUrl(title: string, address: string) {
-  const url = new URL('https://www.google.com/maps/search/');
-  url.searchParams.set('api', '1');
-  url.searchParams.set('query', `${title} ${address}`);
-  return url;
-}
-
 /** The restaurant details the receipt has, in the order the dialog lists them. */
 function detailRows(snapshot: RoomSnapshot) {
   const rows: DetailRow[] = [];
@@ -37,12 +29,16 @@ function detailRows(snapshot: RoomSnapshot) {
   }
   if (snapshot.mealType) rows.push({ icon: Utensils, label: 'Meal', value: snapshot.mealType });
   if (snapshot.address) {
-    const link = mapsUrl(snapshot.title, snapshot.address);
+    const link = mapsLink(snapshot.title, snapshot.address);
     rows.push({ icon: MapPin, label: 'Address', value: snapshot.address, link });
   }
   if (snapshot.phone) {
-    const link = new URL(`tel:${snapshot.phone.replace(/[^\d+]/g, '')}`);
-    rows.push({ icon: Phone, label: 'Phone', value: snapshot.phone, link });
+    rows.push({
+      icon: Phone,
+      label: 'Phone',
+      value: snapshot.phone,
+      link: phoneLink(snapshot.phone),
+    });
   }
   const website = snapshot.website.trim();
   if (website)

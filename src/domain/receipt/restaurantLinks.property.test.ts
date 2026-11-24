@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { parseWebsiteLink } from './websiteLink';
+import { parseWebsiteLink } from './restaurantLinks';
 
 /** A scheme written in any mix of cases, as a receipt might print it. */
 function anyCase(scheme: string) {
