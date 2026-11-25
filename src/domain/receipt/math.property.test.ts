@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { type RoomSnapshot, itemIdSchema, participantIdSchema } from './roomSnapshot';
 import { allocateMinor, computeReceiptMath } from './math';
-import type { DeepReadonly } from '@/utils/deepReadonly';
+import type { DeepReadonly } from '@/utils/types/deepReadonly';
 
 /** A currency as a receipt might name it, with the code it stands for and its decimals. */
 type WrittenCurrency = {
