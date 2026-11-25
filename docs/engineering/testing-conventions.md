@@ -62,14 +62,31 @@ A property test checks a rule that should hold for every input, against many inp
   - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [Mutation testing](mutation-testing.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
 - **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it, and confirm the property fails with the fix undone.
 - **Keep it fast.** fast-check runs 100 inputs by default. Raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is. This is the count CI runs.
-- **Soak a new property before you commit it.** Set its `numRuns` to 100,000, run only its file (`npx vitest run <path>`), and keep running it until a full run passes. Use a lower count only if one run would take longer than about ten minutes. For each failure:
-  1. **Decide where the fault is.** If the code is wrong, fix the code. If the property or its generator is wrong, such as a rule that doesn't hold for an input the code handles correctly, fix the property.
-  2. **Add the shrunk input as an example test** in the module's `.test.ts`, asserting the right answer for it. CI runs far fewer inputs and may never generate that one again, so the example is what keeps covering it.
-  3. **Run the soak again.**
+- **Soak a new property before you commit it.** Run it for ten minutes rather than a fixed count, and keep running it until a full run passes:
+  1. **Give it a time budget.** In the new property's `fc.assert` parameters, put:
 
-  Once a run passes, set `numRuns` back to the count CI should run, and say in the pull request how many inputs the soak ran and what it found.
+     ```ts
+     { numRuns: Number.POSITIVE_INFINITY, interruptAfterTimeLimit: 600_000, markInterruptAsFailure: false }
+     ```
 
-- **When one fails, its output gives a seed and a path.** Pass them to `fc.assert` as `{ seed, path }` to run the same input again. Once it's fixed, add the shrunk input as an example test, as for a soak failure.
+     To see how many inputs ran, call `fc.check` with the same parameters for the soak and log the result's `numRuns`.
+
+  2. **Run only its file, with Vitest's timeout off,** or Vitest stops the test after 5 seconds:
+
+     ```bash
+     npx vitest run <path> --testTimeout=0
+     ```
+
+  3. **For each failure, decide where the fault is.** If the code is wrong, fix the code. If the property or its generator is wrong, such as a rule that doesn't hold for an input the code handles correctly, fix the property.
+  4. **Keep the shrunk input twice.** CI runs far fewer inputs and may never generate it again.
+     - **As an example test** in the module's `.test.ts`, asserting the right answer for that input. This checks the answer without the property.
+     - **In the property's `examples`,** so the property itself always runs it. fast-check runs `examples` first, and counts them towards `numRuns`, so raise `numRuns` by the number of examples you add.
+  5. **Say where each one came from,** in a comment beside both: `// Found by a soak run on #<pull request>.` A later session can then tell it was kept on purpose, not added as a duplicate.
+  6. **Run the soak again.**
+
+  Once a run passes, put back the parameters CI should run, and say in the pull request how many inputs the soak ran and what it found.
+
+- **When one fails, its output gives a seed and a path.** Pass them to `fc.assert` as `{ seed, path }` to run the same input again. Once it's fixed, keep the shrunk input as for a soak failure, saying where it was found.
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.
 
