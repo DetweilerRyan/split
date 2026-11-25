@@ -304,6 +304,108 @@ describe('room sync provider selection', () => {
       'wss://y-webrtc-eu.fly.dev',
     ]);
   });
+
+  it.each([
+    ['initial', 'connecting'],
+    ['connecting', 'connecting'],
+    ['connected', 'connected'],
+    ['reconnecting', 'reconnecting'],
+    ['disconnected', 'disconnected'],
+  ] as const)('shows a Liveblocks room that is %s as %s', async (status, shown) => {
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', 'pk_test');
+    const doc = new Y.Doc();
+    const room = { getStatus: () => status, subscribe: vi.fn(), connect: vi.fn() };
+    mocks.createClient.mockReturnValue({ enterRoom: () => ({ room, leave: vi.fn() }) });
+    mocks.getYjsProviderForRoom.mockReturnValue({
+      getYDoc: () => doc,
+      awareness: { getStates: () => new Map(), on: vi.fn(), setLocalStateField: vi.fn() },
+    });
+
+    const { getRoomProvider } = await import('./yjsProvider');
+    const provider = await getRoomProvider(roomIdSchema.parse('split-st'));
+
+    expect(provider.store.getSnapshot().connection).toEqual({
+      provider: 'Liveblocks',
+      status: shown,
+    });
+    doc.destroy();
+  });
+
+  it("shows a peer's color, and a peer with no usable name or color as a guest", async () => {
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', '');
+    const states = new Map<number, unknown>([
+      [1, { user: { name: 'Colored', color: '#123456' } }],
+      [2, { user: { name: 'Blank color', color: '' } }],
+      [3, { user: {} }],
+      [4, { user: 'not a user' }],
+    ]);
+    mocks.WebrtcProvider.mockImplementation(function () {
+      return {
+        awareness: { getStates: () => states, on: vi.fn(), setLocalStateField: vi.fn() },
+        on: vi.fn(),
+      };
+    });
+
+    const { getRoomProvider } = await import('./yjsProvider');
+    const provider = await getRoomProvider(roomIdSchema.parse('split-pr'));
+
+    expect(provider.store.getSnapshot().peers).toEqual([
+      { id: '1', name: 'Colored', color: '#123456' },
+      { id: '2', name: 'Blank color' },
+      { id: '3', name: 'Guest' },
+      { id: '4', name: 'Guest' },
+    ]);
+    provider.doc.destroy();
+  });
+
+  it('shares the identity over WebRTC, its color picked round the palette', async () => {
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', '');
+    const awareness = { getStates: () => new Map(), on: vi.fn(), setLocalStateField: vi.fn() };
+    mocks.WebrtcProvider.mockImplementation(function () {
+      return { awareness, on: vi.fn() };
+    });
+
+    const { getRoomProvider } = await import('./yjsProvider');
+    const provider = await getRoomProvider(roomIdSchema.parse('split-id'));
+    provider.setIdentity({
+      id: participantIdSchema.parse('p-eighth'),
+      name: 'Eighth',
+      colorIdx: 8,
+    });
+
+    expect(awareness.setLocalStateField).toHaveBeenCalledWith('user', {
+      id: 'p-eighth',
+      name: 'Eighth',
+      colorIdx: 8,
+      color: '#059669',
+    });
+    provider.doc.destroy();
+  });
+
+  it('sets up the room again after a failed setup', async () => {
+    vi.stubEnv('NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY', '');
+    mocks.IndexeddbPersistence.mockImplementationOnce(function () {
+      return { whenSynced: Promise.reject(new Error('IndexedDB is unavailable')) };
+    });
+    mocks.WebrtcProvider.mockImplementation(function () {
+      return {
+        awareness: { getStates: () => new Map(), on: vi.fn(), setLocalStateField: vi.fn() },
+        on: vi.fn(),
+      };
+    });
+
+    const { getRoomProvider } = await import('./yjsProvider');
+    const roomId = roomIdSchema.parse('split-re');
+    await expect(getRoomProvider(roomId)).rejects.toThrow('IndexedDB is unavailable');
+    const provider = await getRoomProvider(roomId);
+
+    expect(provider.store.getSnapshot().connection).toEqual({
+      provider: 'WebRTC',
+      status: 'connecting',
+    });
+    expect(mocks.IndexeddbPersistence).toHaveBeenCalledTimes(2);
+    provider.doc.destroy();
+  });
 });
 
 describe('room names derived from the room id', () => {
