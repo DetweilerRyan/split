@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { parsePurchasedAt } from './mealInfo';
+import type { Frozen } from '../../utils/frozen';
 
 /** The first local moment of a year, including years below 100, which `new Date(y, …)` maps to 19xx. */
 function startOfYear(year: number) {
@@ -57,9 +58,6 @@ const written = fc.record({
   before: fc.constantFrom('', ' ', '\t', '\n  '),
   after: fc.constantFrom('', ' ', '\n'),
 });
-
-/** `T` readonly at every level, as the code under test receives it. */
-type Frozen<T> = { readonly [K in keyof T]: Frozen<T[K]> };
 
 function write({
   moment: m,
