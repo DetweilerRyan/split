@@ -135,7 +135,7 @@
         "treatMethodsAsReadonly": true,
         "allow": [
           // React's children and form events, which React declares mutable.
-          { "from": "package", "package": "react", "name": ["ReactNode", "FormEvent"] },
+          { "from": "package", "package": "react", "name": ["ReactNode", "SubmitEvent"] },
           // Yjs's shared types, which change in place by design: Y.Doc, and Y.Map, declared YMap.
           { "from": "package", "package": "yjs", "name": ["Doc", "YMap"] },
           // The DOM's and the language's own types, which TypeScript's lib declares mutable.
