@@ -8,7 +8,7 @@ function fetchesRate(rate: number, date: string) {
   return vi.fn<FetchRate>(() => Promise.resolve({ rate, date }));
 }
 
-async function setup(fetchRate: ReturnType<typeof vi.fn<FetchRate>>) {
+async function setup(fetchRate: FetchRate) {
   const store = new ReceiptStore(new Y.Doc());
   store.setMeta('currency', 'EUR');
   const showToast = vi.fn();

@@ -40,7 +40,9 @@ const receipt = fc.record({
   ),
 });
 
-type Receipt = typeof receipt extends fc.Arbitrary<infer R> ? R : never;
+/** `T` readonly at every level, as the code under test receives it. */
+type Frozen<T> = { readonly [K in keyof T]: Frozen<T[K]> };
+type Receipt = Frozen<typeof receipt extends fc.Arbitrary<infer R> ? R : never>;
 
 function snapshotOf(r: Receipt): RoomSnapshot {
   return {

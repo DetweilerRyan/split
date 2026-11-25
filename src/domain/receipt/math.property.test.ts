@@ -76,7 +76,9 @@ const receipt = fc.record({
   rate: fc.oneof(fc.constant(0), fc.double({ min: 0.0001, max: 10_000, noNaN: true })),
 });
 
-type Receipt = typeof receipt extends fc.Arbitrary<infer R> ? R : never;
+/** `T` readonly at every level, as the code under test receives it. */
+type Frozen<T> = { readonly [K in keyof T]: Frozen<T[K]> };
+type Receipt = Frozen<typeof receipt extends fc.Arbitrary<infer R> ? R : never>;
 
 function major(amountMinor: number, exponent: number) {
   return amountMinor / 10 ** exponent;

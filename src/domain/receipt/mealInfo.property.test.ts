@@ -58,12 +58,15 @@ const written = fc.record({
   after: fc.constantFrom('', ' ', '\n'),
 });
 
+/** `T` readonly at every level, as the code under test receives it. */
+type Frozen<T> = { readonly [K in keyof T]: Frozen<T[K]> };
+
 function write({
   moment: m,
   time,
   before,
   after,
-}: typeof written extends fc.Arbitrary<infer W> ? W : never) {
+}: Frozen<typeof written extends fc.Arbitrary<infer W> ? W : never>) {
   const date = `${pad(m.year, 4)}-${pad(m.month)}-${pad(m.day)}`;
   const clock =
     time !== null ? `${time.separator}${pad(m.hour)}:${pad(m.minute)}${time.after}` : '';

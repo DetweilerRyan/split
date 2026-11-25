@@ -232,7 +232,9 @@ export class ReceiptStore {
   }
 }
 
-export function useReceiptStore(store: ReceiptStore | null): RoomSnapshot {
+export function useReceiptStore(
+  store: Pick<ReceiptStore, 'subscribe' | 'getSnapshot'> | null,
+): RoomSnapshot {
   return useSyncExternalStore(
     store?.subscribe ?? (() => () => undefined),
     store?.getSnapshot ?? (() => EMPTY_SNAPSHOT),

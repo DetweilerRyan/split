@@ -62,6 +62,7 @@ function opensScope(node: AstNode) {
 
 /** The names a binding pattern, such as a parameter or a destructuring, declares. */
 // Stryker disable next-line ArrayDeclaration: the seeded name has spaces in it, so no identifier is ever looked up under it.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds to `into` in place, so deeply nested patterns need no copy at each level.
 function boundNames(pattern: unknown, into: Names = []): readonly string[] {
   if (!isNode(pattern)) return into;
   // Stryker disable next-line ConditionalExpression: no other binding pattern has a `name`, so this would only add undefined, which no lookup asks for.
@@ -335,6 +336,7 @@ function callsIn(
   context: Context,
   members: Members | null,
   // Stryker disable next-line ArrayDeclaration: a seeded entry that isn't a call has no `from`, so graphOf skips it.
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds to one list in place, so deeply nested code needs no copy at each level.
   into: Calls = [],
 ): readonly Call[] {
   if (node.type === 'ClassBody') return callsInClass(node, context, into);
@@ -365,6 +367,7 @@ function callsOf(call: AstNode, context: Context): readonly Call[] {
  * Adds the calls in a class's members to `into`. A static member's or static block's `this` is the
  * class, and any other member's is the instance.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds to `into` in place, as callsIn does.
 function callsInClass(body: AstNode, context: Context, into: Calls): readonly Call[] {
   const { instance, statics } = classMembers(body);
   for (const member of parseNodes(body.body)) {
@@ -379,6 +382,7 @@ function callsInClass(body: AstNode, context: Context, into: Calls): readonly Ca
  * block. callsIn hands `self` on through parentheses around a method's or field's function, and
  * opens a static block's scope.
  */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds to `into` in place, as callsIn does.
 function callsInMember(member: AstNode, context: Context, self: Members, into: Calls) {
   if (member.type === 'StaticBlock') return callsIn(member, { ...context, self }, self, into);
   for (const child of children(member)) {
@@ -395,6 +399,7 @@ function callsInFunction(
   fn: AstNode,
   context: Context,
   members: Members | null,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds to `into` in place, as callsIn does.
   into: Calls,
 ): readonly Call[] {
   // An arrow keeps the `this` around it; any other function has its own.

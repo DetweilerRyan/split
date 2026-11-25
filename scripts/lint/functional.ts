@@ -20,6 +20,7 @@ type ClassNode = Parameters<
 const WHY = 'functions over stateful classes, as the owner decided on DetweilerRyan/split#81';
 
 /** The name a class `extends`: an identifier, or the last name of a `a.b.Name` path. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oxlint's AST nodes are mutable, and `allow` can't name them once `| null` joins their union.
 function superName(superClass: ClassNode['superClass']): string | undefined {
   if (superClass?.type === 'Identifier') return superClass.name;
   if (superClass?.type === 'MemberExpression' && !superClass.computed) {
@@ -44,6 +45,7 @@ function inTypeQuery(node: ThisNode): boolean {
 }
 
 /** Whether a class extends `Error` or a class whose name ends in `Error`. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oxlint's AST nodes are mutable, and `allow` can't name them once `| null` joins their union.
 function extendsError(superClass: ClassNode['superClass']): boolean {
   return superName(superClass)?.endsWith('Error') ?? false;
 }
