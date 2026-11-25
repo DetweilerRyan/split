@@ -92,11 +92,11 @@ function text(source: string, node: unknown) {
 }
 
 /** A label for a function, from its own name or what it's assigned or passed to. */
-export function label(source: string, fn: AstNode, parent: AstNode | undefined) {
+export function label(source: string, fn: AstNode, parent: AstNode) {
   const own = fn.id;
   // A function's `id`, when it has one, is an Identifier, whose name is a string.
   if (isNamed(own)) return own.name;
-  return (parent !== undefined ? nameFromParent(source, fn, parent) : undefined) ?? '(anonymous)';
+  return nameFromParent(source, fn, parent) ?? '(anonymous)';
 }
 
 /** The name a function's parent gives it, as `const f = …` names `f`, or nothing if it can't. */
@@ -247,7 +247,8 @@ function countRecursion(
     program,
     (node) => {
       const fn = byNode.get(node);
-      return fn !== undefined && enclosing ? (fn.parents[0] ?? fn) : fn;
+      // Stryker disable next-line OptionalChaining: `callerOf` is given only `context.fn`, which `callsInFunction` sets to a node of the three function types. oxc gives each a body (a bodyless signature is a TSDeclareFunction or TSEmptyBodyFunctionExpression), and the walk records every one, so `fn` is never undefined here.
+      return enclosing ? (fn?.parents[0] ?? fn) : fn;
     },
     (node) => {
       const fn = byNode.get(node);

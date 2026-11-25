@@ -447,6 +447,9 @@ describe('recursion', () => {
     }
     expect(recursive(program('function a() { other.x(); go(); }'), all, all)).toEqual(new Set());
     expect(recursive(program('function a() { a(); }'), all, all)).toEqual(new Set(['all']));
+    // A call at the top level is from no function, and a parameter is bound to no function.
+    expect(recursive(program('function a() {}\na();'), all, all)).toEqual(new Set());
+    expect(recursive(program('function a(x) { x(); }'), all, all)).toEqual(new Set());
   });
 
   it('lists only the uses of the names it’s given that a binding hides', () => {
