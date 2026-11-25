@@ -1,7 +1,8 @@
-// Soaks property tests, or replays one input, from environment variables, so a soak edits no test
-// file. scripts/property-soak.setup.ts puts `soakAssert` in place of fast-check's `assert` when any
-// of the variables is set; both Vitest configs load it. docs/testing/property-testing.md says how
-// to run a soak; why it works this way is in its sidecar, under "Soak by environment variable".
+// Soaks fast-check property tests for a time budget, or replays one input, from environment
+// variables, so a soak edits no test file. property-soak.setup.ts puts `soakAssert` in place of
+// fast-check's `assert` when a variable is set. How to use it is in property-soak.md beside this
+// file; why it works as it does is in property-soak.meta.md. Read the sidecar only when changing or
+// questioning it.
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases: no enums,
 // namespaces or parameter properties.
 import fc from 'fast-check';

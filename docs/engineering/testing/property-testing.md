@@ -13,7 +13,7 @@ A property test checks a rule that should hold for every input, against many inp
   - **agreement with a simpler version** of the same code.
 - **Don't write one** for components, or for code whose right answer you'd have to work out the same way the code does. Example tests say those more clearly.
 - **Keep the example tests too.** A property test adds inputs nobody thought of; it doesn't replace the cases a reader needs to see.
-- **Put it in its own sidecar,** named as [testing conventions](../engineering/testing-conventions.md#which-project-a-test-belongs-in) say.
+- **Put it in its own sidecar,** named as [testing conventions](../testing-conventions.md#which-project-a-test-belongs-in) say.
 
 ## Writing one
 
@@ -35,7 +35,7 @@ A property test checks a rule that should hold for every input, against many inp
 
 ## Soaking a new property
 
-Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. The soak is set by environment variables, which [`scripts/property-soak.ts`](../../scripts/property-soak.ts) reads. Don't edit the test to soak it.
+Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. The soak is set by environment variables, which [`property-soak`](../../../scripts/property-soak.md) reads. Don't edit the test to soak it.
 
 1. **Start the soak as a background command,** and keep working until it finishes. For a property under `src/` or `app/`:
 
@@ -64,7 +64,7 @@ Once a soak passes, say in the pull request how many inputs it ran and what it f
 
 - **Decide where the fault is.** The property or its generator may be wrong, such as a rule that doesn't hold for an input the code handles correctly, or the code may be.
 - **Keep the shrunk input** as [Keeping a failing input](#keeping-a-failing-input) says, before you fix anything.
-- **If the code is wrong,** confirm the new example test fails, then fix the code, as [Fixing a bug](../engineering/testing-conventions.md#fixing-a-bug) says. If the property is wrong, fix the property.
+- **If the code is wrong,** confirm the new example test fails, then fix the code, as [Fixing a bug](../testing-conventions.md#fixing-a-bug) says. If the property is wrong, fix the property.
 
 ## Keeping a failing input
 

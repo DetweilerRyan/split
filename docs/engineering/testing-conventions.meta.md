@@ -106,7 +106,7 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 
 ## Property tests
 
-Moved with the rules to [property testing's sidecar](../testing/property-testing.meta.md).
+Moved with the rules to [property testing's sidecar](testing/property-testing.meta.md).
 
 ## Tooling tests and feature contracts
 

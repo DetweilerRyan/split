@@ -1,6 +1,6 @@
 # Testing conventions
 
-How to write tests in this repository: what they check, which project they belong in, how component and hook tests are written, and what tests may touch. A kind of test with its own document in the [testing index](../testing/README.md), such as a property test, follows that document instead of a section here. Everything else you need to follow these conventions is in this file. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../AGENTS.md#definition-of-done).
+How to write tests in this repository: what they check, which project they belong in, how component and hook tests are written, and what tests may touch. A kind of test with its own document in the [testing index](testing/README.md), such as a property test, follows that document instead of a section here. Everything else you need to follow these conventions is in this file. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../AGENTS.md#definition-of-done).
 
 ## What a test checks
 
@@ -29,7 +29,7 @@ The app's tests use [Vitest](https://vitest.dev/), with three [projects](https:/
 | `real`    | `<module>.real.test.ts`                                 | Node                                  | a test that runs real programs or touches the file system                               |
 | `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code |
 
-- **A [property test](../testing/property-testing.md) is named `<module>.property.test.ts`,** and runs in the project its module's other tests would: `unit` for the app, `tooling-unit` for tooling.
+- **A [property test](testing/property-testing.md) is named `<module>.property.test.ts`,** and runs in the project its module's other tests would: `unit` for the app, `tooling-unit` for tooling.
 - **Each test file is a sidecar.** It sits beside the one module it covers and is named after it: `src/domain/receipt/math.ts` → `src/domain/receipt/math.test.ts`, `app/r/[room]/_room-view/IdentityModal.tsx` → `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`. When tests for a second module creep into a file, move them to that module's sidecar.
 - **Don't assert on layout or visibility in the `unit` project.** jsdom does no layout, so `toBeVisible` there doesn't reflect what a user would see. Write that test in the `browser` project.
 - **Tests run through the React Compiler,** as the app build does. Don't remove the compiler from `vitest.config.ts`; `vitest.config.browser.test.ts` fails if a component stops being compiled.
@@ -37,7 +37,7 @@ The app's tests use [Vitest](https://vitest.dev/), with three [projects](https:/
 
 ## Property tests
 
-How and when to write a property test is in [Property testing](../testing/property-testing.md).
+How and when to write a property test is in [Property testing](testing/property-testing.md).
 
 ## Writing component and hook tests
 

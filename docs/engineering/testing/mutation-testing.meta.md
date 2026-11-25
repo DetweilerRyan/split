@@ -92,7 +92,7 @@ The owner had the survivors split into three batches, each worked by a subagent 
 
 ## Where it lives
 
-- **In `docs/testing/`, moved from `docs/engineering/` on [#154](https://github.com/DetweilerRyan/split/pull/154).** The session advised that `crap.md` stay in engineering, since a CRAP finding is a check on the code that is often fixed by refactoring or a `@crap-allow`, and that mutation testing was the stronger candidate, since it checks how strong the tests are and [property testing](property-testing.md) relies on it to show a property can fail. The owner said: "move mutation testing in this pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7175415375)).
+- **In `docs/engineering/testing/`, moved from `docs/engineering/` on [#154](https://github.com/DetweilerRyan/split/pull/154).** The session advised that `crap.md` stay in engineering, since a CRAP finding is a check on the code that is often fixed by refactoring or a `@crap-allow`, and that mutation testing was the stronger candidate, since it checks how strong the tests are and [property testing](property-testing.md) relies on it to show a property can fail. The owner said: "move mutation testing in this pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7175415375)).
 - **Its trigger stays in the engineering index's testing row,** since it fires when oxCrap's code changes, not only when someone sets out to test.
 
 ## What would reopen this
