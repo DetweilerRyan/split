@@ -29,6 +29,13 @@ describe('numberOrZero', () => {
     expect(numberOrZero(Object.create(null))).toBe(0);
   });
 
+  it.each([Infinity, -Infinity, 'Infinity'])(
+    'reads %j, which is no finite number, as 0',
+    (value) => {
+      expect(numberOrZero(value)).toBe(0);
+    },
+  );
+
   it('reads minus zero as 0', () => {
     expect(Object.is(numberOrZero('-0'), 0)).toBe(true);
     expect(Object.is(numberOrZero(-0), 0)).toBe(true);

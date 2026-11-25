@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { hydrateFromSeed } from './seedCodec';
 import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 import type { RoomId } from '../domain/room/roomId';
-import { storedText } from './storedText';
+import { storedTextSchema } from './storedText';
 import { ReceiptStore } from './useReceiptStore';
 import type { ParticipantId, RoomSnapshot } from '../domain/receipt/roomSnapshot';
 
@@ -158,7 +158,7 @@ function showPeers(awareness: PeerAwareness, store: Pick<ReceiptStore, 'setPeers
         const { user } = peerState.parse(state);
         return {
           id: String(clientId),
-          name: storedText(user?.name, 'Guest'),
+          name: storedTextSchema('Guest').parse(user?.name),
           ...(user?.color !== undefined && user.color !== '' ? { color: user.color } : {}),
         };
       },

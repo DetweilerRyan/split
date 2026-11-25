@@ -1,12 +1,12 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { storedText } from './storedText';
+import { storedTextSchema } from './storedText';
 
-describe('storedText', () => {
+describe('storedTextSchema', () => {
   it('reads every non-empty string as it is', () => {
     fc.assert(
       fc.property(fc.string({ minLength: 1 }), fc.string(), (value, fallback) => {
-        expect(storedText(value, fallback)).toBe(value);
+        expect(storedTextSchema(fallback).parse(value)).toBe(value);
       }),
     );
   });
@@ -18,7 +18,7 @@ describe('storedText', () => {
     );
     fc.assert(
       fc.property(notText, fc.string(), (value, fallback) => {
-        expect(storedText(value, fallback)).toBe(fallback);
+        expect(storedTextSchema(fallback).parse(value)).toBe(fallback);
       }),
     );
   });

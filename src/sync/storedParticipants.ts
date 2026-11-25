@@ -4,7 +4,7 @@ import {
   type ParticipantId,
   parseParticipantId,
 } from '../domain/receipt/roomSnapshot';
-import { storedText } from './storedText';
+import { storedTextSchema } from './storedText';
 
 /**
  * The id of a participant stored in a room's `participants` map under `key`: its `id` field, or
@@ -14,7 +14,7 @@ import { storedText } from './storedText';
  * with it, and to leave the document as it is.
  */
 export function storedParticipantId(value: unknown, key: string): ParticipantId | null {
-  const stored = storedText(value, key);
+  const stored = storedTextSchema(key).parse(value);
   const id = parseParticipantId(stored);
   if (id === null) {
     console.warn(
@@ -36,6 +36,6 @@ export function storedParticipants(
   return [...participants.entries()].flatMap(([key, map]) => {
     if (!(map instanceof Y.Map)) return [];
     const id = storedParticipantId(map.get('id'), key);
-    return id === null ? [] : [{ id, name: storedText(map.get('name'), '') }];
+    return id === null ? [] : [{ id, name: storedTextSchema('').parse(map.get('name')) }];
   });
 }

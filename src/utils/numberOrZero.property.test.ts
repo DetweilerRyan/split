@@ -2,10 +2,10 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { numberOrZero } from './numberOrZero';
 
-/** Any number but zero or NaN. */
+/** Any finite number but zero. */
 const nonZero = fc.oneof(
-  fc.double({ min: Number.MIN_VALUE, noNaN: true }),
-  fc.double({ max: -Number.MIN_VALUE, noNaN: true }),
+  fc.double({ min: Number.MIN_VALUE, noNaN: true, noDefaultInfinity: true }),
+  fc.double({ max: -Number.MIN_VALUE, noNaN: true, noDefaultInfinity: true }),
 );
 
 describe('numberOrZero', () => {
