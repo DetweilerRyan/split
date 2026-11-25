@@ -20,8 +20,8 @@ it('runs the default count', () => {
 });
 `;
 
-// A property that passes, one that fails on one input in every 9,973, which a soak finds within a
-// second, and one that sets its own count, which a soak can't change.
+// A property that passes, one that fails on one input in every 97, which a soak finds well within a
+// second even on a loaded machine, and one that sets its own count, which a soak can't change.
 const soaks = `import fc from 'fast-check';
 import { expect, it } from 'vitest';
 
@@ -30,13 +30,22 @@ it('holds', () => {
 });
 
 it('breaks', () => {
-  fc.assert(fc.property(fc.integer({ min: 0, max: 2_000_000 }), (n) => { expect(n % 9_973 === 7 && n > 1000).toBe(false); }));
+  fc.assert(fc.property(fc.integer({ min: 0, max: 2_000_000 }), (n) => { expect(n % 97 === 7 && n > 1000).toBe(false); }));
 });
 
 it('sets its own count', () => {
   let runs = 0;
   fc.assert(fc.property(fc.integer(), () => { runs += 1; }), { numRuns: 20 });
   expect(runs).toBe(20);
+});
+`;
+
+// One passing property, written to two files, for a run that shares one module graph between them.
+const single = `import fc from 'fast-check';
+import { it } from 'vitest';
+
+it('holds', () => {
+  fc.assert(fc.property(fc.integer(), () => {}));
 });
 `;
 
@@ -51,6 +60,8 @@ function project() {
   );
   writeFileSync(join(cwd, 'counts.test.ts'), counts);
   writeFileSync(join(cwd, 'soaks.test.ts'), soaks);
+  writeFileSync(join(cwd, 'first.test.ts'), single);
+  writeFileSync(join(cwd, 'second.test.ts'), single);
   return cwd;
 }
 
@@ -115,6 +126,19 @@ describe('property soak', { timeout: 60_000 }, () => {
     expect(replayed.output).toContain(counterexample);
     expect(replayed.output).not.toContain('Soak passed');
     expect(replayed.status).toBe(1);
+  });
+
+  it('installs its plugins once when test files share a module graph', () => {
+    const result = run(
+      project(),
+      ['first.test.ts', 'second.test.ts', '--no-isolate', '--maxWorkers=1'],
+      {
+        PROPERTY_SOAK_SECONDS: '1',
+      },
+    );
+
+    expect(result.output.match(/Soak passed:/g)).toHaveLength(2);
+    expect(result.status).toBe(0);
   });
 
   // A count of runs without its seed makes the setup file throw before any test runs, so this

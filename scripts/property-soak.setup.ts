@@ -7,11 +7,19 @@ import { readSoak, soakPlugins, soakSettings } from './property-soak.ts';
 
 const soak = readSoak(process.env);
 
+// Marks the plugins installed, since fast-check's global plugins outlive this file when Vitest
+// runs several test files in one module graph (isolate: false), and installing them twice would
+// double the time limit and the log.
+const installed = Symbol.for('property-soak.installed');
+
 if (soak !== undefined) {
   fc.configureGlobal({ ...fc.readConfigureGlobal(), ...soakSettings(soak) });
-  for (const plugin of soakPlugins(soak, (line) => {
-    console.log(line);
-  })) {
-    fc.installGlobalPlugin(plugin);
+  if (Reflect.get(globalThis, installed) !== true) {
+    for (const plugin of soakPlugins(soak, (line) => {
+      console.log(line);
+    })) {
+      fc.installGlobalPlugin(plugin);
+    }
+    Reflect.set(globalThis, installed, true);
   }
 }
