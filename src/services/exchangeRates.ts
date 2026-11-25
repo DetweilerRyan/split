@@ -70,9 +70,24 @@ async function writeCache(key: string, value: ExchangeRate): Promise<void> {
   });
 }
 
-// @crap-allow CRAP 210, complexity 14. It reads IndexedDB and fetch, which no unit test fakes
-// yet, so nothing covers it. Tests with a fake for each, as testing conventions say, would
-// bring it under the limits.
+/** Where getExchangeRate keeps rates between visits: IndexedDB, in the browser. */
+export type RateCache = {
+  readonly read: (key: string) => Promise<ExchangeRate | null>;
+  readonly write: (key: string, rate: ExchangeRate) => Promise<void>;
+};
+
+/** What getExchangeRate reads and writes outside the program. */
+export type RateSources = {
+  readonly cache: RateCache;
+  readonly fetch: (url: string) => Promise<Pick<Response, 'ok' | 'status' | 'json'>>;
+};
+
+// fetch is wrapped, since a browser refuses it when it's called as another object's method.
+const browserSources: RateSources = {
+  cache: { read: readCache, write: writeCache },
+  fetch: (url) => fetch(url),
+};
+
 /**
  * Gets a base->quote rate. Fresh cached values are used first; on network failure a stale
  * cached value is returned. Resolves to null when no rate is available (e.g. offline).
@@ -81,31 +96,41 @@ export async function getExchangeRate(
   baseCode: string,
   quoteCode: string,
   { force = false, now = Date.now() }: { readonly force?: boolean; readonly now?: number } = {},
+  sources: RateSources = browserSources,
 ): Promise<ExchangeRate | null> {
   const base = normalizeCurrency(baseCode);
   const quote = normalizeCurrency(quoteCode);
   if (base === quote) return { base, quote, rate: 1, date: '', fetchedAt: now };
 
   const key = `${base}:${quote}`;
-  const cached = await readCache(key);
-  if (cached !== null && !force && now - cached.fetchedAt < RATE_TTL_MS) return cached;
+  const cached = await sources.cache.read(key);
+  if (!force && isFresh(cached, now)) return cached;
 
   try {
-    const response = await fetch(`${API}?base=${base}&symbols=${quote}`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = rateResponseSchema.parse(await response.json());
-    const rate = data.rates?.[quote];
-    if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error('No rate');
-    const fresh: ExchangeRate = {
-      base,
-      quote,
-      rate,
-      date: data.date,
-      fetchedAt: now,
-    };
-    await writeCache(key, fresh);
+    const fresh = await requestRate(sources.fetch, base, quote, now);
+    await sources.cache.write(key, fresh);
     return fresh;
   } catch {
     return cached;
   }
+}
+
+/** Whether a cached rate is younger than RATE_TTL_MS, so it's used without asking the provider. */
+function isFresh(cached: ExchangeRate | null, now: number): cached is ExchangeRate {
+  return cached !== null && now - cached.fetchedAt < RATE_TTL_MS;
+}
+
+/** The provider's rate from `base` to `quote`. Throws when it gives none that's usable. */
+async function requestRate(
+  fetchRate: RateSources['fetch'],
+  base: string,
+  quote: string,
+  now: number,
+): Promise<ExchangeRate> {
+  const response = await fetchRate(`${API}?base=${base}&symbols=${quote}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = rateResponseSchema.parse(await response.json());
+  const rate = data.rates?.[quote];
+  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error('No rate');
+  return { base, quote, rate, date: data.date, fetchedAt: now };
 }
