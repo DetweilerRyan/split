@@ -20,6 +20,14 @@ Why the rules in [types and schemas](types-and-schemas.md) are as they are, and 
 - **Reason:** a hand-written copy of a schema's type can drift from the schema, and the compiler won't notice when it does.
 - **The export is recommended, not required,** in the owner's words.
 
+## `type`, not `interface`
+
+- **Decided by the owner** in the session on 2026-11-25, [recorded on #132](https://github.com/DetweilerRyan/split/issues/132#issuecomment-7149066406): "go with type, add it to 132".
+- **Reasons:** unions, discriminated unions and `z.infer<…>` must be `type`s, so one keyword covers every type here. A `type` can't merge with another declaration of the same name by accident. An object `type` is assignable to `Record<string, unknown>`, which an `interface` isn't. What `interface` adds, `implements` and declaration merging, matters for class-based and published APIs, and this codebase is functions-first and not a library. Matt Pocock argues for `type` by default ([Total TypeScript](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)).
+- **Not taken: `interface`,** typescript-eslint's default and love's and antfu's choice. TypeScript's performance guide prefers `interface … extends` to `&`, since it caches interface relationships; `extends` reports an incompatible property where it's declared, where `&` gives `never`; and editors show an interface's name.
+- **What would reopen it:** a deep `extends` hierarchy where checking gets slow. An `interface … extends` with a per-line disable and its reason covers that case.
+- **Applied** on #132: 37 `interface`s, none with an `extends`, rewritten by oxlint's fixer.
+
 ## Ids and the strings built from them
 
 - **Branded ids:** asked for by the owner on [#37](https://github.com/DetweilerRyan/split/pull/37#discussion_r4649349619) ("can we use a branded type or a string template type via zod to better type the key?"), filed as [#40](https://github.com/DetweilerRyan/split/issues/40) and done in #42. A brand stops a plain string, or a key built from an id, from being passed where an id is expected.
