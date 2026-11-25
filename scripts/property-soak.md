@@ -54,13 +54,13 @@ An empty value counts as unset. Each of these fails the run, with a message nami
 Run only the file, and the test, you mean to soak:
 
 ```bash
-PROPERTY_SOAK_SECONDS=120 npx vitest run <file> -t '<test name>' --testTimeout=0 --silent=false
+PROPERTY_SOAK_SECONDS=120 npx vitest run <file> -t "<test name>" --testTimeout=0 --silent=false --coverage.enabled=false
 ```
 
 - **`--testTimeout=0`** turns off Vitest's test timeout, which would otherwise stop a soak after 5 seconds.
 - **`--silent=false`** shows the soak's log, which Vitest hides for a test that passes.
 - **`--coverage.enabled=false`** keeps a coverage report from being replaced by this run's, if the config writes one.
-- **`-t`** picks one test. Without it, each property in the file soaks for the whole budget, one after another.
+- **`-t`** picks one test. It takes a regular expression matched against test names, so escape characters such as `(` or `.` in a name. Without it, each property in the file soaks for the whole budget, one after another.
 
 Each property that passes logs:
 
@@ -75,17 +75,18 @@ A property that fails throws fast-check's usual report: the shrunk counterexampl
 Set the seed, and the count from "Property failed after N tests", on that test alone:
 
 ```bash
-PROPERTY_SEED=<seed> PROPERTY_RUNS=<N> npx vitest run <file> -t '<test name>'
+PROPERTY_SEED=<seed> PROPERTY_RUNS=<N> npx vitest run <file> -t "<test name>" --testTimeout=0
 ```
 
-The same seed generates the same inputs, so the run fails on the same input and shrinks it to the end. For a failure from a normal run, at the test's usual count, `PROPERTY_SEED` alone is enough.
+The same seed generates the same inputs, so the run fails on the same input and shrinks it to the end. It takes about as long as the soak took to reach the failure, so keep `--testTimeout=0`. For a failure from a normal run, at the test's usual count, `PROPERTY_SEED` alone is enough.
 
 Every property the run reaches uses the same seed, so name the test with `-t`.
 
 ## Limits
 
 - **A property's own `numRuns` or `seed` wins,** as above.
-- **One process's global settings:** the soak sets fast-check's global configuration in each test file's process, so it reaches every property those files run, through any runner that reads that configuration.
+- **Counts left to the default:** during a soak, fast-check's default count is unlimited, so `fc.sample` and `fc.statistics` called without a count never finish. Pass them a count.
+- **Where it reaches:** the soak sets fast-check's global configuration for each test file the run loads, through `setupFiles`, so it reaches every property those files run. With Vitest's `isolate: false`, the files share one module graph, and the setup file installs its plugins once.
 
 ## What it exports
 

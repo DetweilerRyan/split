@@ -41,10 +41,10 @@ Before you commit a new property, run it for two minutes rather than its usual c
 1. **Start the soak as a background command,** and keep working until it finishes. For a property under `src/` or `app/`:
 
    ```bash
-   PROPERTY_SOAK_SECONDS=120 npx vitest run <path> -t '<test name>' --testTimeout=0 --silent=false --coverage.enabled=false
+   PROPERTY_SOAK_SECONDS=120 npx vitest run <path> -t "<test name>" --testTimeout=0 --silent=false --coverage.enabled=false
    ```
 
-   For one under `scripts/`, add `-c vitest.tooling.config.ts`. Leave out `-t` to soak every property in the file, each for the full two minutes.
+   For one under `scripts/`, add `-c vitest.tooling.config.ts`. `-t` takes a regular expression, so escape characters such as `(` or `.` in the name. Leave out `-t` to soak every property in the file, each for the full two minutes.
 
 2. **Read the result when it finishes.**
    - **`Soak passed:`** gives how many inputs the property ran.
@@ -61,10 +61,10 @@ Once a soak passes, say in the pull request how many inputs it ran and what it f
 - **Its output gives a seed, and how many tests it took to fail.** Run the same input again, with full shrinking, on that test alone. Every property the command runs uses the seed, so name the file and the test:
 
   ```bash
-  PROPERTY_SEED=<seed> PROPERTY_RUNS=<tests it took> npx vitest run <path to file> -t '<test name>' --coverage.enabled=false
+  PROPERTY_SEED=<seed> PROPERTY_RUNS=<tests it took> npx vitest run <path to file> -t "<test name>" --testTimeout=0 --coverage.enabled=false
   ```
 
-  For a failure from a normal run or CI, rather than a soak, `PROPERTY_SEED` alone is enough. For a file under `scripts/`, add `-c vitest.tooling.config.ts`.
+  For a failure from a normal run or CI, rather than a soak, `PROPERTY_SEED` alone is enough. For a file under `scripts/`, add `-c vitest.tooling.config.ts`. A replay of a soak's failure takes about as long as the soak took to reach it, so run it as a background command too.
 
 - **Decide where the fault is.** The property or its generator may be wrong, such as a rule that doesn't hold for an input the code handles correctly, or the code may be.
 - **Keep the shrunk input** as [Keeping a failing input](#keeping-a-failing-input) says, before you fix anything.

@@ -104,7 +104,10 @@ export function soakReport(soak: Soak, details: fc.RunDetails<unknown>): string 
   if (!details.interrupted) {
     return undefined;
   }
-  return `The time limit cut shrinking short. To finish it, run this test alone again, with Vitest's -t, setting ${SOAK_VARIABLES.seed}=${String(details.seed)} ${SOAK_VARIABLES.runs}=${String(details.numRuns)} and no ${SOAK_VARIABLES.seconds}.`;
+  if (details.counterexample === null) {
+    return 'No input passed within the budget: every input was skipped, or one ran longer than the budget.';
+  }
+  return `The time limit cut shrinking short. To finish it, run this test alone again, with Vitest's -t and --testTimeout=0, setting ${SOAK_VARIABLES.seed}=${String(details.seed)} ${SOAK_VARIABLES.runs}=${String(details.numRuns)} and no ${SOAK_VARIABLES.seconds}.`;
 }
 
 /**

@@ -114,7 +114,21 @@ describe('soakReport', () => {
     const details: fc.RunDetails<unknown> = { ...checked, interrupted: true };
 
     expect(soakReport(budget, details)).toBe(
-      `The time limit cut shrinking short. To finish it, run this test alone again, with Vitest's -t, setting PROPERTY_SEED=1 PROPERTY_RUNS=${String(checked.numRuns)} and no PROPERTY_SOAK_SECONDS.`,
+      `The time limit cut shrinking short. To finish it, run this test alone again, with Vitest's -t and --testTimeout=0, setting PROPERTY_SEED=1 PROPERTY_RUNS=${String(checked.numRuns)} and no PROPERTY_SOAK_SECONDS.`,
+    );
+  });
+
+  it('says when no input passed within the budget, which leaves nothing to replay', () => {
+    const skipping: fc.IProperty<unknown> = fc.property(fc.integer(), () => {
+      fc.pre(false);
+    });
+    const details = fc.check(skipping, {
+      numRuns: Number.POSITIVE_INFINITY,
+      plugins: [fc.interruptAfterTimeLimit(50)],
+    });
+
+    expect(soakReport(budget, details)).toBe(
+      'No input passed within the budget: every input was skipped, or one ran longer than the budget.',
     );
   });
 

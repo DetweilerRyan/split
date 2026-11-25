@@ -14,11 +14,14 @@ The fast-check behaviour below was checked on fast-check 4.10.2 and Vitest 5.0.5
 - **The report plugin only logs.** Its `onAllRunsComplete` hook logs the count on a pass, and the replay values when shrinking was cut short. It never throws, because fast-check runs the hook for `fc.check` too, and a throw there would break `fc.check`, which should return its details. `fc.assert` throws its own report on a failure, as usual. One synchronous hook serves both sync and async properties.
 - **A replay by seed and count, not seed and path.** `path` can't be set globally. The same seed generates the same inputs in the same order whatever the count (checked: a soak's failure after 359 tests came back, with the same shrunk counterexample, from that seed and `numRuns: 359`; 358 passed). So the seed and the count from "Property failed after N tests" replay it, with no time limit, and shrinking runs to the end. A failure from a normal run, at the test's usual count, replays from the seed alone.
 - **The time limit also stops shrinking.** fast-check's interrupt applies to every run, shrinks included: a failure planted 10 ms before the limit came back after 2 shrinks, with `interrupted: true`. So the report plugin logs the seed and count to replay when a failure was interrupted.
+- **Plugins installed once.** fast-check keeps global plugins for the life of the module, and with Vitest's `isolate: false` several test files share it while the setup file runs for each. A `Symbol.for` mark on `globalThis` stops a second install, which would double the time limit and the log (checked: without it, two files logged three lines). `configureGlobal` replaces the settings, so it needs no mark.
+- **A budget no input passes.** fast-check reports a run as failed and interrupted, with no counterexample, when no input passed before the limit: every input was skipped by `fc.pre`, or one ran past the budget. The report says so instead of giving a replay, since there's nothing to replay.
 - **Strict variables.** A malformed value fails the run instead of being ignored, since a soak that silently runs the usual count would look like a pass. A count without its seed fails too, since a count replays nothing without the seed it came from. A count with a budget fails, since the count would cap the budget.
 
 ## What it doesn't do
 
 - **Soak a property that sets its own `numRuns`,** or replay one that sets its own `seed`, as above.
+- **Change counts left to the default elsewhere.** The global `numRuns` is also the default for `fc.sample` and `fc.statistics`, so under a soak they need a count of their own. Leaving the global count alone would leave properties unsoaked.
 - **Split the budget between properties.** Each property gets the whole budget, so the run takes the budget times the number of properties it reaches. `-t` picks one.
 - **Stop a predicate mid-run.** fast-check can't, so the time limit takes effect between inputs, and a slow predicate overruns it by up to one run.
 
@@ -35,7 +38,8 @@ The fast-check behaviour below was checked on fast-check 4.10.2 and Vitest 5.0.5
 - [`property-soak.real.test.ts`](property-soak.real.test.ts) runs Vitest for real, in a temporary project with the setup file:
   - a run with no variables keeps fast-check's default count;
   - a soak reports its count, finds a planted failure, and says it can't soak a property with its own count;
-  - a replay of that failure's seed and count reproduces it.
+  - a replay of that failure's seed and count reproduces it;
+  - with `isolate: false`, two files log one line each, not three.
 
   It also checks that the configs it's given load the setup file.
 
