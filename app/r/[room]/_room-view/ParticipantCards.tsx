@@ -3,9 +3,9 @@ import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { formatMoney } from '@/domain/money/currency';
 import { computeReceiptMath } from '@/domain/receipt/math';
 
-interface ParticipantCardsProps {
+type ParticipantCardsProps = {
   readonly snapshot: RoomSnapshot;
-}
+};
 
 export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
   const math = computeReceiptMath(snapshot);

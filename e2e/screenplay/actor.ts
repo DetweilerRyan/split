@@ -8,10 +8,10 @@ export type Task = (actor: Actor) => Promise<void>;
 export type Question<T> = (actor: Actor) => T;
 
 /** What an actor can remember between steps. */
-export interface Notes {
+export type Notes = {
   readonly receipt: ReceiptSeed;
   readonly toolResult: ToolResult;
-}
+};
 
 // SplitSmart is designed for phones first, so every actor browses on one.
 const phone = { ...devices['Pixel 7'], locale: 'en-US' };
@@ -25,7 +25,7 @@ function isLocal(url: URL): boolean {
  * a browser of their own (a separate context, so separate storage and identity) and an MCP
  * client session.
  */
-export interface Actor {
+export type Actor = {
   readonly name: string;
   readonly attemptsTo: (...tasks: readonly Task[]) => Promise<void>;
   readonly answer: <T>(question: Question<T>) => T;
@@ -36,7 +36,7 @@ export interface Actor {
   readonly remember: <K extends keyof Notes>(key: K, value: Notes[K]) => void;
   readonly recall: <K extends keyof Notes>(key: K) => Notes[K];
   readonly exit: () => Promise<void>;
-}
+};
 
 /** A new actor called `name`, who browses `baseURL` in a context of their own on `browser`. */
 export function createActor(name: string, browser: Browser, baseURL: string): Actor {

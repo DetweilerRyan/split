@@ -10,13 +10,13 @@ import type { RoomId } from '../domain/room/roomId';
 import { ReceiptStore } from './useReceiptStore';
 import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
 
-export interface RoomProvider {
+export type RoomProvider = {
   readonly doc: Y.Doc;
   readonly store: ReceiptStore;
   readonly setIdentity: (
     identity: { readonly id: string; readonly name: string; readonly colorIdx: number } | null,
   ) => void;
-}
+};
 
 /** The IndexedDB database a room's document is persisted in. */
 export type IndexedDbName = `splitsmart-p2p-${RoomId}`;

@@ -1,19 +1,19 @@
-export interface ReceiptItem {
+export type ReceiptItem = {
   readonly id: string;
   readonly name: string;
   readonly en: string;
   readonly eur: number;
   readonly order: number;
   readonly claims: Readonly<Record<string, boolean>>;
-}
+};
 
-export interface Participant {
+export type Participant = {
   readonly id: string;
   readonly name: string;
   readonly colorIdx: number;
-}
+};
 
-export interface RoomSnapshot {
+export type RoomSnapshot = {
   readonly title: string;
   readonly address: string;
   readonly phone: string;
@@ -38,7 +38,7 @@ export interface RoomSnapshot {
     readonly name: string;
     readonly color?: string;
   }[];
-}
+};
 
 /**
  * The id of the participant with this name, or `null` when the name has no letter or digit in any

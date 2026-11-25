@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Toast } from './Toast';
 
-interface ModalDialogProps {
+type ModalDialogProps = {
   /** The id of the heading that names the dialog. */
   readonly labelledBy: string;
   /** Classes added to the `modal-card` ones. */
@@ -9,7 +9,7 @@ interface ModalDialogProps {
   /** Called when the person closes the dialog with Escape or by tapping outside it. */
   readonly onClose: () => void;
   readonly children: ReactNode;
-}
+};
 
 /**
  * A modal `<dialog>`, open while it's rendered. The browser keeps focus inside it and makes the

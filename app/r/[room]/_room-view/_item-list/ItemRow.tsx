@@ -2,7 +2,7 @@ import { Check, Trash2 } from 'lucide-react';
 import type { Participant, ReceiptItem } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, formatMoney } from '@/domain/money/currency';
 
-interface ItemRowProps {
+type ItemRowProps = {
   readonly item: ReceiptItem;
   readonly participants: readonly Participant[];
   readonly activeId: string | null;
@@ -16,7 +16,7 @@ interface ItemRowProps {
   ) => void;
   readonly onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
   readonly onDelete: (itemId: string) => void;
-}
+};
 
 // @crap-allow CRAP 205.3, complexity 14. Debt from before the CRAP check (#63): no tests yet.
 export function ItemRow({

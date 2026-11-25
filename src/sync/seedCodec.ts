@@ -6,16 +6,16 @@ import { findParticipant, participantId } from '../domain/receipt/roomSnapshot';
 import { type RoomId, createRoomId, isUuidRoomId, parseRoomId } from '../domain/room/roomId';
 import { storedParticipants } from './storedParticipants';
 
-export interface HydrationOptions {
+export type HydrationOptions = {
   readonly forceReset?: boolean;
-}
+};
 
-export interface ParsedIngestUrl {
+export type ParsedIngestUrl = {
   readonly seed: ReceiptSeed;
   readonly roomId: RoomId;
   readonly encodedRoom: string;
   readonly redirectUrl: string;
-}
+};
 
 export const INGEST_PATH = '/ingest';
 

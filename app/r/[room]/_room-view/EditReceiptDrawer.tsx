@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, currencyLabel, listCurrencies } from '@/domain/money/currency';
 
-interface EditReceiptDrawerProps {
+type EditReceiptDrawerProps = {
   readonly snapshot: RoomSnapshot;
   readonly onMeta: (
     key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd',
@@ -13,7 +13,7 @@ interface EditReceiptDrawerProps {
   readonly onDisplayCurrency: (code: string, force?: boolean) => void;
   readonly onRate: (rate: number) => void;
   readonly onAddItem: (name: string, en: string, eur: number) => void;
-}
+};
 
 // @crap-allow CRAP 152.8, complexity 12. Debt from before the CRAP check (#63): no tests yet.
 export function EditReceiptDrawer({

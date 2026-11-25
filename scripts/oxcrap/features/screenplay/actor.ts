@@ -10,20 +10,20 @@ export type Task = (actor: Actor) => void;
 export type Question<T> = (actor: Actor) => T;
 
 /** What one run of the check gave back. */
-export interface Run {
+export type Run = {
   readonly status: number | null;
   readonly output: string;
-}
+};
 
 /** A file's share of a test run: every statement in it ran, or none did. */
 export type Covered = 'all' | 'none';
 
 /** What an actor can remember between steps. */
-export interface Notes {
+export type Notes = {
   readonly run: Run;
   readonly coverage: ReadonlyMap<string, Covered>;
   readonly otherFolder: string;
-}
+};
 
 // The CLI under test, run as a program, as a developer runs it. oxCrap's folder imports nothing
 // from outside it, so the screenplay reaches the CLI by path rather than by importing it.
@@ -34,7 +34,7 @@ const cli = fileURLToPath(new URL('../../oxcrap.ts', import.meta.url));
  * no git and no package.json, created on first use and deleted after the scenario; and running
  * the check in it.
  */
-export interface Actor {
+export type Actor = {
   readonly name: string;
   readonly attemptsTo: (...tasks: readonly Task[]) => void;
   readonly answer: <T>(question: Question<T>) => T;
@@ -48,7 +48,7 @@ export interface Actor {
   readonly recall: <K extends keyof Notes>(key: K) => Notes[K];
   readonly has: (key: keyof Notes) => boolean;
   readonly exit: () => void;
-}
+};
 
 /** A new actor called `name`, whose folders and notes are their own. */
 export function createActor(name: string): Actor {

@@ -5,13 +5,13 @@ import { PRESETS } from '@/data/presets';
 import { decodeSeed } from '@/sync/seedCodec';
 import type { ReceiptSeed } from '@/domain/receipt/receiptSeed';
 
-interface SeedModalProps {
+type SeedModalProps = {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly onImport: (seed: ReceiptSeed, forceReset: boolean) => void;
   readonly onPreset: (seed: ReceiptSeed) => void;
   readonly onBlankRoom: () => void;
-}
+};
 
 export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: SeedModalProps) {
   const [text, setText] = useState('');

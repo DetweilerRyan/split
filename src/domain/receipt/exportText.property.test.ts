@@ -83,11 +83,11 @@ function minorOf(printed: string | undefined) {
 }
 
 /** A person's line and the item lines under it, as amounts in the receipt currency's minor units. */
-interface PersonLines {
+type PersonLines = {
   readonly name: string;
   readonly totalMinor: number;
   readonly itemsMinor: readonly number[];
-}
+};
 
 function readSummary(text: string) {
   const lines = text.split('\n');

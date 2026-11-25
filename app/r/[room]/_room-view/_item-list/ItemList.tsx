@@ -3,7 +3,7 @@ import type { Participant, ReceiptItem } from '@/domain/receipt/roomSnapshot';
 import { formatMoney } from '@/domain/money/currency';
 import { ItemRow } from './ItemRow';
 
-interface ItemListProps {
+type ItemListProps = {
   readonly items: readonly ReceiptItem[];
   readonly participants: readonly Participant[];
   readonly activeId: string | null;
@@ -18,7 +18,7 @@ interface ItemListProps {
   ) => void;
   readonly onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
   readonly onDelete: (itemId: string) => void;
-}
+};
 
 export function ItemList(props: ItemListProps) {
   const headingId = useId();

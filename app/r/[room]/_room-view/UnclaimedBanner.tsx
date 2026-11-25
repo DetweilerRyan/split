@@ -1,13 +1,13 @@
 import type { ReceiptItem } from '@/domain/receipt/roomSnapshot';
 import { formatMoney } from '@/domain/money/currency';
 
-interface UnclaimedBannerProps {
+type UnclaimedBannerProps = {
   readonly items: readonly ReceiptItem[];
   readonly total: number;
   readonly currency: string;
   readonly filter: 'all' | 'unclaimed' | 'mine';
   readonly onFilter: (filter: 'all' | 'unclaimed' | 'mine') => void;
-}
+};
 
 export function UnclaimedBanner({
   items,

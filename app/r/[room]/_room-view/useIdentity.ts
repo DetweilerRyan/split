@@ -6,10 +6,10 @@ import type { RoomProvider } from '@/sync/yjsProvider';
 import { useActiveIdentity } from './useActiveIdentity';
 
 /** What `useIdentity` needs of the room's provider. */
-export interface IdentityProvider {
+export type IdentityProvider = {
   readonly store: Pick<ReceiptStore, 'addParticipant' | 'removeParticipant'>;
   readonly setIdentity: RoomProvider['setIdentity'];
-}
+};
 
 /**
  * Who you are in the room, and the identity picker: whether it's open, and choosing, adding and
