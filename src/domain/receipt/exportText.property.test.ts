@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { type RoomSnapshot, itemIdSchema, participantIdSchema } from './roomSnapshot';
 import { buildExportText } from './exportText';
-import type { DeepReadonly } from '@/utils/deepReadonly';
+import type { DeepReadonly } from '@/utils/types/deepReadonly';
 
 const names = ['Ana', 'Ben', 'Cy', 'Dee'] as const;
 
