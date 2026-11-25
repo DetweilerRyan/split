@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { RoomSnapshot } from './roomSnapshot';
 import { buildExportText } from './exportText';
-import type { Frozen } from '@/utils/frozen';
+import type { DeepReadonly } from '@/utils/deepReadonly';
 
 const names = ['Ana', 'Ben', 'Cy', 'Dee'] as const;
 
@@ -41,7 +41,7 @@ const receipt = fc.record({
   ),
 });
 
-type Receipt = Frozen<typeof receipt extends fc.Arbitrary<infer R> ? R : never>;
+type Receipt = DeepReadonly<typeof receipt extends fc.Arbitrary<infer R> ? R : never>;
 
 function snapshotOf(r: Receipt): RoomSnapshot {
   return {
