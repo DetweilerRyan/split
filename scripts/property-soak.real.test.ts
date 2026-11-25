@@ -54,9 +54,13 @@ function project() {
   return cwd;
 }
 
-// The parent's environment, without any soak variable a shell may have set.
+// The parent's environment, without any soak variable a shell may have set, or the settings that
+// change Vitest's output in CI: forced colour, and GitHub's reporter.
 const inherited = Object.fromEntries(
-  Object.entries(process.env).filter(([name]) => !name.startsWith('PROPERTY_')),
+  Object.entries(process.env).filter(
+    ([name]) =>
+      !name.startsWith('PROPERTY_') && name !== 'FORCE_COLOR' && name !== 'GITHUB_ACTIONS',
+  ),
 );
 
 function run(cwd: string, args: readonly string[], env: Readonly<Record<string, string>>) {
@@ -66,7 +70,7 @@ function run(cwd: string, args: readonly string[], env: Readonly<Record<string, 
     {
       cwd,
       encoding: 'utf8',
-      env: { ...inherited, NODE_ENV: 'test', CI: '1', ...env },
+      env: { ...inherited, NODE_ENV: 'test', CI: '1', NO_COLOR: '1', ...env },
     },
   );
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
