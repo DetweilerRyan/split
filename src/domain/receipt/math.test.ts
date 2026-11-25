@@ -190,6 +190,52 @@ describe('integer minor-unit splitting', () => {
   });
 });
 
+describe('choosing the display currency and rate', () => {
+  it('shows a bank charge in USD at the bank rate when no display currency is set', () => {
+    const snap = { ...makeSnapshot('EUR', [100], [['a']]), bankUsd: 110, rate: 1.05 };
+    const result = computeReceiptMath(snap);
+    expect(result.displayCurrency).toBe('USD');
+    expect(result.effectiveRate).toBe(1.1);
+    expect(result.isEstimatedRate).toBe(false);
+    expect(result.perPerson[id('a')]?.converted).toBe(110);
+  });
+
+  it('converts nothing without a display currency or a bank charge, even with a stored rate', () => {
+    const snap = { ...makeSnapshot('EUR', [100], [['a']]), rate: 1.05 };
+    const result = computeReceiptMath(snap);
+    expect(result.displayCurrency).toBeNull();
+    expect(result.effectiveRate).toBeNull();
+    expect(result.isEstimatedRate).toBe(true);
+    expect(result.perPerson[id('a')]?.converted).toBeNull();
+  });
+
+  it('converts nothing when the display currency is the receipt currency, in any case', () => {
+    const snap = {
+      ...makeSnapshot('EUR', [100], [['a']]),
+      displayCurrency: 'eur',
+      bankUsd: 110,
+      rate: 1.05,
+    };
+    const result = computeReceiptMath(snap);
+    expect(result.displayCurrency).toBeNull();
+    expect(result.effectiveRate).toBeNull();
+    expect(result.perPerson[id('a')]?.converted).toBeNull();
+  });
+
+  it('falls back to the stored rate when a bank charge is entered but nothing went on the card', () => {
+    const snap = {
+      ...makeSnapshot('EUR', [], []),
+      displayCurrency: 'USD',
+      bankUsd: 110,
+      rate: 1.05,
+    };
+    const result = computeReceiptMath(snap);
+    expect(result.displayCurrency).toBe('USD');
+    expect(result.effectiveRate).toBe(1.05);
+    expect(result.isEstimatedRate).toBe(true);
+  });
+});
+
 describe('splitItemMinor', () => {
   const snap = makeSnapshot(
     'USD',
