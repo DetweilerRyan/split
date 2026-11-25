@@ -57,6 +57,9 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['**/*.test.ts', '**/*.test.tsx'],
           exclude: [...ignored, ...browserTests, ...realTests],
+          // Soaks a property test when PROPERTY_SOAK_SECONDS or PROPERTY_SEED is set; otherwise
+          // does nothing. docs/testing/property-testing.md says how.
+          setupFiles: ['scripts/property-soak.setup.ts'],
         },
       },
       {

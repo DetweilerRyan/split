@@ -1,6 +1,6 @@
 # Property testing
 
-A property test checks a rule that should hold for every input, against many inputs [fast-check](https://fast-check.dev/) generates. When one fails, fast-check shrinks the input to the smallest one that still breaks the rule. Where a test file goes and which project runs it are in [testing conventions](../engineering/testing-conventions.md#which-project-a-test-belongs-in).
+A property test checks a rule that should hold for every input, against many inputs [fast-check](https://fast-check.dev/) generates. When one fails, fast-check shrinks the input to the smallest one that still breaks the rule.
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.
 
@@ -13,7 +13,7 @@ A property test checks a rule that should hold for every input, against many inp
   - **agreement with a simpler version** of the same code.
 - **Don't write one** for components, or for code whose right answer you'd have to work out the same way the code does. Example tests say those more clearly.
 - **Keep the example tests too.** A property test adds inputs nobody thought of; it doesn't replace the cases a reader needs to see.
-- **Put it in its own sidecar,** `<module>.property.test.ts`, beside the module. It runs with the module's other unit tests, and counts towards the coverage report like them.
+- **Put it in its own sidecar,** named as [testing conventions](../engineering/testing-conventions.md#which-project-a-test-belongs-in) say.
 
 ## Writing one
 
@@ -35,37 +35,49 @@ A property test checks a rule that should hold for every input, against many inp
 
 ## Soaking a new property
 
-Before you commit a new property, run it for two minutes rather than a fixed count, and keep running it until a full run passes.
+Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. The soak is set by environment variables, which [`scripts/property-soak.ts`](../../scripts/property-soak.ts) reads, so it changes no file.
 
-1. **Hand the soak to a background subagent,** so the session keeps working while it runs. Give it the property's path and these steps up to the report. It changes no file but the property's, and puts that back. Don't edit the property's file while the soak runs.
-2. **Give the property a time budget.** In its `fc.assert` parameters, put:
-
-   ```ts
-   { numRuns: Number.POSITIVE_INFINITY, interruptAfterTimeLimit: 120_000, markInterruptAsFailure: false }
-   ```
-
-   To see how many inputs ran, call `fc.check` with the same parameters and log the result's `numRuns`.
-
-3. **Run only its file, with Vitest's timeout off,** or Vitest stops the test after 5 seconds:
+1. **Start the soak as a background command,** so the session keeps working while it runs. For a property under `src/` or `app/`:
 
    ```bash
-   npx vitest run <path> --testTimeout=0
+   PROPERTY_SOAK_SECONDS=120 npx vitest run <path> -t '<test name>' --testTimeout=0 --silent=false --coverage.enabled=false
    ```
 
-4. **Report, then put the property's parameters back.** The report gives how many inputs ran and, for each failure, the shrunk input, seed and path.
-5. **For each failure, decide where the fault is.** If the code is wrong, fix the code. If the property or its generator is wrong, such as a rule that doesn't hold for an input the code handles correctly, fix the property.
-6. **Keep the shrunk input twice.** CI runs far fewer inputs and may never generate it again.
-   - **As an example test** in the module's `.test.ts`, asserting the right answer for that input. This checks the answer without the property.
-   - **In the property's `examples`,** so the property itself always runs it. fast-check runs `examples` first, and counts them towards `numRuns`, so raise `numRuns` by the number of examples you add.
-7. **Say where each one came from,** in a comment beside both: `// Found by a soak run on #<pull request>.` A later session can then tell it was kept on purpose, not added as a duplicate.
-8. **Soak it again.**
+   For one under `scripts/`, add `-c vitest.tooling.config.ts`. Leave out `-t` to soak every property in the file, each for the full two minutes.
+
+2. **Read the result when it finishes.** A property that passed prints `Soak passed:` and how many inputs it ran. One that failed prints its shrunk input, seed and path.
+3. **If the report says the time limit cut shrinking short,** run the command it gives, which replays the input with `PROPERTY_SEED` and `PROPERTY_PATH` and no time limit, and use the input that run shrinks to.
+4. **For each failure, decide where the fault is.** If the code is wrong, fix the code. If the property or its generator is wrong, such as a rule that doesn't hold for an input the code handles correctly, fix the property.
+5. **Keep the shrunk input,** as [Keeping a failing input](#keeping-a-failing-input) says.
+6. **Soak it again.**
 
 Once a soak passes, say in the pull request how many inputs it ran and what it found.
 
 ## When one fails
 
-- **Its output gives a seed and a path.** Pass them to `fc.assert` as `{ seed, path }` to run the same input again.
-- **Once it's fixed, keep the shrunk input** as for a soak failure, saying where it was found.
+- **Its output gives a seed and a path.** Run the same input again, with full shrinking, on that test alone. Every property the command runs replays them, so name the file and the test:
+
+  ```bash
+  PROPERTY_SEED=<seed> PROPERTY_PATH=<path> npx vitest run <path to file> -t '<test name>' --coverage.enabled=false
+  ```
+
+  For a file under `scripts/`, add `-c vitest.tooling.config.ts`.
+
+- **For each failure, decide where the fault is,** as for a soak failure.
+- **Once it's fixed, keep the shrunk input,** as below.
+
+## Keeping a failing input
+
+Keep every shrunk input a property test fails on, whether a soak, a local run or CI found it, in two places:
+
+- **As an example test** in the module's `.test.ts`, asserting the right answer for that input.
+- **In the property's `examples`.** fast-check counts `examples` towards `numRuns`, so raise `numRuns` by the number of examples you add.
+
+Beside both, say where it was found:
+
+- `// Found by a soak run on #<pull request>.`
+- `// Found by CI on #<pull request>.`
+- `// Found by a local run on #<pull request>.`
 
 ## Changing this document
 

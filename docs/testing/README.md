@@ -1,6 +1,6 @@
 # Testing
 
-How tests are written and checked in this repository, one kind of test, or check of the tests, per document. The [engineering index](../engineering/README.md) points here rather than to each document. Read this index before writing, changing, moving or reviewing a test, or when oxCrap's code changes, then each document whose "Read when" matches.
+How tests are written and checked in this repository, one kind of test, or check of the tests, per document. The [engineering index](../engineering/README.md) points here rather than to each document. Read this index before writing, changing, moving or reviewing a test, then each document whose "Read when" matches.
 
 ## Index
 
