@@ -6,42 +6,41 @@ The fast-check behaviour below was checked on fast-check 4.10.2 and Vitest 5.0.5
 
 ## Design
 
-- **A setup file, so no test changes.** fast-check's per-assertion parameters override `fc.configureGlobal`: a global `numRuns` of 5,000 with 50 in the assertion runs 50. So no global setting can raise the count of a property that sets its own, and a soak by settings alone would mean editing each test. Replacing `assert` in a setup file soaks any property as written, new or old.
-- **`vi.doMock`, not `vi.mock`.** `vi.mock` is hoisted and always applies; `vi.doMock` is registered only when a variable is set, so a normal run loads the real fast-check. The setup file runs before each test file imports fast-check, so the mock is in place in time. The setup file loads the real module for the soak itself before it registers the mock.
-- **Nothing is faked.** The stand-in runs fast-check's own `check` and `assert`, with other parameters.
-- **A time budget, not a count.** A fixed count means guessing how fast a property runs, so the same count is seconds for one property and hours for another. A budget spends the same time on each. Hypothesis's adaptive fuzzer, [HypoFuzz](https://github.com/Zac-HD/hypofuzz), makes the same point about a large `max_examples`, and [fast-check's fuzzing guide](https://fast-check.dev/docs/advanced/fuzzing/) runs with a time limit.
-- **The `fc.interruptAfterTimeLimit` plugin,** not the `interruptAfterTimeLimit` and `markInterruptAsFailure` parameters, which fast-check 4.10.2 deprecates. The plugin's default treats a run interrupted with no failure as a pass.
-- **`fc.check` for a timed soak.** `fc.assert` returns nothing, so it can't say how many inputs ran. `fc.check` returns the run's details. The stand-in logs `numRuns` from them on a pass, and throws `fc.defaultReportMessage` on a failure, which is the report `fc.assert` would have thrown.
-- **The time limit also stops shrinking.** fast-check's interrupt applies to every run, shrinks included: a failure planted 10 ms before the limit came back after 2 shrinks, with `interrupted: true`. So the report adds the seed and path to replay when `interrupted` is set, and a replay without the budget finishes the shrink.
-- **A replay goes through `fc.assert`,** so it shrinks to the end, reports as a normal failure does, and runs an async property as `fc.assert` does. fast-check carries on through the test's count after a replayed path that passes.
-- **The test's own parameters are kept.** `examples` and `plugins` stay, so a soak runs the cases a test pins and the plugins it relies on. The time limit is added after the test's plugins. `examples` count towards `numRuns` in fast-check, which an infinite count makes moot.
-- **Strict variables.** A malformed value fails the run instead of being ignored, since a soak that silently runs the usual count would look like a pass. A path without its seed fails too, since a path means nothing without the seed it came from.
+- **fast-check's global configuration, from a setup file.** This is fast-check's own way to run more inputs: its [fuzzing guide](https://fast-check.dev/docs/advanced/fuzzing/) sets `fc.configureGlobal({ numRuns })`, and its [global settings page](https://fast-check.dev/docs/configuration/global-settings/) loads that from a test runner's setup file, Vitest's `setupFiles` included. Nothing is mocked or wrapped, so a test runs fast-check exactly as written.
+- **Environment variables switch it on.** fast-check reads none itself, and has no command-line flag. Variables leave every normal run untouched, and need no edit to soak a test.
+- **A property's own `numRuns` wins.** fast-check's docs: "The per-assertion form always overrides the global one". So a property that sets `numRuns` isn't soaked, and the rule is to leave it out until a property has been soaked. The report plugin reads `runConfiguration.numRuns` and says "Not soaked" when it's finite, since a log of "Soak passed: 300 inputs" would look like a soak that ran.
+- **A time budget, not a count.** A fixed count means guessing how fast a property runs, so the same count is seconds for one property and hours for another. A budget spends the same time on each. [HypoFuzz](https://github.com/Zac-HD/hypofuzz), a fuzzer for Hypothesis tests, makes the same point about a large `max_examples`.
+- **Plugins, installed with `fc.installGlobalPlugin`.** `plugins` isn't a global parameter: `GlobalParameters` leaves out `path`, `examples` and `plugins`. The time limit is fast-check's `fc.interruptAfterTimeLimit` plugin, whose default treats a run interrupted with no failure as a pass. The `interruptAfterTimeLimit` and `markInterruptAsFailure` parameters, and the `reporter` parameter, are deprecated in 4.10.2 in favour of plugins.
+- **The report plugin only logs.** Its `onAllRunsComplete` hook logs the count on a pass, and the replay values when shrinking was cut short. It never throws, because fast-check runs the hook for `fc.check` too, and a throw there would break `fc.check`, which should return its details. `fc.assert` throws its own report on a failure, as usual. One synchronous hook serves both sync and async properties.
+- **A replay by seed and count, not seed and path.** `path` can't be set globally. The same seed generates the same inputs in the same order whatever the count (checked: a soak's failure after 359 tests came back, with the same shrunk counterexample, from that seed and `numRuns: 359`; 358 passed). So the seed and the count from "Property failed after N tests" replay it, with no time limit, and shrinking runs to the end. A failure from a normal run, at the test's usual count, replays from the seed alone.
+- **The time limit also stops shrinking.** fast-check's interrupt applies to every run, shrinks included: a failure planted 10 ms before the limit came back after 2 shrinks, with `interrupted: true`. So the report plugin logs the seed and count to replay when a failure was interrupted.
+- **Strict variables.** A malformed value fails the run instead of being ignored, since a soak that silently runs the usual count would look like a pass. A count without its seed fails too, since a count replays nothing without the seed it came from. A count with a budget fails, since the count would cap the budget.
 
 ## What it doesn't do
 
-- **A timed soak of an async property.** `fc.check` returns a promise for one, which the stand-in would have to await, making it async for every property. Replays of async properties work.
-- **Soak `fc.check` calls, or other runners such as `@fast-check/vitest`.** It replaces only `assert`.
+- **Soak a property that sets its own `numRuns`,** or replay one that sets its own `seed`, as above.
 - **Split the budget between properties.** Each property gets the whole budget, so the run takes the budget times the number of properties it reaches. `-t` picks one.
+- **Stop a predicate mid-run.** fast-check can't, so the time limit takes effect between inputs, and a slow predicate overruns it by up to one run.
 
 ## Options not taken
 
+- **Replacing `fc.assert` with a mock** that sets the parameters on each call. It soaks a property that sets its own `numRuns` too, but it mocks a library, and changes what every test calls.
 - **A helper each test imports,** such as wrapping its parameters in `soak(params)`. It needs an edit to every property, and an import that some projects' boundaries forbid, such as a tool's tests that may import only from the tool's folder.
-- **A global `numRuns` in a setup file** with `fc.configureGlobal`, which per-assertion counts override, as above.
 - **A multiplier on each test's count,** instead of a time budget, which keeps the guess about speed.
 
 ## Tests
 
-- [`property-soak.test.ts`](property-soak.test.ts) covers reading the variables, the parameters, the report and the stand-in, including a replay of an async property and of a passing seed.
-- [`property-soak.property.test.ts`](property-soak.property.test.ts) checks that every whole number reads back, and that anything else is refused.
+- [`property-soak.test.ts`](property-soak.test.ts) covers reading the variables, the settings, the report and the plugins, including an async property.
+- [`property-soak.property.test.ts`](property-soak.property.test.ts) checks that every valid budget, seed and count reads back, and that a budget not written as a whole number is refused.
 - [`property-soak.real.test.ts`](property-soak.real.test.ts) runs Vitest for real, in a temporary project with the setup file:
-  - a run with no variables is left alone;
-  - a soak reports its count and finds a planted failure;
-  - a replay of that failure's seed and path reproduces it.
+  - a run with no variables keeps fast-check's default count;
+  - a soak reports its count, finds a planted failure, and says it can't soak a property with its own count;
+  - a replay of that failure's seed and count reproduces it.
 
   It also checks that the configs it's given load the setup file.
 
 ## Reopen when
 
-- **A timed soak of async properties is needed,** which would make the stand-in async.
-- **fast-check removes or changes the `interruptAfterTimeLimit` plugin,** or `RunDetails`' `numRuns`, `interrupted`, `seed` or `counterexamplePath`.
-- **Vitest stops applying a setup file's `vi.doMock` to the test files' imports,** which the real test would show.
+- **fast-check adds a global setting that overrides per-assertion counts,** or reads an environment variable itself.
+- **fast-check changes `installGlobalPlugin`, `interruptAfterTimeLimit`, `onAllRunsComplete`,** or `RunDetails`' `numRuns`, `interrupted`, `seed` or `runConfiguration`.
+- **A soak must reach properties that set their own `numRuns`,** which only replacing `fc.assert` does.

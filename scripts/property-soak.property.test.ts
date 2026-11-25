@@ -4,23 +4,23 @@ import { describe, expect, it } from 'vitest';
 import { readSoak } from './property-soak.ts';
 
 describe('readSoak', () => {
-  it('reads back every whole number it is given, in each variable that takes one', () => {
+  it('reads back every budget and seed it is given', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 1 }),
-        fc.integer(),
-        fc.string({ minLength: 1 }),
-        (seconds, seed, path) => {
-          expect(
-            readSoak({
-              PROPERTY_SOAK_SECONDS: String(seconds),
-              PROPERTY_SEED: String(seed),
-              PROPERTY_PATH: path,
-            }),
-          ).toStrictEqual({ seconds, seed, path });
-        },
-      ),
-      { numRuns: 300 },
+      fc.property(fc.integer({ min: 1 }), fc.integer(), (seconds, seed) => {
+        expect(
+          readSoak({ PROPERTY_SOAK_SECONDS: String(seconds), PROPERTY_SEED: String(seed) }),
+        ).toStrictEqual({ seconds, seed, runs: undefined });
+      }),
+    );
+  });
+
+  it('reads back every seed and count of runs it is given', () => {
+    fc.assert(
+      fc.property(fc.integer(), fc.integer({ min: 1 }), (seed, runs) => {
+        expect(
+          readSoak({ PROPERTY_SEED: String(seed), PROPERTY_RUNS: String(runs) }),
+        ).toStrictEqual({ seconds: undefined, seed, runs });
+      }),
     );
   });
 
@@ -39,7 +39,6 @@ describe('readSoak', () => {
           );
         },
       ),
-      { numRuns: 300 },
     );
   });
 });
