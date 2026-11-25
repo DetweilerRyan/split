@@ -1,7 +1,6 @@
-// A Vitest setup file, loaded by vitest.config.ts's unit project and by vitest.tooling.config.ts.
-// When a soak variable is set, it replaces fast-check's `assert` with scripts/property-soak.ts's
-// `soakAssert` for that run. With none set it does nothing, so a normal run, and CI, is untouched.
-// docs/testing/property-testing.md says how to run a soak.
+// A Vitest setup file. When a soak variable is set, it replaces fast-check's `assert` with
+// property-soak.ts's `soakAssert` for that run. With none set it does nothing, so a normal run is
+// untouched. How to use it is in property-soak.md beside this file.
 import type * as FastCheck from 'fast-check';
 import { vi } from 'vitest';
 
