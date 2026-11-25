@@ -10,18 +10,10 @@ import {
 } from '../domain/receipt/roomSnapshot';
 import { storedParticipants } from './storedParticipants';
 import { storedText } from './storedText';
+import { numberOrZero } from '../utils/numberOrZero';
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
   (process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ?? '') !== '' ? 'Liveblocks' : 'WebRTC';
-
-/**
- * A number read from the room's Yjs document, where any peer can write any value: the value as a
- * number, or 0 when it isn't one. Minus zero reads as 0 too, so no amount shows as "-0.00".
- */
-function storedNumber(value: unknown): number {
-  const number = Number(value);
-  return Number.isNaN(number) || number === 0 ? 0 : number;
-}
 
 export const EMPTY_SNAPSHOT: RoomSnapshot = {
   title: 'Loading receipt…',
@@ -183,7 +175,7 @@ export class ReceiptStore {
         participants.push({
           id: storedText(map.get('id'), key),
           name: storedText(map.get('name'), 'Friend'),
-          colorIdx: storedNumber(map.get('colorIdx')),
+          colorIdx: numberOrZero(map.get('colorIdx')),
         });
       }
     });
@@ -207,7 +199,7 @@ export class ReceiptStore {
         id,
         name: storedText(map.get('name'), 'Item'),
         en: storedText(map.get('en'), ''),
-        eur: storedNumber(map.get('eur')),
+        eur: numberOrZero(map.get('eur')),
         order: Number(map.get('order') ?? 999),
         claims: claimState,
       });
@@ -225,12 +217,12 @@ export class ReceiptStore {
       website: storedText(this.meta.get('website'), ''),
       purchasedAt: storedText(this.meta.get('purchasedAt'), ''),
       mealType: storedText(this.meta.get('mealType'), ''),
-      cardTipEur: storedNumber(this.meta.get('cardTipEur')),
-      cashTipEur: storedNumber(this.meta.get('cashTipEur')),
-      bankUsd: storedNumber(this.meta.get('bankUsd')),
+      cardTipEur: numberOrZero(this.meta.get('cardTipEur')),
+      cashTipEur: numberOrZero(this.meta.get('cashTipEur')),
+      bankUsd: numberOrZero(this.meta.get('bankUsd')),
       currency: normalizeCurrency(this.meta.get('currency')),
       displayCurrency: storedText(this.meta.get('displayCurrency'), ''),
-      rate: storedNumber(this.meta.get('rate')),
+      rate: numberOrZero(this.meta.get('rate')),
       rateDate: storedText(this.meta.get('rateDate'), ''),
       participants,
       items,

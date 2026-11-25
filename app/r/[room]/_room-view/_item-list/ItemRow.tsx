@@ -1,7 +1,7 @@
 import { Check, Trash2 } from 'lucide-react';
 import type { Participant, ReceiptItem } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, formatMoney } from '@/domain/money/currency';
-import { typedNumber } from '../typedNumber';
+import { numberOrZero } from '@/utils/numberOrZero';
 
 type ItemRowProps = {
   readonly item: ReceiptItem;
@@ -59,7 +59,7 @@ export function ItemRow({
           type="number"
           step={10 ** -currencyExponent(currency)}
           defaultValue={item.eur}
-          onBlur={(event) => onUpdate(item.id, 'eur', typedNumber(event.target.value))}
+          onBlur={(event) => onUpdate(item.id, 'eur', numberOrZero(event.target.value))}
         />
         <button
           aria-label={`Delete ${item.name}`}

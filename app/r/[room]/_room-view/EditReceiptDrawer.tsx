@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { Plus } from 'lucide-react';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, currencyLabel, listCurrencies } from '@/domain/money/currency';
-import { typedNumber } from './typedNumber';
+import { numberOrZero } from '@/utils/numberOrZero';
 
 type EditReceiptDrawerProps = {
   readonly snapshot: RoomSnapshot;
@@ -36,7 +36,7 @@ export function EditReceiptDrawer({
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (name.trim() === '') return;
-    onAddItem(name.trim(), english.trim(), typedNumber(price));
+    onAddItem(name.trim(), english.trim(), numberOrZero(price));
     setName('');
     setEnglish('');
     setPrice('');
@@ -99,7 +99,7 @@ export function EditReceiptDrawer({
                 min="0"
                 step="any"
                 value={snapshot.rate !== 0 ? snapshot.rate : ''}
-                onChange={(event) => onRate(typedNumber(event.target.value))}
+                onChange={(event) => onRate(numberOrZero(event.target.value))}
               />
               <button
                 className="button-secondary"
@@ -118,7 +118,7 @@ export function EditReceiptDrawer({
             type="number"
             step="0.01"
             value={snapshot.bankUsd !== 0 ? snapshot.bankUsd : ''}
-            onChange={(event) => onMeta('bankUsd', typedNumber(event.target.value))}
+            onChange={(event) => onMeta('bankUsd', numberOrZero(event.target.value))}
           />
         </label>
         <label className="field-label">
@@ -128,7 +128,7 @@ export function EditReceiptDrawer({
             type="number"
             step={step}
             value={snapshot.cardTipEur}
-            onChange={(event) => onMeta('cardTipEur', typedNumber(event.target.value))}
+            onChange={(event) => onMeta('cardTipEur', numberOrZero(event.target.value))}
           />
         </label>
         <label className="field-label">
@@ -138,7 +138,7 @@ export function EditReceiptDrawer({
             type="number"
             step={step}
             value={snapshot.cashTipEur}
-            onChange={(event) => onMeta('cashTipEur', typedNumber(event.target.value))}
+            onChange={(event) => onMeta('cashTipEur', numberOrZero(event.target.value))}
           />
         </label>
       </div>
