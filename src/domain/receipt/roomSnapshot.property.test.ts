@@ -117,6 +117,8 @@ const codeUnit = fc.integer({ min: 0, max: 0xffff }).map((code) => String.fromCh
 const notAnId = fc.oneof(
   fc
     .tuple(name, fc.constantFrom('', 'P-', 'p_', 'p', 'q-', '-', ' p-', 'pp-', 'p–'))
+    // Dropping the prefix of `p-p-a`, a name whose first word is "p", leaves `p-a`, an id.
+    .filter(([{ id }, prefix]) => !(prefix === '' && id.slice(2).startsWith('p-')))
     .map(([{ id }, prefix]) => prefix + id.slice(2)),
   name.map(({ id }) => `${id}-`),
   name.map(({ id }) => id.replace('p-', 'p--')),
