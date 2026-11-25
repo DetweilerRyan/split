@@ -26,14 +26,14 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
 
 1. **Run it once, after the [definition of done](../../AGENTS.md#definition-of-done) passes.** It's expensive. Don't run it in the middle of a change, or to probe.
 2. **Take each survivor in turn:**
-   - **Add a test with an assertion that fails on that mutant,** as [testing conventions](testing-conventions.md) say. Make it a [property test](../testing/property-testing.md#when-to-write-one) where those say one is called for.
+   - **Add a test with an assertion that fails on that mutant,** as [testing conventions](../engineering/testing-conventions.md) say. Make it a [property test](property-testing.md#when-to-write-one) where those say one is called for.
    - **If it's in a guard for a case that can't happen, delete the guard:** restructure so the type proves the value is there, as `NestedFn`'s `parents` in `scripts/oxcrap/functions.ts` does. Keep the guard only when a library's type forces it.
    - **Or propose it as equivalent:** a change that can't alter what the code does. Mark it with `// Stryker disable next-line <mutator>: <reason>`, saying why no test could fail on it.
 
    Never weaken, edit away or delete an existing test to kill a mutant.
 
 3. **Stop after four rounds** of adding tests and running the changed lines again. Report what still survives in the pull request, rather than keep going.
-4. **A second judge confirms each proposed equivalent mutant:** a fresh-context reviewer subagent, as in [reviewing work](workflow/reviewing-work.md), or the owner. The author of the tests mustn't be the only judge. List each one in the pull request; a disable comment stays only if the reviewer agrees.
+4. **A second judge confirms each proposed equivalent mutant:** a fresh-context reviewer subagent, as in [reviewing work](../engineering/workflow/reviewing-work.md), or the owner. The author of the tests mustn't be the only judge. List each one in the pull request; a disable comment stays only if the reviewer agrees.
 
 ## Changing this document
 

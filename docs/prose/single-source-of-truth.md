@@ -16,7 +16,7 @@ Every fact in this repository is written in one place, its **owner**, and everyt
 | What the app is, how to run and deploy it, the MCP server, currencies              | [`README.md`](../../README.md)                                                   |
 | Boundaries for every agent session, and the definition of done                     | [`AGENTS.md`](../../AGENTS.md)                                                   |
 | How engineering work is done                                                       | [`docs/engineering/`](../engineering/README.md)                                  |
-| How each kind of test is written                                                   | [`docs/testing/`](../testing/README.md)                                          |
+| How each kind of test is written, and how the tests are checked                    | [`docs/testing/`](../testing/README.md)                                          |
 | Receipt seed fields and their extraction rules                                     | `src/domain/receipt/receiptSeed.ts`                                              |
 | How an agent extracts a receipt and makes a room link                              | [`skills/receipt-generation/SKILL.md`](../../skills/receipt-generation/SKILL.md) |
 | The Docker Sandbox kit and dev container                                           | [`.sbx-kits/splitsmart/README.md`](../../.sbx-kits/splitsmart/README.md)         |

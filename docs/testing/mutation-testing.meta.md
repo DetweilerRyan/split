@@ -90,6 +90,11 @@ The owner had the survivors split into three batches, each worked by a subagent 
 - **A full run starts from no results.** Measuring this showed `oxcrap.ts` still reported as mutated after it left `mutate`. Stryker keeps a file from old incremental results, and the baseline every new worktree is seeded from still held it. A full run reuses nothing anyway, so it now deletes the worktree's file first.
 - **A guard for a case that can't happen is proved away, not marked** (#127). The owner chose "Prove it in the type, else disable" on [#127](https://github.com/DetweilerRyan/split/pull/127), extending "Delete dead code first". The case was `noUncheckedIndexedAccess`: guards for a nested function's outer function and a JSX expression's attribute left equivalent mutants. So `NestedFn` types `parents` as non-empty, and the walk carries a node's parent and grandparent as a pair below the top level, which deletes both guards and their disable comments.
 
+## Where it lives
+
+- **In `docs/testing/`, moved from `docs/engineering/` on [#154](https://github.com/DetweilerRyan/split/pull/154).** The session advised that `crap.md` stay in engineering, since a CRAP finding is a check on the code that is often fixed by refactoring or a `@crap-allow`, and that mutation testing was the stronger candidate, since it checks how strong the tests are and [property testing](property-testing.md) relies on it to show a property can fail. The owner said: "move mutation testing in this pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7175415375)).
+- **Its trigger stays in the engineering index's testing row,** since it fires when oxCrap's code changes, not only when someone sets out to test.
+
 ## What would reopen this
 
 - **Running it in CI, or in the Stop hook,** once changed-lines runs prove fast. The first full run took 78 s.
