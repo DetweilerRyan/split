@@ -299,25 +299,6 @@ describe('seed hydration with forceReset', () => {
     ]);
     expect(doc.getMap('claims').size).toBe(0);
   });
-
-  // The seed's schema refuses two items of the same id, but not an item-1 and an empty id read as
-  // item-1. Without forceReset the later one only fills in what the earlier one lacks; with it,
-  // the later one replaces it.
-  it('lets a later item replace an earlier one read as the same id', () => {
-    const items = [
-      { id: 'item-1', name: 'Soup', en: 'Soup', eur: 4 },
-      { id: '', name: 'Bread', en: 'Bread', eur: 2 },
-    ];
-    const kept = new Y.Doc();
-    const replaced = new Y.Doc();
-
-    hydrateFromSeed(kept, receiptSeedSchema.parse({ ...seed, items }));
-    hydrateFromSeed(replaced, receiptSeedSchema.parse({ ...seed, items }), { forceReset: true });
-    expect(new ReceiptStore(kept).getSnapshot().items.map(({ name }) => name)).toEqual(['Soup']);
-    expect(new ReceiptStore(replaced).getSnapshot().items.map(({ name }) => name)).toEqual([
-      'Bread',
-    ]);
-  });
 });
 
 describe('item ids in seeds', () => {

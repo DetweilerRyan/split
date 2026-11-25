@@ -26,6 +26,35 @@ describe('validateSeed', () => {
     );
   });
 
+  it('refuses an empty id that reads as an earlier item’s id, and says how to fix it (#145)', () => {
+    const items = [
+      { ...seed.items[0], id: 'item-1' },
+      { ...seed.items[0], id: '' },
+    ];
+    expect(() => validateSeed({ ...seed, items })).toThrow(
+      'items[1].id is empty, so it is read as "item-1", which items[0] already uses; give each item its own id, such as item-0, item-1, … in printed order',
+    );
+  });
+
+  it('refuses an id that an earlier empty id reads as (#145)', () => {
+    const items = [
+      { ...seed.items[0], id: '' },
+      { ...seed.items[0], id: 'item-0' },
+    ];
+    expect(() => validateSeed({ ...seed, items })).toThrow(
+      'items[1].id "item-0" is duplicated: items[0], whose empty id is read as "item-0", already uses it',
+    );
+  });
+
+  it('accepts empty ids that read as different ids', () => {
+    const items = [
+      { ...seed.items[0], id: '' },
+      { ...seed.items[0], id: '' },
+      { ...seed.items[0], id: 'item-5' },
+    ];
+    expect(validateSeed({ ...seed, items }).items).toHaveLength(3);
+  });
+
   it('rejects oversized payloads and non-finite amounts', () => {
     const many = Array.from({ length: 201 }, (_, i) => ({ ...seed.items[0], id: `item-${i}` }));
     expect(() => validateSeed({ ...seed, items: many })).toThrow(/items must have at most 200/);

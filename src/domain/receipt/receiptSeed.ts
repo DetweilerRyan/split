@@ -15,6 +15,24 @@ function text(max = MAX_TEXT) {
 const amount = z.number({ error: 'must be a finite number' });
 /** An item's id, read on its own to find duplicates even when the rest of the item is invalid. */
 const withId = z.object({ id: z.string() });
+const UNIQUE_IDS = 'give each item its own id, such as item-0, item-1, … in printed order';
+
+/**
+ * Why an item's id is refused when an earlier item has it: as written, or as an empty id reads,
+ * `item-<index>`. It says how to fix the seed, for an agent calling the MCP tool to correct it.
+ */
+function duplicateIdMessage(
+  id: string,
+  empty: boolean,
+  first: { readonly index: number; readonly empty: boolean },
+): string {
+  const earlier = first.empty
+    ? `items[${first.index}], whose empty id is read as "${id}",`
+    : `items[${first.index}]`;
+  return empty
+    ? `is empty, so it is read as "${id}", which ${earlier} already uses; ${UNIQUE_IDS}`
+    : `"${id}" is duplicated: ${earlier} already uses it; ${UNIQUE_IDS}`;
+}
 const currencyCode = z
   .string({ error: 'must be an ISO 4217 currency code' })
   .refine(isValidCurrency, { error: 'must be an ISO 4217 currency code' });
@@ -118,17 +136,23 @@ export const receiptSeedSchema = immutable(
           z.superRefine(
             (items, ctx) => {
               if (!Array.isArray(items)) return;
-              const seen = new Set<string>();
+              // Each id as hydrateFromSeed stores it, with the index of the item that first has it.
+              const seen = new Map<string, { readonly index: number; readonly empty: boolean }>();
               items.forEach((item, index) => {
-                const id = withId.safeParse(item).data?.id;
-                if (id === undefined) return;
-                if (seen.has(id))
-                  ctx.addIssue({
-                    code: 'custom',
-                    path: [index, 'id'],
-                    message: `"${id}" is duplicated`,
-                  });
-                seen.add(id);
+                const written = withId.safeParse(item).data?.id;
+                if (written === undefined) return;
+                const empty = written === '';
+                const id = empty ? `item-${index}` : written;
+                const first = seen.get(id);
+                if (first === undefined) {
+                  seen.set(id, { index, empty });
+                  return;
+                }
+                ctx.addIssue({
+                  code: 'custom',
+                  path: [index, 'id'],
+                  message: duplicateIdMessage(id, empty, first),
+                });
               });
             },
             { when: () => true },

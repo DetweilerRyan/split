@@ -50,6 +50,21 @@ Given(
   },
 );
 
+Given(
+  /^(\w+) (?:gave|gives) "([^"]*)" the id "([^"]*)"$/,
+  ({ actorCalled }, assistant: string, name: string, id: string) => {
+    const actor = actorCalled(assistant);
+    const receipt = actor.recall('receipt');
+    if (!receipt.items.some((item) => item.name === name)) {
+      throw new Error(`The receipt has no "${name}".`);
+    }
+    actor.remember('receipt', {
+      ...receipt,
+      items: receipt.items.map((item) => (item.name === name ? { ...item, id } : item)),
+    });
+  },
+);
+
 When(
   /^(\w+) (?:creates|has created) a receipt room$/,
   async ({ actorCalled }, assistant: string) => {

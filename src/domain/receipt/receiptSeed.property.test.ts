@@ -27,7 +27,12 @@ const currency = fc.constantFrom('USD', 'EUR', 'JPY', 'KWD', 'jpy', 'Chf');
 
 const item = fc.record({ id: text(64), name: text(), en: text(), eur: amount });
 
-/** A seed within the limits, with items whose ids are all different. */
+/** Each item's id as hydrateFromSeed stores it: as written, or `item-<index>` when it's empty. */
+function storedIds(items: readonly { readonly id: string }[]) {
+  return items.map(({ id }, index) => (id === '' ? `item-${index}` : id));
+}
+
+/** A seed within the limits, with items whose ids, as they're stored, are all different. */
 function seedWith(itemCount: { readonly minLength: number; readonly maxLength: number }) {
   return fc.record(
     {
@@ -45,7 +50,9 @@ function seedWith(itemCount: { readonly minLength: number; readonly maxLength: n
       rate: fc.double({ min: Number.MIN_VALUE, max: 1e9, noNaN: true }),
       rateDate: text(32),
       roster: fc.array(text(), { maxLength: MAX_ROSTER }),
-      items: fc.uniqueArray(item, { selector: (i) => i.id, ...itemCount }),
+      items: fc
+        .uniqueArray(item, { selector: (i) => i.id, ...itemCount })
+        .filter((items) => new Set(storedIds(items)).size === items.length),
     },
     { requiredKeys: ['title', 'cardTipEur', 'cashTipEur', 'bankUsd', 'roster', 'items'] },
   ) satisfies fc.Arbitrary<ReceiptSeed>;
@@ -122,18 +129,23 @@ describe('validateSeed', () => {
   });
 
   it('names the later of two items that share an id, wherever they are', () => {
-    const withDuplicate = seedWith({ minLength: 1, maxLength: MAX_ITEMS - 1 }).chain((s) =>
-      fc
-        .constantFrom(...s.items.map(({ id }, original) => ({ id, original })))
-        .chain(({ id, original }) =>
-          fc.record({
-            seed: fc.constant(s),
-            id: fc.constant(id),
-            copyAt: fc.integer({ min: original + 1, max: s.items.length }),
-            copy: item,
-          }),
-        ),
-    );
+    const withDuplicate = seedWith({ minLength: 1, maxLength: MAX_ITEMS - 1 })
+      .filter((s) => s.items.some(({ id }) => id !== ''))
+      .chain((s) =>
+        fc
+          // An empty id copied elsewhere reads as a different id, so copy only a written one.
+          .constantFrom(
+            ...s.items.map(({ id }, original) => ({ id, original })).filter(({ id }) => id !== ''),
+          )
+          .chain(({ id, original }) =>
+            fc.record({
+              seed: fc.constant(s),
+              id: fc.constant(id),
+              copyAt: fc.integer({ min: original + 1, max: s.items.length }),
+              copy: item,
+            }),
+          ),
+      );
     fc.assert(
       fc.property(withDuplicate, ({ seed: given, id, copyAt, copy }) => {
         const items = [
