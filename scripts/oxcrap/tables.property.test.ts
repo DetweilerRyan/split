@@ -190,7 +190,8 @@ function handlerOf(test: Case, i: number) {
       return `h${i}`;
     case 'namedHandler':
       return 'h';
-    default:
+    case 'importedTable':
+    case 'same':
       return `() => ${i}`;
   }
 }
@@ -212,7 +213,7 @@ function definition(test: Case) {
       return `new Set([${names.map((name) => `'${name}'`).join(', ')}])`;
     case 'array':
       return `[${names.map((name) => `'${name}'`).join(', ')}]`;
-    default:
+    case 'in':
       return `{ ${names.map((name) => `${name}: 1`).join(', ')} }`;
   }
 }
@@ -307,7 +308,7 @@ function read(test: Case, table: string) {
       return `return ${wrapped}.has(k);`;
     case 'array':
       return `return ${wrapped}.includes(k);`;
-    default:
+    case 'in':
       return `return k in ${wrapped};`;
   }
 }
@@ -324,7 +325,7 @@ function runFunction(test: Case, table: string) {
       return `export function run(k: string) { { var T: any = other; } ${body} }`;
     case 'siblingBlock':
       return `export function run(k: string) { { const T = 1; log(T); } ${body} }`;
-    default:
+    case 'none':
       return `export function run(k: string) { ${body} }`;
   }
 }
@@ -336,7 +337,7 @@ function decoyForms(does: Decoy['does']) {
       return READS_OF_TABLE;
     case 'changeTable':
       return CHANGES_TO_TABLE;
-    default:
+    case 'changeOther':
       return CHANGES_TO_OTHER;
   }
 }

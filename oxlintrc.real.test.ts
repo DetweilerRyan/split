@@ -35,7 +35,7 @@ function lint(files: Readonly<Record<string, string>>) {
     problems: result.stdout
       .split('\n')
       .filter((line) => line.includes('['))
-      .map((line) => line.replace(/^([^:]+:\d+):\d+: .* \[Error\/(.*)\]$/, '$1 [$2]'))
+      .map((line) => line.replace(/^([^:]+:\d+):\d+: .* \[(?:Error|Warning)\/(.*)\]$/, '$1 [$2]'))
       .toSorted(),
   };
 }
@@ -214,7 +214,10 @@ describe('.oxlintrc.json’s code design principle checks', () => {
       problems: [
         'app/run.ts:1 [eslint(no-eval)]',
         'scripts/call.ts:1 [eslint(no-new-func)]',
+        // Type-aware linting (#120) turns on no-implied-eval, which also sees a Function call.
+        'scripts/call.ts:1 [typescript(no-implied-eval)]',
         'src/sync/build.ts:1 [eslint(no-new-func)]',
+        'src/sync/build.ts:1 [typescript(no-implied-eval)]',
         'src/utils/wrap.ts:1 [eslint(no-restricted-globals)]',
       ],
     });

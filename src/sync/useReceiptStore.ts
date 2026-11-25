@@ -9,6 +9,7 @@ import {
   participantId,
 } from '../domain/receipt/roomSnapshot';
 import { storedParticipants } from './storedParticipants';
+import { storedText } from './storedText';
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
   process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';
@@ -166,14 +167,16 @@ export class ReceiptStore {
     this.listeners.forEach((listener) => listener());
   }
 
-  // @crap-allow CRAP 27.1, complexity 27. Debt from before the CRAP check (#63): too complex.
+  // @crap-allow CRAP 14, complexity 14. It reads each participant, item and claim from the Yjs
+  // document with a fallback for each field, so its branches are one per field and splitting it
+  // would scatter the snapshot's shape. Parsing the document with a schema (#124) would lower it.
   private createSnapshot(): RoomSnapshot {
     const participants: Participant[] = [];
     this.participants.forEach((map, key) => {
       if (map instanceof Y.Map) {
         participants.push({
-          id: String(map.get('id') || key),
-          name: String(map.get('name') || 'Friend'),
+          id: storedText(map.get('id'), key),
+          name: storedText(map.get('name'), 'Friend'),
           colorIdx: Number(map.get('colorIdx')) || 0,
         });
       }
@@ -183,7 +186,7 @@ export class ReceiptStore {
     const items: ReceiptItem[] = [];
     this.items.forEach((map, key) => {
       if (!(map instanceof Y.Map)) return;
-      const id = String(map.get('id') || key);
+      const id = storedText(map.get('id'), key);
       const legacyClaims = map.get('claims');
       const claimState: Record<string, boolean> = {};
       participants.forEach(({ id: participantId }) => {
@@ -194,8 +197,8 @@ export class ReceiptStore {
       });
       items.push({
         id,
-        name: String(map.get('name') || 'Item'),
-        en: String(map.get('en') || ''),
+        name: storedText(map.get('name'), 'Item'),
+        en: storedText(map.get('en'), ''),
         eur: Number(map.get('eur')) || 0,
         order: Number(map.get('order') ?? 999),
         claims: claimState,
@@ -204,19 +207,19 @@ export class ReceiptStore {
     items.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 
     return {
-      title: String(this.meta.get('title') || 'European Receipt'),
-      address: String(this.meta.get('address') || ''),
-      phone: String(this.meta.get('phone') || ''),
-      website: String(this.meta.get('website') || ''),
-      purchasedAt: String(this.meta.get('purchasedAt') || ''),
-      mealType: String(this.meta.get('mealType') || ''),
+      title: storedText(this.meta.get('title'), 'European Receipt'),
+      address: storedText(this.meta.get('address'), ''),
+      phone: storedText(this.meta.get('phone'), ''),
+      website: storedText(this.meta.get('website'), ''),
+      purchasedAt: storedText(this.meta.get('purchasedAt'), ''),
+      mealType: storedText(this.meta.get('mealType'), ''),
       cardTipEur: Number(this.meta.get('cardTipEur')) || 0,
       cashTipEur: Number(this.meta.get('cashTipEur')) || 0,
       bankUsd: Number(this.meta.get('bankUsd')) || 0,
       currency: normalizeCurrency(this.meta.get('currency')),
-      displayCurrency: String(this.meta.get('displayCurrency') || ''),
+      displayCurrency: storedText(this.meta.get('displayCurrency'), ''),
       rate: Number(this.meta.get('rate')) || 0,
-      rateDate: String(this.meta.get('rateDate') || ''),
+      rateDate: storedText(this.meta.get('rateDate'), ''),
       participants,
       items,
       connection: this.connection,

@@ -97,7 +97,7 @@ function hiddenCall(hiding: Hiding, name: string) {
     // The body's own scope still hides the name from the body.
     case 'bodyPastDefault':
       return `((n = 0) => { const ${name} = () => n; return ${name}(); })();`;
-    default:
+    case 'destructured':
       return `{ const { ${name} } = { ${name}: () => 0 }; ${name}(); }`;
   }
 }
@@ -112,7 +112,11 @@ function hidingBranches(hiding: Hiding) {
     case 'forInConst':
     case 'bodyPastDefault':
       return 1;
-    default:
+    case 'bodyVar':
+    case 'destructured':
+    case 'param':
+    case 'staticConst':
+    case 'staticVar':
       return 0;
   }
 }
@@ -127,7 +131,7 @@ function nearbyCode(nearby: Nearby, name: string) {
     // A static block's `var` stays in the block.
     case 'staticVar':
       return `void class { static { var ${name} = 0; } }; `;
-    default:
+    case 'none':
       return '';
   }
 }
@@ -140,7 +144,8 @@ function callee(form: Form, to: number) {
       return `this.${name(to)}`;
     case 'private':
       return `this.#${name(to)}`;
-    default:
+    case 'arrow':
+    case 'declaration':
       return name(to);
   }
 }
@@ -162,7 +167,7 @@ function realCall(form: Form, via: Via, to: number) {
       return inClass(form) ? `${fn}();` : `void class { static { ${fn}(); } };`;
     case 'fieldInit':
       return inClass(form) ? `${fn}();` : `void class { x = ${fn}(); };`;
-    default:
+    case 'call':
       return `${fn}();`;
   }
 }
@@ -173,7 +178,10 @@ function viaBranches(via: Via) {
     case 'defaultValue':
     case 'patternDefault':
       return 1;
-    default:
+    case 'call':
+    case 'fieldInit':
+    case 'new':
+    case 'staticBlock':
       return 0;
   }
 }
@@ -189,7 +197,8 @@ function otherPrivacy(form: Form, to: number) {
       return `this.#${name(to)}();`;
     case 'private':
       return `this.${name(to)}();`;
-    default:
+    case 'arrow':
+    case 'declaration':
       return 'void 0;';
   }
 }
@@ -235,7 +244,7 @@ function withField(form: Form, field: Field, method: string, name: string) {
     // A method of the same name on the other side, written after it.
     case 'otherMethod':
       return `${method}\n${other}() { return 0; }`;
-    default:
+    case 'none':
       return method;
   }
 }
@@ -254,7 +263,9 @@ function stubKinds(form: Form): readonly (readonly [string, string])[] {
         ['', ''],
         ['static #', '#'],
       ];
-    default:
+    case 'arrow':
+    case 'declaration':
+    case 'private':
       return [['', '']];
   }
 }
@@ -280,7 +291,7 @@ function written(form: Form, { calls, field }: Fn, i: number) {
       return `  #${name(i)}() {\n${body}\n  }`;
     case 'static':
       return withField(form, field, `  static ${name(i)}() {\n${body}\n  }`, name(i));
-    default:
+    case 'method':
       return withField(form, field, `  ${name(i)}() {\n${body}\n  }`, name(i));
   }
 }
@@ -448,7 +459,7 @@ function initializerCode(place: Place, to: number, k: number) {
       return `    static { this.${name(to)}(); }`;
     case 'staticField':
       return `    static x${k} = this.${name(to)}();`;
-    default:
+    case 'instanceField':
       return `    x${k} = this.${name(to)}();`;
   }
 }

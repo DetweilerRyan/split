@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 import type { Participant } from '../domain/receipt/roomSnapshot';
+import { storedText } from './storedText';
 
 /**
  * The id and name of each participant in a room's `participants` map, as stored: an id from an
@@ -12,7 +13,7 @@ export function storedParticipants(
 ): readonly Pick<Participant, 'id' | 'name'>[] {
   return [...participants.entries()].flatMap(([key, map]) =>
     map instanceof Y.Map
-      ? [{ id: String(map.get('id') || key), name: String(map.get('name') ?? '') }]
+      ? [{ id: storedText(map.get('id'), key), name: storedText(map.get('name'), '') }]
       : [],
   );
 }

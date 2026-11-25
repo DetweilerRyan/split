@@ -315,6 +315,23 @@ Asked for on [#116](https://github.com/DetweilerRyan/split/issues/116): the chec
 
 - **Lint enforces part of _honest types_** since [#117](https://github.com/DetweilerRyan/split/issues/117): `typescript/consistent-type-assertions` reports `x as T` outside tests, since an assertion claims a type without the parse the principle asks for. [Types and schemas](types-and-schemas.md#checked-not-asserted) owns what to write instead, and [its sidecar](types-and-schemas.meta.md#checked-not-asserted) the decisions.
 
+## Type-aware linting
+
+- **Asked for** on [#120](https://github.com/DetweilerRyan/split/issues/120): `typescript/switch-exhaustiveness-check`, for _least power_'s exhaustive `switch`, needs type information, which oxlint gets only from a type-aware backend, a new dependency.
+- **Decided by the owner** in the session on 2026-11-25, [recorded on #120](https://github.com/DetweilerRyan/split/issues/120): "i expect this codebase to expand quite a bit... i'd like to turn on type aware linting and i'd like to use tsrs". The session had recommended leaving exhaustiveness to review, since only one `switch` in `src/` and `app/` was over a union, and `noImplicitReturns` already caught a missing case there. The owner chose for the codebase it expects to become.
+- **tsrs, not `oxlint-tsgolint`.** tsrs is oxc's Rust port of TypeScript 7.1's checker; `oxlint-tsgolint` is the Go backend, stable since July 2026. oxlint picks tsrs whenever it's installed, and has no setting to choose, so only tsrs is installed.
+- **The versions are pinned by the two-week rule** in [Choosing and adding dependencies](dependencies.md#after-approval): oxlint `1.93.0`, published 2026-11-09, and tsrs `0.24.0-ts7.1.0-beta`, published 2026-11-10, the newest releases at least two weeks old on 2026-11-25. tsrs's backend needs oxlint 1.92.0 or later and tsrs 0.23.0 or later.
+- **tsrs is a beta,** built on TypeScript 7.1's beta, while `tsc` here is 7.0.2. Lint may read a type as 7.1 does; `npm run typecheck` stays the type checker of record.
+- **What type-aware mode turned on by itself:** three rules oxlint runs by default once type information is there, which reported 27 warnings on 2026-11-25.
+  - `no-base-to-string`, 16: `ReceiptStore` and `storedParticipants` read each text field from the Yjs document, typed `unknown` because any peer can write it, with `String(…)`, which turns an object into `"[object Object]"`. `storedText` in `src/sync/` now reads a non-empty string as itself and anything else as the fallback, as _honest types_' "parse input where it enters" asks. The exchange-rate response's `date` is parsed as a string by its schema.
+  - `no-misused-spread`, 9, all in property tests, which spread an alphabet of single-code-point characters into what fast-check picks from. Tests are exempt, since the rule guards user text being split, and a test splitting its own alphabet means to.
+  - `no-duplicate-type-constituents`, 2: a test typed one parameter as a union of three rules of the same type, now that type.
+- **`switch-exhaustiveness-check` keeps its default options,** so a `default` doesn't count as handling a case: a new case would fall into it unnoticed, which is what the rule is for. It reported 17 `switch`es on 2026-11-25:
+  - 16 in oxCrap's property tests, whose `default` stood for the cases left. Each now names them.
+  - 1 in `scripts/lint/functional.ts`, which walks up through every kind of node oxlint's AST has, so its `default` is the open rest. It has a disable on its line, with that reason.
+- **oxCrap's own `switch`es aren't checked:** they switch on `AstNode`'s `type`, a `string`, which isn't a union.
+- **The cost,** measured on 2026-11-25: oxlint takes about 0.56 s with type information, and `npm run lint` still finishes in about 2 s.
+
 ## What would reopen this
 
 - **A principle an agent follows unprompted.** As models grow more capable, a principle they apply without being told becomes an instruction that only costs attention. Remove it then, and keep the rules its owning documents enforce.
