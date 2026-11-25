@@ -23,8 +23,7 @@ export type Fn = Range & {
   readonly label: string;
   /** Its label inside the functions around it: "RoomView > changeDisplayCurrency". */
   readonly name: string;
-  // oxlint-disable-next-line readonly/types -- countRecursion adds to it in place: a nested function's `parents` holds this Fn itself, so a copy would leave them stale.
-  complexity: number;
+  readonly complexity: number;
   /** UTF-16 offsets of the function in its file. */
   readonly offset: { readonly start: number; readonly end: number };
   /** The functions it sits inside, outermost first. */
@@ -145,10 +144,15 @@ type Source = {
   /** The lookup tables the module can read, own and imported, and the uses a local hides. */
   readonly tables: Readable;
 };
+/** A `Fn` as the walk builds it, before `countRecursion` adds to its complexity. */
+type Counted = Omit<Fn, 'complexity'> & {
+  // oxlint-disable-next-line readonly/types -- countRecursion adds to it in place: a nested function's `parents` holds this Fn itself, so a copy would leave them stale.
+  complexity: number;
+};
 /** What a walk finds: each function with the node it came from, and the simple statements. */
 type Found = {
   // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, so deeply nested code needs no copy at each level.
-  readonly functions: { readonly fn: Fn; readonly node: AstNode }[];
+  readonly functions: { readonly fn: Counted; readonly node: AstNode }[];
   // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, as for `functions`.
   readonly nested: NestedFn[];
   // oxlint-disable-next-line readonly/types -- walk() adds to one list in place, as for `functions`.
@@ -165,6 +169,7 @@ function walk(
   [parent, grandparent]: Around,
   enclosing: readonly Fn[],
   source: Source,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- walk() adds to one list in place, so deeply nested code needs no copy at each level.
   into: Found,
 ): void {
   const inside = record(node, parent, enclosing, source, into, () =>
@@ -176,6 +181,7 @@ function walk(
 }
 
 /** Walks a node at the top level, whose parent is the Program. A JSX expression is never one. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds to `into` in place, as walk() does.
 function walkTop(node: AstNode, program: AstNode, source: Source, into: Found): void {
   const inside = record(node, program, [], source, into, () => label(source.text, node, program));
   for (const child of children(node)) walk(child, [node, program], inside, source, into);
@@ -190,6 +196,7 @@ function record(
   parent: AstNode,
   enclosing: readonly Fn[],
   source: Source,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds to `into` in place, as walk() does.
   into: Found,
   labelOf: () => string,
 ): readonly Fn[] {
@@ -215,7 +222,7 @@ function describe<Parents extends readonly Fn[]>(
   own: string,
   parents: Parents,
   source: Source,
-): Fn & { readonly parents: Parents } {
+): Counted & { readonly parents: Parents } {
   return {
     label: own,
     name: [...parents.map((outer) => outer.label), own].join(' > '),
@@ -236,6 +243,7 @@ function describe<Parents extends readonly Fn[]>(
  */
 function countRecursion(
   program: AstNode,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- it adds 1 to each recursive function's complexity in place, before parse returns it as a readonly Fn.
   found: Found['functions'],
   scored: readonly Fn[],
   counting: Counting,
@@ -257,7 +265,7 @@ function countRecursion(
     },
   );
   // In place: a nested function's `parents` holds its outer `Fn` itself, so a copy would break it.
-  for (const fn of cycles) fn.complexity += 1;
+  for (const { fn } of found) if (cycles.has(fn)) fn.complexity += 1;
 }
 
 /** Whether `node` is passed straight to a call, as `items.forEach(() => …)` passes its callback. */

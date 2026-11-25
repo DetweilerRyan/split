@@ -194,6 +194,7 @@ function reports(
   rule: Parameters<RuleTester['run']>[1],
   code: string,
   count: number,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RuleTester takes oxlint's mutable `Options`, a JSON array with no readonly form.
   options?: Case['options'],
 ) {
   // A rule with no options refuses even an empty list, so `no-classes` is given none at all.

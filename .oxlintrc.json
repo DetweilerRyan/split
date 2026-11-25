@@ -124,6 +124,39 @@
     // The owner's decision (#69): the types we declare are readonly by default, checked level by
     // level. docs/engineering/types-and-schemas.md says what the rule asks for.
     "readonly/types": "error",
+    // Contained state (docs/engineering/code-design-principles.md, #132): a function doesn't change
+    // its caller's value, so each parameter's type is readonly all the way down, through imported
+    // types too, which readonly/types doesn't see. Tests are included. `allow` lists the library
+    // types the hits pass that the code can't make readonly; anything else is fixed or disabled.
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "ignoreInferredTypes": true,
+        "treatMethodsAsReadonly": true,
+        "allow": [
+          // React's children and form events, which React declares mutable.
+          { "from": "package", "package": "react", "name": ["ReactNode", "FormEvent"] },
+          // Yjs's shared types, which change in place by design: Y.Doc, and Y.Map, declared YMap.
+          { "from": "package", "package": "yjs", "name": ["Doc", "YMap"] },
+          // The DOM's and the language's own types, which TypeScript's lib declares mutable.
+          { "from": "lib", "name": ["Error", "Request", "URL", "StorageEvent"] },
+          // oxlint's plugin types, which the local lint rules take as oxlint gives them: any node
+          // (declared Node$1), the node kinds a rule visits, and a rule for RuleTester.
+          {
+            "from": "package",
+            "package": "oxlint",
+            "name": ["Node$1", "ThisExpression", "VariableDeclaration", "TSTypeReference", "Rule"]
+          },
+          // zod's brand, a type-only marker on a branded id, and the issues a failed parse gives.
+          { "from": "package", "package": "zod", "name": ["$brand", "$ZodIssue"] },
+          // The end-to-end tests' browser page, and Vitest's browser locator.
+          { "from": "package", "package": "playwright-core", "name": ["Page"] },
+          { "from": "package", "package": "@vitest/browser", "name": ["Locator"] },
+          // The schema errors Ajv gives oxCrap's config check.
+          { "from": "package", "package": "ajv", "name": ["ErrorObject"] }
+        ]
+      }
+    ],
     // The owner's decision (#119), for honest types (docs/engineering/code-design-principles.md):
     // no `!` claims a value the type says may be missing. Test files are exempt below.
     "typescript/no-non-null-assertion": "error"

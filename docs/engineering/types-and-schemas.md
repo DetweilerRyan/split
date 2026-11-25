@@ -30,20 +30,26 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
 
 ## Readonly by default
 
-`npm run lint` checks every type in `app/`, `src/`, `scripts/` and `e2e/`, tests included, with `readonly/types`, a local rule in [`scripts/lint/readonly.ts`](../../scripts/lint/readonly.ts). [`.oxlintrc.json`](../../.oxlintrc.json) loads it under `jsPlugins` and turns it on under `rules`.
+`npm run lint` checks readonly types in `app/`, `src/`, `scripts/` and `e2e/`, tests included, with two rules that [`.oxlintrc.json`](../../.oxlintrc.json) turns on:
 
-- **Write each type readonly, level by level, as the rule requires.** [Its README](../../scripts/lint/readonly.md) lists what it reports and what to write instead, and allows a mutable working value in a variable declared inside a function.
+- **`readonly/types`,** a local rule in [`scripts/lint/readonly.ts`](../../scripts/lint/readonly.ts), checks every type a file writes out, level by level: aliases, interfaces, return types and the rest. It doesn't see what an imported type holds.
+- **`typescript/prefer-readonly-parameter-types`** checks each parameter's type all the way down, through imported types, with type information. It doesn't check a type that isn't a parameter's. Its `allow` list names the library types a parameter may take as their library declares them.
+
+To meet both:
+
+- **Write each type readonly, level by level, as `readonly/types` requires.** [Its README](../../scripts/lint/readonly.md) lists what it reports and what to write instead, and allows a mutable working value in a variable declared inside a function.
 - **Don't change a readonly value in place.** Build a new one with `map`, `filter`, spread or a sorted copy.
 - **Give a zod schema that owns a type `.readonly()`** on each object and array, so `z.infer` gives a readonly type. In `src/domain/receipt/receiptSeed.ts`, `immutable` does it for the seed, whose JSON Schema the MCP tool serves.
 - **Write a module-level constant built from literals `as const`.** When a library's parameter takes a mutable array, pass it a copy, as in `[...signalingUrls]`.
-- **When a type must stay mutable,** such as a library's type, a global cache or a list a recursive walk fills in place, disable the rule on that line with a reason, as [`AGENTS.md`](../../AGENTS.md#definition-of-done) requires:
+- **Give a parameter only what the function reads,** such as `Pick<ReceiptStore, 'subscribe' | 'getSnapshot'>`, when the whole type isn't readonly.
+- **When a type must stay mutable,** such as a library's type, a global cache or a list a recursive walk fills in place, disable the rule on that line with a reason, as [`AGENTS.md`](../../AGENTS.md#definition-of-done) requires. A parameter that takes the list needs its own disable:
 
   ```ts
   // oxlint-disable-next-line readonly/types -- the list callsIn's walk adds to in place.
   type Calls = Call[];
   ```
 
-  Yjs types such as `Y.Map` and `Y.Doc` aren't checked, so they need no disable.
+  Yjs types such as `Y.Map` and `Y.Doc` aren't checked by `readonly/types`, and are in `prefer-readonly-parameter-types`' `allow` list, so they need no disable. Add a library type to `allow`, with a comment saying why, only when it can't be made readonly where the code takes it.
 
 ## Indexed reads and `!`
 

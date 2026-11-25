@@ -173,7 +173,7 @@ describe('room sync provider selection', () => {
       on: vi.fn(),
       setLocalStateField: vi.fn(),
     };
-    let onWebrtcStatus: ((status: { connected: boolean }) => void) | undefined;
+    let onWebrtcStatus: ((status: { readonly connected: boolean }) => void) | undefined;
     const webrtcProvider = {
       awareness,
       on: vi.fn((_event: string, listener: (status: { readonly connected: boolean }) => void) => {

@@ -55,6 +55,7 @@ function annotatesVariable(annotation: AnyNode): boolean {
 }
 
 /** Whether `node` is under a function, before the module's top level. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oxlint's AST nodes are mutable, and `allow` can't name them once `| null` joins their union.
 function underFunction(node: AnyNode | null): boolean {
   for (let at = node; at !== null; at = at.parent) {
     if (isFunction(at)) return true;

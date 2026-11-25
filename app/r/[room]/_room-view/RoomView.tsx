@@ -79,6 +79,7 @@ type RoomViewProps = {
 };
 
 /** A receipt room: its header, items and totals, and the dialogs they open. */
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- `provider` holds the room's ReceiptStore, the stateful class the owner kept on #83, whose fields change as the room does.
 export function RoomView({
   roomId,
   provider,

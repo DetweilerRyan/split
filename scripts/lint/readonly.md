@@ -95,7 +95,7 @@ function f() {
 - **Method signatures, and call and construct signatures,** which have no `readonly` form.
 - **`WeakMap` and `WeakSet`,** which have no readonly counterparts.
 - **Qualified names,** such as `ns.Map` or `Records.Record`, which may name other types, and look-alike names, such as `MyArray` or `ArrayLike`.
-- **What an imported type holds.** The rule sees the types written in the file it checks, so a type from another module or a library is as readonly as its own declaration.
+- **What an imported type holds.** The rule sees the types written in the file it checks, so a type from another module or a library is as readonly as its own declaration. For parameters, pair it with a type-aware check that sees through imports, such as `typescript/prefer-readonly-parameter-types`.
 - **A type that's inferred,** not written, such as `const cache = new Map<string, number>()` at module level.
 - **A class field's own `readonly` modifier.** Only the type written on the field is checked.
 - **Changes to a value at run time,** such as `push` on an array whose readonly type was cast away. The rule checks types, not code that mutates.

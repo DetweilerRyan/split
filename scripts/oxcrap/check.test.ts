@@ -30,7 +30,7 @@ function allowFor(crap: number, complexity: number, line = 1): Allow {
   };
 }
 
-function messages(findings: ReturnType<typeof check>) {
+function messages(findings: Readonly<ReturnType<typeof check>>) {
   return findings.map((f) => f.message);
 }
 
