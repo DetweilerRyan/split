@@ -1,10 +1,12 @@
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
+import * as Y from 'yjs';
 import {
   buildIngestUrl,
   decodeRoomId,
   decodeSeed,
   encodeRoomId,
   encodeSeed,
+  hydrateFromSeed,
   parseIngestUrl,
   parseRoomHash,
   parseRoomPath,
@@ -15,6 +17,7 @@ import { receiptSeedSchema } from '../domain/receipt/receiptSeed';
 import { createRoomId, roomIdSchema } from '../domain/room/roomId';
 import { savedIdentityKey, type SavedIdentityKey } from './savedIdentity';
 import { getRoomProvider, indexedDbName } from './yjsProvider';
+import { ReceiptStore } from './useReceiptStore';
 
 describe('room IDs, paths and ingest links', () => {
   it('creates opaque URL-safe URN room IDs and decodes them from hashes', () => {
@@ -194,6 +197,125 @@ describe('seed hydration into a room that already has data', () => {
       'USD',
       1.08,
       '2026-11-01',
+    ]);
+  });
+
+  it("keeps the room's details already set, and adds those it lacks", () => {
+    const doc = new Y.Doc();
+    doc.getMap('meta').set('title', 'Edited title');
+
+    hydrateFromSeed(doc, { ...seed, currency: 'EUR' });
+    const snapshot = new ReceiptStore(doc).getSnapshot();
+    expect([snapshot.title, snapshot.currency]).toEqual(['Edited title', 'EUR']);
+  });
+
+  it("leaves an entry in the room's items that isn't a map as it is", () => {
+    const doc = new Y.Doc();
+    doc.getMap('items').set('item-0', 'not a map');
+
+    hydrateFromSeed(doc, seed);
+    expect(doc.getMap('items').get('item-0')).toBe('not a map');
+  });
+
+  it('names an item with no printed name Receipt Item, new or filled in', () => {
+    const doc = new Y.Doc();
+    const stored = new Y.Map<unknown>();
+    stored.set('eur', 7);
+    doc.getMap('items').set('item-1', stored);
+    const items = [
+      { id: 'item-0', name: '', en: 'Soup', eur: 4 },
+      { id: 'item-1', name: '', en: 'Bread', eur: 2 },
+    ];
+
+    hydrateFromSeed(doc, receiptSeedSchema.parse({ ...seed, items }));
+    expect(new ReceiptStore(doc).getSnapshot().items).toEqual([
+      { id: 'item-0', name: 'Receipt Item', en: 'Soup', eur: 4, order: 0, claims: {} },
+      { id: 'item-1', name: 'Receipt Item', en: 'Bread', eur: 7, order: 1, claims: {} },
+    ]);
+  });
+});
+
+describe("the room's details in seeds", () => {
+  it('trims each detail, and leaves out one that is blank', () => {
+    const doc = new Y.Doc();
+
+    hydrateFromSeed(doc, { ...seed, address: '  1 Main St  ', phone: '   ' });
+    expect(doc.getMap('meta').get('address')).toBe('1 Main St');
+    expect(doc.getMap('meta').has('phone')).toBe(false);
+    expect(doc.getMap('meta').has('website')).toBe(false);
+  });
+
+  it('stores a display currency with no rate as rate 0 and no date', () => {
+    const doc = new Y.Doc();
+
+    hydrateFromSeed(doc, { ...seed, displayCurrency: 'eur' });
+    const meta = doc.getMap('meta');
+    expect([meta.get('displayCurrency'), meta.get('rate'), meta.get('rateDate')]).toEqual([
+      'EUR',
+      0,
+      '',
+    ]);
+  });
+
+  it('stores no display currency, rate or date when the seed has no display currency', () => {
+    const doc = new Y.Doc();
+
+    hydrateFromSeed(doc, { ...seed, rate: 1.08, rateDate: '2026-11-01' });
+    const meta = doc.getMap('meta');
+    expect(['displayCurrency', 'rate', 'rateDate'].filter((key) => meta.has(key))).toEqual([]);
+  });
+});
+
+describe('seed hydration with forceReset', () => {
+  it("replaces the room's details, people, items and claims with the seed's", () => {
+    const doc = new Y.Doc();
+    hydrateFromSeed(
+      doc,
+      receiptSeedSchema.parse({
+        ...seed,
+        address: '1 Main St',
+        roster: ['Sam'],
+        items: [...seed.items, { id: 'item-9', name: 'Flan', en: 'Flan', eur: 3 }],
+      }),
+    );
+    doc.getMap('meta').set('title', 'Edited title');
+    doc.getMap<Y.Map<unknown>>('items').get('item-0')?.set('name', 'Edited taco');
+    doc.getMap('claims').set('item-0::p-sam', true);
+
+    hydrateFromSeed(doc, { ...seed, title: 'Cantina', roster: ['Amy'] }, { forceReset: true });
+    const snapshot = new ReceiptStore(doc).getSnapshot();
+    expect(snapshot.title).toBe('Cantina');
+    expect(doc.getMap('meta').has('address')).toBe(false);
+    expect(snapshot.participants.map(({ id }) => id)).toEqual(['p-amy']);
+    expect(snapshot.items).toEqual([
+      {
+        id: 'item-0',
+        name: 'Taco (1/2)',
+        en: 'Taco',
+        eur: 5,
+        order: 0,
+        claims: { 'p-amy': false },
+      },
+    ]);
+    expect(doc.getMap('claims').size).toBe(0);
+  });
+
+  // The seed's schema refuses two items of the same id, but not an item-1 and an empty id read as
+  // item-1. Without forceReset the later one only fills in what the earlier one lacks; with it,
+  // the later one replaces it.
+  it('lets a later item replace an earlier one read as the same id', () => {
+    const items = [
+      { id: 'item-1', name: 'Soup', en: 'Soup', eur: 4 },
+      { id: '', name: 'Bread', en: 'Bread', eur: 2 },
+    ];
+    const kept = new Y.Doc();
+    const replaced = new Y.Doc();
+
+    hydrateFromSeed(kept, receiptSeedSchema.parse({ ...seed, items }));
+    hydrateFromSeed(replaced, receiptSeedSchema.parse({ ...seed, items }), { forceReset: true });
+    expect(new ReceiptStore(kept).getSnapshot().items.map(({ name }) => name)).toEqual(['Soup']);
+    expect(new ReceiptStore(replaced).getSnapshot().items.map(({ name }) => name)).toEqual([
+      'Bread',
     ]);
   });
 });
