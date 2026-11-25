@@ -157,7 +157,7 @@
           {
             "from": "package",
             "package": "fast-check",
-            "name": ["Parameters", "IProperty", "RunDetails"]
+            "name": ["Parameters", "IProperty", "IRawProperty", "RunDetails"]
           },
           // The schema errors Ajv gives oxCrap's config check.
           { "from": "package", "package": "ajv", "name": ["ErrorObject"] }

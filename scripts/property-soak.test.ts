@@ -106,7 +106,7 @@ describe('soakReport', () => {
     const details: fc.RunDetails<unknown> = { ...checked, interrupted: true };
 
     expect(soakReport(budget, details).message).toContain(
-      `The time limit cut shrinking short. To finish it, run again with PROPERTY_SEED=${String(details.seed)} PROPERTY_PATH=${String(details.counterexamplePath)} and no PROPERTY_SOAK_SECONDS.`,
+      `The time limit cut shrinking short. To finish it, run this test alone again, with Vitest's -t, setting PROPERTY_SEED=${String(details.seed)} PROPERTY_PATH=${String(details.counterexamplePath)} and no PROPERTY_SOAK_SECONDS.`,
     );
   });
 });
@@ -146,12 +146,40 @@ describe('soakAssert', () => {
     }).toThrow('Counterexample: [5]');
   });
 
-  it('refuses an async property', () => {
+  it('replays a passing seed with the test count, not a soak, and logs nothing', () => {
+    const lines: string[] = [];
+    let runs = 0;
+    const passing = fc.property(fc.integer(), () => {
+      runs += 1;
+    });
+
+    soakAssert({ seconds: undefined, seed: 7, path: '0' }, (line) => {
+      lines.push(line);
+    })(passing, { numRuns: 300 });
+
+    expect(runs).toBe(300);
+    expect(lines).toStrictEqual([]);
+  });
+
+  it('replays an async property through fc.assert', async () => {
+    const failing = fc.asyncProperty(fc.integer({ min: 0, max: 10 }), async (n) => {
+      await Promise.resolve();
+      expect(n).toBeLessThan(5);
+    });
+    const { seed, counterexamplePath } = await fc.check(failing, { seed: 3 });
+
+    await expect(
+      soakAssert({ seconds: undefined, seed, path: counterexamplePath ?? undefined }, () => {})(
+        failing,
+      ),
+    ).rejects.toThrow('Counterexample: [5]');
+  });
+
+  it('refuses to soak an async property with a time budget', () => {
     const async = fc.asyncProperty(fc.boolean(), async () => {});
 
     expect(() => {
-      // @ts-expect-error -- the soak takes synchronous properties only, and checks at run time too.
       soakAssert(budget, () => {})(async);
-    }).toThrow('A soak runs synchronous properties only; this one is async.');
+    }).toThrow('A soak with a time budget runs synchronous properties only; this one is async.');
   });
 });

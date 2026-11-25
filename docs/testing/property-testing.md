@@ -35,9 +35,9 @@ A property test checks a rule that should hold for every input, against many inp
 
 ## Soaking a new property
 
-Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. The soak is set by environment variables, which [`scripts/property-soak.ts`](../../scripts/property-soak.ts) reads, so it changes no file.
+Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. The soak is set by environment variables, which [`scripts/property-soak.ts`](../../scripts/property-soak.ts) reads. Don't edit the test to soak it.
 
-1. **Start the soak as a background command,** so the session keeps working while it runs. For a property under `src/` or `app/`:
+1. **Start the soak as a background command,** and keep working until it finishes. For a property under `src/` or `app/`:
 
    ```bash
    PROPERTY_SOAK_SECONDS=120 npx vitest run <path> -t '<test name>' --testTimeout=0 --silent=false --coverage.enabled=false
@@ -46,10 +46,9 @@ Before you commit a new property, run it for two minutes rather than its usual c
    For one under `scripts/`, add `-c vitest.tooling.config.ts`. Leave out `-t` to soak every property in the file, each for the full two minutes.
 
 2. **Read the result when it finishes.** A property that passed prints `Soak passed:` and how many inputs it ran. One that failed prints its shrunk input, seed and path.
-3. **If the report says the time limit cut shrinking short,** run the command it gives, which replays the input with `PROPERTY_SEED` and `PROPERTY_PATH` and no time limit, and use the input that run shrinks to.
-4. **For each failure, decide where the fault is.** If the code is wrong, fix the code. If the property or its generator is wrong, such as a rule that doesn't hold for an input the code handles correctly, fix the property.
-5. **Keep the shrunk input,** as [Keeping a failing input](#keeping-a-failing-input) says.
-6. **Soak it again.**
+3. **If the report says the time limit cut shrinking short,** replay the seed and path it gives on that test alone, as [When one fails](#when-one-fails) shows, and use the input that run shrinks to.
+4. **Handle each failure** as [When one fails](#when-one-fails) says.
+5. **Soak it again.**
 
 Once a soak passes, say in the pull request how many inputs it ran and what it found.
 
@@ -63,8 +62,9 @@ Once a soak passes, say in the pull request how many inputs it ran and what it f
 
   For a file under `scripts/`, add `-c vitest.tooling.config.ts`.
 
-- **For each failure, decide where the fault is,** as for a soak failure.
-- **Once it's fixed, keep the shrunk input,** as below.
+- **Decide where the fault is.** The property or its generator may be wrong, such as a rule that doesn't hold for an input the code handles correctly, or the code may be.
+- **Keep the shrunk input** as [Keeping a failing input](#keeping-a-failing-input) says, before you fix anything.
+- **If the code is wrong,** confirm the new example test fails, then fix the code, as [Fixing a bug](../engineering/testing-conventions.md#fixing-a-bug) says. If the property is wrong, fix the property.
 
 ## Keeping a failing input
 
