@@ -29,43 +29,49 @@ export function claimKey(itemId: ItemId, participantId: ParticipantId): ClaimKey
  * catches, so parsing never fails: a missing or malformed value reads as its fallback, and keys
  * the app doesn't know are left out.
  */
-const storedMetaSchema = z.object({
-  title: storedTextSchema('European Receipt'),
-  address: storedTextSchema(''),
-  phone: storedTextSchema(''),
-  website: storedTextSchema(''),
-  purchasedAt: storedTextSchema(''),
-  mealType: storedTextSchema(''),
-  cardTipEur: numberOrZeroSchema,
-  cashTipEur: numberOrZeroSchema,
-  bankUsd: numberOrZeroSchema,
-  currency: z.unknown().optional().transform(normalizeCurrency),
-  displayCurrency: storedTextSchema(''),
-  rate: numberOrZeroSchema,
-  rateDate: storedTextSchema(''),
-});
+const storedMetaSchema = z
+  .object({
+    title: storedTextSchema('European Receipt'),
+    address: storedTextSchema(''),
+    phone: storedTextSchema(''),
+    website: storedTextSchema(''),
+    purchasedAt: storedTextSchema(''),
+    mealType: storedTextSchema(''),
+    cardTipEur: numberOrZeroSchema,
+    cashTipEur: numberOrZeroSchema,
+    bankUsd: numberOrZeroSchema,
+    currency: z.unknown().optional().transform(normalizeCurrency),
+    displayCurrency: storedTextSchema(''),
+    rate: numberOrZeroSchema,
+    rateDate: storedTextSchema(''),
+  })
+  .readonly();
 
 /** A participant's fields besides its id, as a peer stored them, each with its fallback. */
-const storedParticipantSchema = z.object({
-  id: z.unknown().optional(),
-  name: storedTextSchema('Friend'),
-  colorIdx: numberOrZeroSchema,
-});
+const storedParticipantSchema = z
+  .object({
+    id: z.unknown().optional(),
+    name: storedTextSchema('Friend'),
+    colorIdx: numberOrZeroSchema,
+  })
+  .readonly();
 
 /**
  * An item's fields besides its id and claims, as a peer stored them, each with its fallback. An
  * `order` that isn't a number reads as `NaN`, and the snapshot then sorts the item by its id.
  */
-const storedItemSchema = z.object({
-  id: z.unknown().optional(),
-  name: storedTextSchema('Item'),
-  en: storedTextSchema(''),
-  eur: numberOrZeroSchema,
-  order: z
-    .unknown()
-    .optional()
-    .transform((order) => Number(order ?? 999)),
-});
+const storedItemSchema = z
+  .object({
+    id: z.unknown().optional(),
+    name: storedTextSchema('Item'),
+    en: storedTextSchema(''),
+    eur: numberOrZeroSchema,
+    order: z
+      .unknown()
+      .optional()
+      .transform((order) => Number(order ?? 999)),
+  })
+  .readonly();
 
 /**
  * The id of an item stored in the room's `items` map under `key`: its `id` field, or `key` when
