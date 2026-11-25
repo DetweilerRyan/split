@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { RoomSnapshot } from './roomSnapshot';
 import { buildExportText } from './exportText';
+import type { Frozen } from '../../utils/frozen';
 
 const names = ['Ana', 'Ben', 'Cy', 'Dee'] as const;
 
@@ -40,8 +41,6 @@ const receipt = fc.record({
   ),
 });
 
-/** `T` readonly at every level, as the code under test receives it. */
-type Frozen<T> = { readonly [K in keyof T]: Frozen<T[K]> };
 type Receipt = Frozen<typeof receipt extends fc.Arbitrary<infer R> ? R : never>;
 
 function snapshotOf(r: Receipt): RoomSnapshot {

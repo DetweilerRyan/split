@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { RoomSnapshot } from './roomSnapshot';
 import { allocateMinor, computeReceiptMath } from './math';
+import type { Frozen } from '../../utils/frozen';
 
 /** A currency as a receipt might name it, with the code it stands for and its decimals. */
 type WrittenCurrency = {
@@ -76,8 +77,6 @@ const receipt = fc.record({
   rate: fc.oneof(fc.constant(0), fc.double({ min: 0.0001, max: 10_000, noNaN: true })),
 });
 
-/** `T` readonly at every level, as the code under test receives it. */
-type Frozen<T> = { readonly [K in keyof T]: Frozen<T[K]> };
 type Receipt = Frozen<typeof receipt extends fc.Arbitrary<infer R> ? R : never>;
 
 function major(amountMinor: number, exponent: number) {
