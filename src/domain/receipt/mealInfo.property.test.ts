@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { parsePurchasedAt } from './mealInfo';
-import type { Frozen } from '@/utils/frozen';
+import type { DeepReadonly } from '@/utils/deepReadonly';
 
 /** The first local moment of a year, including years below 100, which `new Date(y, …)` maps to 19xx. */
 function startOfYear(year: number) {
@@ -64,7 +64,7 @@ function write({
   time,
   before,
   after,
-}: Frozen<typeof written extends fc.Arbitrary<infer W> ? W : never>) {
+}: DeepReadonly<typeof written extends fc.Arbitrary<infer W> ? W : never>) {
   const date = `${pad(m.year, 4)}-${pad(m.month)}-${pad(m.day)}`;
   const clock =
     time !== null ? `${time.separator}${pad(m.hour)}:${pad(m.minute)}${time.after}` : '';

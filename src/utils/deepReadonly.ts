@@ -3,4 +3,4 @@
  * leave mutable, so they can be passed where a parameter is readonly all the way down, as
  * `typescript/prefer-readonly-parameter-types` asks.
  */
-export type Frozen<T> = { readonly [K in keyof T]: Frozen<T[K]> };
+export type DeepReadonly<T> = { readonly [K in keyof T]: DeepReadonly<T[K]> };
