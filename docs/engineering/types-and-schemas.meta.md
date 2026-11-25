@@ -90,6 +90,13 @@ Why the rules in [types and schemas](types-and-schemas.md) are as they are, and 
 - **What the sweep changed:** 95 assertions outside tests when the rule was turned on, counted on #117. A string name in an import or export, as in `export { T as 'a-b' }`, now names no table or function, where before it was read as `undefined`. A parse error in a coverage report now gives its error's name before its message. `decodeSeed` in `src/sync/seedCodec.ts` parses the whole seed with `receiptSeedSchema`, where it had checked only that `items` was an array, so a seed missing a field, such as `roster`, is now refused as no seed. The owner chose "Parse the whole seed" on [#128](https://github.com/DetweilerRyan/split/pull/128), accepting that.
 - **Equivalent mutants:** the owner chose "Prove it in the type, else disable" on #128. Where a library's own type allows a value it never gives, as Ajv's `validate.errors` allows null after a failed validation, the fallback stays, with a Stryker disable saying why.
 
+## Reading the Yjs document
+
+- **Asked for** by the owner in the session on 2026-11-25: "i'd like us to leverage zod as much as possible for validation, parsing and refinment. spike out using zod 4's .catch()". The spike, [#152](https://github.com/DetweilerRyan/split/pull/152), replaced the hand-written `storedText` and `numberOrZero` with schemas, and the owner adopted it: "adpot it", [recorded there](https://github.com/DetweilerRyan/split/pull/152#issuecomment-7172534333).
+- **Cost:** about 5 times the hand-written reads, measured on #152 with 12 people and 200 items. A rebuild went from 0.35 ms to 1.8 ms, and nearly all of it is zod's parse, mostly the `.catch()` path for missing fields, not `toJSON()`. That's far inside a 16 ms frame even on every keystroke, and real receipts are much smaller. Reopen this if a room grows large enough for a rebuild to show.
+- **Infinity reads as 0,** since zod 4's `z.number()` refuses it. Before, `numberOrZero` returned it. An infinite amount is no amount.
+- **Never writing repairs back, and adding fields rather than renaming them,** come from research in the same session: the [Yjs forum's thread on migrations](https://discuss.yjs.dev/t/what-is-the-correct-way-to-apply-document-migrations/2321) reports repairs and migrations racing between peers under last-writer-wins, with the winner effectively random. [Loro's maintainer](https://github.com/loro-dev/loro/discussions/314) argues that validation belongs in the app layer, since refusing updates can break a CRDT's consistency.
+
 ## The document's scope
 
 - **Not taken:** a broader `code-conventions.md`, considered on #43. Its "Read when" would match almost every task, and it would collect unrelated rules.
