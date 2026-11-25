@@ -2,15 +2,42 @@ import { useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
 import { DEFAULT_CURRENCY, normalizeCurrency } from '../domain/money/currency';
 import {
+  type ItemId,
   type Participant,
+  type ParticipantId,
   type ReceiptItem,
   type RoomSnapshot,
   findParticipant,
+  itemIdSchema,
+  parseItemId,
   participantId,
 } from '../domain/receipt/roomSnapshot';
-import { storedParticipants } from './storedParticipants';
+import { storedParticipantId, storedParticipants } from './storedParticipants';
 import { storedText } from './storedText';
 import { numberOrZero } from '../utils/numberOrZero';
+
+/** The key of a participant's claim on an item in the room's `claims` map. */
+export type ClaimKey = `${ItemId}::${ParticipantId}`;
+
+export function claimKey(itemId: ItemId, participantId: ParticipantId): ClaimKey {
+  return `${itemId}::${participantId}` as const;
+}
+
+/**
+ * The id of an item stored in the room's `items` map under `key`: its `id` field, or `key` when
+ * that isn't text. `null`, with a console warning naming it, when that isn't an item id, which
+ * leaves the item and its claims out of the snapshot, as the owner chose on #124.
+ */
+function storedItemId(value: unknown, key: string): ItemId | null {
+  const stored = storedText(value, key);
+  const id = parseItemId(stored);
+  if (id === null) {
+    console.warn(
+      `SplitSmart left out the item stored as ${JSON.stringify(stored)}, and its claims: that isn't an item id.`,
+    );
+  }
+  return id;
+}
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
   (process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ?? '') !== '' ? 'Liveblocks' : 'WebRTC';
@@ -118,7 +145,7 @@ export class ReceiptStore {
     return { id, name: trimmed, colorIdx };
   }
 
-  removeParticipant(id: string): void {
+  removeParticipant(id: ParticipantId): void {
     this.ydoc.transact(() => {
       this.participants.delete(id);
       this.claims.forEach((_value, key) => {
@@ -127,8 +154,8 @@ export class ReceiptStore {
     });
   }
 
-  toggleClaim(itemId: string, participantId: string): void {
-    const key = `${itemId}::${participantId}`;
+  toggleClaim(itemId: ItemId, participantId: ParticipantId): void {
+    const key = claimKey(itemId, participantId);
     const item = this.items.get(itemId);
     if (item === undefined) return;
     const legacyClaims = item.get('claims');
@@ -138,18 +165,18 @@ export class ReceiptStore {
     this.claims.set(key, !current);
   }
 
-  setClaims(itemId: string, participantIds: readonly string[], selected: boolean): void {
+  setClaims(itemId: ItemId, participantIds: readonly ParticipantId[], selected: boolean): void {
     this.ydoc.transact(() => {
-      participantIds.forEach((id) => this.claims.set(`${itemId}::${id}`, selected));
+      participantIds.forEach((id) => this.claims.set(claimKey(itemId, id), selected));
     });
   }
 
-  updateItem(id: string, field: 'name' | 'en' | 'eur', value: string | number): void {
+  updateItem(id: ItemId, field: 'name' | 'en' | 'eur', value: string | number): void {
     this.items.get(id)?.set(field, value);
   }
 
   addItem(name: string, en: string, eur: number): void {
-    const id = `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const id = itemIdSchema.parse(`item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
     const item = new Y.Map<unknown>();
     item.set('id', id);
     item.set('order', this.items.size);
@@ -159,7 +186,7 @@ export class ReceiptStore {
     this.items.set(id, item);
   }
 
-  deleteItem(id: string): void {
+  deleteItem(id: ItemId): void {
     this.items.delete(id);
   }
 
@@ -168,16 +195,22 @@ export class ReceiptStore {
     this.listeners.forEach((listener) => listener());
   }
 
+  // @crap-allow CRAP 11, complexity 11. It reads each participant, item and claim from the Yjs
+  // document with a fallback for each field, and leaves out a participant or item whose id
+  // doesn't parse (#124), which took it one over the limit. Splitting the participants from the
+  // items would scatter the snapshot's shape; reading a whole participant and a whole item with a
+  // schema would bring it within the limits, so do that when either gains a field.
   private createSnapshot(): RoomSnapshot {
     const participants: Participant[] = [];
     this.participants.forEach((map, key) => {
-      if (map instanceof Y.Map) {
-        participants.push({
-          id: storedText(map.get('id'), key),
-          name: storedText(map.get('name'), 'Friend'),
-          colorIdx: numberOrZero(map.get('colorIdx')),
-        });
-      }
+      if (!(map instanceof Y.Map)) return;
+      const id = storedParticipantId(map.get('id'), key);
+      if (id === null) return;
+      participants.push({
+        id,
+        name: storedText(map.get('name'), 'Friend'),
+        colorIdx: numberOrZero(map.get('colorIdx')),
+      });
     });
     participants.sort((a, b) =>
       a.colorIdx !== b.colorIdx ? a.colorIdx - b.colorIdx : a.id.localeCompare(b.id),
@@ -186,11 +219,12 @@ export class ReceiptStore {
     const items: ReceiptItem[] = [];
     this.items.forEach((map, key) => {
       if (!(map instanceof Y.Map)) return;
-      const id = storedText(map.get('id'), key);
+      const id = storedItemId(map.get('id'), key);
+      if (id === null) return;
       const legacyClaims = map.get('claims');
-      const claimState: Record<string, boolean> = {};
+      const claimState: Record<ParticipantId, boolean> = {};
       participants.forEach(({ id: participantId }) => {
-        const key = `${id}::${participantId}`;
+        const key = claimKey(id, participantId);
         claimState[participantId] = this.claims.has(key)
           ? this.claims.get(key) === true
           : legacyClaims instanceof Y.Map && legacyClaims.get(participantId) === true;

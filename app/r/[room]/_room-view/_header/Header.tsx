@@ -1,6 +1,6 @@
 import { CalendarDays, ChevronRight, Pencil, Share2, Users } from 'lucide-react';
 import { formatPurchaseTime, parsePurchasedAt } from '@/domain/receipt/mealInfo';
-import type { Participant, RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import type { Participant, ParticipantId, RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { getConnectionStatusDisplay } from './connectionStatus';
 
 type HeaderProps = {
@@ -8,7 +8,7 @@ type HeaderProps = {
   readonly purchasedAt: string;
   readonly mealType: string;
   readonly onDetails: () => void;
-  readonly activeId: string | null;
+  readonly activeId: ParticipantId | null;
   readonly connection: RoomSnapshot['connection'];
   readonly peers: RoomSnapshot['peers'];
   readonly participants: readonly Participant[];

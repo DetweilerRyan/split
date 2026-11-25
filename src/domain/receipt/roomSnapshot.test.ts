@@ -1,5 +1,59 @@
 import { describe, expect, it } from 'vitest';
-import { findParticipant, participantId } from './roomSnapshot';
+import {
+  findParticipant,
+  parseItemId,
+  parseParticipantId,
+  participantId,
+  participantIdSchema,
+} from './roomSnapshot';
+
+describe('parseParticipantId', () => {
+  it('accepts an id participantId mints, in any script', () => {
+    expect(parseParticipantId('p-sam')).toBe('p-sam');
+    expect(parseParticipantId('p-josé-李-2')).toBe('p-josé-李-2');
+    expect(parseParticipantId('p-हिन्दी')).toBe('p-हिन्दी');
+  });
+
+  it('accepts an id stored under the older ASCII-only rule', () => {
+    expect(parseParticipantId('p-zo-lee')).toBe('p-zo-lee');
+    expect(parseParticipantId('p-jos')).toBe('p-jos');
+  });
+
+  it('refuses p- on its own, the id the older rule gave a name with no ASCII letter or digit', () => {
+    expect(parseParticipantId('p-')).toBeNull();
+  });
+
+  it('refuses an id with an empty word, a separator other than -, or no p- prefix', () => {
+    expect(parseParticipantId('p--sam')).toBeNull();
+    expect(parseParticipantId('p-sam-')).toBeNull();
+    expect(parseParticipantId('p-sam lee')).toBeNull();
+    expect(parseParticipantId('p-sam_lee')).toBeNull();
+    expect(parseParticipantId('sam')).toBeNull();
+    expect(parseParticipantId('P-sam')).toBeNull();
+    expect(parseParticipantId('')).toBeNull();
+  });
+
+  it('refuses a value that is not a string', () => {
+    expect(parseParticipantId(42)).toBeNull();
+    expect(parseParticipantId(null)).toBeNull();
+    expect(parseParticipantId(undefined)).toBeNull();
+  });
+});
+
+describe('parseItemId', () => {
+  it('accepts any text from 1 to 64 characters', () => {
+    expect(parseItemId('item-0')).toBe('item-0');
+    expect(parseItemId('item-1764000000000-a1b2c')).toBe('item-1764000000000-a1b2c');
+    expect(parseItemId('x')).toBe('x');
+    expect(parseItemId('x'.repeat(64))).toBe('x'.repeat(64));
+  });
+
+  it('refuses an empty id, one longer than 64 characters, and a value that is not a string', () => {
+    expect(parseItemId('')).toBeNull();
+    expect(parseItemId('x'.repeat(65))).toBeNull();
+    expect(parseItemId(7)).toBeNull();
+  });
+});
 
 describe('participantId', () => {
   it('lower-cases the name and joins its words with hyphens', () => {
@@ -50,22 +104,19 @@ describe('participantId', () => {
 });
 
 describe('findParticipant', () => {
-  const sam = { id: 'p-sam', name: 'Sam' };
+  const sam = { id: participantIdSchema.parse('p-sam'), name: 'Sam' };
 
   it('finds the participant whose id the name gives', () => {
     expect(findParticipant([sam], ' SAM ')).toBe(sam);
   });
 
   it('finds a participant stored under an older id by its name', () => {
-    const jose = { id: 'p-jos', name: 'José' };
+    const jose = { id: participantIdSchema.parse('p-jos'), name: 'José' };
     expect(findParticipant([sam, jose], 'josé')).toBe(jose);
   });
 
-  it("doesn't match a non-Latin name to another stored under the old empty id", () => {
-    expect(findParticipant([{ id: 'p-', name: 'Мария' }], '李')).toBeUndefined();
-  });
-
   it('finds nobody for a name with no letter or digit', () => {
-    expect(findParticipant([{ id: 'p-', name: '!!!' }], '!!!')).toBeUndefined();
+    const stored = { id: participantIdSchema.parse('p-x'), name: '!!!' };
+    expect(findParticipant([stored], '!!!')).toBeUndefined();
   });
 });

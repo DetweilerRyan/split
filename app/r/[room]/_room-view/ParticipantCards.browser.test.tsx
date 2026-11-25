@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { page, type Locator } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import '../../../index.css';
-import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import {
+  type RoomSnapshot,
+  itemIdSchema,
+  participantIdSchema,
+} from '@/domain/receipt/roomSnapshot';
 import { ParticipantCards } from './ParticipantCards';
+
+const ryan = participantIdSchema.parse('p-ryan');
+const jameson = participantIdSchema.parse('p-jameson');
 
 // Ryan ate €100 and Jameson €37 of a €140 card payment (€3 card tip) with a €10 cash tip, and the
 // bank charged $154: €1 = $1.1. Tips split by what each person ate.
@@ -22,12 +29,26 @@ const dinner: RoomSnapshot = {
   rate: 0,
   rateDate: '',
   participants: [
-    { id: 'p-ryan', name: 'Ryan', colorIdx: 0 },
-    { id: 'p-jameson', name: 'Jameson', colorIdx: 1 },
+    { id: ryan, name: 'Ryan', colorIdx: 0 },
+    { id: jameson, name: 'Jameson', colorIdx: 1 },
   ],
   items: [
-    { id: 'item-0', name: 'Meal A', en: '', eur: 100, order: 0, claims: { 'p-ryan': true } },
-    { id: 'item-1', name: 'Meal B', en: '', eur: 37, order: 1, claims: { 'p-jameson': true } },
+    {
+      id: itemIdSchema.parse('item-0'),
+      name: 'Meal A',
+      en: '',
+      eur: 100,
+      order: 0,
+      claims: { [ryan]: true },
+    },
+    {
+      id: itemIdSchema.parse('item-1'),
+      name: 'Meal B',
+      en: '',
+      eur: 37,
+      order: 1,
+      claims: { [jameson]: true },
+    },
   ],
   connection: { provider: 'WebRTC', status: 'connected' },
   peers: [],

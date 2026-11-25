@@ -1,5 +1,6 @@
 import { devices, type Browser, type Page } from '@playwright/test';
-import type { ReceiptSeed } from '../../src/domain/receipt/receiptSeed';
+import type { z } from 'zod';
+import type { receiptSeedSchema } from '../../src/domain/receipt/receiptSeed';
 import { connectToMcpServer, type McpSession, type ToolResult } from './mcp';
 
 /** Something an actor does, made of interactions with the abilities the actor has. */
@@ -9,7 +10,8 @@ export type Question<T> = (actor: Actor) => T;
 
 /** What an actor can remember between steps. */
 export type Notes = {
-  readonly receipt: ReceiptSeed;
+  /** The receipt an assistant sends the MCP tool, as JSON: its ids aren't parsed yet. */
+  readonly receipt: z.input<typeof receiptSeedSchema>;
   readonly toolResult: ToolResult;
 };
 

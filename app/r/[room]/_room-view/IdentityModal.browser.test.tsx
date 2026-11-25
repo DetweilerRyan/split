@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import '../../../index.css';
+import { participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { IdentityModal } from './IdentityModal';
 
-const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 } as const;
-const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 } as const;
+const alex = { id: participantIdSchema.parse('p-alex'), name: 'Alex', colorIdx: 0 } as const;
+const sam = { id: participantIdSchema.parse('p-sam'), name: 'Sam', colorIdx: 1 } as const;
 
 async function renderModal(props: Partial<Parameters<typeof IdentityModal>[0]> = {}) {
   const handlers = { onClose: vi.fn(), onSelect: vi.fn(), onAdd: vi.fn(), onRemove: vi.fn() };

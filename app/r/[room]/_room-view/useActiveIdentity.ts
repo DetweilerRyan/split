@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { readSavedIdentity, saveIdentity, subscribeToSavedIdentity } from '@/sync/savedIdentity';
 import type { RoomProvider } from '@/sync/yjsProvider';
+import type { ParticipantId } from '@/domain/receipt/roomSnapshot';
 import type { RoomId } from '@/domain/room/roomId';
 
 type Participant = {
-  readonly id: string;
+  readonly id: ParticipantId;
   readonly name: string;
   readonly colorIdx: number;
 };
@@ -14,7 +15,7 @@ export function useActiveIdentity(
   roomId: RoomId,
   participants: readonly Participant[],
 ) {
-  const [chosenId, setActiveId] = useState<string | null>(null);
+  const [chosenId, setActiveId] = useState<ParticipantId | null>(null);
 
   // The identity saved for this room lives in localStorage, which changes without React
   // knowing (another tab can save one), so it is read as an external store rather than during
@@ -32,11 +33,11 @@ export function useActiveIdentity(
   // The active identity is the one chosen, else the one saved for this room, else the first
   // participant. It is worked out during render from React's own values, so no render goes by
   // without one.
-  function isParticipant(id: string | null) {
+  function isParticipant(id: ParticipantId | null) {
     return id !== null && participants.some((person) => person.id === id);
   }
   const [firstParticipant] = participants;
-  let activeId: string | null = null;
+  let activeId: ParticipantId | null = null;
   if (isParticipant(chosenId)) {
     activeId = chosenId;
   } else if (firstParticipant !== undefined) {

@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import {
   buildIngestUrl,
   decodeRoomId,
@@ -11,6 +11,7 @@ import {
   pendingSeedKey,
   roomPath,
 } from './seedCodec';
+import { receiptSeedSchema } from '../domain/receipt/receiptSeed';
 import { createRoomId, roomIdSchema } from '../domain/room/roomId';
 import { savedIdentityKey, type SavedIdentityKey } from './savedIdentity';
 import { getRoomProvider, indexedDbName } from './yjsProvider';
@@ -102,14 +103,14 @@ describe('room IDs, paths and ingest links', () => {
   });
 });
 
-const seed = {
+const seed = receiptSeedSchema.parse({
   title: 'Taverna',
   cardTipEur: 0,
   cashTipEur: 0,
   bankUsd: 0,
   roster: [],
   items: [{ id: 'item-0', name: 'Taco (1/2)', en: 'Taco', eur: 5 }],
-} as const;
+});
 
 describe('ingest links', () => {
   it('round-trips a built ingest link through parseIngestUrl', () => {
@@ -132,8 +133,19 @@ describe('decoding a seed', () => {
     ['a seed with only a title and items', JSON.stringify({ title: 'No roster', items: [] })],
     ['a seed whose item has no price', JSON.stringify({ ...seed, items: [{ id: 'item-0' }] })],
     ['a compressed seed with no roster', encodeSeed({ ...seed, roster: undefined } as never)],
+    [
+      'a seed whose item id is longer than 64 characters',
+      JSON.stringify({ ...seed, items: [{ ...seed.items[0], id: 'x'.repeat(65) }] }),
+    ],
   ])('refuses %s', (_, value) => {
     expect(decodeSeed(value)).toBeNull();
+  });
+
+  it('accepts an item id of up to 64 characters, and an empty one', () => {
+    const long = { ...seed, items: [{ ...seed.items[0], id: 'x'.repeat(64) }] };
+    const empty = { ...seed, items: [{ ...seed.items[0], id: '' }] };
+    expect(decodeSeed(JSON.stringify(long))).toEqual(long);
+    expect(decodeSeed(JSON.stringify(empty))).toEqual(empty);
   });
 });
 
@@ -186,6 +198,25 @@ describe('seed hydration into a room that already has data', () => {
   });
 });
 
+describe('item ids in seeds', () => {
+  it('reads an empty item id as item- and its place in the seed', async () => {
+    const { hydrateFromSeed } = await import('./seedCodec');
+    const { ReceiptStore } = await import('./useReceiptStore');
+    const Y = await import('yjs');
+    const doc = new Y.Doc();
+    const items = [
+      { id: 'soup', name: 'Soup', en: 'Soup', eur: 4 },
+      { id: '', name: 'Bread', en: 'Bread', eur: 2 },
+    ];
+
+    hydrateFromSeed(doc, receiptSeedSchema.parse({ ...seed, items }));
+    expect(new ReceiptStore(doc).getSnapshot().items.map(({ id }) => id)).toEqual([
+      'soup',
+      'item-1',
+    ]);
+  });
+});
+
 describe('the roster in seeds', () => {
   const base = { title: 't', cardTipEur: 0, cashTipEur: 0, bankUsd: 0, items: [] };
 
@@ -217,6 +248,28 @@ describe('the roster in seeds', () => {
       'p-jos',
       'p-sam',
     ]);
+  });
+
+  it('adds a roster name stored under p-, since the participant stored there is left out', async () => {
+    const { hydrateFromSeed } = await import('./seedCodec');
+    const { ReceiptStore } = await import('./useReceiptStore');
+    const Y = await import('yjs');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const doc = new Y.Doc();
+    const maria = new Y.Map<unknown>();
+    maria.set('id', 'p-');
+    maria.set('name', 'Мария');
+    maria.set('colorIdx', 0);
+    doc.getMap('participants').set('p-', maria);
+
+    hydrateFromSeed(doc, { ...base, roster: ['Мария'] });
+    expect(new ReceiptStore(doc).getSnapshot().participants.map(({ id }) => id)).toEqual([
+      'p-мария',
+    ]);
+    expect(warn).toHaveBeenCalledWith(
+      'SplitSmart left out the participant stored as "p-", and its claims: that isn\'t a participant id.',
+    );
+    warn.mockRestore();
   });
 });
 

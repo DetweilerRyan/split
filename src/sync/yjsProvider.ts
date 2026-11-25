@@ -9,13 +9,17 @@ import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 import type { RoomId } from '../domain/room/roomId';
 import { storedText } from './storedText';
 import { ReceiptStore } from './useReceiptStore';
-import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
+import type { ParticipantId, RoomSnapshot } from '../domain/receipt/roomSnapshot';
 
 export type RoomProvider = {
   readonly doc: Y.Doc;
   readonly store: ReceiptStore;
   readonly setIdentity: (
-    identity: { readonly id: string; readonly name: string; readonly colorIdx: number } | null,
+    identity: {
+      readonly id: ParticipantId;
+      readonly name: string;
+      readonly colorIdx: number;
+    } | null,
   ) => void;
 };
 

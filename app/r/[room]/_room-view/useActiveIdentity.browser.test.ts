@@ -1,14 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import { type ParticipantId, participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import type { RoomProvider } from '@/sync/yjsProvider';
 import { roomIdSchema } from '@/domain/room/roomId';
 import { useActiveIdentity } from './useActiveIdentity';
 
 type Identity = Parameters<RoomProvider['setIdentity']>[0];
-type Person = { readonly id: string; readonly name: string; readonly colorIdx: number };
+type Person = { readonly id: ParticipantId; readonly name: string; readonly colorIdx: number };
 
-const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 } as const;
-const sam = { id: 'p-sam', name: 'Sam', colorIdx: 1 } as const;
+const alex = { id: participantIdSchema.parse('p-alex'), name: 'Alex', colorIdx: 0 } as const;
+const sam = { id: participantIdSchema.parse('p-sam'), name: 'Sam', colorIdx: 1 } as const;
 const roomId = roomIdSchema.parse('split-r1');
 const storageKey = 'splitsmart-user-split-r1';
 
@@ -29,7 +30,9 @@ async function setup(participants: readonly Person[]) {
     { initialProps: participants },
   );
   function choose(id: string | null) {
-    return hook.act(() => hook.result.current[1](id));
+    return hook.act(() =>
+      hook.result.current[1](id === null ? null : participantIdSchema.parse(id)),
+    );
   }
   // Another tab's write: the browser updates localStorage and fires a storage event in every
   // other tab with the same origin, never in the tab that wrote.
@@ -71,6 +74,17 @@ describe('useActiveIdentity', () => {
     window.localStorage.setItem(storageKey, 'p-gone');
     const hook = await setup([alex, sam]);
     expect(hook.current()).toBe('p-alex');
+  });
+
+  it('ignores a saved id that is no participant id, such as p-, with a warning', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    window.localStorage.setItem(storageKey, 'p-');
+    const hook = await setup([alex, sam]);
+    expect(hook.current()).toBe('p-alex');
+    expect(warn).toHaveBeenCalledWith(
+      `SplitSmart left out the identity saved for room split-r1 as "p-": that isn't a participant id.`,
+    );
+    warn.mockRestore();
   });
 
   it('uses and saves the participant chosen', async () => {

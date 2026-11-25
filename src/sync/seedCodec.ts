@@ -2,7 +2,7 @@ import LZString from 'lz-string';
 import * as Y from 'yjs';
 import { isValidCurrency, normalizeCurrency } from '../domain/money/currency';
 import { type ReceiptSeed, receiptSeedSchema, validateSeed } from '../domain/receipt/receiptSeed';
-import { findParticipant, participantId } from '../domain/receipt/roomSnapshot';
+import { findParticipant, itemIdSchema, participantId } from '../domain/receipt/roomSnapshot';
 import { type RoomId, createRoomId, isUuidRoomId, parseRoomId } from '../domain/room/roomId';
 import { storedParticipants } from './storedParticipants';
 
@@ -179,7 +179,7 @@ export function hydrateFromSeed(
     addRoster(participants, seed.roster);
 
     seed.items.forEach((item, index) => {
-      const id = item.id !== '' ? item.id : `item-${index}`;
+      const id = item.id !== '' ? item.id : itemIdSchema.parse(`item-${index}`);
       let existing = items.get(id);
       if (items.has(id) && !forceReset) {
         if (!(existing instanceof Y.Map)) return;

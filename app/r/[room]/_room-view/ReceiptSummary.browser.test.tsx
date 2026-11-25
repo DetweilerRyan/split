@@ -3,7 +3,7 @@ import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import '../../../index.css';
 import { computeReceiptMath } from '@/domain/receipt/math';
-import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import { type RoomSnapshot, itemIdSchema } from '@/domain/receipt/roomSnapshot';
 import { EMPTY_SNAPSHOT } from '@/sync/useReceiptStore';
 import { ReceiptSummary } from './ReceiptSummary';
 
@@ -14,8 +14,8 @@ const receipt: RoomSnapshot = {
   currency: 'EUR',
   cardTipEur: 2,
   items: [
-    { id: 'item-0', name: 'Pizza', en: '', eur: 10, order: 0, claims: {} },
-    { id: 'item-1', name: 'Wine', en: '', eur: 5.5, order: 1, claims: {} },
+    { id: itemIdSchema.parse('item-0'), name: 'Pizza', en: '', eur: 10, order: 0, claims: {} },
+    { id: itemIdSchema.parse('item-1'), name: 'Wine', en: '', eur: 5.5, order: 1, claims: {} },
   ],
 };
 
