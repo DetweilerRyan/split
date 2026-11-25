@@ -20,9 +20,6 @@ function stashSeed(roomId: RoomId, seed: ReceiptSeed | null) {
   } catch {}
 }
 
-// @crap-allow CRAP 110, complexity 10. No test renders it yet: its effect reads window.location
-// and calls Next's router, which a browser test would have to fake. A test of each kind of link
-// would bring it under the limits.
 export default function RoomEntry({ mode = 'root' }: { readonly mode?: 'root' | 'ingest' }) {
   const router = useRouter();
   const [error, setError] = useState('');
