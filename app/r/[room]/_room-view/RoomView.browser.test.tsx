@@ -51,7 +51,8 @@ function FakeEditReceiptDrawer(props: PropsOf<'EditReceiptDrawer'>) {
   return (
     <section aria-label="Edit receipt">
       <p>
-        Receipt in {currency}, shown in {displayCurrency || 'its own currency'} at {rate}
+        Receipt in {currency}, shown in{' '}
+        {displayCurrency !== '' ? displayCurrency : 'its own currency'} at {rate}
       </p>
       <button onClick={() => props.onMeta('title', 'Lunch')}>Rename to Lunch</button>
       <button onClick={() => props.onAddItem('Bread', '', 3)}>Add bread</button>
@@ -74,13 +75,13 @@ function FakeItemList(props: PropsOf<'ItemList'>) {
           <li key={item.id}>
             {item.name}, claimed by{' '}
             {props.participants
-              .filter((person) => item.claims[person.id])
+              .filter((person) => item.claims[person.id] === true)
               .map((person) => person.id)
               .join(' ')}
           </li>
         ))}
       </ul>
-      {first && (
+      {first !== undefined && (
         <>
           <button onClick={() => props.onClaim(first.id, props.activeId ?? '')}>Claim first</button>
           <button onClick={() => props.onClaimAll(first.id, props.participants, true)}>
@@ -159,7 +160,7 @@ function FakeSeedModal(props: PropsOf<'SeedModal'>) {
 
 function FakeToast() {
   const message = use(ToastContext);
-  return message ? <output>{message}</output> : null;
+  return message !== '' ? <output>{message}</output> : null;
 }
 
 const fakeParts: RoomParts = {
@@ -184,9 +185,9 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
   store.addItem('Pizza', '', 10);
   names.forEach((name) => store.addParticipant(name));
   const provider = { doc, store, setIdentity: vi.fn() };
-  const navigate = vi.fn();
-  const clipboard = { writeText: vi.fn<(text: string) => Promise<void>>(async () => undefined) };
-  const fetchRate = vi.fn<FetchRate>(async () => ({ rate: 1.08, date: '2026-11-20' }));
+  const navigate = vi.fn<(path: string) => void>();
+  const clipboard = { writeText: vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()) };
+  const fetchRate = vi.fn<FetchRate>(() => Promise.resolve({ rate: 1.08, date: '2026-11-20' }));
   // Long enough that no toast clears during a test.
   const services = { clipboard, fetchRate, toastMs: 60_000 };
   const screen = await render(

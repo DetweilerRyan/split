@@ -1,11 +1,5 @@
 import type { Participant, ReceiptItem, RoomSnapshot } from './roomSnapshot';
-import {
-  DEFAULT_CURRENCY,
-  currencyExponent,
-  fromMinor,
-  normalizeCurrency,
-  toMinor,
-} from '../money/currency';
+import { currencyExponent, fromMinor, normalizeCurrency, toMinor } from '../money/currency';
 
 export type PersonTotal = {
   readonly participant: RoomSnapshot['participants'][number];
@@ -60,7 +54,7 @@ function allocate<T>(
   const remainder = total - exact.reduce((sum, { share }) => sum + share, 0);
   // The `remainder` parts with the largest fractions get one more unit each, then go back in order.
   return exact
-    .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+    .sort((a, b) => (b.fraction !== a.fraction ? b.fraction - a.fraction : a.index - b.index))
     .map(({ part, index, share }, rank) => ({
       part,
       index,
@@ -90,8 +84,8 @@ export function splitItemMinor(
   currency: string,
 ): readonly ItemShare[] {
   const itemMinor = toMinor(item.eur, currency);
-  const claimants = participants.filter((person) => item.claims[person.id]);
-  if (!claimants.length) return [];
+  const claimants = participants.filter((person) => item.claims[person.id] === true);
+  if (claimants.length === 0) return [];
   const base = Math.floor(itemMinor / claimants.length);
   const extra = itemMinor - base * claimants.length;
   return claimants.map(({ id }, index) => {
@@ -100,9 +94,9 @@ export function splitItemMinor(
   });
 }
 
-// @crap-allow CRAP 14, complexity 14. Most branches choose the display currency and the rate to convert at; #97 moved the item split out and left those, which read as one rule. Move them into their own function when the conversion rules next change.
+// @crap-allow CRAP 13, complexity 13. Most branches choose the display currency and the rate to convert at; #97 moved the item split out and left those, which read as one rule. Move them into their own function when the conversion rules next change.
 export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
-  const currency = normalizeCurrency(snapshot.currency ?? DEFAULT_CURRENCY);
+  const currency = normalizeCurrency(snapshot.currency);
   const exp = currencyExponent(currency);
   // Filled in place below, as a local working value; ReceiptMath gives callers each total as readonly.
   const perPerson: Record<string, { -readonly [K in keyof PersonTotal]: PersonTotal[K] }> = {};
@@ -152,15 +146,16 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   const cardTotalMinor = itemsSubtotalMinor + cardTipMinor;
   const cardTotal = fromMinor(cardTotalMinor, currency);
 
-  const displayCurrency = snapshot.displayCurrency
-    ? normalizeCurrency(snapshot.displayCurrency)
-    : snapshot.bankUsd > 0
-      ? 'USD'
-      : null;
+  const displayCurrency =
+    snapshot.displayCurrency !== ''
+      ? normalizeCurrency(snapshot.displayCurrency)
+      : snapshot.bankUsd > 0
+        ? 'USD'
+        : null;
   let effectiveRate: number | null = null;
   let isEstimatedRate = true;
   let converting = false;
-  if (displayCurrency && displayCurrency !== currency) {
+  if (displayCurrency !== null && displayCurrency !== currency) {
     if (snapshot.bankUsd > 0 && cardTotal > 0) {
       effectiveRate = snapshot.bankUsd / cardTotal;
       isEstimatedRate = false;
@@ -170,7 +165,7 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
     converting = effectiveRate !== null;
   }
 
-  if (converting && effectiveRate !== null && displayCurrency) {
+  if (converting && effectiveRate !== null && displayCurrency !== null) {
     const grandMinor = people.reduce((sum, person) => sum + person.totalMinor, 0);
     const convertedMinor = toMinor(
       fromMinor(grandMinor, currency) * effectiveRate,

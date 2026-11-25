@@ -73,9 +73,10 @@ function functionsAt<F extends Fn>(line: number | undefined, parsed: Parsed, amo
   if (starting.length > 0) return { candidates: starting, where: `start on line ${line}` };
   // Statements are listed outermost first, so this is the widest one starting on the line.
   const statement = parsed.statements.find((s) => parsed.position(s.start).line === line);
-  const inside = statement
-    ? among.filter((fn) => fn.offset.start >= statement.start && fn.offset.end <= statement.end)
-    : [];
+  const inside =
+    statement !== undefined
+      ? among.filter((fn) => fn.offset.start >= statement.start && fn.offset.end <= statement.end)
+      : [];
   const callbacks = outermost(inside).filter((fn) => fn.passedToCall);
   return { candidates: callbacks, where: `are passed to calls in the statement on line ${line}` };
 }
@@ -90,14 +91,14 @@ function functionFor(
   const { candidates, where } = functionsAt(target, parsed, parsed.functions);
   const [inner] =
     candidates.length === 0 ? functionsAt(target, parsed, parsed.nested).candidates : [];
-  if (inner) {
+  if (inner !== undefined) {
     const [outer] = inner.parents;
     return {
       problem: `This @crap-allow comment is above ${inner.name}, which is inside ${outer.name} and counts towards it. Move the comment above ${outer.name}, with its numbers.`,
     };
   }
   const [fn] = candidates;
-  if (!fn) {
+  if (fn === undefined) {
     return {
       problem:
         'This @crap-allow comment isn’t directly above a function. Move it there, or delete it.',
@@ -122,7 +123,7 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
     const line = parsed.position(comment.start).line;
     const at = { file, line };
     const match = FORMAT.exec(text);
-    if (!match) {
+    if (match === null) {
       problems.push({ ...at, message: `This @crap-allow comment isn’t in the form ${FORM}.` });
       continue;
     }
@@ -137,7 +138,7 @@ export function findAllows(file: string, source: string, parsed: Parsed) {
       continue;
     }
     const reason = match[3] ?? '';
-    if (!reason) {
+    if (reason === '') {
       problems.push({ ...at, message: `The @crap-allow comment for ${fn.name} gives no reason.` });
     }
     allowed.set(fn, {

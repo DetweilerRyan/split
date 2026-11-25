@@ -16,23 +16,30 @@ type DetailRow = {
   readonly icon: typeof MapPin;
   readonly label: string;
   readonly value: string;
-  readonly link?: URL | null;
+  readonly link: URL | null;
 };
 
 /** The restaurant details the receipt has, in the order the dialog lists them. */
 function detailRows(snapshot: RoomSnapshot) {
   const rows: DetailRow[] = [];
   const purchase = parsePurchasedAt(snapshot.purchasedAt);
-  if (purchase) {
+  if (purchase !== null) {
     const { day, time } = formatPurchaseTime(purchase);
-    rows.push({ icon: CalendarDays, label: 'When', value: time ? `${day} · ${time}` : day });
+    rows.push({
+      icon: CalendarDays,
+      label: 'When',
+      value: time !== '' ? `${day} · ${time}` : day,
+      link: null,
+    });
   }
-  if (snapshot.mealType) rows.push({ icon: Utensils, label: 'Meal', value: snapshot.mealType });
-  if (snapshot.address) {
+  if (snapshot.mealType !== '') {
+    rows.push({ icon: Utensils, label: 'Meal', value: snapshot.mealType, link: null });
+  }
+  if (snapshot.address !== '') {
     const link = mapsLink(snapshot.title, snapshot.address);
     rows.push({ icon: MapPin, label: 'Address', value: snapshot.address, link });
   }
-  if (snapshot.phone) {
+  if (snapshot.phone !== '') {
     rows.push({
       icon: Phone,
       label: 'Phone',
@@ -41,7 +48,7 @@ function detailRows(snapshot: RoomSnapshot) {
     });
   }
   const website = snapshot.website.trim();
-  if (website)
+  if (website !== '')
     rows.push({ icon: Globe, label: 'Website', value: website, link: parseWebsiteLink(website) });
   return rows;
 }
@@ -64,7 +71,7 @@ export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantM
           <X size={18} />
         </button>
       </div>
-      {rows.length ? (
+      {rows.length > 0 ? (
         <dl className="mt-3 space-y-3">
           {rows.map(({ icon: Icon, label, value, link }) => (
             <div key={label} className="flex items-start gap-3">
@@ -74,7 +81,7 @@ export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantM
                   {label}
                 </dt>
                 <dd className="break-words text-sm text-slate-900">
-                  {link ? (
+                  {link !== null ? (
                     <a
                       className="text-indigo-600 underline"
                       href={link.href}

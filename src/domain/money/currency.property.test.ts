@@ -7,7 +7,7 @@ function anyCase(text: string) {
   return fc
     .array(fc.boolean(), { minLength: text.length, maxLength: text.length })
     .map((upper) =>
-      [...text].map((c, i) => (upper[i] ? c.toUpperCase() : c.toLowerCase())).join(''),
+      [...text].map((c, i) => (upper[i] === true ? c.toUpperCase() : c.toLowerCase())).join(''),
     );
 }
 

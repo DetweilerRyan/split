@@ -81,7 +81,7 @@ export function createActor(name: string): Actor {
       encoding: 'utf8',
       env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
     });
-    if (result.error) throw result.error;
+    if (result.error !== undefined) throw result.error;
     return { status: result.status, output: `${result.stdout}${result.stderr}` };
   }
 
@@ -100,7 +100,7 @@ export function createActor(name: string): Actor {
 
   function exit(): void {
     for (const each of [folder, ...others]) {
-      if (each) rmSync(each, { recursive: true, force: true });
+      if (each !== undefined) rmSync(each, { recursive: true, force: true });
     }
   }
 

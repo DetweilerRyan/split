@@ -41,8 +41,8 @@ export function useIdentity(
   // Adding a name already on the bill chooses that participant instead.
   function add(name: string) {
     const participant = provider.store.addParticipant(name) ?? findParticipant(participants, name);
-    if (participant) choose(participant.id);
-    else if (name.trim()) showToast('Enter a name with at least one letter or number.');
+    if (participant !== undefined) choose(participant.id);
+    else if (name.trim() !== '') showToast('Enter a name with at least one letter or number.');
     else showToast('Enter a participant name.');
   }
 

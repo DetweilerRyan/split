@@ -33,7 +33,8 @@ export function Header({
   onShare,
 }: HeaderProps) {
   const purchase = parsePurchasedAt(purchasedAt);
-  const when = purchase ? formatPurchaseTime(purchase) : null;
+  const when = purchase !== null ? formatPurchaseTime(purchase) : null;
+  const initial = title.trim().charAt(0).toUpperCase();
   const identity = participants.find((person) => person.id === activeId);
   const {
     label: statusLabel,
@@ -53,7 +54,7 @@ export function Header({
               onClick={onDetails}
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-indigo-600 font-extrabold text-white">
-                {title.trim().charAt(0).toUpperCase() || '¤'}
+                {initial !== '' ? initial : '¤'}
               </span>
               <span className="min-w-0">
                 <span className="flex items-center gap-0.5">
@@ -65,12 +66,12 @@ export function Header({
                 <span className="flex items-center gap-1 truncate text-xs text-slate-600">
                   <CalendarDays size={12} className="shrink-0" aria-hidden="true" />
                   <span className="truncate">
-                    {when
-                      ? `${when.day}${when.time ? ` · ${when.time}` : ''}`
+                    {when !== null
+                      ? `${when.day}${when.time !== '' ? ` · ${when.time}` : ''}`
                       : 'Date not on receipt'}
                   </span>
                 </span>
-                {mealType && (
+                {mealType !== '' && (
                   <span className="block truncate text-xs font-semibold text-indigo-600">
                     {mealType}
                   </span>

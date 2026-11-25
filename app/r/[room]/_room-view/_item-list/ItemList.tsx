@@ -24,7 +24,8 @@ export function ItemList(props: ItemListProps) {
   const headingId = useId();
   const visible = props.items.filter((item) => {
     if (props.filter === 'unclaimed') return !Object.values(item.claims).some(Boolean);
-    if (props.filter === 'mine') return props.activeId ? item.claims[props.activeId] : false;
+    if (props.filter === 'mine')
+      return props.activeId !== null && item.claims[props.activeId] === true;
     return true;
   });
 
@@ -44,7 +45,7 @@ export function ItemList(props: ItemListProps) {
           )}
         </span>
       </div>
-      {visible.length ? (
+      {visible.length > 0 ? (
         visible.map((item) => (
           <ItemRow
             key={item.id}

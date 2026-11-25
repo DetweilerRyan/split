@@ -344,7 +344,7 @@ function expected(program: Program) {
   const cycles = inCycles(program);
   const scored = program.fns.map(({ calls }, i) => [
     program.form === 'private' ? `#${name(i)}` : name(i),
-    1 + branches(calls) + (cycles[i] ? 1 : 0),
+    1 + branches(calls) + (cycles[i] === true ? 1 : 0),
   ]);
   // The stubs, and the methods of the same name on the other side, call nothing.
   const stubs = inClass(program.form)

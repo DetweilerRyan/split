@@ -15,7 +15,7 @@ function anyCase(code: string) {
   return fc
     .array(fc.boolean(), { minLength: code.length, maxLength: code.length })
     .map((upper) =>
-      [...code].map((c, i) => (upper[i] ? c.toUpperCase() : c.toLowerCase())).join(''),
+      [...code].map((c, i) => (upper[i] === true ? c.toUpperCase() : c.toLowerCase())).join(''),
     );
 }
 
@@ -118,7 +118,7 @@ function snapshotOf(r: Receipt): RoomSnapshot {
 function claimantsOf(r: Receipt, item: Receipt['items'][number]) {
   return ids
     .slice(0, r.participantCount)
-    .filter((id) => item.claims[id as keyof typeof item.claims]);
+    .filter((id) => item.claims[id as keyof typeof item.claims] === true);
 }
 
 function sum(values: readonly number[]) {

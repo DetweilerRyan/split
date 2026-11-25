@@ -46,7 +46,7 @@ function sourceFiles() {
   );
   return listed.stdout
     .split('\n')
-    .filter((file) => file && !/\.test\.tsx?$/.test(file))
+    .filter((file) => file !== '' && !/\.test\.tsx?$/.test(file))
     .sort();
 }
 

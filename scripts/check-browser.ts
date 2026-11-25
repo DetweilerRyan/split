@@ -21,6 +21,7 @@ try {
   await renderPage();
   console.log('Headless Chromium launched and rendered a page.');
 } catch (error) {
-  console.error(`Headless Chromium did not launch: ${error.message.split('\n')[0]}`);
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`Headless Chromium did not launch: ${message.split('\n')[0]}`);
   process.exitCode = 1;
 }

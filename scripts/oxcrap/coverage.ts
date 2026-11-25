@@ -11,15 +11,16 @@ export type FileCoverage = {
 };
 export type Report = Readonly<Record<string, FileCoverage>>;
 
+/** The parts of an istanbul file entry that the scoring reads, each an object. */
+const PARTS = ['statementMap', 's', 'fnMap', 'f'] as const;
+
 /** Whether `file` has every part of an istanbul file entry that the scoring reads. */
 function isFileCoverage(file: unknown): file is FileCoverage {
   if (typeof file !== 'object' || file === null) return false;
-  return Boolean(
-    Reflect.get(file, 'statementMap') &&
-    Reflect.get(file, 's') &&
-    Reflect.get(file, 'fnMap') &&
-    Reflect.get(file, 'f'),
-  );
+  return PARTS.every((part) => {
+    const value: unknown = Reflect.get(file, part);
+    return typeof value === 'object' && value !== null;
+  });
 }
 
 /** Whether `report` is an object of istanbul file entries, by path. */
@@ -71,7 +72,7 @@ function innermost(functions: readonly Fn[], range: Range) {
     if (
       contains(fn, range) &&
       // Stryker disable next-line EqualityOperator: two functions of one length that both hold a range would be the same function, since a file's functions are either nested or apart, so `<` and `<=` never choose differently.
-      (!best || fn.offset.end - fn.offset.start < best.offset.end - best.offset.start)
+      (best === undefined || fn.offset.end - fn.offset.start < best.offset.end - best.offset.start)
     ) {
       best = fn;
     }
@@ -85,7 +86,7 @@ function statementCounts(functions: readonly Fn[], file: FileCoverage) {
   for (const [id, range] of Object.entries(file.statementMap)) {
     const owner = innermost(functions, range);
     // Stryker disable next-line ConditionalExpression: a statement outside every function would be counted under `undefined`, which `coverageOf` never looks up.
-    if (!owner) continue;
+    if (owner === undefined) continue;
     const count = counts.get(owner) ?? { total: 0, run: 0 };
     count.total++;
     if ((file.s[id] ?? 0) > 0) count.run++;
@@ -99,7 +100,7 @@ function calledFunctions(functions: readonly Fn[], file: FileCoverage) {
   const called = new Set<Fn>();
   for (const [id, fn] of Object.entries(file.fnMap)) {
     const owner = innermost(functions, fn.loc);
-    if (owner && (file.f[id] ?? 0) > 0) called.add(owner);
+    if (owner !== undefined && (file.f[id] ?? 0) > 0) called.add(owner);
   }
   return called;
 }
@@ -112,13 +113,14 @@ function calledFunctions(functions: readonly Fn[], file: FileCoverage) {
  * report shows it was called. A file the report doesn't have scores 0 throughout.
  */
 export function coverageOf(functions: readonly Fn[], file: FileCoverage | undefined) {
-  const counts = file ? statementCounts(functions, file) : new Map();
-  const called = file ? calledFunctions(functions, file) : new Set<Fn>();
+  const counts: ReadonlyMap<Fn, { readonly total: number; readonly run: number }> =
+    file !== undefined ? statementCounts(functions, file) : new Map();
+  const called = file !== undefined ? calledFunctions(functions, file) : new Set<Fn>();
   const covered = new Map<Fn, number>();
   for (const fn of functions) {
     const count = counts.get(fn);
     // `statementCounts` makes a count only when it counts a statement, so its total is never 0.
-    if (count) covered.set(fn, count.run / count.total);
+    if (count !== undefined) covered.set(fn, count.run / count.total);
     else covered.set(fn, called.has(fn) ? 1 : 0);
   }
   return covered;

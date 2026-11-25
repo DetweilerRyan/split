@@ -45,7 +45,7 @@ function importsOf(folder: string, packages: readonly string[]) {
   return Object.fromEntries(
     packages.map((name, index) => [
       `${folder}/imports${index}.ts`,
-      `import * as p from '${name}';\nexport const a = p;\n`,
+      `import * as p from '${name}';\nexport { p };\n`,
     ]),
   );
 }
@@ -116,7 +116,8 @@ describe('.oxlintrc.json’s package bans', () => {
 
   it('refuses JSX in src/domain/, which imports react/jsx-runtime with no import statement', () => {
     expect(
-      lint({ 'src/domain/badge.tsx': 'export function Badge() {\n  return <i />;\n}\n' }),
+      // It returns unknown: with no React installed here, the JSX's type is any.
+      lint({ 'src/domain/badge.tsx': 'export function Badge(): unknown {\n  return <i />;\n}\n' }),
     ).toEqual({ status: 1, problems: ['src/domain/badge.tsx:2 [react(jsx-filename-extension)]'] });
   });
 
@@ -203,7 +204,7 @@ describe('.oxlintrc.json’s code design principle checks', () => {
 
   it('refuses eval, new Function and Proxy anywhere', () => {
     const banned = {
-      'app/run.ts': "export const a = eval('1');\n",
+      'app/run.ts': "eval('1');\n",
       'src/sync/build.ts': "export const f = new Function('return 1');\n",
       'scripts/call.ts': "export const g = Function('return 1');\n",
       'src/utils/wrap.ts': 'export const p = new Proxy({}, {});\n',

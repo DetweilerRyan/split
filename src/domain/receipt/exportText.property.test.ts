@@ -94,13 +94,13 @@ function readSummary(text: string) {
   const people: PersonLines[] = [];
   lines.forEach((line) => {
     const item = /^ {2}• .*: (.*?)(?: \(1\/\d+\))?$/.exec(line);
-    if (item) {
+    if (item !== null) {
       const person = people.pop() as PersonLines;
       people.push({ ...person, itemsMinor: [...person.itemsMinor, minorOf(item[1])] });
       return;
     }
     const person = new RegExp(`^(${names.join('|')}): (?:.* \\((.*)\\)|(.*))$`).exec(line);
-    if (person) {
+    if (person !== null) {
       people.push({
         name: person[1] ?? '',
         totalMinor: minorOf(person[2] ?? person[3]),
@@ -124,7 +124,7 @@ describe('buildExportText', () => {
         const atTable = names.slice(0, r.participantCount);
         const claimedMinor = sum(
           r.items
-            .filter((item) => atTable.some((name) => item.claims[name]))
+            .filter((item) => atTable.some((name) => item.claims[name] === true))
             .map((item) => item.minor),
         );
         expect(summary.people.map((person) => person.name)).toEqual(atTable);

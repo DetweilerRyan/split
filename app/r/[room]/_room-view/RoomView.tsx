@@ -131,7 +131,7 @@ export function RoomView({
               snapshot={snapshot}
               onMeta={(key, value) => store.setMeta(key, value)}
               onCurrency={rates.changeCurrency}
-              onDisplayCurrency={rates.changeDisplayCurrency}
+              onDisplayCurrency={(code, force) => void rates.changeDisplayCurrency(code, force)}
               onRate={rates.setRate}
               onAddItem={(name, en, eur) => store.addItem(name, en, eur)}
             />

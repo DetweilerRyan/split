@@ -140,7 +140,11 @@ export function formatSeedIssues(issues: readonly z.core.$ZodIssue[]): readonly 
   const messages = issues.map((issue) => {
     const path = issue.path.reduce<string>(
       (acc, key) =>
-        typeof key === 'number' ? `${acc}[${key}]` : acc ? `${acc}.${String(key)}` : String(key),
+        typeof key === 'number'
+          ? `${acc}[${key}]`
+          : acc !== ''
+            ? `${acc}.${String(key)}`
+            : String(key),
       '',
     );
     return `${path} ${issue.message}`;

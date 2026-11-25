@@ -25,7 +25,7 @@ function jsonRpcError(
 async function readCapped(request: Request): Promise<string | null> {
   const declared = Number(request.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return null;
-  if (!request.body) return '';
+  if (request.body === null) return '';
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -65,7 +65,12 @@ export function guardMcp(handler: (request: Request) => Promise<Response> | Resp
     if (body === null) return jsonRpcError(413, 'Request body too large');
 
     const rawIp = ipAddress(request);
-    if (rawIp && hasToolCall(body) && isRateLimited(normalizeIp(rawIp), LIMIT, WINDOW_MS)) {
+    if (
+      rawIp !== undefined &&
+      rawIp !== '' &&
+      hasToolCall(body) &&
+      isRateLimited(normalizeIp(rawIp), LIMIT, WINDOW_MS)
+    ) {
       return jsonRpcError(429, 'Rate limit exceeded', {
         'Retry-After': String(WINDOW_MS / 1000),
         'RateLimit-Limit': String(LIMIT),

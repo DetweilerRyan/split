@@ -1,6 +1,7 @@
 import { Check, Trash2 } from 'lucide-react';
 import type { Participant, ReceiptItem } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, formatMoney } from '@/domain/money/currency';
+import { typedNumber } from '../typedNumber';
 
 type ItemRowProps = {
   readonly item: ReceiptItem;
@@ -18,7 +19,9 @@ type ItemRowProps = {
   readonly onDelete: (itemId: string) => void;
 };
 
-// @crap-allow CRAP 205.3, complexity 14. Debt from before the CRAP check (#63): no tests yet.
+// @crap-allow CRAP 152.6, complexity 12. No test renders it yet: RoomView's test passes a fake
+// ItemList, so no row is drawn. A browser test of claiming and editing a row would bring it under
+// the limits.
 export function ItemRow({
   item,
   participants,
@@ -30,7 +33,7 @@ export function ItemRow({
   onUpdate,
   onDelete,
 }: ItemRowProps) {
-  const claimedBy = participants.filter((person) => item.claims[person.id]);
+  const claimedBy = participants.filter((person) => item.claims[person.id] === true);
   function formatAmount(value: number) {
     return formatMoney(value, currency);
   }
@@ -56,7 +59,7 @@ export function ItemRow({
           type="number"
           step={10 ** -currencyExponent(currency)}
           defaultValue={item.eur}
-          onBlur={(event) => onUpdate(item.id, 'eur', Number(event.target.value) || 0)}
+          onBlur={(event) => onUpdate(item.id, 'eur', typedNumber(event.target.value))}
         />
         <button
           aria-label={`Delete ${item.name}`}
@@ -70,23 +73,28 @@ export function ItemRow({
   }
 
   const allClaimed = participants.length > 0 && claimedBy.length === participants.length;
+  const claimedByMe = activeId !== null && item.claims[activeId] === true;
   return (
     <article className="border-b border-slate-100 p-4 last:border-b-0">
       <div className="flex items-start justify-between gap-3">
         <button
           className="flex min-w-0 flex-1 items-start gap-3 text-left"
-          onClick={() => activeId && onClaim(item.id, activeId)}
+          onClick={() => {
+            if (activeId !== null) onClaim(item.id, activeId);
+          }}
         >
           <span
-            className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${activeId && item.claims[activeId] ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}
+            className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${claimedByMe ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}
           >
-            {activeId && item.claims[activeId] && <Check size={14} />}
+            {claimedByMe && <Check size={14} />}
           </span>
           <span className="min-w-0">
             <span className="block break-words text-sm font-extrabold text-slate-900">
               {item.name}
             </span>
-            {item.en && <span className="block text-xs italic text-slate-500">{item.en}</span>}
+            {item.en !== '' && (
+              <span className="block text-xs italic text-slate-500">{item.en}</span>
+            )}
           </span>
         </button>
         <span className="shrink-0 font-mono text-sm font-bold">{formatAmount(item.eur)}</span>
@@ -96,7 +104,7 @@ export function ItemRow({
           {participants.map((person) => (
             <button
               key={person.id}
-              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${item.claims[person.id] ? 'border-indigo-200 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500'}`}
+              className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${item.claims[person.id] === true ? 'border-indigo-200 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500'}`}
               onClick={() => onClaim(item.id, person.id)}
             >
               {person.name}

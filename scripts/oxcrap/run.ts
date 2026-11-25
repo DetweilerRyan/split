@@ -63,7 +63,9 @@ export function isUrl(value: string) {
 
 /** A path as the person running oxCrap would write it: from the current directory. */
 function shown(host: Host, path: string) {
-  return toPosix(relative(host.cwd, path)) || '.';
+  const fromHere = toPosix(relative(host.cwd, path));
+  // The current directory itself is the empty path.
+  return fromHere !== '' ? fromHere : '.';
 }
 
 /** A path from the current directory, made absolute. */
@@ -82,7 +84,7 @@ function pathKey(host: Host, path: string) {
 
 /** The config file to read: the one `-c` names, else the first default name in this folder. */
 function configFile(host: Host, given: string | undefined) {
-  if (!given) return CONFIG_NAMES.map((name) => here(host, name)).find(host.exists);
+  if (given === undefined) return CONFIG_NAMES.map((name) => here(host, name)).find(host.exists);
   const path = here(host, given);
   if (!host.exists(path)) throw new Error(`No config file at ${given}.`);
   if (host.isDirectory(path)) throw new Error(`${given} is a folder, not a config file.`);
@@ -91,10 +93,10 @@ function configFile(host: Host, given: string | undefined) {
 
 /** The config's options, refusing `files` that reach outside its folder. */
 function readConfig(host: Host, path: string | undefined): Partial<Config> {
-  if (!path) return {};
+  if (path === undefined) return {};
   const options = parseConfig(host.read(path), shown(host, path));
   const escaping = options.files?.find(outside);
-  if (escaping) {
+  if (escaping !== undefined) {
     throw new Error(
       `${shown(host, path)}: "files" can't reach outside the config's folder, as "${escaping}" does. Move the config up to a folder that holds the files.`,
     );
@@ -112,7 +114,8 @@ function pathsFor(host: Host, root: string, paths: readonly string[]) {
   for (const path of paths) {
     const from = pathFrom(host, root, path);
     if (!host.isDirectory(here(host, path))) named.push(from);
-    else globs.push(from ? `${from}/${CODE_FILES}` : CODE_FILES);
+    // The root itself is the empty path.
+    else globs.push(from !== '' ? `${from}/${CODE_FILES}` : CODE_FILES);
   }
   return { globs, named };
 }
@@ -139,8 +142,8 @@ function coveragePath(
   configured: string | undefined,
   root: string,
 ) {
-  if (given) return here(host, given);
-  if (configured) return resolve(root, configured);
+  if (given !== undefined) return here(host, given);
+  if (configured !== undefined) return resolve(root, configured);
   throw new Error(
     `${USAGE}\nGive the coverage report with --coverage, or as "coverage" in ${CONFIG_NAMES[0]}.`,
   );
@@ -159,11 +162,11 @@ function helpFrom(
   from: string,
 ) {
   const value = given ?? configured;
-  if (!value || isUrl(value)) return value;
-  const path = given ? here(host, given) : resolve(root, value);
+  if (value === undefined || isUrl(value)) return value;
+  const path = given !== undefined ? here(host, given) : resolve(root, value);
   if (!host.exists(path)) {
     throw new Error(
-      `No help file at ${shown(host, path)}, which ${given ? '--help-url' : from} names.`,
+      `No help file at ${shown(host, path)}, which ${given !== undefined ? '--help-url' : from} names.`,
     );
   }
   return shown(host, path);
@@ -237,6 +240,11 @@ function findings(
   return [...problems, ...check(scored, allowed, config.limits)];
 }
 
+/** A command-line option's value, reading an empty one, as `--coverage=` gives, as not given. */
+function optionValue(value: string | undefined) {
+  return value === '' ? undefined : value;
+}
+
 /** The whole run: options, config, files and report, then the findings to print. */
 function score(host: Host, args: readonly string[]): Outcome {
   const { values, positionals } = parseArgs({
@@ -248,19 +256,20 @@ function score(host: Host, args: readonly string[]): Outcome {
       'help-url': { type: 'string' },
     },
   });
-  const configPath = configFile(host, values.config);
+  const configPath = configFile(host, optionValue(values.config));
   // Paths in a config are read from its folder; paths on the command line from this one.
-  const root = configPath ? dirname(configPath) : host.cwd;
+  const root = configPath !== undefined ? dirname(configPath) : host.cwd;
   const fromFile = readConfig(host, configPath);
   const given = positionals.length > 0 ? pathsFor(host, root, positionals) : undefined;
   const config = merge(fromFile, { files: given?.globs });
-  const coverage = coveragePath(host, values.coverage, config.coverage, root);
+  const coverage = coveragePath(host, optionValue(values.coverage), config.coverage, root);
   // Stryker disable next-line StringLiteral: only a config file can give `helpUrl`, so with no config file this name is never shown.
-  const named = configPath ? `"helpUrl" in ${shown(host, configPath)}` : 'the config';
-  const help = helpFrom(host, values['help-url'], config.helpUrl, root, named);
+  const named = configPath !== undefined ? `"helpUrl" in ${shown(host, configPath)}` : 'the config';
+  const help = helpFrom(host, optionValue(values['help-url']), config.helpUrl, root, named);
   const files = host.findFiles(root, config.files, config.ignorePatterns, given?.named ?? []);
   if (files.scored.length === 0) {
-    const where = configPath ? `"files" in ${shown(host, configPath)}` : 'the paths given';
+    const where =
+      configPath !== undefined ? `"files" in ${shown(host, configPath)}` : 'the paths given';
     throw new Error(`No files to score: nothing matches ${where} that "ignorePatterns" leaves in.`);
   }
   function absolute(file: string) {
@@ -298,7 +307,7 @@ export function resolveImport(host: Host, importer: string, from: string) {
 /** What the module at `path` exports, read once into `modules`. */
 // oxlint-disable-next-line readonly/types -- `modules` is the cache exportsAt fills, so each module is read once.
 function exportsAt(host: Host, path: string | undefined, modules: Map<string, Exports>) {
-  if (!path) return undefined;
+  if (path === undefined) return undefined;
   if (!modules.has(path)) modules.set(path, moduleExports(path, host.read(path)));
   return modules.get(path);
 }
@@ -308,7 +317,7 @@ export function outcome(problems: readonly Finding[], help: string | undefined):
   if (problems.length === 0) return { status: 0, stdout: ['No CRAP findings.'], stderr: [] };
   const lines = problems.map((f) => `- ${f.file}:${f.line} ${f.message}`);
   const stderr = [`CRAP findings:\n${lines.join('\n')}`];
-  if (help) stderr.push(`\nGet help: ${help}`);
+  if (help !== undefined) stderr.push(`\nGet help: ${help}`);
   return { status: 1, stdout: [], stderr };
 }
 

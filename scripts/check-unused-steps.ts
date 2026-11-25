@@ -22,7 +22,8 @@ const cli =
 function configsIn(args: readonly string[]): readonly (string | undefined)[] {
   const configs: (string | undefined)[] = [];
   for (let i = 0; i < args.length; i++) {
-    if ((args[i] === '-c' || args[i] === '--config') && args[i + 1]) configs.push(args[++i]);
+    if ((args[i] === '-c' || args[i] === '--config') && (args[i + 1] ?? '') !== '')
+      configs.push(args[++i]);
     else {
       console.error(
         `Unknown argument ${args[i]}. Usage: node scripts/check-unused-steps.ts [-c <config>]...`,
@@ -41,13 +42,15 @@ for (const config of configs) {
   const name = config ?? 'playwright.config.ts';
   const result = spawnSync(
     process.execPath,
-    [cli, 'export', '--unused-steps', ...(config ? ['-c', config] : [])],
+    [cli, 'export', '--unused-steps', ...(config !== undefined ? ['-c', config] : [])],
     { encoding: 'utf8', env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' } },
   );
   const output = `${result.stdout}${result.stderr}`.trim();
 
   if (result.status !== 0) {
-    console.error(`${name}: ${output || `bddgen exited with ${result.status ?? result.signal}.`}`);
+    console.error(
+      `${name}: ${output !== '' ? output : `bddgen exited with ${result.status ?? result.signal}.`}`,
+    );
     process.exit(1);
   }
 

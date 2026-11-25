@@ -4,7 +4,7 @@ import { parsePurchasedAt } from './mealInfo';
 /** The local date and time a parsed purchase time holds, as a person would read it. */
 function readBack(value: string) {
   const parsed = parsePurchasedAt(value);
-  if (!parsed) return null;
+  if (parsed === null) return null;
   const { date, hasTime } = parsed;
   return {
     year: date.getFullYear(),

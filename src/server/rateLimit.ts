@@ -10,7 +10,7 @@ function makeRoom(windowMs: number, now: number) {
   }
   // Still full of active keys: drop the oldest rather than grow without bound.
   const oldest = hits.keys().next();
-  if (hits.size >= MAX_KEYS && !oldest.done) hits.delete(oldest.value);
+  if (hits.size >= MAX_KEYS && oldest.done !== true) hits.delete(oldest.value);
 }
 
 export function isRateLimited(
@@ -30,12 +30,12 @@ export function isRateLimited(
 /** Collapses IPv6 to its /64 so one host can't dodge limits by rotating addresses. */
 export function normalizeIp(ip: string): string {
   if (!ip.includes(':') || ip.includes('.')) return ip;
-  const [head, tail = ''] = ip.split('::');
-  const groups = head ? head.split(':') : [];
-  const rest = tail ? tail.split(':') : [];
+  const [head = '', tail = ''] = ip.split('::');
+  const groups = head !== '' ? head.split(':') : [];
+  const rest = tail !== '' ? tail.split(':') : [];
   const full = [
     ...groups,
-    ...Array(Math.max(0, 8 - groups.length - rest.length)).fill('0'),
+    ...Array.from({ length: Math.max(0, 8 - groups.length - rest.length) }, () => '0'),
     ...rest,
   ];
   return (

@@ -123,7 +123,7 @@ function tableOf(init: unknown, functions: ReadonlySet<string>): Table | undefin
       return objectOf(value, functions);
     case 'ArrayExpression': {
       const elements = literalElements(value);
-      if (!elements) return undefined;
+      if (elements === undefined) return undefined;
       const dispatch = elements.some((element) => holdsFunction(element, functions));
       return { kind: 'array', entries: elements.length, dispatch };
     }
@@ -150,7 +150,7 @@ function collectionOf(expression: AstNode, functions: ReadonlySet<string>): Tabl
   const callee = expression.callee;
   const name = isNode(callee) ? callee.name : undefined;
   const elements = literalElements(parseList(expression.arguments)[0]);
-  if (!elements) return undefined;
+  if (elements === undefined) return undefined;
   if (name === 'Set') return { kind: 'set', entries: elements.length, dispatch: false };
   if (name !== 'Map') return undefined;
   const pairs = elements.map((element) => literalElements(element));
@@ -258,14 +258,14 @@ function exportsOf(program: AstNode, own: Tables, functions: ReadonlySet<string>
   const exportedFunctions = new Set<string>();
   for (const [local, name] of names) {
     const table = own.get(local);
-    if (table) tables.set(name, table);
+    if (table !== undefined) tables.set(name, table);
     if (functions.has(local)) exportedFunctions.add(name);
   }
   return { tables, functions: exportedFunctions };
 }
 /** The names one statement exports, local then exported: `export const T`, `export { T as U }`. */
 function exportedNames(statement: AstNode): readonly (readonly [string, string])[] {
-  if (statement.type !== 'ExportNamedDeclaration' || statement.source) return [];
+  if (statement.type !== 'ExportNamedDeclaration' || isNode(statement.source)) return [];
   const declaration = statement.declaration;
   const declared: [string, string][] = isNode(declaration)
     ? declaredNames(declaration).map((name) => [name, name])
@@ -295,7 +295,7 @@ export function tablesIn(program: AstNode, imported: Imported = () => undefined)
   const tables = new Map<string, Table>();
   for (const { local, imported: name, from } of imports) {
     const table = imported(from)?.tables.get(name);
-    if (table) tables.set(local, table);
+    if (table !== undefined) tables.set(local, table);
   }
   for (const [name, table] of own) tables.set(name, table);
   const shadowed = shadowedUses(program, new Set(tables.keys()));
@@ -315,7 +315,7 @@ export function tablesIn(program: AstNode, imported: Imported = () => undefined)
 /** The local names of the functions a module imports from modules that export them. */
 function importedFunctions(imports: readonly Import[], imported: Imported): readonly string[] {
   return imports
-    .filter(({ imported: name, from }) => imported(from)?.functions.has(name))
+    .filter(({ imported: name, from }) => imported(from)?.functions.has(name) === true)
     .map(({ local }) => local);
 }
 
@@ -329,13 +329,14 @@ function staticTables(
   for (const statement of statements) {
     for (const [name, init] of constants(statement)) {
       const table = tableOf(init, functions);
-      if (table) own.set(name, table);
+      if (table !== undefined) own.set(name, table);
     }
   }
   for (const statement of statements) {
     const added = addition(statement);
-    const table = added && own.get(added.name);
-    if (!table || !added) continue;
+    if (added === undefined) continue;
+    const table = own.get(added.name);
+    if (table === undefined) continue;
     own.set(added.name, {
       ...table,
       entries: table.entries + 1,
@@ -360,7 +361,7 @@ function mutatedInFunctions(
   const inside = inFunction || isFunctionType(node.type);
   const changed = inside ? mutatedName(node) : undefined;
   // A local of the same name is another object.
-  if (changed && !shadowed.has(changed)) into.add(changed.name);
+  if (changed !== undefined && !shadowed.has(changed)) into.add(changed.name);
   for (const child of children(node)) mutatedInFunctions(child, shadowed, into, inside);
   return into;
 }
@@ -453,7 +454,7 @@ function tableNamed(node: unknown, readable: Readable): Table | undefined {
 function methodAdds(call: AstNode, readable: Readable, counting: Counting) {
   const callee = parseNode(call.callee);
   const table = tableNamed(callee.object, readable);
-  if (!table || !isNode(callee.property)) return 0;
+  if (table === undefined || !isNode(callee.property)) return 0;
   switch (callee.property.name) {
     case 'has':
       return table.kind === 'set' || table.kind === 'map' ? membership(table.entries, counting) : 0;
@@ -480,9 +481,9 @@ function getAdds(call: AstNode, table: Table, counting: Counting) {
 function callAdds(call: AstNode, readable: Readable, counting: Counting) {
   // A callee other than a member has no `object`, so methodAdds finds no table in it.
   const callee = parseNode(call.callee);
-  if (!callee.computed) return methodAdds(call, readable, counting);
+  if (callee.computed !== true) return methodAdds(call, readable, counting);
   if (staticKey(callee.property)) return 0;
-  return tableNamed(callee.object, readable)?.dispatch ? 0 : 1;
+  return tableNamed(callee.object, readable)?.dispatch === true ? 0 : 1;
 }
 
 /**
@@ -505,7 +506,7 @@ export function lookupAdds(node: AstNode, readable: Readable, counting: Counting
 /** `T[k]`: a dispatch object or array read with a runtime key, as the switch it stands for. */
 function indexAdds(member: AstNode, readable: Readable, counting: Counting) {
   const table = tableNamed(member.object, readable);
-  if (!member.computed || !table?.dispatch || staticKey(member.property)) return 0;
+  if (member.computed !== true || table?.dispatch !== true || staticKey(member.property)) return 0;
   return table.kind === 'object' || table.kind === 'array' ? dispatch(table.entries, counting) : 0;
 }
 

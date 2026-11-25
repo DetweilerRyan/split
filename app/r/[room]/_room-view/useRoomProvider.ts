@@ -11,7 +11,7 @@ const loads = new Map<RoomId, Promise<RoomProvider>>();
 function readPendingSeed(roomId: RoomId): ReceiptSeed | null {
   try {
     const raw = window.sessionStorage.getItem(pendingSeedKey(roomId));
-    return raw ? validateSeed(JSON.parse(raw)) : null;
+    return raw !== null ? validateSeed(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -34,7 +34,7 @@ function loadRoom(roomId: RoomId): Promise<RoomProvider> {
 /** Suspends while the room loads; a failed load is thrown to the nearest error boundary. */
 export function useRoomProvider(roomId: RoomId): RoomProvider {
   let load = loads.get(roomId);
-  if (!load) {
+  if (load === undefined) {
     load = loadRoom(roomId);
     loads.set(roomId, load);
   }

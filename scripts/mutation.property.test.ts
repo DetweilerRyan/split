@@ -14,7 +14,9 @@ type File = {
   readonly hunks: readonly Hunk[];
 };
 
-const segment = fc.stringMatching(/^[a-z][a-z0-9 _-]{0,8}$/).map((s) => s.trimEnd() || 'x');
+const segment = fc
+  .stringMatching(/^[a-z][a-z0-9 _-]{0,8}$/)
+  .map((s) => (s.trimEnd() === '' ? 'x' : s.trimEnd()));
 function pathOf(kind: File['kind'], name: string) {
   return {
     mutated: `scripts/oxcrap/${name}.ts`,

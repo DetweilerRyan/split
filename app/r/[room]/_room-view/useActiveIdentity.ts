@@ -39,16 +39,18 @@ export function useActiveIdentity(
   let activeId: string | null = null;
   if (isParticipant(chosenId)) {
     activeId = chosenId;
-  } else if (firstParticipant) {
+  } else if (firstParticipant !== undefined) {
     activeId = isParticipant(savedId) ? savedId : firstParticipant.id;
   }
 
   useEffect(() => {
     const identity = participants.find((person) => person.id === activeId);
     provider.setIdentity(
-      identity ? { id: identity.id, name: identity.name, colorIdx: identity.colorIdx } : null,
+      identity !== undefined
+        ? { id: identity.id, name: identity.name, colorIdx: identity.colorIdx }
+        : null,
     );
-    if (identity) saveIdentity(roomId, identity.id);
+    if (identity !== undefined) saveIdentity(roomId, identity.id);
   }, [activeId, provider, roomId, participants]);
 
   return [activeId, setActiveId] as const;

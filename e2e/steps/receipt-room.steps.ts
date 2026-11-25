@@ -12,7 +12,7 @@ import { Claim, CreateReceiptRoom, JoinRoomOf, OpenRoomLinkFrom } from '../scree
 
 Given(
   '{word} has read a receipt from {string} for {string} and {string}:',
-  async (
+  (
     { actorCalled },
     assistant: string,
     title: string,
@@ -38,11 +38,11 @@ Given(
 
 Given(
   '{word} gave {string} the same id as {string}',
-  async ({ actorCalled }, assistant: string, copy: string, original: string) => {
+  ({ actorCalled }, assistant: string, copy: string, original: string) => {
     const actor = actorCalled(assistant);
     const receipt = actor.recall('receipt');
     const id = receipt.items.find((item) => item.name === original)?.id;
-    if (!id) throw new Error(`The receipt has no "${original}".`);
+    if (id === undefined) throw new Error(`The receipt has no "${original}".`);
     actor.remember('receipt', {
       ...receipt,
       items: receipt.items.map((item) => (item.name === copy ? { ...item, id } : item)),
@@ -111,7 +111,7 @@ Then(
 
 Then(
   '{word} is told the receipt is invalid because {string}',
-  async ({ actorCalled }, assistant: string, reason: string) => {
+  ({ actorCalled }, assistant: string, reason: string) => {
     const actor = actorCalled(assistant);
     expect(actor.answer(ToolCallFailed(actor))).toBe(true);
     expect(actor.answer(ToolResultText(actor))).toContain(reason);

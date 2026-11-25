@@ -41,7 +41,7 @@ export function runsTests(path: string, covered: string): Task {
       readFileSync(join(actor.project, file), 'utf8')
         .split('\n')
         .forEach((line, index) => {
-          if (!line.trim()) return;
+          if (line.trim() === '') return;
           statementMap[index] = {
             start: { line: index + 1, column: 0 },
             end: { line: index + 1, column: line.length },
@@ -109,9 +109,10 @@ export function runsTheCheck(
     const [program, ...args] = commandLine.split(/\s+/).filter(Boolean);
     if (program !== 'oxcrap')
       throw new Error(`Expected a command starting "oxcrap": ${commandLine}`);
-    const cwd = where.inTheOtherFolder
-      ? actor.recall('otherFolder')
-      : join(actor.project, where.in ?? '');
+    const cwd =
+      where.inTheOtherFolder === true
+        ? actor.recall('otherFolder')
+        : join(actor.project, where.in ?? '');
     actor.remember('run', actor.runsTheCheck(args, cwd));
   };
 }

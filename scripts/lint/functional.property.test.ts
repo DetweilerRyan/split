@@ -183,7 +183,7 @@ const program = fc
     }),
     fc.option(defaultClass, { nil: undefined }),
   )
-  .map(([parts, last]) => join(last ? [...parts, last] : parts));
+  .map(([parts, last]) => join(last !== undefined ? [...parts, last] : parts));
 
 /** A case RuleTester runs, written as an object rather than as code alone. */
 type Case = Exclude<Parameters<RuleTester['run']>[2]['valid'][number], string>;
@@ -197,7 +197,7 @@ function reports(
   options?: Case['options'],
 ) {
   // A rule with no options refuses even an empty list, so `no-classes` is given none at all.
-  const test: Case = options ? { code, options } : { code };
+  const test: Case = options !== undefined ? { code, options } : { code };
   if (count === 0) tester.run(ruleName, rule, { valid: [test], invalid: [] });
   else tester.run(ruleName, rule, { valid: [], invalid: [{ ...test, errors: count }] });
 }

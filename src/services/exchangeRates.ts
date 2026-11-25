@@ -42,7 +42,7 @@ function openDb(): Promise<IDBDatabase | null> {
 
 async function readCache(key: string): Promise<ExchangeRate | null> {
   const db = await openDb();
-  if (!db) return null;
+  if (db === null) return null;
   return new Promise((resolve) => {
     try {
       const request = db.transaction(STORE).objectStore(STORE).get(key);
@@ -56,7 +56,7 @@ async function readCache(key: string): Promise<ExchangeRate | null> {
 
 async function writeCache(key: string, value: ExchangeRate): Promise<void> {
   const db = await openDb();
-  if (!db) return;
+  if (db === null) return;
   await new Promise<void>((resolve) => {
     try {
       const tx = db.transaction(STORE, 'readwrite');
@@ -88,7 +88,7 @@ export async function getExchangeRate(
 
   const key = `${base}:${quote}`;
   const cached = await readCache(key);
-  if (cached && !force && now - cached.fetchedAt < RATE_TTL_MS) return cached;
+  if (cached !== null && !force && now - cached.fetchedAt < RATE_TTL_MS) return cached;
 
   try {
     const response = await fetch(`${API}?base=${base}&symbols=${quote}`);

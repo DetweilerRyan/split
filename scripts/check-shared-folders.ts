@@ -85,7 +85,9 @@ function importersOf(
   });
   if (result.status !== 0) {
     const output = `${result.stdout}${result.stderr}`.trim();
-    return { error: output || `rev-dep exited with ${result.status ?? result.signal}.` };
+    return {
+      error: output !== '' ? output : `rev-dep exited with ${result.status ?? result.signal}.`,
+    };
   }
   return {
     importers: result.stdout

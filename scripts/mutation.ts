@@ -44,7 +44,7 @@ export function changedRanges(diff: string): readonly string[] {
       continue;
     }
     const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
-    if (hunk && file && mutated(file)) {
+    if (hunk !== null && file !== undefined && mutated(file)) {
       const start = Number(hunk[1]);
       const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
       if (count > 0) ranges.push(`${file}:${start}-${start + count - 1}`);
@@ -84,12 +84,12 @@ function changedMutate(root: string) {
       spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: root })
         .status === 0,
   );
-  if (!base) throw new Error("Couldn't find origin/main or main to compare with.");
+  if (base === undefined) throw new Error("Couldn't find origin/main or main to compare with.");
   const mergeBase = git(['merge-base', base, 'HEAD'], root);
   const ranges = changedRanges(git(diffArgs(mergeBase), root));
   const untracked = git(['ls-files', '--others', '--exclude-standard', '--', SCOPE], root)
     .split('\n')
-    .filter((file) => file && mutated(file));
+    .filter((file) => mutated(file));
   return [...ranges, ...untracked];
 }
 
@@ -106,7 +106,7 @@ function stryker(root: string, args: readonly string[]) {
     cwd: root,
     stdio: 'inherit',
   });
-  if (result.error) throw new Error(`Couldn't run Stryker: ${result.error.message}`);
+  if (result.error !== undefined) throw new Error(`Couldn't run Stryker: ${result.error.message}`);
   return result.status ?? 1;
 }
 

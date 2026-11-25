@@ -6,7 +6,7 @@ import { parseWebsiteLink } from './restaurantLinks';
 function anyCase(scheme: string) {
   return fc
     .array(fc.boolean(), { minLength: scheme.length, maxLength: scheme.length })
-    .map((upper) => [...scheme].map((c, i) => (upper[i] ? c.toUpperCase() : c)).join(''));
+    .map((upper) => [...scheme].map((c, i) => (upper[i] === true ? c.toUpperCase() : c)).join(''));
 }
 
 const webUrl = fc.webUrl({ validSchemes: ['http', 'https'], withQueryParameters: true });
@@ -28,7 +28,7 @@ describe('parseWebsiteLink', () => {
     fc.assert(
       fc.property(websiteLine, (website) => {
         const url = parseWebsiteLink(website);
-        if (!url) return;
+        if (url === null) return;
         expect(['http:', 'https:']).toContain(url.protocol);
         expect(url.hostname).toContain('.');
         expect(url.username).toBe('');

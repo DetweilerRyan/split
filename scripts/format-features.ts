@@ -36,7 +36,8 @@ function format(source: string): string {
   if (result.status !== 0) {
     // The formatter throws on a parse error; keep its "(line:column): ..." lines, not the stack.
     const positions = result.stderr.split('\n').filter((line) => /^\(\d+:\d+\)/.test(line));
-    throw new Error(positions.join('\n') || result.stderr.trim() || 'the formatter failed');
+    const message = [positions.join('\n'), result.stderr.trim()].find((text) => text !== '');
+    throw new Error(message ?? 'the formatter failed');
   }
   return result.stdout;
 }

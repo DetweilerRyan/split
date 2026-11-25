@@ -17,7 +17,7 @@ const handler = createMcpHandler(
           'Turn an extracted restaurant receipt into a shareable SplitSmart link. Follow the field descriptions strictly: unroll multi-quantity lines into 1x items, never add tax/VAT/subtotal lines as items, and apply defaults (0 tips and bankUsd, [] roster) instead of asking for optional metadata. The link opens a new live room that anyone with the link can join.',
         inputSchema: receiptSeedSchema,
       },
-      async (seed, ctx) => {
+      (seed, ctx) => {
         const origin = new URL(ctx.http?.req?.url ?? 'https://split.detweiler.me').origin;
         const url = buildIngestUrl(origin, seed);
         return {

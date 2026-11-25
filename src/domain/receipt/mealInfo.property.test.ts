@@ -65,7 +65,8 @@ function write({
   after,
 }: typeof written extends fc.Arbitrary<infer W> ? W : never) {
   const date = `${pad(m.year, 4)}-${pad(m.month)}-${pad(m.day)}`;
-  const clock = time ? `${time.separator}${pad(m.hour)}:${pad(m.minute)}${time.after}` : '';
+  const clock =
+    time !== null ? `${time.separator}${pad(m.hour)}:${pad(m.minute)}${time.after}` : '';
   return `${before}${date}${clock}${after}`;
 }
 
@@ -87,8 +88,8 @@ describe('parsePurchasedAt', () => {
         expect(date.getFullYear()).toBe(w.moment.year);
         expect(date.getMonth() + 1).toBe(w.moment.month);
         expect(date.getDate()).toBe(w.moment.day);
-        expect(date.getHours()).toBe(w.time ? w.moment.hour : 0);
-        expect(date.getMinutes()).toBe(w.time ? w.moment.minute : 0);
+        expect(date.getHours()).toBe(w.time !== null ? w.moment.hour : 0);
+        expect(date.getMinutes()).toBe(w.time !== null ? w.moment.minute : 0);
       }),
     );
   });

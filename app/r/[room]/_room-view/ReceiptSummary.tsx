@@ -35,7 +35,7 @@ export function ReceiptSummary({ snapshot, math, onCopySummary }: ReceiptSummary
           <dt>Card total</dt>
           <dd className="font-mono">{formatMoney(math.cardTotal, math.currency)}</dd>
         </div>
-        {math.displayCurrency && math.effectiveRate !== null && (
+        {math.displayCurrency !== null && math.effectiveRate !== null && (
           <>
             {snapshot.bankUsd > 0 && (
               <div className="flex justify-between">
@@ -46,7 +46,7 @@ export function ReceiptSummary({ snapshot, math, onCopySummary }: ReceiptSummary
             <div className="flex justify-between border-t border-slate-100 pt-1 font-bold">
               <dt>
                 Exchange rate
-                {math.isEstimatedRate && snapshot.rateDate ? ` (${snapshot.rateDate})` : ''}
+                {math.isEstimatedRate && snapshot.rateDate !== '' ? ` (${snapshot.rateDate})` : ''}
               </dt>
               <dd className="font-mono">
                 {math.effectiveRate.toFixed(4)} {math.displayCurrency} / {math.currency}

@@ -22,7 +22,7 @@ export function useSharing(
   location: SiteLocation = typeof window === 'undefined' ? null : window.location,
 ) {
   const [open, setOpen] = useState(false);
-  const url = location ? `${location.origin}${roomPath(roomId)}` : '';
+  const url = location !== null ? `${location.origin}${roomPath(roomId)}` : '';
 
   function openDialog() {
     setOpen(true);
