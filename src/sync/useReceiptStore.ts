@@ -39,6 +39,55 @@ function storedItemId(value: unknown, key: string): ItemId | null {
   return id;
 }
 
+/**
+ * The participant stored in the room's `participants` map under `key`, with a fallback for each
+ * field. `null` when the entry isn't a map, or when its id doesn't parse, as `storedParticipantId`
+ * says.
+ */
+function storedParticipant(map: unknown, key: string): Participant | null {
+  if (!(map instanceof Y.Map)) return null;
+  const id = storedParticipantId(map.get('id'), key);
+  if (id === null) return null;
+  return {
+    id,
+    name: storedText(map.get('name'), 'Friend'),
+    colorIdx: numberOrZero(map.get('colorIdx')),
+  };
+}
+
+/**
+ * The item stored in the room's `items` map under `key`, with a fallback for each field, and each
+ * participant's claim on it: the one in the room's `claims` map, else the one an older version
+ * stored on the item itself. `null` when the entry isn't a map, or when its id doesn't parse, as
+ * `storedItemId` says.
+ */
+function storedItem(
+  map: unknown,
+  key: string,
+  participants: readonly Participant[],
+  claims: Y.Map<boolean>,
+): ReceiptItem | null {
+  if (!(map instanceof Y.Map)) return null;
+  const id = storedItemId(map.get('id'), key);
+  if (id === null) return null;
+  const legacyClaims: unknown = map.get('claims');
+  const claimState: Record<ParticipantId, boolean> = {};
+  participants.forEach(({ id: participantId }) => {
+    const claim = claimKey(id, participantId);
+    claimState[participantId] = claims.has(claim)
+      ? claims.get(claim) === true
+      : legacyClaims instanceof Y.Map && legacyClaims.get(participantId) === true;
+  });
+  return {
+    id,
+    name: storedText(map.get('name'), 'Item'),
+    en: storedText(map.get('en'), ''),
+    eur: numberOrZero(map.get('eur')),
+    order: Number(map.get('order') ?? 999),
+    claims: claimState,
+  };
+}
+
 const configuredProvider: RoomSnapshot['connection']['provider'] =
   (process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ?? '') !== '' ? 'Liveblocks' : 'WebRTC';
 
@@ -195,22 +244,11 @@ export class ReceiptStore {
     this.listeners.forEach((listener) => listener());
   }
 
-  // @crap-allow CRAP 11, complexity 11. It reads each participant, item and claim from the Yjs
-  // document with a fallback for each field, and leaves out a participant or item whose id
-  // doesn't parse (#124), which took it one over the limit. Splitting the participants from the
-  // items would scatter the snapshot's shape; reading a whole participant and a whole item with a
-  // schema would bring it within the limits, so do that when either gains a field.
   private createSnapshot(): RoomSnapshot {
     const participants: Participant[] = [];
     this.participants.forEach((map, key) => {
-      if (!(map instanceof Y.Map)) return;
-      const id = storedParticipantId(map.get('id'), key);
-      if (id === null) return;
-      participants.push({
-        id,
-        name: storedText(map.get('name'), 'Friend'),
-        colorIdx: numberOrZero(map.get('colorIdx')),
-      });
+      const participant = storedParticipant(map, key);
+      if (participant !== null) participants.push(participant);
     });
     participants.sort((a, b) =>
       a.colorIdx !== b.colorIdx ? a.colorIdx - b.colorIdx : a.id.localeCompare(b.id),
@@ -218,25 +256,8 @@ export class ReceiptStore {
 
     const items: ReceiptItem[] = [];
     this.items.forEach((map, key) => {
-      if (!(map instanceof Y.Map)) return;
-      const id = storedItemId(map.get('id'), key);
-      if (id === null) return;
-      const legacyClaims = map.get('claims');
-      const claimState: Record<ParticipantId, boolean> = {};
-      participants.forEach(({ id: participantId }) => {
-        const key = claimKey(id, participantId);
-        claimState[participantId] = this.claims.has(key)
-          ? this.claims.get(key) === true
-          : legacyClaims instanceof Y.Map && legacyClaims.get(participantId) === true;
-      });
-      items.push({
-        id,
-        name: storedText(map.get('name'), 'Item'),
-        en: storedText(map.get('en'), ''),
-        eur: numberOrZero(map.get('eur')),
-        order: Number(map.get('order') ?? 999),
-        claims: claimState,
-      });
+      const item = storedItem(map, key, participants, this.claims);
+      if (item !== null) items.push(item);
     });
     items.sort((a, b) => {
       // An order a peer wrote may not be a number, and then the ids decide, as they do for a tie.
