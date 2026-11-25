@@ -132,10 +132,6 @@ export function parseRoomHash(hash: string): {
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }
 
-/* @crap-allow CRAP 21.1, complexity 21. Too complex: a branch for each seed field's default, in
-   the room's details and in each item, and for whether forceReset overwrites it. Splitting the
-   details from the items would bring it within the limits, but that is a change of its own, not
-   part of moving the domain logic out of src/store/ (#94). */
 export function hydrateFromSeed(
   ydoc: Y.Doc,
   seed: ReceiptSeed,
@@ -154,51 +150,72 @@ export function hydrateFromSeed(
       meta.forEach((_value, key) => meta.delete(key));
     }
 
-    for (const [key, value] of Object.entries({
-      title: seed.title,
-      ...Object.fromEntries(
-        (['address', 'phone', 'website', 'purchasedAt', 'mealType'] as const)
-          .map((key) => [key, seed[key]?.trim() ?? ''] as const)
-          .filter(([, value]) => value !== ''),
-      ),
-      cardTipEur: seed.cardTipEur,
-      cashTipEur: seed.cashTipEur,
-      bankUsd: seed.bankUsd,
-      currency: normalizeCurrency(seed.currency),
-      ...(isValidCurrency(seed.displayCurrency)
-        ? {
-            displayCurrency: seed.displayCurrency.toUpperCase(),
-            rate: Number(seed.rate) > 0 ? Number(seed.rate) : 0,
-            rateDate: typeof seed.rateDate === 'string' ? seed.rateDate : '',
-          }
-        : {}),
-    })) {
-      if (forceReset || !meta.has(key)) meta.set(key, value);
+    addDetails(meta, seed);
+    addRoster(participants, seed.roster);
+    addItems(items, seed.items, forceReset);
+  });
+}
+
+/**
+ * Stores the seed's details of the room in its `meta` map: its title, address and the rest, tips
+ * and currencies. A detail the room already has is kept: `forceReset` clears them all first.
+ * A blank address, phone, website, time or meal type is left out, and so are the display
+ * currency, rate and rate date when the seed has no valid display currency.
+ */
+function addDetails(meta: Y.Map<unknown>, seed: ReceiptSeed): void {
+  for (const [key, value] of Object.entries({
+    title: seed.title,
+    ...Object.fromEntries(
+      (['address', 'phone', 'website', 'purchasedAt', 'mealType'] as const)
+        .map((key) => [key, seed[key]?.trim() ?? ''] as const)
+        .filter(([, value]) => value !== ''),
+    ),
+    cardTipEur: seed.cardTipEur,
+    cashTipEur: seed.cashTipEur,
+    bankUsd: seed.bankUsd,
+    currency: normalizeCurrency(seed.currency),
+    ...(isValidCurrency(seed.displayCurrency)
+      ? {
+          displayCurrency: seed.displayCurrency.toUpperCase(),
+          rate: Number(seed.rate) > 0 ? Number(seed.rate) : 0,
+          rateDate: typeof seed.rateDate === 'string' ? seed.rateDate : '',
+        }
+      : {}),
+  })) {
+    if (!meta.has(key)) meta.set(key, value);
+  }
+}
+
+/**
+ * Stores each of the seed's items in the room's `items` map, under its id, or `item-<index>` when
+ * its id is empty. An item the room already has keeps its fields and gets only those it lacks,
+ * unless `forceReset` says to replace it. An entry there that isn't a map is left as it is.
+ */
+function addItems(
+  items: Y.Map<Y.Map<unknown>>,
+  seedItems: ReceiptSeed['items'],
+  forceReset: boolean,
+): void {
+  seedItems.forEach((item, index) => {
+    const id = item.id !== '' ? item.id : itemIdSchema.parse(`item-${index}`);
+    let existing = items.get(id);
+    if (items.has(id) && !forceReset) {
+      if (!(existing instanceof Y.Map)) return;
+      if (!existing.has('id')) existing.set('id', id);
+      if (!existing.has('order')) existing.set('order', index);
+      if (!existing.has('name')) existing.set('name', itemName(item.name));
+      if (!existing.has('en')) existing.set('en', item.en);
+      if (!existing.has('eur')) existing.set('eur', item.eur);
+      return;
     }
 
-    addRoster(participants, seed.roster);
-
-    seed.items.forEach((item, index) => {
-      const id = item.id !== '' ? item.id : itemIdSchema.parse(`item-${index}`);
-      let existing = items.get(id);
-      if (items.has(id) && !forceReset) {
-        if (!(existing instanceof Y.Map)) return;
-        if (!existing.has('id')) existing.set('id', id);
-        if (!existing.has('order')) existing.set('order', index);
-        if (!existing.has('name')) existing.set('name', itemName(item.name));
-        if (!existing.has('en')) existing.set('en', item.en);
-        if (!existing.has('eur')) existing.set('eur', item.eur);
-        return;
-      }
-
-      existing = new Y.Map<unknown>();
-      existing.set('id', id);
-      existing.set('order', index);
-      existing.set('name', itemName(item.name));
-      existing.set('en', item.en);
-      existing.set('eur', item.eur);
-      items.set(id, existing);
-    });
+    existing = new Y.Map<unknown>();
+    existing.set('id', id);
+    existing.set('order', index);
+    existing.set('name', itemName(item.name));
+    existing.set('en', item.en);
+    existing.set('eur', item.eur);
+    items.set(id, existing);
   });
 }
 
