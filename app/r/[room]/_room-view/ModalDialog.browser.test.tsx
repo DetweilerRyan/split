@@ -7,16 +7,22 @@ import { ToastContext } from './Toast';
 
 async function renderDialog(toast = '') {
   const onClose = vi.fn();
+  const clickedBehind = vi.fn();
   const screen = await render(
     <ToastContext value={toast}>
-      <button>Behind the dialog</button>
+      <button onClick={clickedBehind}>Behind the dialog</button>
       <ModalDialog labelledBy="title" onClose={onClose}>
         <h2 id="title">Share this room</h2>
         <button>Copy link</button>
       </ModalDialog>
     </ToastContext>,
   );
-  return { screen, onClose, dialog: screen.getByRole('dialog', { name: 'Share this room' }) };
+  return {
+    screen,
+    onClose,
+    clickedBehind,
+    dialog: screen.getByRole('dialog', { name: 'Share this room' }),
+  };
 }
 
 describe('ModalDialog', () => {
@@ -27,9 +33,14 @@ describe('ModalDialog', () => {
   });
 
   it('keeps the page behind it from being clicked', async () => {
-    const { screen } = await renderDialog();
-    const behind = screen.getByRole('button', { name: 'Behind the dialog' });
-    await expect(userEvent.click(behind, { timeout: 500 })).rejects.toThrow(/intercepts pointer/);
+    const { screen, dialog, clickedBehind } = await renderDialog();
+    await expect.element(dialog).toBeVisible();
+    // `force` skips Playwright's wait for the button to be clickable, but still clicks where it
+    // is, so the modal's top layer and backdrop take the click instead.
+    await userEvent.click(screen.getByRole('button', { name: 'Behind the dialog' }), {
+      force: true,
+    });
+    expect(clickedBehind).not.toHaveBeenCalled();
   });
 
   it('closes on Escape', async () => {
