@@ -70,6 +70,12 @@ describe('parseConfig', () => {
     expect(() => parseConfig(text, 'c.json')).toThrow(message);
   });
 
+  it('leaves out the limits and counting a config doesn’t set', () => {
+    expect(parseConfig('{ "files": ["src/**/*.ts"] }', 'c.json')).toEqual({
+      files: ['src/**/*.ts'],
+    });
+  });
+
   it('lays a config’s counting over the defaults, one option at a time', () => {
     expect(parseConfig('{ "counting": { "nestedFunctions": "own" } }', 'c.json').counting).toEqual({
       ...DEFAULTS.counting,

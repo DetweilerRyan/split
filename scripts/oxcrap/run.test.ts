@@ -140,6 +140,22 @@ describe('run', () => {
     );
   });
 
+  it('reads --help-url from the current folder, not the config’s', () => {
+    const files = {
+      '/repo/web/src/grade.ts': branchy('grade', 12),
+      '/repo/web/crap.json': '{ "coverage": "../coverage.json" }',
+      '/repo/HELP.md': '# Help',
+    };
+    const all = {
+      ...files,
+      '/repo/coverage.json': report({ '/repo/web/src/grade.ts': files['/repo/web/src/grade.ts'] }),
+    };
+    const args = ['-c', 'web/crap.json', '--help-url', 'HELP.md'];
+    expect(oxcrap(args, all, { '/repo/coverage.json': 2 }).stderr.at(-1)).toBe(
+      '\nGet help: HELP.md',
+    );
+  });
+
   it('prints a help URL as it is, and refuses a help path that doesn’t exist', () => {
     const { files, times } = project();
     const args = ['--coverage', 'coverage.json', 'src'];
@@ -197,6 +213,12 @@ describe('run', () => {
     const listed = scored.stderr[0]?.split('\n').slice(1);
     expect(listed).toHaveLength(1);
     expect(listed?.[0]).toMatch(/^- src\/grade\.ts:1 grade: /);
+  });
+
+  it('scores every code file when the folder named on the command line is the one it scores', () => {
+    const { files, times } = project();
+    const listed = oxcrap(['--coverage', 'coverage.json', '.'], files, times).stderr[0];
+    expect(listed).toContain('- src/grade.ts:1 grade: ');
   });
 
   it('scores only the code files in a folder named on the command line', () => {

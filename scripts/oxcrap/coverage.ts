@@ -100,7 +100,13 @@ function calledFunctions(functions: readonly Fn[], file: FileCoverage) {
   const called = new Set<Fn>();
   for (const [id, fn] of Object.entries(file.fnMap)) {
     const owner = innermost(functions, fn.loc);
-    if (owner !== undefined && (file.f[id] ?? 0) > 0) called.add(owner);
+    if (
+      (file.f[id] ?? 0) > 0 &&
+      // Stryker disable next-line ConditionalExpression: a called function outside every function would add undefined to the set, which `coverageOf` never looks up.
+      owner !== undefined
+    ) {
+      called.add(owner);
+    }
   }
   return called;
 }
