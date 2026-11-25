@@ -18,8 +18,15 @@ describe('numberOrZero', () => {
     expect(numberOrZero(4.25)).toBe(4.25);
   });
 
-  it.each([undefined, {}, [1, 2]])('reads %j, which is no number, as 0', (value) => {
-    expect(numberOrZero(value)).toBe(0);
+  it.each([undefined, null, true, {}, [5], [1, 2]])(
+    'reads %j, which is neither a number nor text, as 0',
+    (value) => {
+      expect(numberOrZero(value)).toBe(0);
+    },
+  );
+
+  it('reads an object with no prototype, which Number() would throw on, as 0', () => {
+    expect(numberOrZero(Object.create(null))).toBe(0);
   });
 
   it('reads minus zero as 0', () => {
