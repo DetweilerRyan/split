@@ -74,38 +74,35 @@ const participantColors = [
   '#c026d3',
 ] as const;
 
-/** A WebRTC provider for the room's document, with the awareness it shares peers' states through. */
-function connectWebrtc(roomId: RoomId, doc: Y.Doc) {
-  const webrtc = new WebrtcProvider(webrtcRoomName(roomId), doc, {
-    signaling: [...signalingUrls],
+/**
+ * The room's Liveblocks room, entered without connecting, and the Yjs provider over it, or null when
+ * no Liveblocks key is configured. Every room shares one Liveblocks client.
+ */
+function enterLiveblocksRoom(roomId: RoomId) {
+  if (liveblocksApiKey === '') return null;
+  providerRegistry.__splitLiveblocksClient ??= createClient({ publicApiKey: liveblocksApiKey });
+  const { room } = providerRegistry.__splitLiveblocksClient.enterRoom(roomId, {
+    autoConnect: false,
+    initialPresence: { user: null },
   });
-  return { awareness: webrtc.awareness, webrtc };
+  return { room, yjs: getYjsProviderForRoom(room) };
 }
 
-// @crap-allow CRAP 22, complexity 22. Too complex: it sets up the room's document, storage, Liveblocks or WebRTC, connection status and presence in one place, each with branches of its own. Split the Liveblocks and the WebRTC setup into functions of their own when either next changes.
-async function createProvider(roomId: RoomId, seed: ReceiptSeed | null): Promise<RoomProvider> {
-  const liveblocksRoom =
-    liveblocksApiKey !== ''
-      ? (providerRegistry.__splitLiveblocksClient ??= createClient({
-          publicApiKey: liveblocksApiKey,
-        })).enterRoom(roomId, {
-          autoConnect: false,
-          initialPresence: { user: null },
-        }).room
-      : null;
-  const liveblocks = liveblocksRoom !== null ? getYjsProviderForRoom(liveblocksRoom) : null;
-  const doc = liveblocks?.getYDoc() ?? new Y.Doc();
-  const persistence = new IndexeddbPersistence(indexedDbName(roomId), doc);
-  await persistence.whenSynced;
-
-  const items = doc.getMap('items');
-  if (seed !== null && items.size === 0) {
-    hydrateFromSeed(doc, seed);
-  }
-
-  const store = new ReceiptStore(doc);
-  const connectionProvider = liveblocksRoom !== null ? 'Liveblocks' : 'WebRTC';
-  function updateLiveblocksStatus(status: string) {
+/**
+ * Shows the Liveblocks room's connection status in the store, now and as it changes, and returns
+ * the awareness peers share their states through.
+ */
+function followLiveblocks(
+  liveblocks: {
+    readonly room: {
+      readonly getStatus: () => string;
+      readonly subscribe: (event: 'status', listener: (status: string) => void) => unknown;
+    };
+    readonly yjs: { readonly awareness: PeerAwareness };
+  },
+  store: Pick<ReceiptStore, 'setConnection'>,
+): PeerAwareness {
+  function updateStatus(status: string) {
     store.setConnection({
       provider: 'Liveblocks',
       status:
@@ -118,17 +115,43 @@ async function createProvider(roomId: RoomId, seed: ReceiptSeed | null): Promise
               : 'connecting',
     });
   }
-  if (liveblocksRoom !== null) {
-    updateLiveblocksStatus(liveblocksRoom.getStatus());
-    liveblocksRoom.subscribe('status', updateLiveblocksStatus);
-  } else {
-    store.setConnection({ provider: connectionProvider, status: 'connecting' });
-  }
-  const { awareness, webrtc } =
-    liveblocks !== null
-      ? { awareness: liveblocks.awareness, webrtc: null }
-      : connectWebrtc(roomId, doc);
+  updateStatus(liveblocks.room.getStatus());
+  liveblocks.room.subscribe('status', updateStatus);
+  return liveblocks.yjs.awareness;
+}
 
+/**
+ * Connects the room's document to its peers over WebRTC, shows the connection's status in the
+ * store as it changes, and returns the awareness peers share their states through.
+ */
+function connectWebrtc(roomId: RoomId, doc: Y.Doc, store: Pick<ReceiptStore, 'setConnection'>) {
+  store.setConnection({ provider: 'WebRTC', status: 'connecting' });
+  const webrtc = new WebrtcProvider(webrtcRoomName(roomId), doc, {
+    signaling: [...signalingUrls],
+  });
+  webrtc.on('status', ({ connected }) => {
+    store.setConnection({
+      provider: 'WebRTC',
+      status: connected ? 'connected' : 'disconnected',
+    });
+  });
+  return webrtc.awareness;
+}
+
+/** What the room reads and sets of an awareness, which Liveblocks' and y-webrtc's both have. */
+type PeerAwareness = {
+  readonly getStates: () => ReadonlyMap<number, unknown>;
+  readonly on: (event: 'change', listener: () => void) => void;
+  readonly setLocalStateField: (field: 'user', user: SharedUser | null) => void;
+};
+
+/** The user a peer shares through its awareness: its identity, with the color it's shown in. */
+type SharedUser = NonNullable<Parameters<RoomProvider['setIdentity']>[0]> & {
+  readonly color: (typeof participantColors)[number] | undefined;
+};
+
+/** Keeps the store's list of peers in step with the states they share through `awareness`. */
+function showPeers(awareness: PeerAwareness, store: Pick<ReceiptStore, 'setPeers'>) {
   function updatePeers() {
     const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().entries()).map(
       ([clientId, state]) => {
@@ -142,18 +165,26 @@ async function createProvider(roomId: RoomId, seed: ReceiptSeed | null): Promise
     );
     store.setPeers(peers);
   }
-
   awareness.on('change', updatePeers);
   updatePeers();
-  if (webrtc !== null) {
-    webrtc.on('status', ({ connected }) => {
-      store.setConnection({
-        provider: 'WebRTC',
-        status: connected ? 'connected' : 'disconnected',
-      });
-    });
+}
+
+async function createProvider(roomId: RoomId, seed: ReceiptSeed | null): Promise<RoomProvider> {
+  const liveblocks = enterLiveblocksRoom(roomId);
+  const doc = liveblocks?.yjs.getYDoc() ?? new Y.Doc();
+  const persistence = new IndexeddbPersistence(indexedDbName(roomId), doc);
+  await persistence.whenSynced;
+
+  const items = doc.getMap('items');
+  if (seed !== null && items.size === 0) {
+    hydrateFromSeed(doc, seed);
   }
-  liveblocksRoom?.connect();
+
+  const store = new ReceiptStore(doc);
+  const awareness =
+    liveblocks !== null ? followLiveblocks(liveblocks, store) : connectWebrtc(roomId, doc, store);
+  showPeers(awareness, store);
+  liveblocks?.room.connect();
 
   return {
     doc,
