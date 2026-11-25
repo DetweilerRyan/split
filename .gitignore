@@ -16,6 +16,6 @@ coverage-tooling/
 .features-gen/
 test-results/
 
-# Mutation testing: Stryker's sandbox and its reports (docs/engineering/mutation-testing.md)
+# Mutation testing: Stryker's sandbox and its reports (docs/testing/mutation-testing.md)
 .stryker-tmp/
 /reports/
