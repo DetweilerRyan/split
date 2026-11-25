@@ -6,6 +6,7 @@ import * as Y from 'yjs';
 import '../../../index.css';
 import { ToastContext } from './Toast';
 import { PRESETS } from '@/data/presets';
+import { participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { roomIdSchema } from '@/domain/room/roomId';
 import type { FetchRate } from './useExchangeRate';
 import { parseRoomPath } from '@/sync/seedCodec';
@@ -83,7 +84,13 @@ function FakeItemList(props: PropsOf<'ItemList'>) {
       </ul>
       {first !== undefined && (
         <>
-          <button onClick={() => props.onClaim(first.id, props.activeId ?? '')}>Claim first</button>
+          <button
+            onClick={() => {
+              if (props.activeId !== null) props.onClaim(first.id, props.activeId);
+            }}
+          >
+            Claim first
+          </button>
           <button onClick={() => props.onClaimAll(first.id, props.participants, true)}>
             Everyone claims first
           </button>
@@ -115,9 +122,9 @@ function FakeIdentityModal(props: PropsOf<'IdentityModal'>) {
   return (
     <dialog open aria-label="Identity">
       <p>Picking among {props.participants.length} people</p>
-      <button onClick={() => props.onSelect('p-sam')}>Pick Sam</button>
+      <button onClick={() => props.onSelect(participantIdSchema.parse('p-sam'))}>Pick Sam</button>
       <button onClick={() => props.onAdd('Jamie')}>Join as Jamie</button>
-      <button onClick={() => props.onRemove('p-sam')}>Remove Sam</button>
+      <button onClick={() => props.onRemove(participantIdSchema.parse('p-sam'))}>Remove Sam</button>
       <button onClick={props.onClose}>Close identity</button>
     </dialog>
   );

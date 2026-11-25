@@ -1,10 +1,15 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { RoomSnapshot } from './roomSnapshot';
+import { type RoomSnapshot, itemIdSchema, participantIdSchema } from './roomSnapshot';
 import { buildExportText } from './exportText';
 import type { DeepReadonly } from '@/utils/deepReadonly';
 
 const names = ['Ana', 'Ben', 'Cy', 'Dee'] as const;
+
+/** The participant id of the participant named `name`. */
+function idOf(name: string) {
+  return participantIdSchema.parse(`p-${name.toLowerCase()}`);
+}
 
 /** Currencies with 0, 2 and 3 decimals, which change how many minor units an amount has. */
 const currency = fc.constantFrom(
@@ -62,14 +67,16 @@ function snapshotOf(r: Receipt): RoomSnapshot {
     peers: [],
     participants: names
       .slice(0, r.participantCount)
-      .map((name, colorIdx) => ({ id: name, name, colorIdx })),
+      .map((name, colorIdx) => ({ id: idOf(name), name, colorIdx })),
     items: r.items.map((item, order) => ({
-      id: `item-${order}`,
+      id: itemIdSchema.parse(`item-${order}`),
       name: `Dish ${order}`,
       en: '',
       eur: item.minor / 10 ** r.currency.exponent,
       order,
-      claims: item.claims,
+      claims: Object.fromEntries(
+        Object.entries(item.claims).map(([name, claimed]) => [idOf(name), claimed]),
+      ),
     })),
   };
 }

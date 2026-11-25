@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import * as Y from 'yjs';
+import { participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { roomIdSchema } from '@/domain/room/roomId';
 import { ReceiptStore, useReceiptStore } from '@/sync/useReceiptStore';
 import { useIdentity } from './useIdentity';
@@ -40,7 +41,7 @@ describe('useIdentity', () => {
   it('makes you the participant you choose, and closes the picker', async () => {
     const hook = await setup(['Alex', 'Sam']);
     await hook.act(() => hook.current().openPicker());
-    await hook.act(() => hook.current().choose('p-sam'));
+    await hook.act(() => hook.current().choose(participantIdSchema.parse('p-sam')));
     expect(hook.current().activeId).toBe('p-sam');
     expect(hook.current().pickerOpen).toBe(false);
   });
@@ -98,16 +99,16 @@ describe('useIdentity', () => {
 
   it('removes a participant, and moves you to the first one left when it was you', async () => {
     const hook = await setup(['Alex', 'Sam']);
-    await hook.act(() => hook.current().choose('p-sam'));
-    await hook.act(() => hook.current().remove('p-sam'));
+    await hook.act(() => hook.current().choose(participantIdSchema.parse('p-sam')));
+    await hook.act(() => hook.current().remove(participantIdSchema.parse('p-sam')));
     expect(hook.participantNames()).toEqual(['Alex']);
     expect(hook.current().activeId).toBe('p-alex');
   });
 
   it('keeps you as you are when someone else is removed', async () => {
     const hook = await setup(['Alex', 'Sam', 'Jamie']);
-    await hook.act(() => hook.current().choose('p-jamie'));
-    await hook.act(() => hook.current().remove('p-sam'));
+    await hook.act(() => hook.current().choose(participantIdSchema.parse('p-jamie')));
+    await hook.act(() => hook.current().remove(participantIdSchema.parse('p-sam')));
     expect(hook.participantNames()).toEqual(['Alex', 'Jamie']);
     expect(hook.current().activeId).toBe('p-jamie');
   });

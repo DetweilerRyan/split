@@ -1,4 +1,4 @@
-import type { Participant, ReceiptItem, RoomSnapshot } from './roomSnapshot';
+import type { Participant, ParticipantId, ReceiptItem, RoomSnapshot } from './roomSnapshot';
 import { currencyExponent, fromMinor, normalizeCurrency, toMinor } from '../money/currency';
 
 export type PersonTotal = {
@@ -27,7 +27,7 @@ export type ReceiptMath = {
   readonly effectiveRate: number | null;
   readonly isEstimatedRate: boolean;
   /** Each participant's totals, by participant id. */
-  readonly perPerson: Readonly<Record<string, PersonTotal>>;
+  readonly perPerson: Readonly<Record<ParticipantId, PersonTotal>>;
 };
 
 /**
@@ -99,7 +99,8 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   const currency = normalizeCurrency(snapshot.currency);
   const exp = currencyExponent(currency);
   // Filled in place below, as a local working value; ReceiptMath gives callers each total as readonly.
-  const perPerson: Record<string, { -readonly [K in keyof PersonTotal]: PersonTotal[K] }> = {};
+  const perPerson: Record<ParticipantId, { -readonly [K in keyof PersonTotal]: PersonTotal[K] }> =
+    {};
 
   const itemShares = snapshot.items.flatMap((item, itemIndex) =>
     splitItemMinor(item, itemIndex, snapshot.participants, currency),

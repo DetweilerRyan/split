@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { participantId } from './roomSnapshot';
+import { MAX_ITEM_ID, parseItemId, parseParticipantId, participantId } from './roomSnapshot';
 
 /**
  * How one character of a word is written: as it is, upper-cased, with its accent as a separate
@@ -90,6 +90,99 @@ describe('participantId', () => {
       fc.property(nameless, (written) => {
         expect(participantId(written)).toBeNull();
       }),
+    );
+  });
+});
+
+/**
+ * Any text, with a letter or digit an id keeps somewhere in it, so it names someone. The letter
+ * may carry a combining mark that stays one after normalizing, such as a Devanagari vowel sign.
+ */
+const someone = fc
+  .tuple(
+    fc.string({ unit: 'binary' }),
+    fc.constantFrom(...kept),
+    fc.constantFrom('', '\u093f', '\u094d', '\u0301'),
+    fc.string({ unit: 'binary' }),
+  )
+  .map(([before, letter, mark, after]) => before + letter + mark + after);
+
+/** One UTF-16 code unit, which is what an item id's 64-character limit counts. */
+const codeUnit = fc.integer({ min: 0, max: 0xffff }).map((code) => String.fromCharCode(code));
+
+/**
+ * Strings that look like a participant id but aren't one: an id with another prefix, an empty
+ * word, a word joined by something other than `-`, or `p-` on its own.
+ */
+const notAnId = fc.oneof(
+  fc
+    .tuple(name, fc.constantFrom('', 'P-', 'p_', 'p', 'q-', '-', ' p-', 'pp-', 'p–'))
+    .map(([{ id }, prefix]) => prefix + id.slice(2)),
+  name.map(({ id }) => `${id}-`),
+  name.map(({ id }) => id.replace('p-', 'p--')),
+  fc
+    .tuple(name, fc.constantFrom(' ', '_', '.', '/', '\n'), name)
+    .map(([first, join, second]) => first.id + join + second.id.slice(2)),
+  fc.constant('p-'),
+);
+
+describe('parseParticipantId', () => {
+  it('accepts every id participantId mints, for any name that has a letter or digit', () => {
+    fc.assert(
+      fc.property(someone, (written) => {
+        const id = participantId(written);
+        expect(id).not.toBeNull();
+        expect(parseParticipantId(id)).toBe(id);
+      }),
+    );
+  });
+
+  it('accepts every id a name written any way gives', () => {
+    fc.assert(
+      fc.property(name, ({ id }) => {
+        expect(parseParticipantId(id)).toBe(id);
+      }),
+    );
+  });
+
+  it("refuses a string that isn't p- and words joined by -", () => {
+    fc.assert(
+      fc.property(notAnId, (value) => {
+        expect(parseParticipantId(value)).toBeNull();
+      }),
+    );
+  });
+});
+
+describe('parseItemId', () => {
+  it('accepts every id the app mints, and any other text up to 64 characters, as it is', () => {
+    const minted = fc
+      .tuple(
+        fc.nat(),
+        fc.string({
+          unit: fc.constantFrom(...'0123456789abcdefghijklmnopqrstuvwxyz'),
+          minLength: 1,
+          maxLength: 5,
+        }),
+      )
+      .map(([time, random]) => `item-${time}-${random}`);
+    const preset = fc.nat({ max: 199 }).map((index) => `item-${index}`);
+    const anyText = fc.string({ unit: codeUnit, minLength: 1, maxLength: MAX_ITEM_ID });
+    fc.assert(
+      fc.property(fc.oneof(minted, preset, anyText), (id) => {
+        expect(parseItemId(id)).toBe(id);
+      }),
+    );
+  });
+
+  it('refuses an empty id, and one longer than 64 characters', () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(fc.constant(''), fc.string({ minLength: MAX_ITEM_ID + 1, maxLength: 200 })),
+        (id) => {
+          expect(parseItemId(id)).toBeNull();
+        },
+      ),
     );
   });
 });

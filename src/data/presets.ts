@@ -1,8 +1,9 @@
-import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
+import { receiptSeedSchema } from '../domain/receipt/receiptSeed';
 
-// Its keys are known, so a test that reads one gets a seed, not a seed that may be missing.
+// Each preset is parsed as a seed, which gives its items' ids their type and checks the rest. Its
+// keys are known, so a test that reads one gets a seed, not a seed that may be missing.
 export const PRESETS = {
-  plitvice: {
+  plitvice: receiptSeedSchema.parse({
     title: 'Konoba Lička Kuća — Plitvice',
     cardTipEur: 0,
     cashTipEur: 12,
@@ -31,8 +32,8 @@ export const PRESETS = {
         eur: 19.5,
       },
     ],
-  },
-  osteria: {
+  }),
+  osteria: receiptSeedSchema.parse({
     title: 'Trattoria da Enzo al 29 — Roma',
     cardTipEur: 5,
     cashTipEur: 8,
@@ -56,5 +57,5 @@ export const PRESETS = {
         eur: 17,
       },
     ],
-  },
-} satisfies Readonly<Record<string, ReceiptSeed>>;
+  }),
+};

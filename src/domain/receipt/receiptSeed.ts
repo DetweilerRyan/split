@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isValidCurrency } from '../money/currency';
+import { MAX_ITEM_ID, itemIdSchema } from './roomSnapshot';
 
 export const MAX_ITEMS = 200;
 export const MAX_ROSTER = 50;
@@ -89,7 +90,10 @@ export const receiptSeedSchema = immutable(
           immutable(
             z.object(
               {
-                id: text(64).describe('Sequential unique ID in printed order: item-0, item-1, ...'),
+                // An empty id is read as `item-<index>` by hydrateFromSeed, as before ids had a type.
+                id: text(MAX_ITEM_ID)
+                  .pipe(z.union([itemIdSchema, z.literal('')]))
+                  .describe('Sequential unique ID in printed order: item-0, item-1, ...'),
                 name: text().describe(
                   'Item text as printed on the receipt. Multi-quantity items are suffixed "(1/2)", "(2/2)".',
                 ),

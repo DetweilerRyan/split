@@ -1,6 +1,16 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { MAX_ITEMS, MAX_ROSTER, MAX_TEXT, type ReceiptSeed, validateSeed } from './receiptSeed';
+import type { z } from 'zod';
+import {
+  MAX_ITEMS,
+  MAX_ROSTER,
+  MAX_TEXT,
+  type receiptSeedSchema,
+  validateSeed,
+} from './receiptSeed';
+
+/** A seed as it's given, before parsing gives its item ids their type. */
+type ReceiptSeed = z.input<typeof receiptSeedSchema>;
 
 /** Text up to `max` UTF-16 units: printable ASCII, or any code point, astral ones included. */
 function text(max = MAX_TEXT) {

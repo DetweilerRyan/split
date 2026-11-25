@@ -1,6 +1,16 @@
 import { assert, describe, expect, it } from 'vitest';
-import type { RoomSnapshot } from './roomSnapshot';
+import { type RoomSnapshot, itemIdSchema, participantIdSchema } from './roomSnapshot';
 import { computeReceiptMath, splitItemMinor } from './math';
+
+const ryan = participantIdSchema.parse('p-ryan');
+const jameson = participantIdSchema.parse('p-jameson');
+const item0 = itemIdSchema.parse('item-0');
+const item1 = itemIdSchema.parse('item-1');
+
+/** The id of the participant `makeSnapshot` names `label`. */
+function id(label: 'a' | 'b' | 'c') {
+  return participantIdSchema.parse(`p-${label}`);
+}
 
 describe('receipt currency math', () => {
   it('uses the bank reconciliation rate and allocates tips proportionally', () => {
@@ -21,12 +31,12 @@ describe('receipt currency math', () => {
       connection: { provider: 'WebRTC', status: 'connected' },
       peers: [],
       participants: [
-        { id: 'p-ryan', name: 'Ryan', colorIdx: 0 },
-        { id: 'p-jameson', name: 'Jameson', colorIdx: 1 },
+        { id: ryan, name: 'Ryan', colorIdx: 0 },
+        { id: jameson, name: 'Jameson', colorIdx: 1 },
       ],
       items: [
-        { id: 'item-0', name: 'Meal A', en: '', eur: 100, order: 0, claims: { 'p-ryan': true } },
-        { id: 'item-1', name: 'Meal B', en: '', eur: 37, order: 1, claims: { 'p-jameson': true } },
+        { id: item0, name: 'Meal A', en: '', eur: 100, order: 0, claims: { [ryan]: true } },
+        { id: item1, name: 'Meal B', en: '', eur: 37, order: 1, claims: { [jameson]: true } },
       ],
     };
 
@@ -35,10 +45,10 @@ describe('receipt currency math', () => {
     expect(result.cardTotal).toBe(140);
     expect(result.effectiveRate).toBe(1.1);
     expect(result.isEstimatedRate).toBe(false);
-    expect(result.perPerson['p-ryan']?.cardTipShare).toBeCloseTo(3 * (100 / 137));
-    expect(result.perPerson['p-ryan']?.cashTipShare).toBeCloseTo(10 * (100 / 137));
-    expect(result.perPerson['p-ryan']?.converted).toBeCloseTo((100 + 13 * (100 / 137)) * 1.1);
-    expect(result.perPerson['p-jameson']?.converted).toBeCloseTo((37 + 13 * (37 / 137)) * 1.1);
+    expect(result.perPerson[ryan]?.cardTipShare).toBeCloseTo(3 * (100 / 137));
+    expect(result.perPerson[ryan]?.cashTipShare).toBeCloseTo(10 * (100 / 137));
+    expect(result.perPerson[ryan]?.converted).toBeCloseTo((100 + 13 * (100 / 137)) * 1.1);
+    expect(result.perPerson[jameson]?.converted).toBeCloseTo((37 + 13 * (37 / 137)) * 1.1);
   });
 
   it('uses the estimated rate when no bank charge is entered', () => {
@@ -58,26 +68,24 @@ describe('receipt currency math', () => {
       rateDate: '2026-01-02',
       connection: { provider: 'WebRTC', status: 'connected' },
       peers: [],
-      participants: [{ id: 'p-ryan', name: 'Ryan', colorIdx: 0 }],
-      items: [
-        { id: 'item-0', name: 'Meal', en: '', eur: 10, order: 0, claims: { 'p-ryan': true } },
-      ],
+      participants: [{ id: ryan, name: 'Ryan', colorIdx: 0 }],
+      items: [{ id: item0, name: 'Meal', en: '', eur: 10, order: 0, claims: { [ryan]: true } }],
     };
 
     const result = computeReceiptMath(snapshot);
     expect(result.effectiveRate).toBe(1.085);
     expect(result.isEstimatedRate).toBe(true);
-    expect(result.perPerson['p-ryan']?.converted).toBeCloseTo(15 * 1.085);
+    expect(result.perPerson[ryan]?.converted).toBeCloseTo(15 * 1.085);
   });
 });
 
 function makeSnapshot(
   currency: string | undefined,
   amounts: readonly number[],
-  claimants: readonly (readonly string[])[],
+  claimants: readonly (readonly ('a' | 'b' | 'c')[])[],
   tips = { card: 0, cash: 0 },
 ): RoomSnapshot {
-  const ids = ['a', 'b', 'c'];
+  const labels = ['a', 'b', 'c'] as const;
   return {
     title: 't',
     address: '',
@@ -94,14 +102,16 @@ function makeSnapshot(
     rateDate: '',
     connection: { provider: 'WebRTC', status: 'connected' },
     peers: [],
-    participants: ids.map((id, colorIdx) => ({ id, name: id, colorIdx })),
+    participants: labels.map((label, colorIdx) => ({ id: id(label), name: label, colorIdx })),
     items: amounts.map((eur, order) => ({
-      id: `i${order}`,
+      id: itemIdSchema.parse(`i${order}`),
       name: 'x',
       en: '',
       eur,
       order,
-      claims: Object.fromEntries(ids.map((id) => [id, claimants[order]?.includes(id) === true])),
+      claims: Object.fromEntries(
+        labels.map((label) => [id(label), claimants[order]?.includes(label) === true]),
+      ),
     })),
   };
 }
@@ -127,7 +137,7 @@ describe('integer minor-unit splitting', () => {
     const first = computeReceiptMath(snap);
     const second = computeReceiptMath(snap);
     expect(Object.values(first.perPerson).map((p) => p.totalMinor)).toEqual(
-      ['a', 'b', 'c'].map((id) => second.perPerson[id]?.totalMinor),
+      (['a', 'b', 'c'] as const).map((label) => second.perPerson[id(label)]?.totalMinor),
     );
   });
 
@@ -145,12 +155,12 @@ describe('integer minor-unit splitting', () => {
 
   it('gives callers readonly totals, which TypeScript refuses to change', () => {
     const result = computeReceiptMath(makeSnapshot('USD', [10], [['a']]));
-    const { a } = result.perPerson;
+    const a = result.perPerson[id('a')];
     assert(a !== undefined, 'a has totals');
     // @ts-expect-error A person's totals are readonly to callers.
     a.total = 1;
     // @ts-expect-error So is the record of them.
-    result.perPerson.b = a;
+    result.perPerson[id('b')] = a;
     // @ts-expect-error And the receipt's own totals.
     result.grandTotal = 1;
   });
@@ -158,7 +168,7 @@ describe('integer minor-unit splitting', () => {
   it('falls back to USD when the receipt has no currency (legacy rooms)', () => {
     const result = computeReceiptMath(makeSnapshot(undefined, [10.5], [['a']]));
     expect(result.currency).toBe('USD');
-    expect(result.perPerson.a?.totalMinor).toBe(1050);
+    expect(result.perPerson[id('a')]?.totalMinor).toBe(1050);
   });
 
   it('converts shares using the stored rate and keeps converted totals exact', () => {
@@ -176,7 +186,7 @@ describe('integer minor-unit splitting', () => {
 
   it('shows no conversion without a rate', () => {
     const snap = { ...makeSnapshot('EUR', [10], [['a']]), displayCurrency: 'JPY' };
-    expect(computeReceiptMath(snap).perPerson.a?.converted).toBeNull();
+    expect(computeReceiptMath(snap).perPerson[id('a')]?.converted).toBeNull();
   });
 });
 
@@ -194,24 +204,24 @@ describe('splitItemMinor', () => {
 
   it("gives the leftover cent of an item that doesn't divide evenly to its first claimant", () => {
     expect(split(0)).toEqual([
-      { id: 'a', minor: 34 },
-      { id: 'b', minor: 33 },
-      { id: 'c', minor: 33 },
+      { id: id('a'), minor: 34 },
+      { id: id('b'), minor: 33 },
+      { id: id('c'), minor: 33 },
     ]);
   });
 
   it("gives the next item's leftover cent to the next claimant", () => {
     expect(split(1)).toEqual([
-      { id: 'a', minor: 33 },
-      { id: 'b', minor: 34 },
-      { id: 'c', minor: 33 },
+      { id: id('a'), minor: 33 },
+      { id: id('b'), minor: 34 },
+      { id: id('c'), minor: 33 },
     ]);
   });
 
   it("splits only between an item's claimants, in the participants' order", () => {
     expect(split(2)).toEqual([
-      { id: 'b', minor: 50 },
-      { id: 'c', minor: 50 },
+      { id: id('b'), minor: 50 },
+      { id: id('c'), minor: 50 },
     ]);
   });
 
@@ -222,9 +232,9 @@ describe('splitItemMinor', () => {
   it('adds up to the subtotals computeReceiptMath charges', () => {
     const { perPerson } = computeReceiptMath(snap);
     expect([
-      perPerson.a?.itemsSubtotalMinor,
-      perPerson.b?.itemsSubtotalMinor,
-      perPerson.c?.itemsSubtotalMinor,
+      perPerson[id('a')]?.itemsSubtotalMinor,
+      perPerson[id('b')]?.itemsSubtotalMinor,
+      perPerson[id('c')]?.itemsSubtotalMinor,
     ]).toEqual([34 + 33, 33 + 34 + 50, 33 + 33 + 50]);
   });
 });

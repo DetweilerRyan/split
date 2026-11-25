@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { type Participant, findParticipant } from '@/domain/receipt/roomSnapshot';
+import {
+  type Participant,
+  type ParticipantId,
+  findParticipant,
+} from '@/domain/receipt/roomSnapshot';
 import type { RoomId } from '@/domain/room/roomId';
 import type { ReceiptStore } from '@/sync/useReceiptStore';
 import type { RoomProvider } from '@/sync/yjsProvider';
@@ -33,7 +37,7 @@ export function useIdentity(
     setPickerOpen(false);
   }
 
-  function choose(id: string) {
+  function choose(id: ParticipantId) {
     setActiveId(id);
     setPickerOpen(false);
   }
@@ -46,7 +50,7 @@ export function useIdentity(
     else showToast('Enter a participant name.');
   }
 
-  function remove(id: string) {
+  function remove(id: ParticipantId) {
     provider.store.removeParticipant(id);
     if (id === activeId) setActiveId(null);
   }

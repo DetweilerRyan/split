@@ -25,8 +25,10 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
 
 ## Ids and the strings built from them
 
-- **Give an id that enters the app from a URL, storage or a link a zod brand,** as `RoomId` has. Parse it once where it enters, as `parseRoomId` and `decodeRoomId` do, and pass the branded type from there on. Code past that point takes the branded type, not `string`.
-- **Type a string built from a branded id as a template literal,** and build it with one function that returns that type, as `pendingSeedKey` returns `PendingSeedKey`. `SavedIdentityKey`, `IndexedDbName` and `WebrtcRoomName` follow the same pattern. Define it beside the code that reads or writes the key.
+- **Give an id that enters the app from a URL, storage or a link a zod brand,** as `RoomId` in `src/domain/room/roomId.ts`, and `ParticipantId` and `ItemId` in `src/domain/receipt/roomSnapshot.ts`, have. Parse it once where it enters, as `parseRoomId` and `decodeRoomId` do, and pass the branded type from there on. Code past that point takes the branded type, not `string`.
+  - **Where an id is minted, parse what the app builds,** as `createRoomId` and `participantId` do, so a new id has the brand without a cast.
+  - **A stored participant, item or saved identity whose id doesn't parse is left out** of what the app reads, with a `console.warn` naming it, and the stored data is left as it is. The warning is the shell's: it's logged in `src/sync/`, never in `src/domain/`.
+- **Type a string built from a branded id as a template literal,** and build it with one function that returns that type, as `pendingSeedKey` returns `PendingSeedKey`. `SavedIdentityKey`, `IndexedDbName`, `WebrtcRoomName` and `ClaimKey`, which `claimKey` builds from an `ItemId` and a `ParticipantId`, follow the same pattern. Define it beside the code that reads or writes the key.
 
 ## Readonly by default
 

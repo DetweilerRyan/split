@@ -1,16 +1,16 @@
 import { useState, type SubmitEvent } from 'react';
 import { X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
-import type { Participant } from '@/domain/receipt/roomSnapshot';
+import type { Participant, ParticipantId } from '@/domain/receipt/roomSnapshot';
 
 type IdentityModalProps = {
   readonly open: boolean;
   readonly participants: readonly Participant[];
-  readonly activeId: string | null;
+  readonly activeId: ParticipantId | null;
   readonly onClose: () => void;
-  readonly onSelect: (id: string) => void;
+  readonly onSelect: (id: ParticipantId) => void;
   readonly onAdd: (name: string) => void;
-  readonly onRemove: (id: string) => void;
+  readonly onRemove: (id: ParticipantId) => void;
 };
 
 export function IdentityModal({

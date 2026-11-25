@@ -1,14 +1,55 @@
+import { z } from 'zod';
+
+// A participant id in the form participantId mints, since #100: `p-` and one or more words of
+// letters, combining marks and digits, in any script, joined by `-`. Ids stored under the older
+// ASCII-only rule, such as `p-jos`, have the same form. `p-` on its own, which that rule gave a
+// name with no ASCII letter or digit, doesn't, and nor does any other string. The owner chose
+// "Only today's format" on #124.
+const participantIdPattern = /^p-[\p{L}\p{M}\p{N}]+(?:-[\p{L}\p{M}\p{N}]+)*$/u;
+
+export const participantIdSchema = z
+  .string()
+  .regex(participantIdPattern, {
+    message: 'Participant ids are p- and words of letters, marks and digits joined by -.',
+  })
+  .brand<'ParticipantId'>();
+
+/** A participant id that has been checked. Only parsing, or `participantId`, produces one. */
+export type ParticipantId = z.infer<typeof participantIdSchema>;
+
+/** The participant id in `value`, or `null` when it isn't one. */
+export function parseParticipantId(value: unknown): ParticipantId | null {
+  const result = participantIdSchema.safeParse(value);
+  return result.success ? result.data : null;
+}
+
+export const MAX_ITEM_ID = 64;
+
+// Item ids have never had a format: the app mints `item-<time>-<random>`, presets use `item-0`,
+// and a seed may give any text up to 64 characters. So any non-empty string up to that length is
+// one, as the owner chose on #124.
+export const itemIdSchema = z.string().min(1).max(MAX_ITEM_ID).brand<'ItemId'>();
+
+/** An item id that has been checked. Only parsing produces one. */
+export type ItemId = z.infer<typeof itemIdSchema>;
+
+/** The item id in `value`, or `null` when it isn't one. */
+export function parseItemId(value: unknown): ItemId | null {
+  const result = itemIdSchema.safeParse(value);
+  return result.success ? result.data : null;
+}
+
 export type ReceiptItem = {
-  readonly id: string;
+  readonly id: ItemId;
   readonly name: string;
   readonly en: string;
   readonly eur: number;
   readonly order: number;
-  readonly claims: Readonly<Record<string, boolean>>;
+  readonly claims: Readonly<Record<ParticipantId, boolean>>;
 };
 
 export type Participant = {
-  readonly id: string;
+  readonly id: ParticipantId;
   readonly name: string;
   readonly colorIdx: number;
 };
@@ -54,14 +95,15 @@ export type RoomSnapshot = {
  * after the words.
  *
  * A participant stored before this rule keeps the id it was stored with, which may differ from
- * this; `findParticipant` still finds it by its name.
+ * this; `findParticipant` still finds it by its name. One stored as `p-` isn't read at all, since
+ * `participantIdSchema` refuses it.
  */
-export function participantId(name: string): string | null {
+export function participantId(name: string): ParticipantId | null {
   const words = name
     .normalize('NFKC')
     .toLowerCase()
     .match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu);
-  return words !== null ? `p-${words.join('-')}` : null;
+  return words !== null ? parseParticipantId(`p-${words.join('-')}`) : null;
 }
 
 /**

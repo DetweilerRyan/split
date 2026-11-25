@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { formatMoney } from '../money/currency';
-import type { RoomSnapshot } from './roomSnapshot';
+import { type RoomSnapshot, itemIdSchema, participantIdSchema } from './roomSnapshot';
 import { buildExportText } from './exportText';
+
+/** The participant id of the participant named `name`. */
+function idOf(name: string) {
+  return participantIdSchema.parse(`p-${name.toLowerCase()}`);
+}
 
 function receipt(
   currency: string,
@@ -25,15 +30,15 @@ function receipt(
     rateDate: '',
     connection: { provider: 'WebRTC', status: 'connected' },
     peers: [],
-    participants: names.map((name, colorIdx) => ({ id: name, name, colorIdx })),
+    participants: names.map((name, colorIdx) => ({ id: idOf(name), name, colorIdx })),
     items: amounts.map((eur, order) => ({
-      id: `item-${order}`,
+      id: itemIdSchema.parse(`item-${order}`),
       name: `Dish ${order + 1}`,
       en: '',
       eur,
       order,
       claims: Object.fromEntries(
-        names.map((name) => [name, claimants[order]?.includes(name) === true]),
+        names.map((name) => [idOf(name), claimants[order]?.includes(name) === true]),
       ),
     })),
   };

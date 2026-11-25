@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
+import { receiptSeedSchema } from '../domain/receipt/receiptSeed';
+import { participantIdSchema } from '../domain/receipt/roomSnapshot';
 import { roomIdSchema } from '../domain/room/roomId';
 import { indexedDbName, webrtcRoomName } from './yjsProvider';
 
@@ -95,14 +97,14 @@ describe('room sync provider selection', () => {
     mocks.getYjsProviderForRoom.mockReturnValue({ getYDoc: () => doc, awareness });
 
     const { getRoomProvider } = await import('./yjsProvider');
-    const seed = {
+    const seed = receiptSeedSchema.parse({
       title: 'Link title',
       cardTipEur: 0,
       cashTipEur: 0,
       bankUsd: 0,
       roster: [],
       items: [{ id: 'seed-item', name: 'Seed item', en: 'Seed item', eur: 1 }],
-    };
+    });
     const providerPromise = getRoomProvider(roomIdSchema.parse('split-lb'), seed);
     expect(getRoomProvider(roomIdSchema.parse('split-lb'))).toBe(providerPromise);
 
@@ -151,10 +153,14 @@ describe('room sync provider selection', () => {
 
     onRoomStatus?.('disconnected');
     expect(provider.store.getSnapshot().connection.status).toBe('disconnected');
-    provider.setIdentity({ id: 'person-1', name: 'Person', colorIdx: 0 });
+    provider.setIdentity({
+      id: participantIdSchema.parse('p-person'),
+      name: 'Person',
+      colorIdx: 0,
+    });
     expect(awareness.setLocalStateField).toHaveBeenCalledWith(
       'user',
-      expect.objectContaining({ id: 'person-1', name: 'Person', color: '#4f46e5' }),
+      expect.objectContaining({ id: 'p-person', name: 'Person', color: '#4f46e5' }),
     );
     provider.setIdentity(null);
     expect(awareness.setLocalStateField).toHaveBeenLastCalledWith('user', null);
@@ -245,14 +251,17 @@ describe('room sync provider selection', () => {
     });
 
     const { getRoomProvider } = await import('./yjsProvider');
-    const provider = await getRoomProvider(roomIdSchema.parse('split-data'), {
-      title: 'Link title',
-      cardTipEur: 0,
-      cashTipEur: 0,
-      bankUsd: 0,
-      roster: ['Link participant'],
-      items: [{ id: 'seed-item', name: 'Seed item', en: 'Seed item', eur: 1 }],
-    });
+    const provider = await getRoomProvider(
+      roomIdSchema.parse('split-data'),
+      receiptSeedSchema.parse({
+        title: 'Link title',
+        cardTipEur: 0,
+        cashTipEur: 0,
+        bankUsd: 0,
+        roster: ['Link participant'],
+        items: [{ id: 'seed-item', name: 'Seed item', en: 'Seed item', eur: 1 }],
+      }),
+    );
 
     expect(provider.store.getSnapshot().title).toBe('Existing room');
     expect(provider.store.getSnapshot().items.map(({ id }) => id)).toEqual(['existing-item']);

@@ -1,23 +1,28 @@
 import { useId } from 'react';
-import type { Participant, ReceiptItem } from '@/domain/receipt/roomSnapshot';
+import type {
+  ItemId,
+  Participant,
+  ParticipantId,
+  ReceiptItem,
+} from '@/domain/receipt/roomSnapshot';
 import { formatMoney } from '@/domain/money/currency';
 import { ItemRow } from './ItemRow';
 
 type ItemListProps = {
   readonly items: readonly ReceiptItem[];
   readonly participants: readonly Participant[];
-  readonly activeId: string | null;
+  readonly activeId: ParticipantId | null;
   readonly editing: boolean;
   readonly currency: string;
   readonly filter: 'all' | 'unclaimed' | 'mine';
-  readonly onClaim: (itemId: string, participantId: string) => void;
+  readonly onClaim: (itemId: ItemId, participantId: ParticipantId) => void;
   readonly onClaimAll: (
-    itemId: string,
+    itemId: ItemId,
     participants: readonly Participant[],
     claimed: boolean,
   ) => void;
-  readonly onUpdate: (itemId: string, field: 'name' | 'en' | 'eur', value: string | number) => void;
-  readonly onDelete: (itemId: string) => void;
+  readonly onUpdate: (itemId: ItemId, field: 'name' | 'en' | 'eur', value: string | number) => void;
+  readonly onDelete: (itemId: ItemId) => void;
 };
 
 export function ItemList(props: ItemListProps) {

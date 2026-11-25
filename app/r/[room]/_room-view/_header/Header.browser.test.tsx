@@ -2,9 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import '../../../../index.css';
+import { participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { Header } from './Header';
 
-const alex = { id: 'p-alex', name: 'Alex', colorIdx: 0 } as const;
+const alex = { id: participantIdSchema.parse('p-alex'), name: 'Alex', colorIdx: 0 } as const;
 
 async function renderHeader(props: Partial<Parameters<typeof Header>[0]> = {}) {
   const handlers = { onDetails: vi.fn(), onIdentity: vi.fn(), onEdit: vi.fn(), onShare: vi.fn() };
@@ -58,7 +59,7 @@ describe('Header', () => {
     const { banner, onIdentity } = await renderHeader();
     await userEvent.click(banner.getByRole('button', { name: 'Who are you?' }));
     expect(onIdentity).toHaveBeenCalledOnce();
-    const picked = await renderHeader({ activeId: 'p-alex' });
+    const picked = await renderHeader({ activeId: alex.id });
     await expect
       .element(picked.banner.getByRole('button', { name: 'Alex', exact: true }))
       .toBeVisible();

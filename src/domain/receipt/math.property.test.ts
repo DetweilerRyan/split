@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import type { RoomSnapshot } from './roomSnapshot';
+import { type RoomSnapshot, itemIdSchema, participantIdSchema } from './roomSnapshot';
 import { allocateMinor, computeReceiptMath } from './math';
 import type { DeepReadonly } from '@/utils/deepReadonly';
 
@@ -51,6 +51,11 @@ const displayCurrency = fc.oneof(
 
 const ids = ['a', 'b', 'c', 'd'] as const;
 
+/** The participant id of the participant, or the stranger, a claim names. */
+function idOf(label: string) {
+  return participantIdSchema.parse(`p-${label}`);
+}
+
 /** Whom an item's claims name: each participant claiming, unclaiming or absent, plus a stranger. */
 const claims = fc.record(
   { a: fc.boolean(), b: fc.boolean(), c: fc.boolean(), d: fc.boolean(), stranger: fc.boolean() },
@@ -86,7 +91,7 @@ function major(amountMinor: number, exponent: number) {
 function snapshotOf(r: Receipt): RoomSnapshot {
   const participants = ids
     .slice(0, r.participantCount)
-    .map((id, colorIdx) => ({ id, name: id.toUpperCase(), colorIdx }));
+    .map((id, colorIdx) => ({ id: idOf(id), name: id.toUpperCase(), colorIdx }));
   return {
     title: 'Receipt',
     address: '',
@@ -105,12 +110,14 @@ function snapshotOf(r: Receipt): RoomSnapshot {
     peers: [],
     participants,
     items: r.items.map((item, order) => ({
-      id: `item-${order}`,
+      id: itemIdSchema.parse(`item-${order}`),
       name: `Item ${order}`,
       en: '',
       eur: major(item.minor + item.offset, r.currency.exponent),
       order,
-      claims: item.claims,
+      claims: Object.fromEntries(
+        Object.entries(item.claims).map(([label, claimed]) => [idOf(label), claimed]),
+      ),
     })),
   };
 }
@@ -176,7 +183,7 @@ describe('computeReceiptMath', () => {
           const most = sum(
             claimed.map(({ item, claimants }) => Math.ceil(item.minor / claimants.length)),
           );
-          const subtotal = result.perPerson[id]?.itemsSubtotalMinor;
+          const subtotal = result.perPerson[idOf(id)]?.itemsSubtotalMinor;
           expect(subtotal).toBeGreaterThanOrEqual(fewest);
           expect(subtotal).toBeLessThanOrEqual(most);
         });
@@ -230,7 +237,7 @@ describe('computeReceiptMath', () => {
             p.itemsSubtotalMinor + p.cardTipShareMinor + p.cashTipShareMinor,
           );
         });
-        expect(Object.keys(result.perPerson)).toEqual(ids.slice(0, r.participantCount));
+        expect(Object.keys(result.perPerson)).toEqual(ids.slice(0, r.participantCount).map(idOf));
       }),
     );
   });
