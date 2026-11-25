@@ -58,7 +58,7 @@ echo "\tlibc.so.6 => /lib/libc.so.6"
   // The launch check fails while fail-launch exists.
   mkdirSync(join(cwd, 'scripts'));
   writeFileSync(
-    join(cwd, 'scripts/check-browser.mjs'),
+    join(cwd, 'scripts/check-browser.ts'),
     `import { existsSync } from 'node:fs';
 if (existsSync('fail-launch')) { console.error('browser did not launch'); process.exit(1); }
 console.log('Headless Chromium launched and rendered a page.');

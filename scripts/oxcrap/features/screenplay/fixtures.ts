@@ -11,7 +11,7 @@ export const test = base.extend<{ readonly actorCalled: (name: string) => Actor 
     const cast = new Map<string, Actor>();
     await use((name) => {
       let actor = cast.get(name);
-      if (!actor) {
+      if (actor === undefined) {
         actor = createActor(name);
         cast.set(name, actor);
       }

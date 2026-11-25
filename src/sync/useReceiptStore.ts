@@ -12,7 +12,16 @@ import { storedParticipants } from './storedParticipants';
 import { storedText } from './storedText';
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
-  process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ? 'Liveblocks' : 'WebRTC';
+  (process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ?? '') !== '' ? 'Liveblocks' : 'WebRTC';
+
+/**
+ * A number read from the room's Yjs document, where any peer can write any value: the value as a
+ * number, or 0 when it isn't one. Minus zero reads as 0 too, so no amount shows as "-0.00".
+ */
+function storedNumber(value: unknown): number {
+  const number = Number(value);
+  return Number.isNaN(number) || number === 0 ? 0 : number;
+}
 
 export const EMPTY_SNAPSHOT: RoomSnapshot = {
   title: 'Loading receipt…',
@@ -107,7 +116,7 @@ export class ReceiptStore {
     const trimmed = name.trim();
     const id = participantId(trimmed);
     if (id === null || this.participants.has(id)) return null;
-    if (findParticipant(storedParticipants(this.participants), trimmed)) return null;
+    if (findParticipant(storedParticipants(this.participants), trimmed) !== undefined) return null;
     const colorIdx = this.participants.size % 7;
     const participant = new Y.Map<unknown>();
     participant.set('id', id);
@@ -129,7 +138,7 @@ export class ReceiptStore {
   toggleClaim(itemId: string, participantId: string): void {
     const key = `${itemId}::${participantId}`;
     const item = this.items.get(itemId);
-    if (!item) return;
+    if (item === undefined) return;
     const legacyClaims = item.get('claims');
     const legacyValue =
       legacyClaims instanceof Y.Map ? legacyClaims.get(participantId) === true : false;
@@ -167,9 +176,6 @@ export class ReceiptStore {
     this.listeners.forEach((listener) => listener());
   }
 
-  // @crap-allow CRAP 14, complexity 14. It reads each participant, item and claim from the Yjs
-  // document with a fallback for each field, so its branches are one per field and splitting it
-  // would scatter the snapshot's shape. Parsing the document with a schema (#124) would lower it.
   private createSnapshot(): RoomSnapshot {
     const participants: Participant[] = [];
     this.participants.forEach((map, key) => {
@@ -177,11 +183,13 @@ export class ReceiptStore {
         participants.push({
           id: storedText(map.get('id'), key),
           name: storedText(map.get('name'), 'Friend'),
-          colorIdx: Number(map.get('colorIdx')) || 0,
+          colorIdx: storedNumber(map.get('colorIdx')),
         });
       }
     });
-    participants.sort((a, b) => a.colorIdx - b.colorIdx || a.id.localeCompare(b.id));
+    participants.sort((a, b) =>
+      a.colorIdx !== b.colorIdx ? a.colorIdx - b.colorIdx : a.id.localeCompare(b.id),
+    );
 
     const items: ReceiptItem[] = [];
     this.items.forEach((map, key) => {
@@ -199,12 +207,16 @@ export class ReceiptStore {
         id,
         name: storedText(map.get('name'), 'Item'),
         en: storedText(map.get('en'), ''),
-        eur: Number(map.get('eur')) || 0,
+        eur: storedNumber(map.get('eur')),
         order: Number(map.get('order') ?? 999),
         claims: claimState,
       });
     });
-    items.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+    items.sort((a, b) => {
+      // An order a peer wrote may not be a number, and then the ids decide, as they do for a tie.
+      const byOrder = a.order - b.order;
+      return byOrder !== 0 && !Number.isNaN(byOrder) ? byOrder : a.id.localeCompare(b.id);
+    });
 
     return {
       title: storedText(this.meta.get('title'), 'European Receipt'),
@@ -213,12 +225,12 @@ export class ReceiptStore {
       website: storedText(this.meta.get('website'), ''),
       purchasedAt: storedText(this.meta.get('purchasedAt'), ''),
       mealType: storedText(this.meta.get('mealType'), ''),
-      cardTipEur: Number(this.meta.get('cardTipEur')) || 0,
-      cashTipEur: Number(this.meta.get('cashTipEur')) || 0,
-      bankUsd: Number(this.meta.get('bankUsd')) || 0,
+      cardTipEur: storedNumber(this.meta.get('cardTipEur')),
+      cashTipEur: storedNumber(this.meta.get('cashTipEur')),
+      bankUsd: storedNumber(this.meta.get('bankUsd')),
       currency: normalizeCurrency(this.meta.get('currency')),
       displayCurrency: storedText(this.meta.get('displayCurrency'), ''),
-      rate: Number(this.meta.get('rate')) || 0,
+      rate: storedNumber(this.meta.get('rate')),
       rateDate: storedText(this.meta.get('rateDate'), ''),
       participants,
       items,

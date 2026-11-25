@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import type { Participant } from '@/domain/receipt/roomSnapshot';
@@ -25,9 +25,9 @@ export function IdentityModal({
   const [name, setName] = useState('');
   if (!open) return null;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (name.trim() === '') return;
     onAdd(name);
     setName('');
   }

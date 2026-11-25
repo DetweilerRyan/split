@@ -118,7 +118,7 @@ describe('coverageOf', () => {
       f: {},
     };
     const [f] = parse('example.ts', source, SEPARATELY).functions;
-    assert(f, 'the source has a function');
+    assert(f !== undefined, 'the source has a function');
     expect(f.start).toEqual(at(2, 17));
     expect(coverageOf([f], file).get(f)).toBe(1);
   });
@@ -152,6 +152,17 @@ describe('parseReport', () => {
       );
     },
   );
+
+  it.each(
+    (['statementMap', 's', 'fnMap', 'f'] as const).flatMap((part) =>
+      [null, 5].map((value) => [part, value] as const),
+    ),
+  )('refuses a file entry whose %s is %s, which isn’t an object', (part, value) => {
+    const entry = { ...report([[2, true]], [[9, true]]), [part]: value };
+    expect(() => parseReport(JSON.stringify({ '/repo/src/a.ts': entry }), 'c.json')).toThrow(
+      "c.json isn't an istanbul JSON coverage report, such as coverage-final.json.",
+    );
+  });
 
   it('refuses a report whose file entry is null', () => {
     expect(() => parseReport('{"/repo/src/a.ts": null}', 'c.json')).toThrow(

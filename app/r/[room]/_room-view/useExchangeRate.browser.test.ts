@@ -5,7 +5,7 @@ import { ReceiptStore, useReceiptStore } from '@/sync/useReceiptStore';
 import { type FetchRate, useExchangeRate } from './useExchangeRate';
 
 function fetchesRate(rate: number, date: string) {
-  return vi.fn<FetchRate>(async () => ({ rate, date }));
+  return vi.fn<FetchRate>(() => Promise.resolve({ rate, date }));
 }
 
 async function setup(fetchRate: ReturnType<typeof vi.fn<FetchRate>>) {
@@ -48,7 +48,7 @@ describe('useExchangeRate', () => {
   });
 
   it('shows the receipt currency only, with no rate, when no rate can be fetched', async () => {
-    const fetchRate = vi.fn<FetchRate>(async () => null);
+    const fetchRate = vi.fn<FetchRate>(() => Promise.resolve(null));
     const hook = await setup(fetchRate);
     await hook.act(() => hook.current().changeDisplayCurrency('USD'));
     await expect

@@ -56,7 +56,7 @@ function annotatesVariable(annotation: AnyNode): boolean {
 
 /** Whether `node` is under a function, before the module's top level. */
 function underFunction(node: AnyNode | null): boolean {
-  for (let at = node; at; at = at.parent) {
+  for (let at = node; at !== null; at = at.parent) {
     if (isFunction(at)) return true;
   }
   return false;
@@ -67,7 +67,7 @@ function underFunction(node: AnyNode | null): boolean {
  * `const out: string[] = []`, which may be a mutable working value.
  */
 function inLocalAnnotation(node: AnyNode): boolean {
-  for (let at: AnyNode | null = node; at && inType(at); at = at.parent) {
+  for (let at: AnyNode | null = node; at !== null && inType(at); at = at.parent) {
     if (annotatesVariable(at)) return underFunction(at.parent);
   }
   return false;
@@ -87,7 +87,7 @@ function passesReadonly(node: AnyNode): boolean {
  */
 function inReadonlyWrapper(node: AnyNode): boolean {
   let parent = node.parent;
-  while (parent && passesReadonly(parent)) parent = parent.parent;
+  while (parent !== null && passesReadonly(parent)) parent = parent.parent;
   const reference = parent?.parent;
   return (
     parent?.type === 'TSTypeParameterInstantiation' &&
@@ -160,7 +160,7 @@ export const types: Rule = {
       },
       TSTypeReference(node) {
         const problem = referenceProblem(node);
-        if (problem) report(node, problem);
+        if (problem !== undefined) report(node, problem);
       },
       TSPropertySignature(node) {
         if (!node.readonly && !readonlyMembers(node.parent)) report(node, 'property');

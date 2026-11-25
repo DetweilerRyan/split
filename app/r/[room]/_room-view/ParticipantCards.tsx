@@ -18,7 +18,7 @@ export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
       <div className="space-y-3">
         {snapshot.participants.map((participant) => {
           const totals = math.perPerson[participant.id];
-          if (!totals) return null;
+          if (totals === undefined) return null;
           function fmt(amount: number) {
             return formatMoney(amount, math.currency);
           }
@@ -36,7 +36,7 @@ export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
                   </p>
                 </div>
                 <div className="text-right font-mono">
-                  {totals.converted !== null && math.displayCurrency ? (
+                  {totals.converted !== null && math.displayCurrency !== null ? (
                     <>
                       <p className="font-extrabold text-indigo-700">
                         {formatMoney(totals.converted, math.displayCurrency)}
@@ -53,11 +53,11 @@ export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
           );
         })}
       </div>
-      {math.displayCurrency && math.effectiveRate !== null && (
+      {math.displayCurrency !== null && math.effectiveRate !== null && (
         <p className="mt-3 text-xs text-slate-500">
           Rate: 1 {math.currency} = {math.effectiveRate.toFixed(4)} {math.displayCurrency} ·{' '}
           {math.isEstimatedRate
-            ? `rate of ${snapshot.rateDate || 'unknown date'}`
+            ? `rate of ${snapshot.rateDate !== '' ? snapshot.rateDate : 'unknown date'}`
             : 'based on bank charge'}
         </p>
       )}

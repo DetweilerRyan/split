@@ -27,14 +27,14 @@ export function encodeRoomId(roomId: RoomId): string {
 
 /** The room id in a URL segment or hash value, encoded or not; `null` when it holds none. */
 export function decodeRoomId(value: string | null): RoomId | null {
-  if (!value) return null;
+  if (value === null || value === '') return null;
   const direct = parseRoomId(value);
-  if (direct) return direct;
+  if (direct !== null) return direct;
   try {
     const encoded = value.replace(/-/g, '+').replace(/_/g, '/');
     const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=');
     const decoded = parseRoomId(atob(padded));
-    return decoded && isUuidRoomId(decoded) ? decoded : null;
+    return decoded !== null && isUuidRoomId(decoded) ? decoded : null;
   } catch {
     return null;
   }
@@ -49,13 +49,12 @@ export function buildIngestUrl(origin: string, seed: ReceiptSeed): string {
 }
 
 export function decodeSeed(value: string | null): ReceiptSeed | null {
-  if (!value) return null;
+  if (value === null || value === '') return null;
   const content = value.trim();
   try {
     const json = content.startsWith('{')
       ? content
       : LZString.decompressFromEncodedURIComponent(content);
-    if (!json) return null;
     return receiptSeedSchema.safeParse(JSON.parse(json)).data ?? null;
   } catch {
     return null;
@@ -133,7 +132,7 @@ export function parseRoomHash(hash: string): {
   return { roomId: decodeRoomId(params.get('room')), seed: params.get('seed') };
 }
 
-/* @crap-allow CRAP 29.3, complexity 29. Too complex: a branch for each seed field's default, in
+/* @crap-allow CRAP 21.1, complexity 21. Too complex: a branch for each seed field's default, in
    the room's details and in each item, and for whether forceReset overwrites it. Splitting the
    details from the items would bring it within the limits, but that is a change of its own, not
    part of moving the domain logic out of src/store/ (#94). */
@@ -159,12 +158,12 @@ export function hydrateFromSeed(
       title: seed.title,
       ...Object.fromEntries(
         (['address', 'phone', 'website', 'purchasedAt', 'mealType'] as const)
-          .map((key) => [key, seed[key]?.trim()])
-          .filter(([, value]) => value),
+          .map((key) => [key, seed[key]?.trim() ?? ''] as const)
+          .filter(([, value]) => value !== ''),
       ),
-      cardTipEur: Number(seed.cardTipEur) || 0,
-      cashTipEur: Number(seed.cashTipEur) || 0,
-      bankUsd: Number(seed.bankUsd) || 0,
+      cardTipEur: seed.cardTipEur,
+      cashTipEur: seed.cashTipEur,
+      bankUsd: seed.bankUsd,
       currency: normalizeCurrency(seed.currency),
       ...(isValidCurrency(seed.displayCurrency)
         ? {
@@ -180,27 +179,32 @@ export function hydrateFromSeed(
     addRoster(participants, seed.roster);
 
     seed.items.forEach((item, index) => {
-      const id = item.id || `item-${index}`;
+      const id = item.id !== '' ? item.id : `item-${index}`;
       let existing = items.get(id);
       if (items.has(id) && !forceReset) {
         if (!(existing instanceof Y.Map)) return;
         if (!existing.has('id')) existing.set('id', id);
         if (!existing.has('order')) existing.set('order', index);
-        if (!existing.has('name')) existing.set('name', item.name || 'Receipt Item');
-        if (!existing.has('en')) existing.set('en', item.en || '');
-        if (!existing.has('eur')) existing.set('eur', Number(item.eur) || 0);
+        if (!existing.has('name')) existing.set('name', itemName(item.name));
+        if (!existing.has('en')) existing.set('en', item.en);
+        if (!existing.has('eur')) existing.set('eur', item.eur);
         return;
       }
 
       existing = new Y.Map<unknown>();
       existing.set('id', id);
       existing.set('order', index);
-      existing.set('name', item.name || 'Receipt Item');
-      existing.set('en', item.en || '');
-      existing.set('eur', Number(item.eur) || 0);
+      existing.set('name', itemName(item.name));
+      existing.set('en', item.en);
+      existing.set('eur', item.eur);
       items.set(id, existing);
     });
   });
+}
+
+/** An item's name, or a stand-in when the receipt printed none. */
+function itemName(name: string): string {
+  return name !== '' ? name : 'Receipt Item';
 }
 
 /**
@@ -212,7 +216,7 @@ function addRoster(participants: Y.Map<Y.Map<unknown>>, roster: readonly string[
   roster.forEach((name, index) => {
     const id = participantId(name);
     if (id === null || participants.has(id)) return;
-    if (findParticipant(storedParticipants(participants), name)) return;
+    if (findParticipant(storedParticipants(participants), name) !== undefined) return;
     const participant = new Y.Map<unknown>();
     participant.set('id', id);
     participant.set('name', name.trim());

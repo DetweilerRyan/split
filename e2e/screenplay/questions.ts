@@ -20,7 +20,7 @@ export function ToolCallFailed(assistant: Actor): Question<boolean> {
 export function RoomLinkFrom(assistant: Actor): Question<string> {
   return (actor) => {
     const link = linkPattern.exec(actor.answer(ToolResultText(assistant)))?.[0];
-    if (!link) throw new Error(`${assistant.name}'s tool result holds no link.`);
+    if (link === undefined) throw new Error(`${assistant.name}'s tool result holds no link.`);
     return link;
   };
 }

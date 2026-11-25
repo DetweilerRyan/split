@@ -59,11 +59,11 @@ function describe(error: ErrorObject, path: string) {
   if (error.keyword === 'additionalProperties') {
     // Ajv names the extra key in `additionalProperty`, which its types declare only as any.
     const name = String(error.params.additionalProperty);
-    return option
+    return option !== ''
       ? `${path}: "${option}" has no option "${name}".`
       : `${path} has no option "${name}". The options are ${OPTIONS.join(', ')}.`;
   }
-  return option ? `${path}: "${option}" ${error.message}.` : `${path} ${error.message}.`;
+  return option !== '' ? `${path}: "${option}" ${error.message}.` : `${path} ${error.message}.`;
 }
 
 /** The options a config file sets, checked against the schema. */
@@ -71,7 +71,7 @@ export function parseConfig(text: string, path: string): Partial<Config> {
   const errors: ParseError[] = [];
   const data: unknown = parse(text, errors, { allowTrailingComma: true });
   const [first] = errors;
-  if (first) {
+  if (first !== undefined) {
     throw new ConfigError(
       `${path} isn't valid JSON at ${lineAndColumn(text, first.offset)}: ${printParseErrorCode(first.error)}.`,
     );
@@ -96,8 +96,8 @@ export function parseConfig(text: string, path: string): Partial<Config> {
   const { $schema: _, limits, counting, ...rest } = data;
   return {
     ...rest,
-    ...(limits && { limits: { ...DEFAULTS.limits, ...limits } }),
-    ...(counting && { counting: { ...DEFAULTS.counting, ...counting } }),
+    ...(limits !== undefined ? { limits: { ...DEFAULTS.limits, ...limits } } : {}),
+    ...(counting !== undefined ? { counting: { ...DEFAULTS.counting, ...counting } } : {}),
   };
 }
 
@@ -106,11 +106,11 @@ type Layer = { readonly [Option in keyof Config]?: Config[Option] | undefined };
 
 /** A config's options over the defaults, and then the command line's over both. */
 export function merge(...layers: readonly Layer[]): Config {
-  return Object.assign(
-    {},
+  return layers.reduce<Config>(
+    (config, layer) => ({
+      ...config,
+      ...Object.fromEntries(Object.entries(layer).filter(([, value]) => value !== undefined)),
+    }),
     DEFAULTS,
-    ...layers.map((layer) =>
-      Object.fromEntries(Object.entries(layer).filter(([, value]) => value !== undefined)),
-    ),
   );
 }

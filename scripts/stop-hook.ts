@@ -61,7 +61,8 @@ function run(command: string, args: readonly string[], cwd: string) {
     maxBuffer: 64 * 1024 * 1024,
     env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
   });
-  if (result.error) throw new Error(`Couldn't run ${command}: ${result.error.message}`);
+  if (result.error !== undefined)
+    throw new Error(`Couldn't run ${command}: ${result.error.message}`);
   return { status: result.status, output: `${result.stdout}${result.stderr}`.trim() };
 }
 
@@ -108,21 +109,37 @@ function stateFile(root: string, session: string) {
   return join(folder, session.replace(/[^\w-]/g, '_'));
 }
 
-/** The advice for Claude, or nothing when there's nothing to say. */
-function advice(input: {
+/** The fields of the hook's JSON input that `advice` reads. */
+type HookInput = {
   readonly cwd?: string;
   readonly stop_hook_active?: boolean;
   readonly session_id?: string;
-}) {
+};
+
+/** The hook's JSON input, keeping each field `advice` reads only when it has the type it should. */
+function parseInput(json: unknown): HookInput {
+  if (typeof json !== 'object' || json === null) return {};
+  const cwd = 'cwd' in json ? json.cwd : undefined;
+  const active = 'stop_hook_active' in json ? json.stop_hook_active : undefined;
+  const session = 'session_id' in json ? json.session_id : undefined;
+  return {
+    ...(typeof cwd === 'string' ? { cwd } : {}),
+    ...(typeof active === 'boolean' ? { stop_hook_active: active } : {}),
+    ...(typeof session === 'string' ? { session_id: session } : {}),
+  };
+}
+
+/** The advice for Claude, or nothing when there's nothing to say. */
+function advice(input: HookInput) {
   // Advise once: when Claude is already continuing because of a stop hook, let it stop.
-  if (input.stop_hook_active) return undefined;
+  if (input.stop_hook_active === true) return undefined;
   const top = run('git', ['rev-parse', '--show-toplevel'], input.cwd ?? process.cwd());
   if (top.status !== 0) return undefined;
   const root = top.output;
   const base = ['origin/main', 'main'].find(
     (ref) => run('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], root).status === 0,
   );
-  if (!base) return `The Stop hook couldn't find origin/main or main to compare with.`;
+  if (base === undefined) return `The Stop hook couldn't find origin/main or main to compare with.`;
   const mergeBase = run('git', ['merge-base', base, 'HEAD'], root).output;
   function changedIn(paths: readonly string[]) {
     return (
@@ -136,7 +153,8 @@ function advice(input: {
 
   // Stay quiet when nothing in WATCHED changed since this session's last stop. It's saved before
   // the checks run, so whatever they report is reported once, not on every stop after.
-  if (input.session_id) {
+  // An empty session id names no session, so it keeps no state.
+  if (input.session_id !== undefined && input.session_id !== '') {
     const state = stateFile(root, input.session_id);
     const now = fingerprint(root);
     if (existsSync(state) && readFileSync(state, 'utf8') === now) return undefined;
@@ -183,14 +201,14 @@ function advice(input: {
 function adviceForStdin(): string | undefined {
   try {
     const stdin = readFileSync(0, 'utf8').trim();
-    return advice(stdin ? JSON.parse(stdin) : {});
+    return advice(stdin !== '' ? parseInput(JSON.parse(stdin)) : {});
   } catch (error) {
     return `The Stop hook couldn't run: ${error instanceof Error ? error.message : String(error)}`;
   }
 }
 
 const message = adviceForStdin();
-if (message) {
+if (message !== undefined) {
   console.log(
     JSON.stringify({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext: message } }),
   );

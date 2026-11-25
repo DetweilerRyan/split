@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/mcp': ['./skills/receipt-generation/SKILL.md'],
   },
-  async headers() {
-    return [
+  headers() {
+    return Promise.resolve([
       {
         source: '/r/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
         source: '/ingest',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
-    ];
+    ]);
   },
 };
 

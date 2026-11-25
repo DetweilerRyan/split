@@ -44,7 +44,7 @@ export function check(scored: readonly Scored[], allowed: ReadonlyMap<Fn, Allow>
   const problems: Finding[] = [];
   for (const s of scored) {
     const allow = allowed.get(s.fn);
-    if (allow) {
+    if (allow !== undefined) {
       const at = { file: allow.file, line: allow.line };
       if (!overLimit(s)) {
         problems.push({

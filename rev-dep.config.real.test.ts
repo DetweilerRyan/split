@@ -86,6 +86,11 @@ function target(path: string) {
   return { [`${path}.ts`]: 'export const o = 1;\nexport type O = number;\n' };
 }
 
+/** A module at each of `paths`, as `target` writes one. */
+function targets(paths: readonly string[]): Readonly<Record<string, string>> {
+  return Object.fromEntries(paths.flatMap((path) => Object.entries(target(path))));
+}
+
 /**
  * Each way a file in `src/<layer>/` could import `src/<outside>.ts`, keyed by the importing file:
  * a parent folder, type-only, a re-export, a dynamic `import()`, the `@/` alias, and a path that
@@ -254,7 +259,7 @@ describe('.rev-dep.config.jsonc', () => {
 
     it('fails an import of each other folder it may not use', () => {
       const { status, output } = check({
-        ...Object.assign({}, ...refused.map(target)),
+        ...targets(refused),
         ...importsOf(layer, refused),
       });
 
@@ -268,7 +273,7 @@ describe('.rev-dep.config.jsonc', () => {
 
     it(`lets it import ${allowed.map((path) => path.split('/').slice(0, 2).join('/')).join(', ')}`, () => {
       const { status, output } = check({
-        ...Object.assign({}, ...allowed.map(target)),
+        ...targets(allowed),
         ...importsOf(layer, allowed),
         [`src/${layer}/a/b/deep.ts`]: `import { o } from '../b/../../../../${allowed[0]}.ts';\nexport const d = o;\n`,
       });

@@ -4,8 +4,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, onTestFinished } from 'vitest';
+import { z } from 'zod';
 
 const script = fileURLToPath(new URL('./stop-hook.ts', import.meta.url));
+
+/** What the hook prints when it has advice. */
+const hookOutput = z.object({
+  hookSpecificOutput: z.object({ hookEventName: z.string(), additionalContext: z.string() }),
+});
 
 // Fakes of the npm scripts the hook runs. `lint` fails when LINT_FAILS is set, `test` when a file
 // named tests-fail exists, `test:tooling` when tooling-fails exists, and `oxcrap:app` and
@@ -60,10 +66,16 @@ function hook(cwd: string, input: object, env: Readonly<Record<string, string>> 
     encoding: 'utf8',
     env: { ...process.env, ...env },
   });
-  const context = result.stdout
-    ? (JSON.parse(result.stdout).hookSpecificOutput.additionalContext as string)
-    : undefined;
-  return { status: result.status, stdout: result.stdout, context };
+  const output =
+    result.stdout !== ''
+      ? hookOutput.parse(JSON.parse(result.stdout)).hookSpecificOutput
+      : undefined;
+  return {
+    status: result.status,
+    stdout: result.stdout,
+    output,
+    context: output?.additionalContext,
+  };
 }
 
 describe('stop-hook', () => {
@@ -78,7 +90,7 @@ describe('stop-hook', () => {
     const result = hook(cwd, { stop_hook_active: false });
 
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).hookSpecificOutput.hookEventName).toBe('Stop');
+    expect(result.output?.hookEventName).toBe('Stop');
     expect(result.context).toContain(
       '`npm run oxcrap:app` reports:\nCRAP findings: grade is over the limits.',
     );

@@ -35,7 +35,7 @@ describe('Yjs synchronization and seed hydration', () => {
     const seedString = encodeSeed(sampleSeed);
     const seed = decodeSeed(seedString);
     expect(seed).not.toBeNull();
-    if (!seed) return;
+    if (seed === null) return;
 
     const docA = new Y.Doc();
     const docB = new Y.Doc();

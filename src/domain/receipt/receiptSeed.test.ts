@@ -42,11 +42,11 @@ describe('validateSeed', () => {
     }).toThrow(TypeError);
     expect(() => {
       // @ts-expect-error Its roster is a readonly array.
-      parsed.roster.push('Ben');
+      parsed.roster.push('Ben'); // oxlint-disable-line typescript/no-unsafe-call -- the @ts-expect-error above is the check: push is an error type because the roster is readonly.
     }).toThrow(TypeError);
     expect(() => {
       // @ts-expect-error Its items are a readonly array.
-      parsed.items.push(seed.items[0]);
+      parsed.items.push(seed.items[0]); // oxlint-disable-line typescript/no-unsafe-call -- as for the roster: push is an error type because the items are readonly.
     }).toThrow(TypeError);
     expect(() => {
       // @ts-expect-error Each item's fields are readonly.

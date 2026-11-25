@@ -229,9 +229,9 @@ function classMembers(body: AstNode): { readonly instance: Members; readonly sta
   // A field is defined on the instance or the class after the methods are, so it hides a method of
   // its name wherever it's written: the fields go again at the end.
   for (const member of [...all, ...all.filter(isField)]) {
-    const name = member.computed ? undefined : memberName(member.key);
+    const name = member.computed === true ? undefined : memberName(member.key);
     const value = functionValue(member.value);
-    (member.static ? statics : instance).set(name, value);
+    (member.static === true ? statics : instance).set(name, value);
   }
   return { instance, statics };
 }
@@ -256,7 +256,7 @@ function memberName(key: unknown): string | undefined {
 function thisMethod(callee: AstNode): string | undefined {
   // Only a MemberExpression has an `object`.
   const isThis =
-    !callee.computed && isNode(callee.object) && callee.object.type === 'ThisExpression';
+    callee.computed !== true && isNode(callee.object) && callee.object.type === 'ThisExpression';
   return isThis ? memberName(callee.property) : undefined;
 }
 
@@ -368,7 +368,7 @@ function callsOf(call: AstNode, context: Context): readonly Call[] {
 function callsInClass(body: AstNode, context: Context, into: Calls): readonly Call[] {
   const { instance, statics } = classMembers(body);
   for (const member of parseNodes(body.body)) {
-    const self = member.static || member.type === 'StaticBlock' ? statics : instance;
+    const self = member.static === true || member.type === 'StaticBlock' ? statics : instance;
     callsInMember(member, context, self, into);
   }
   return into;
@@ -424,8 +424,8 @@ function graphOf<Fn>(
 ) {
   const edges: Map<Fn, Set<Fn>> = new Map();
   for (const { from, to } of calls) {
-    const source = from ? callerOf(from) : undefined;
-    const target = to ? scoredAt(to) : undefined;
+    const source = from !== undefined ? callerOf(from) : undefined;
+    const target = isNode(to) ? scoredAt(to) : undefined;
     // Stryker disable next-line ConditionalExpression: an edge from undefined, or one to it, can't close a cycle while the other check stays, since undefined is then only ever a source or only ever a target.
     if (source === undefined || target === undefined) continue;
     edges.set(source, (edges.get(source) ?? new Set<Fn>()).add(target));

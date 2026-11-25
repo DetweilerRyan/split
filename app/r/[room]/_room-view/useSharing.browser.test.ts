@@ -9,7 +9,7 @@ const roomId = roomIdSchema.parse('split-r1');
 const snapshot = { ...EMPTY_SNAPSHOT, title: 'Trattoria Da Enzo' };
 
 function fakeClipboard() {
-  return { writeText: vi.fn(async () => undefined) };
+  return { writeText: vi.fn(() => Promise.resolve()) };
 }
 
 const site = { origin: 'https://split.example' };

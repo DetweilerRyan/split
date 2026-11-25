@@ -164,7 +164,7 @@ function adds(node: AstNode, parent: AstNode, counting: Counting) {
       return parent.type === 'LogicalExpression' ? 0 : operatorRuns(node);
     case 'BreakStatement':
     case 'ContinueStatement':
-      return counting.labelledJumps && node.label ? 1 : 0;
+      return counting.labelledJumps && isNode(node.label) ? 1 : 0;
     case 'AssignmentExpression':
       // `&&=`, `||=` and `??=`.
       return LOGICAL_ASSIGNMENTS.has(String(node.operator)) ? 1 : 0;

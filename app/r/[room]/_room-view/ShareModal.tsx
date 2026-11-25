@@ -12,7 +12,7 @@ type ShareModalProps = {
 
 export function ShareModal({ open, url, onClose, onCopy }: ShareModalProps) {
   const qr = useMemo(() => (open ? qrSvgPath(url) : null), [open, url]);
-  if (!open || !qr) return null;
+  if (!open || qr === null) return null;
 
   return (
     <ModalDialog labelledBy="share-title" onClose={onClose}>

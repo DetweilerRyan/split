@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Plus } from 'lucide-react';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, currencyLabel, listCurrencies } from '@/domain/money/currency';
+import { typedNumber } from './typedNumber';
 
 type EditReceiptDrawerProps = {
   readonly snapshot: RoomSnapshot;
@@ -15,7 +16,8 @@ type EditReceiptDrawerProps = {
   readonly onAddItem: (name: string, en: string, eur: number) => void;
 };
 
-// @crap-allow CRAP 152.8, complexity 12. Debt from before the CRAP check (#63): no tests yet.
+// @crap-allow CRAP 54.9, complexity 7. No test renders it yet: RoomView's test passes a fake in its
+// place. A browser test of its fields, as testing conventions say, would bring it under the limits.
 export function EditReceiptDrawer({
   snapshot,
   onMeta,
@@ -31,10 +33,10 @@ export function EditReceiptDrawer({
   const currencies = listCurrencies();
   const step = 10 ** -currencyExponent(snapshot.currency);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) return;
-    onAddItem(name.trim(), english.trim(), Number(price) || 0);
+    if (name.trim() === '') return;
+    onAddItem(name.trim(), english.trim(), typedNumber(price));
     setName('');
     setEnglish('');
     setPrice('');
@@ -86,18 +88,18 @@ export function EditReceiptDrawer({
               ))}
           </select>
         </label>
-        {snapshot.displayCurrency && (
+        {snapshot.displayCurrency !== '' && (
           <label className="field-label">
             Rate (1 {snapshot.currency} = ? {snapshot.displayCurrency})
-            {snapshot.rateDate ? ` · ${snapshot.rateDate}` : ''}
+            {snapshot.rateDate !== '' ? ` · ${snapshot.rateDate}` : ''}
             <span className="flex gap-2">
               <input
                 className="input"
                 type="number"
                 min="0"
                 step="any"
-                value={snapshot.rate || ''}
-                onChange={(event) => onRate(Number(event.target.value) || 0)}
+                value={snapshot.rate !== 0 ? snapshot.rate : ''}
+                onChange={(event) => onRate(typedNumber(event.target.value))}
               />
               <button
                 className="button-secondary"
@@ -115,8 +117,8 @@ export function EditReceiptDrawer({
             className="input"
             type="number"
             step="0.01"
-            value={snapshot.bankUsd || ''}
-            onChange={(event) => onMeta('bankUsd', Number(event.target.value) || 0)}
+            value={snapshot.bankUsd !== 0 ? snapshot.bankUsd : ''}
+            onChange={(event) => onMeta('bankUsd', typedNumber(event.target.value))}
           />
         </label>
         <label className="field-label">
@@ -126,7 +128,7 @@ export function EditReceiptDrawer({
             type="number"
             step={step}
             value={snapshot.cardTipEur}
-            onChange={(event) => onMeta('cardTipEur', Number(event.target.value) || 0)}
+            onChange={(event) => onMeta('cardTipEur', typedNumber(event.target.value))}
           />
         </label>
         <label className="field-label">
@@ -136,7 +138,7 @@ export function EditReceiptDrawer({
             type="number"
             step={step}
             value={snapshot.cashTipEur}
-            onChange={(event) => onMeta('cashTipEur', Number(event.target.value) || 0)}
+            onChange={(event) => onMeta('cashTipEur', typedNumber(event.target.value))}
           />
         </label>
       </div>

@@ -6,7 +6,7 @@ import { isUuidRoomId, parseRoomId } from './roomId';
 function anyCase(value: string) {
   return fc
     .array(fc.boolean(), { minLength: value.length, maxLength: value.length })
-    .map((upper) => [...value].map((c, i) => (upper[i] ? c.toUpperCase() : c)).join(''));
+    .map((upper) => [...value].map((c, i) => (upper[i] === true ? c.toUpperCase() : c)).join(''));
 }
 
 const base36 = fc.constantFrom(...'0123456789abcdefghijklmnopqrstuvwxyz');

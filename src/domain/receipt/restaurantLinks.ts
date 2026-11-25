@@ -15,7 +15,7 @@ export function parseWebsiteLink(website: string): URL | null {
   }
   // A bare `info@daenzoal29.com` parses with `info` as the username, and a bare `localhost` or a
   // note's first word as a single-label host: neither is a website.
-  const isWebsite = url.hostname.includes('.') && !url.username && !url.password;
+  const isWebsite = url.hostname.includes('.') && url.username === '' && url.password === '';
   return isWebsite ? url : null;
 }
 

@@ -10,7 +10,11 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 const oxlint = fileURLToPath(new URL('../../node_modules/oxlint/bin/oxlint', import.meta.url));
 const config = fileURLToPath(new URL('../../.oxlintrc.json', import.meta.url));
 
-/** oxlint's one-line-per-problem output for `source`, linted as a file of its own. */
+/**
+ * oxlint's status for `source`, linted as a file of its own, and the functional plugin's problems
+ * in its one-line-per-problem output. The config's other rules report on these deliberately bad
+ * snippets too, such as an untyped `this`, and aren't what this file checks.
+ */
 function lint(source: string) {
   const cwd = mkdtempSync(join(tmpdir(), 'splitsmart-lint-'));
   onTestFinished(() => rmSync(cwd, { recursive: true }));
@@ -25,7 +29,7 @@ function lint(source: string) {
   );
   return {
     status: result.status,
-    problems: result.stdout.split('\n').filter((l) => l.includes('[')),
+    problems: result.stdout.split('\n').filter((l) => l.includes('[Error/functional(')),
   };
 }
 

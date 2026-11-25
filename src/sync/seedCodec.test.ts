@@ -70,7 +70,7 @@ describe('room IDs, paths and ingest links', () => {
     ]) {
       const parsed = parseIngestUrl(href);
       expect(parsed).not.toBeNull();
-      if (!parsed || 'error' in parsed) continue;
+      if (parsed === null || 'error' in parsed) continue;
       expect(parsed.seed).toEqual(seed);
       expect(parsed.roomId).toMatch(/^urn:split:room:[0-9a-f-]{36}$/i);
       expect(parsed.encodedRoom).not.toContain('=');
@@ -116,7 +116,7 @@ describe('ingest links', () => {
     const url = buildIngestUrl('https://split.detweiler.me/', seed);
     expect(url.startsWith('https://split.detweiler.me/ingest#ingest=')).toBe(true);
     const parsed = parseIngestUrl(url);
-    expect(parsed && 'seed' in parsed && parsed.seed).toEqual(seed);
+    expect(parsed !== null && 'seed' in parsed && parsed.seed).toEqual(seed);
   });
 });
 

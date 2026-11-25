@@ -19,20 +19,21 @@ export function useExchangeRate(
   showToast: (message: string) => void,
 ) {
   async function changeDisplayCurrency(code: string, force = false, base = snapshot.currency) {
-    if (!code || code === base) {
+    if (code === '' || code === base) {
       store.setExchangeRate('', 0, '');
       return;
     }
     store.setExchangeRate(code, 0, '');
     const result = await fetchRate(base, code, { force });
-    if (result) store.setExchangeRate(code, result.rate, result.date);
+    if (result !== null) store.setExchangeRate(code, result.rate, result.date);
     else showToast('Exchange rate unavailable offline; showing receipt currency only.');
   }
 
   // A new receipt currency needs a new rate to the display currency.
   function changeCurrency(code: string) {
     store.setMeta('currency', code);
-    if (snapshot.displayCurrency) void changeDisplayCurrency(snapshot.displayCurrency, false, code);
+    if (snapshot.displayCurrency !== '')
+      void changeDisplayCurrency(snapshot.displayCurrency, false, code);
   }
 
   // A rate typed by hand is dated today.

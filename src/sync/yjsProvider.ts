@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { hydrateFromSeed } from './seedCodec';
 import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
 import type { RoomId } from '../domain/room/roomId';
+import { storedText } from './storedText';
 import { ReceiptStore } from './useReceiptStore';
 import type { RoomSnapshot } from '../domain/receipt/roomSnapshot';
 
@@ -51,15 +52,14 @@ const peerState = z
 const providers =
   providerRegistry.__splitRoomProviders ??
   (providerRegistry.__splitRoomProviders = new Map<RoomId, Promise<RoomProvider>>());
-const liveblocksApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim();
+const liveblocksApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() ?? '';
 const publicSignalingUrls = ['wss://signaling.yjs.dev', 'wss://y-webrtc-eu.fly.dev'] as const;
 const configuredSignalingUrls = (process.env.NEXT_PUBLIC_WEBRTC_SIGNALING_URLS ?? '')
   .split(',')
   .map((url) => url.trim())
   .filter(Boolean);
-const signalingUrls = configuredSignalingUrls.length
-  ? configuredSignalingUrls
-  : publicSignalingUrls;
+const signalingUrls =
+  configuredSignalingUrls.length > 0 ? configuredSignalingUrls : publicSignalingUrls;
 const participantColors = [
   '#4f46e5',
   '#059669',
@@ -79,27 +79,28 @@ function connectWebrtc(roomId: RoomId, doc: Y.Doc) {
 }
 
 // @crap-allow CRAP 22, complexity 22. Too complex: it sets up the room's document, storage, Liveblocks or WebRTC, connection status and presence in one place, each with branches of its own. Split the Liveblocks and the WebRTC setup into functions of their own when either next changes.
-async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
-  const liveblocksRoom = liveblocksApiKey
-    ? (providerRegistry.__splitLiveblocksClient ??= createClient({
-        publicApiKey: liveblocksApiKey,
-      })).enterRoom(roomId, {
-        autoConnect: false,
-        initialPresence: { user: null },
-      }).room
-    : null;
-  const liveblocks = liveblocksRoom ? getYjsProviderForRoom(liveblocksRoom) : null;
+async function createProvider(roomId: RoomId, seed: ReceiptSeed | null): Promise<RoomProvider> {
+  const liveblocksRoom =
+    liveblocksApiKey !== ''
+      ? (providerRegistry.__splitLiveblocksClient ??= createClient({
+          publicApiKey: liveblocksApiKey,
+        })).enterRoom(roomId, {
+          autoConnect: false,
+          initialPresence: { user: null },
+        }).room
+      : null;
+  const liveblocks = liveblocksRoom !== null ? getYjsProviderForRoom(liveblocksRoom) : null;
   const doc = liveblocks?.getYDoc() ?? new Y.Doc();
   const persistence = new IndexeddbPersistence(indexedDbName(roomId), doc);
   await persistence.whenSynced;
 
   const items = doc.getMap('items');
-  if (seed && items.size === 0) {
+  if (seed !== null && items.size === 0) {
     hydrateFromSeed(doc, seed);
   }
 
   const store = new ReceiptStore(doc);
-  const connectionProvider = liveblocksRoom ? 'Liveblocks' : 'WebRTC';
+  const connectionProvider = liveblocksRoom !== null ? 'Liveblocks' : 'WebRTC';
   function updateLiveblocksStatus(status: string) {
     store.setConnection({
       provider: 'Liveblocks',
@@ -113,15 +114,16 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
               : 'connecting',
     });
   }
-  if (liveblocksRoom) {
+  if (liveblocksRoom !== null) {
     updateLiveblocksStatus(liveblocksRoom.getStatus());
     liveblocksRoom.subscribe('status', updateLiveblocksStatus);
   } else {
     store.setConnection({ provider: connectionProvider, status: 'connecting' });
   }
-  const { awareness, webrtc } = liveblocks
-    ? { awareness: liveblocks.awareness, webrtc: null }
-    : connectWebrtc(roomId, doc);
+  const { awareness, webrtc } =
+    liveblocks !== null
+      ? { awareness: liveblocks.awareness, webrtc: null }
+      : connectWebrtc(roomId, doc);
 
   function updatePeers() {
     const peers: RoomSnapshot['peers'] = Array.from(awareness.getStates().entries()).map(
@@ -129,8 +131,8 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
         const { user } = peerState.parse(state);
         return {
           id: String(clientId),
-          name: user?.name || 'Guest',
-          ...(user?.color ? { color: user.color } : {}),
+          name: storedText(user?.name, 'Guest'),
+          ...(user?.color !== undefined && user.color !== '' ? { color: user.color } : {}),
         };
       },
     );
@@ -139,7 +141,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
 
   awareness.on('change', updatePeers);
   updatePeers();
-  if (webrtc) {
+  if (webrtc !== null) {
     webrtc.on('status', ({ connected }) => {
       store.setConnection({
         provider: 'WebRTC',
@@ -155,7 +157,7 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
     setIdentity: (identity) => {
       awareness.setLocalStateField(
         'user',
-        identity
+        identity !== null
           ? {
               ...identity,
               color: participantColors[identity.colorIdx % participantColors.length],
@@ -166,9 +168,12 @@ async function createProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promis
   };
 }
 
-export function getRoomProvider(roomId: RoomId, seed?: ReceiptSeed | null): Promise<RoomProvider> {
+export function getRoomProvider(
+  roomId: RoomId,
+  seed: ReceiptSeed | null = null,
+): Promise<RoomProvider> {
   let provider = providers.get(roomId);
-  if (!provider) {
+  if (provider === undefined) {
     provider = createProvider(roomId, seed).catch((error: unknown) => {
       providers.delete(roomId);
       throw error;

@@ -19,7 +19,7 @@ function report(files: Readonly<Record<string, string>>, covered: readonly strin
     const statementMap: Record<string, unknown> = {};
     const s: Record<string, number> = {};
     source.split('\n').forEach((line, i) => {
-      if (!line.trim()) return;
+      if (line.trim() === '') return;
       statementMap[i] = {
         start: { line: i + 1, column: 0 },
         end: { line: i + 1, column: line.length },
@@ -114,6 +114,16 @@ describe('run', () => {
       '/repo/HELP.md': '# Help',
     });
     expect(oxcrap([], files, times).stderr.at(-1)).toBe('\nGet help: HELP.md');
+  });
+
+  it('reads an empty -c, --coverage or --help-url as not given', () => {
+    const { files, times } = project({
+      '/repo/.oxcraprc.json': '{ "coverage": "coverage.json", "helpUrl": "HELP.md" }',
+      '/repo/HELP.md': '# Help',
+    });
+    expect(oxcrap(['-c', '', '--coverage', '', '--help-url', ''], files, times).stderr.at(-1)).toBe(
+      '\nGet help: HELP.md',
+    );
   });
 
   it('reads a config -c names from its own folder', () => {
@@ -352,6 +362,7 @@ describe('run', () => {
     const broken: Host = {
       ...host({}),
       exists: () => {
+        // oxlint-disable-next-line typescript/only-throw-error -- the case under test: what run reports when something it calls throws a value that isn't an Error.
         throw 'disk gone';
       },
     };

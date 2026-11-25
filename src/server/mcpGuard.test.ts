@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { guardMcp, MAX_BODY_BYTES } from './mcpGuard';
+
+const jsonRpcError = z.object({ error: z.object({ message: z.string() }) });
 
 describe('guardMcp', () => {
   async function ok(req: Request) {
@@ -16,7 +19,7 @@ describe('guardMcp', () => {
   it('rejects oversized bodies with a JSON-RPC 413', async () => {
     const res = await guardMcp(ok)(post('x'.repeat(MAX_BODY_BYTES + 1)));
     expect(res.status).toBe(413);
-    expect((await res.json()).error.message).toMatch(/too large/);
+    expect(jsonRpcError.parse(await res.json()).error.message).toMatch(/too large/);
   });
 
   it('forwards the body unchanged', async () => {

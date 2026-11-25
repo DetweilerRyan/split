@@ -143,7 +143,7 @@ export function formatMoney(amount: number, code: string, locale?: string): stri
 export function localeCurrency(language: string): string {
   try {
     const region = new Intl.Locale(language).maximize().region;
-    return (region && REGION_CURRENCIES[region]) || DEFAULT_CURRENCY;
+    return (region !== undefined ? REGION_CURRENCIES[region] : undefined) ?? DEFAULT_CURRENCY;
   } catch {
     return DEFAULT_CURRENCY;
   }
@@ -154,7 +154,7 @@ export function listCurrencies(): readonly string[] {
     // TypeScript's lib declares Intl.supportedValuesOf, but older browsers don't have it.
     const supported =
       typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('currency') : [];
-    if (supported.length) return supported;
+    if (supported.length > 0) return supported;
   } catch {}
   return COMMON_CURRENCIES;
 }
@@ -162,7 +162,7 @@ export function listCurrencies(): readonly string[] {
 export function currencyLabel(code: string): string {
   try {
     const name = new Intl.DisplayNames(['en'], { type: 'currency' }).of(code);
-    return name && name !== code ? `${code} — ${name}` : code;
+    return name !== undefined && name !== '' && name !== code ? `${code} — ${name}` : code;
   } catch {
     return code;
   }

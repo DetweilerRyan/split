@@ -86,7 +86,7 @@ function isClassMethod(fn: Ancestor): boolean {
 function bindsToClass(node: ThisNode): boolean {
   let child: Ancestor = node;
   let parent: Ancestor | null = node.parent;
-  while (parent) {
+  while (parent !== null) {
     if (parent.type === 'FunctionExpression' || parent.type === 'FunctionDeclaration') {
       return isClassMethod(parent);
     }
@@ -146,9 +146,9 @@ type DeclarationNode = Parameters<
  * or one in a `declare namespace` or `declare global`, only names a type and holds nothing.
  */
 function livesWithModule(node: DeclarationNode): boolean {
-  if (node.declare) return false;
-  let parent: Ancestor | null = node.parent;
-  while (parent) {
+  if (node.declare === true) return false;
+  // The walk always reaches the Program, which returns.
+  for (let parent: Ancestor = node.parent; ; parent = parent.parent) {
     // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- this walks up past every other kind of node oxlint's AST has, so `default` is the open rest, not a case left out.
     switch (parent.type) {
       case 'Program':
@@ -167,9 +167,7 @@ function livesWithModule(node: DeclarationNode): boolean {
       default:
         if (node.kind === 'let') return false;
     }
-    parent = parent.parent;
   }
-  return false;
 }
 
 export const noModuleLet: Rule = {

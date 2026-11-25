@@ -151,8 +151,10 @@ describe('findFiles', () => {
   it('asks the glob for file types, from the root', () => {
     const glob = vi.fn<Glob>(() => []);
     findFiles(glob, ROOT, CODE, [], [], '');
+    // Vitest types its matchers as `any`; this one matches any function.
+    const aFunction: unknown = expect.any(Function);
     expect(glob.mock.calls).toEqual([
-      [CODE, { cwd: ROOT, withFileTypes: true, exclude: expect.any(Function) }],
+      [CODE, { cwd: ROOT, withFileTypes: true, exclude: aFunction }],
     ]);
   });
 

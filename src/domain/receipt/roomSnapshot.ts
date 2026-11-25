@@ -61,7 +61,7 @@ export function participantId(name: string): string | null {
     .normalize('NFKC')
     .toLowerCase()
     .match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu);
-  return words ? `p-${words.join('-')}` : null;
+  return words !== null ? `p-${words.join('-')}` : null;
 }
 
 /**

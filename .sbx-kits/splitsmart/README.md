@@ -20,7 +20,7 @@ On every start the script also provisions headless Chromium for the [browser tes
 
 - It installs the Chromium build that the `playwright` version pinned in the lockfile names, about 273 MB on a first start.
 - It installs the system libraries Chromium needs, through `sudo` and Playwright's `install-deps`, only while `ldd` reports one missing. The sandbox image lacks about a hundred packages on a first start.
-- It checks that the browser launches and renders a page (`scripts/check-browser.mjs`).
+- It checks that the browser launches and renders a page (`scripts/check-browser.ts`).
 
 Later starts skip the download and apt, and the log says so (`Headless Chromium is already installed.`). `SplitSmart setup complete` appears only once the launch check passes. If it fails, the log names any library still missing.
 

@@ -53,7 +53,7 @@ export function createActor(name: string, browser: Browser, baseURL: string): Ac
   }
 
   async function browseTheWeb(): Promise<Page> {
-    if (!page) {
+    if (page === undefined) {
       const context = await browser.newContext({ ...phone, baseURL });
       // Tests stay offline: anything not served by this machine, such as web fonts, is refused.
       await context.route(
@@ -66,7 +66,7 @@ export function createActor(name: string, browser: Browser, baseURL: string): Ac
   }
 
   function openedPage(): Page {
-    if (!page) throw new Error(`${name} has not opened a browser yet.`);
+    if (page === undefined) throw new Error(`${name} has not opened a browser yet.`);
     return page;
   }
 

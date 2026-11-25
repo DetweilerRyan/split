@@ -32,7 +32,7 @@ export function UnclaimedBanner({
           <div className="h-full bg-emerald-500 transition-all" style={{ width: `${percent}%` }} />
         </div>
         <span className="rounded-lg bg-amber-100 px-2.5 py-1 font-mono text-xs font-bold text-amber-900">
-          {unclaimed.length
+          {unclaimed.length > 0
             ? `${formatAmount(unclaimed.reduce((sum, item) => sum + item.eur, 0))} unclaimed`
             : 'All claimed'}
         </span>

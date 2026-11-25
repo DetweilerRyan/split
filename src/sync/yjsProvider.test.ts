@@ -7,7 +7,10 @@ const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   getYjsProviderForRoom: vi.fn(),
   IndexeddbPersistence: vi.fn(),
-  WebrtcProvider: vi.fn(),
+  WebrtcProvider:
+    vi.fn<
+      (room: string, doc: Y.Doc, options: { readonly signaling: readonly string[] }) => unknown
+    >(),
 }));
 
 vi.mock('@liveblocks/client', () => ({ createClient: mocks.createClient }));
@@ -197,7 +200,7 @@ describe('room sync provider selection', () => {
     expect(mocks.WebrtcProvider).toHaveBeenCalledWith(
       'splitsmart-p2p-room-split-p2p',
       expect.any(Y.Doc),
-      expect.objectContaining({ signaling: expect.any(Array) }),
+      expect.objectContaining<{ readonly signaling: unknown }>({ signaling: expect.any(Array) }),
     );
     expect(provider.store.getSnapshot().items).toEqual([]);
     expect(provider.store.getSnapshot().participants).toEqual([]);

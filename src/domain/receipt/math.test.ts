@@ -146,7 +146,7 @@ describe('integer minor-unit splitting', () => {
   it('gives callers readonly totals, which TypeScript refuses to change', () => {
     const result = computeReceiptMath(makeSnapshot('USD', [10], [['a']]));
     const { a } = result.perPerson;
-    assert(a, 'a has totals');
+    assert(a !== undefined, 'a has totals');
     // @ts-expect-error A person's totals are readonly to callers.
     a.total = 1;
     // @ts-expect-error So is the record of them.
@@ -188,7 +188,7 @@ describe('splitItemMinor', () => {
   );
   function split(itemIndex: number) {
     const item = snap.items[itemIndex];
-    assert(item, `the receipt has an item ${itemIndex}`);
+    assert(item !== undefined, `the receipt has an item ${itemIndex}`);
     return splitItemMinor(item, itemIndex, snap.participants, 'USD');
   }
 

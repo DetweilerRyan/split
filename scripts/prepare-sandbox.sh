@@ -67,7 +67,7 @@ else
 fi
 
 # Confirm the browser launches and renders a page, and name what is missing if it doesn't.
-if ! node scripts/check-browser.mjs; then
+if ! node scripts/check-browser.ts; then
   still_missing=$(missing_libs)
   if [ -n "$still_missing" ]; then
     echo "Chromium is missing these system libraries:"

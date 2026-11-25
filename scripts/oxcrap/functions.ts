@@ -96,7 +96,7 @@ export function label(source: string, fn: AstNode, parent: AstNode | undefined) 
   const own = fn.id;
   // A function's `id`, when it has one, is an Identifier, whose name is a string.
   if (isNamed(own)) return own.name;
-  return (parent && nameFromParent(source, fn, parent)) ?? '(anonymous)';
+  return (parent !== undefined ? nameFromParent(source, fn, parent) : undefined) ?? '(anonymous)';
 }
 
 /** The name a function's parent gives it, as `const f = …` names `f`, or nothing if it can't. */
@@ -120,9 +120,9 @@ function nameFromParent(source: string, fn: AstNode, parent: AstNode) {
   return undefined;
 }
 
-/** A callback's label, from the call it's passed to. */
+/** A callback's label, from the call it's passed to. A callee is never empty text. */
 function callback(callee: string | undefined) {
-  return callee ? `${callee} callback` : undefined;
+  return callee !== undefined ? `${callee} callback` : undefined;
 }
 
 /**
@@ -194,9 +194,9 @@ function record(
   labelOf: () => string,
 ): readonly Fn[] {
   if (SIMPLE_STATEMENTS.has(node.type)) into.statements.push({ start: node.start, end: node.end });
-  if (!isFunctionType(node.type) || !node.body) return enclosing;
+  if (!isFunctionType(node.type) || !isNode(node.body)) return enclosing;
   const [outer, ...rest] = enclosing;
-  if (outer) {
+  if (outer !== undefined) {
     const parents: NestedFn['parents'] = [outer, ...rest];
     const fn = describe(node, parent, labelOf(), parents, source);
     into.functions.push({ fn, node });
@@ -247,12 +247,12 @@ function countRecursion(
     program,
     (node) => {
       const fn = byNode.get(node);
-      return fn && enclosing ? (fn.parents[0] ?? fn) : fn;
+      return fn !== undefined && enclosing ? (fn.parents[0] ?? fn) : fn;
     },
     (node) => {
       const fn = byNode.get(node);
       // Stryker disable next-line ConditionalExpression,LogicalOperator: with `own` counting every function is scored; with `enclosing`, `callerOf` gives every call to an outermost function, so an unscored nested one never calls out and can't be in a cycle, whether calls reach it or not.
-      return fn && scoredSet.has(fn) ? fn : undefined;
+      return fn !== undefined && scoredSet.has(fn) ? fn : undefined;
     },
   );
   // In place: a nested function's `parents` holds its outer `Fn` itself, so a copy would break it.
@@ -278,7 +278,7 @@ export function parse(
 ): Parsed {
   const result = parseSync(file, source);
   const [error] = result.errors;
-  if (error) throw new ParseError(`Couldn't parse ${file}: ${error.message}`);
+  if (error !== undefined) throw new ParseError(`Couldn't parse ${file}: ${error.message}`);
   const program = parseNode(result.program);
   const position = positions(source);
   const tables = tablesIn(program, imported).readable;

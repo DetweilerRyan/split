@@ -10,7 +10,7 @@ export const ToastContext = createContext('');
  */
 export function Toast() {
   const message = useContext(ToastContext);
-  if (!message) return null;
+  if (message === '') return null;
   return (
     <div
       className="fixed bottom-4 right-4 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-lg"

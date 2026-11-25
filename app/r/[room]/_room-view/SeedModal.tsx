@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import { PRESETS } from '@/data/presets';
@@ -18,7 +18,7 @@ export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: Se
   const [forceReset, setForceReset] = useState(true);
   if (!open) return null;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     onImportText();
   }
@@ -30,7 +30,7 @@ export function SeedModal({ open, onClose, onImport, onPreset, onBlankRoom }: Se
         input.includes('#') ? input.slice(input.indexOf('#') + 1) : input,
       );
       const seed = decodeSeed(urlParams.get('seed') ?? input);
-      if (!seed) throw new Error('Invalid seed');
+      if (seed === null) throw new Error('Invalid seed');
       onImport(seed, forceReset);
     } catch {
       window.alert('Could not parse seed JSON, compressed seed, or room link.');
