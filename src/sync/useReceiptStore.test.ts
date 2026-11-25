@@ -238,6 +238,67 @@ describe('ids stored in the document', () => {
     ]);
   });
 
+  it('reads a participant with no name as Friend, and orders participants by colour, then id', () => {
+    const doc = new Y.Doc();
+    const participants = doc.getMap<Y.Map<unknown>>('participants');
+    [
+      { id: 'p-cy', colorIdx: 1 },
+      { id: 'p-bo', colorIdx: 0 },
+      { id: 'p-al', colorIdx: 1 },
+    ].forEach(({ id, colorIdx }) => {
+      const participant = new Y.Map<unknown>();
+      participant.set('id', id);
+      participant.set('colorIdx', colorIdx);
+      participants.set(id, participant);
+    });
+
+    expect(new ReceiptStore(doc).getSnapshot().participants).toEqual([
+      { id: 'p-bo', name: 'Friend', colorIdx: 0 },
+      { id: 'p-al', name: 'Friend', colorIdx: 1 },
+      { id: 'p-cy', name: 'Friend', colorIdx: 1 },
+    ]);
+  });
+
+  it('orders items by order, and by id when orders tie or one is not a number', () => {
+    const doc = new Y.Doc();
+    const items = doc.getMap<Y.Map<unknown>>('items');
+    [
+      { id: 'item-d', order: 1 },
+      { id: 'item-c', order: 'first' },
+      { id: 'item-b', order: 0 },
+      { id: 'item-a', order: 1 },
+    ].forEach(({ id, order }) => {
+      const item = new Y.Map<unknown>();
+      item.set('id', id);
+      item.set('order', order);
+      items.set(id, item);
+    });
+
+    expect(new ReceiptStore(doc).getSnapshot().items.map(({ id }) => id)).toEqual([
+      'item-b',
+      'item-a',
+      'item-c',
+      'item-d',
+    ]);
+  });
+
+  it('reads a claim from the claims map over one stored on the item', () => {
+    const doc = new Y.Doc();
+    storeParticipant(doc, 'p-sam', 'p-sam', 'Sam');
+    storeParticipant(doc, 'p-amy', 'p-amy', 'Amy');
+    storeItem(doc, 'item-0', 'item-0');
+    const legacyClaims = new Y.Map<boolean>();
+    legacyClaims.set('p-sam', true);
+    legacyClaims.set('p-amy', true);
+    doc.getMap<Y.Map<unknown>>('items').get('item-0')?.set('claims', legacyClaims);
+    doc.getMap<boolean>('claims').set('item-0::p-sam', false);
+
+    expect(new ReceiptStore(doc).getSnapshot().items[0]?.claims).toEqual({
+      'p-amy': true,
+      'p-sam': false,
+    });
+  });
+
   it('claims with keys built from an item id and a participant id', () => {
     const store = new ReceiptStore(new Y.Doc());
     store.addParticipant('Sam');
