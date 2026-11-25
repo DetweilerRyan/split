@@ -2,12 +2,12 @@ import { formatMoney } from '@/domain/money/currency';
 import type { ReceiptMath } from '@/domain/receipt/math';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 
-interface ReceiptSummaryProps {
+type ReceiptSummaryProps = {
   readonly snapshot: RoomSnapshot;
   /** `computeReceiptMath(snapshot)`. */
   readonly math: ReceiptMath;
   readonly onCopySummary: () => void;
-}
+};
 
 /** The receipt's totals, and the exchange rate while it's shown in another currency. */
 export function ReceiptSummary({ snapshot, math, onCopySummary }: ReceiptSummaryProps) {

@@ -7,7 +7,7 @@ import {
   toMinor,
 } from '../money/currency';
 
-export interface PersonTotal {
+export type PersonTotal = {
   readonly participant: RoomSnapshot['participants'][number];
   readonly itemsSubtotalMinor: number;
   readonly cardTipShareMinor: number;
@@ -20,10 +20,10 @@ export interface PersonTotal {
   readonly total: number;
   /** Total in display-currency major units, or null when no conversion applies. */
   readonly converted: number | null;
-}
+};
 
 /** A receipt's totals, as computeReceiptMath works them out from a snapshot. */
-export interface ReceiptMath {
+export type ReceiptMath = {
   readonly currency: string;
   readonly exponent: number;
   readonly displayCurrency: string | null;
@@ -34,7 +34,7 @@ export interface ReceiptMath {
   readonly isEstimatedRate: boolean;
   /** Each participant's totals, by participant id. */
   readonly perPerson: Readonly<Record<string, PersonTotal>>;
-}
+};
 
 /**
  * Splits `total` (integer minor units) across `weights` proportionally using the
@@ -71,10 +71,10 @@ function allocate<T>(
 }
 
 /** One claimant's share of an item, in minor units of the receipt currency. */
-export interface ItemShare {
+export type ItemShare = {
   readonly id: Participant['id'];
   readonly minor: number;
-}
+};
 
 /**
  * Splits the item at `itemIndex` of a receipt equally between the participants who claim it, in

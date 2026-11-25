@@ -26,7 +26,7 @@ import type { RoomProvider } from '@/sync/yjsProvider';
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
 /** The components a room is built from. A test passes fakes, to check only how the room wires them. */
-export interface RoomParts {
+export type RoomParts = {
   readonly Header: ComponentType<ComponentProps<typeof Header>>;
   readonly UnclaimedBanner: ComponentType<ComponentProps<typeof UnclaimedBanner>>;
   readonly EditReceiptDrawer: ComponentType<ComponentProps<typeof EditReceiptDrawer>>;
@@ -38,7 +38,7 @@ export interface RoomParts {
   readonly ShareModal: ComponentType<ComponentProps<typeof ShareModal>>;
   readonly SeedModal: ComponentType<ComponentProps<typeof SeedModal>>;
   readonly Toast: ComponentType;
-}
+};
 
 const roomParts: RoomParts = {
   Header,
@@ -55,20 +55,20 @@ const roomParts: RoomParts = {
 };
 
 /** What the room reaches outside itself for. A test passes fakes. */
-export interface RoomServices {
+export type RoomServices = {
   /** Where the room's link and summary are copied to. */
   readonly clipboard: CopyTarget;
   /** Gets the rate to the currency the receipt is shown in. */
   readonly fetchRate: FetchRate;
   /** How long a toast stays up, in milliseconds. */
   readonly toastMs: number;
-}
+};
 
 function browserServices(): RoomServices {
   return { clipboard: navigator.clipboard, fetchRate: getExchangeRate, toastMs: TOAST_MS };
 }
 
-interface RoomViewProps {
+type RoomViewProps = {
   readonly roomId: RoomId;
   /** The room's document, store and presence. Pass the same one on every render. */
   readonly provider: RoomProvider;
@@ -76,7 +76,7 @@ interface RoomViewProps {
   readonly navigate: (path: string) => void;
   readonly parts?: RoomParts;
   readonly services?: RoomServices;
-}
+};
 
 /** A receipt room: its header, items and totals, and the dialogs they open. */
 export function RoomView({

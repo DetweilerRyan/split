@@ -3,7 +3,7 @@ import { formatPurchaseTime, parsePurchasedAt } from '@/domain/receipt/mealInfo'
 import type { Participant, RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { getConnectionStatusDisplay } from './connectionStatus';
 
-interface HeaderProps {
+type HeaderProps = {
   readonly title: string;
   readonly purchasedAt: string;
   readonly mealType: string;
@@ -16,7 +16,7 @@ interface HeaderProps {
   readonly onIdentity: () => void;
   readonly onEdit: () => void;
   readonly onShare: () => void;
-}
+};
 
 export function Header({
   title,

@@ -42,11 +42,11 @@ function seedWith(itemCount: { readonly minLength: number; readonly maxLength: n
 }
 
 /** One text field of a seed, with its limit and how to put a value in it. */
-interface TextField {
+type TextField = {
   readonly path: string;
   readonly max: number;
   readonly set: (seed: ReceiptSeed, value: string) => ReceiptSeed;
-}
+};
 
 const textFields: readonly TextField[] = [
   ...(['title', 'address', 'website'] as const).map((key) => ({

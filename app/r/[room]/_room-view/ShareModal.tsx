@@ -3,12 +3,12 @@ import { Copy, X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import { qrSvgPath } from '@/utils/qr';
 
-interface ShareModalProps {
+type ShareModalProps = {
   readonly open: boolean;
   readonly url: string;
   readonly onClose: () => void;
   readonly onCopy: () => void;
-}
+};
 
 export function ShareModal({ open, url, onClose, onCopy }: ShareModalProps) {
   const qr = useMemo(() => (open ? qrSvgPath(url) : null), [open, url]);

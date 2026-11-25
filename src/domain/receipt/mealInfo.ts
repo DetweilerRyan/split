@@ -1,9 +1,9 @@
 import { parse } from 'date-fns/parse';
 
-export interface PurchaseTime {
+export type PurchaseTime = {
   readonly date: Date;
   readonly hasTime: boolean;
-}
+};
 
 /**
  * Reads the local date, and the time when one is written, from the start of a purchase time such

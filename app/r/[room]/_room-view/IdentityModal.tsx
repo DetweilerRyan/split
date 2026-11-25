@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { ModalDialog } from './ModalDialog';
 import type { Participant } from '@/domain/receipt/roomSnapshot';
 
-interface IdentityModalProps {
+type IdentityModalProps = {
   readonly open: boolean;
   readonly participants: readonly Participant[];
   readonly activeId: string | null;
@@ -11,7 +11,7 @@ interface IdentityModalProps {
   readonly onSelect: (id: string) => void;
   readonly onAdd: (name: string) => void;
   readonly onRemove: (id: string) => void;
-}
+};
 
 export function IdentityModal({
   open,

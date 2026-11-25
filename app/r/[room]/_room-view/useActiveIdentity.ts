@@ -3,11 +3,11 @@ import { readSavedIdentity, saveIdentity, subscribeToSavedIdentity } from '@/syn
 import type { RoomProvider } from '@/sync/yjsProvider';
 import type { RoomId } from '@/domain/room/roomId';
 
-interface Participant {
+type Participant = {
   readonly id: string;
   readonly name: string;
   readonly colorIdx: number;
-}
+};
 
 export function useActiveIdentity(
   provider: Pick<RoomProvider, 'setIdentity'>,

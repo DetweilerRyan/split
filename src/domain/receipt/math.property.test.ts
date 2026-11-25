@@ -4,11 +4,11 @@ import type { RoomSnapshot } from './roomSnapshot';
 import { allocateMinor, computeReceiptMath } from './math';
 
 /** A currency as a receipt might name it, with the code it stands for and its decimals. */
-interface WrittenCurrency {
+type WrittenCurrency = {
   readonly written: string | undefined;
   readonly code: string;
   readonly exponent: number;
-}
+};
 
 /** A code written in any mix of cases. */
 function anyCase(code: string) {
