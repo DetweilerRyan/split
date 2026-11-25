@@ -31,7 +31,8 @@ A property test checks a rule that should hold for every input, against many inp
 - **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.
   - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [Mutation testing](mutation-testing.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
 - **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it, and confirm the property fails with the fix undone.
-- **Keep it fast.** fast-check runs 100 inputs by default. Raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is. This is the count CI runs.
+- **Leave `numRuns` and `seed` out of a new property until it has been soaked.** A soak can't reach a property that sets its own.
+- **Keep it fast.** fast-check runs 100 inputs by default. After the soak, raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is. This is the count CI runs.
 
 ## Soaking a new property
 
@@ -45,8 +46,11 @@ Before you commit a new property, run it for two minutes rather than its usual c
 
    For one under `scripts/`, add `-c vitest.tooling.config.ts`. Leave out `-t` to soak every property in the file, each for the full two minutes.
 
-2. **Read the result when it finishes.** A property that passed prints `Soak passed:` and how many inputs it ran. One that failed prints its shrunk input, seed and path.
-3. **If the report says the time limit cut shrinking short,** replay the seed and path it gives on that test alone, as [When one fails](#when-one-fails) shows, and use the input that run shrinks to.
+2. **Read the result when it finishes.**
+   - **`Soak passed:`** gives how many inputs the property ran.
+   - **`Not soaked:`** means the property sets its own `numRuns`. Take it out and soak again.
+   - **A failure** prints the shrunk input, the seed, and how many tests it took to fail.
+3. **If the soak says the time limit cut shrinking short,** replay the seed and count it gives on that test alone, as [When one fails](#when-one-fails) shows, and use the input that run shrinks to.
 4. **Handle each failure** as [When one fails](#when-one-fails) says.
 5. **Soak it again.**
 
@@ -54,13 +58,13 @@ Once a soak passes, say in the pull request how many inputs it ran and what it f
 
 ## When one fails
 
-- **Its output gives a seed and a path.** Run the same input again, with full shrinking, on that test alone. Every property the command runs replays them, so name the file and the test:
+- **Its output gives a seed, and how many tests it took to fail.** Run the same input again, with full shrinking, on that test alone. Every property the command runs uses the seed, so name the file and the test:
 
   ```bash
-  PROPERTY_SEED=<seed> PROPERTY_PATH=<path> npx vitest run <path to file> -t '<test name>' --coverage.enabled=false
+  PROPERTY_SEED=<seed> PROPERTY_RUNS=<tests it took> npx vitest run <path to file> -t '<test name>' --coverage.enabled=false
   ```
 
-  For a file under `scripts/`, add `-c vitest.tooling.config.ts`.
+  For a failure from a normal run or CI, rather than a soak, `PROPERTY_SEED` alone is enough. For a file under `scripts/`, add `-c vitest.tooling.config.ts`.
 
 - **Decide where the fault is.** The property or its generator may be wrong, such as a rule that doesn't hold for an input the code handles correctly, or the code may be.
 - **Keep the shrunk input** as [Keeping a failing input](#keeping-a-failing-input) says, before you fix anything.
@@ -71,7 +75,7 @@ Once a soak passes, say in the pull request how many inputs it ran and what it f
 Keep every shrunk input a property test fails on, whether a soak, a local run or CI found it, in two places:
 
 - **As an example test** in the module's `.test.ts`, asserting the right answer for that input.
-- **In the property's `examples`.** fast-check counts `examples` towards `numRuns`, so raise `numRuns` by the number of examples you add.
+- **In the property's `examples`.** fast-check counts `examples` towards `numRuns`, so if the property sets `numRuns`, raise it by the number of examples you add.
 
 Beside both, say where it was found:
 

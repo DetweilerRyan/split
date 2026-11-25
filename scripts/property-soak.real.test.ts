@@ -9,17 +9,34 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const setup = fileURLToPath(new URL('./property-soak.setup.ts', import.meta.url));
 const vitest = join(root, 'node_modules/.bin/vitest');
 
-// A property that fails on one input in every 9,973. Its fixed seed, which a soak keeps, makes both
-// runs the same every time: 20 runs pass, and a soak finds a failure within a second.
-const tests = `import fc from 'fast-check';
+// A property that runs fast-check's default count, which a run without soak variables keeps.
+const counts = `import fc from 'fast-check';
+import { expect, it } from 'vitest';
+
+it('runs the default count', () => {
+  let runs = 0;
+  fc.assert(fc.property(fc.integer(), () => { runs += 1; }));
+  expect(runs).toBe(100);
+});
+`;
+
+// A property that passes, one that fails on one input in every 9,973, which a soak finds within a
+// second, and one that sets its own count, which a soak can't change.
+const soaks = `import fc from 'fast-check';
 import { expect, it } from 'vitest';
 
 it('holds', () => {
-  fc.assert(fc.property(fc.integer(), (n) => { expect(Number.isInteger(n)).toBe(true); }), { numRuns: 20 });
+  fc.assert(fc.property(fc.integer(), (n) => { expect(Number.isInteger(n)).toBe(true); }));
 });
 
 it('breaks', () => {
-  fc.assert(fc.property(fc.integer({ min: 0, max: 2_000_000 }), (n) => { expect(n % 9_973 === 7 && n > 1000).toBe(false); }), { numRuns: 20, examples: [[0]], seed: 42 });
+  fc.assert(fc.property(fc.integer({ min: 0, max: 2_000_000 }), (n) => { expect(n % 9_973 === 7 && n > 1000).toBe(false); }));
+});
+
+it('sets its own count', () => {
+  let runs = 0;
+  fc.assert(fc.property(fc.integer(), () => { runs += 1; }), { numRuns: 20 });
+  expect(runs).toBe(20);
 });
 `;
 
@@ -32,7 +49,8 @@ function project() {
     join(cwd, 'vitest.config.ts'),
     `export default { test: { include: ['*.test.ts'], setupFiles: [${JSON.stringify(setup)}] } };\n`,
   );
-  writeFileSync(join(cwd, 'soak.test.ts'), tests);
+  writeFileSync(join(cwd, 'counts.test.ts'), counts);
+  writeFileSync(join(cwd, 'soaks.test.ts'), soaks);
   return cwd;
 }
 
@@ -56,45 +74,55 @@ function run(cwd: string, args: readonly string[], env: Readonly<Record<string, 
 
 // Each test starts Vitest, and a soak runs for a second per property.
 describe('property soak', { timeout: 60_000 }, () => {
-  it('leaves a run without soak variables as the test wrote it', () => {
-    const result = run(project(), [], {});
+  it('leaves a run without soak variables at the default count', () => {
+    const result = run(project(), ['counts.test.ts'], {});
 
     expect(result.output).not.toContain('Soak passed');
     expect(result.status).toBe(0);
   });
 
-  it('soaks each property for the budget, and reports the count or the failure', () => {
-    const result = run(project(), [], { PROPERTY_SOAK_SECONDS: '1' });
+  it('soaks each property without its own count, and says which it could not', () => {
+    const result = run(project(), ['soaks.test.ts'], { PROPERTY_SOAK_SECONDS: '1' });
 
     expect(result.output).toMatch(/Soak passed: \d+ inputs in 1 s\./);
     expect(result.output).toMatch(/Counterexample: \[\d+\]/);
+    expect(result.output).toContain(
+      'Not soaked: this property sets its own numRuns (20), which overrides the soak.',
+    );
+    expect(result.output).toContain('1 failed | 2 passed');
     expect(result.status).toBe(1);
   });
 
-  it('replays a seed and path with full shrinking and no budget', () => {
+  it('replays a failure from its seed and count of runs, with no budget', () => {
     const cwd = project();
-    const soaked = run(cwd, ['-t', 'breaks'], { PROPERTY_SOAK_SECONDS: '1' }).output;
+    const soaked = run(cwd, ['soaks.test.ts', '-t', 'breaks'], {
+      PROPERTY_SOAK_SECONDS: '1',
+    }).output;
     const seed = /seed: (-?\d+)/.exec(soaked)?.[1] ?? '';
-    const path = /path: "([\d:]+)"/.exec(soaked)?.[1] ?? '';
+    const runs = /Property failed after (\d+) tests/.exec(soaked)?.[1] ?? '';
     const counterexample = /Counterexample: \[\d+\]/.exec(soaked)?.[0] ?? 'none';
 
-    const replayed = run(cwd, ['-t', 'breaks'], { PROPERTY_SEED: seed, PROPERTY_PATH: path });
+    const replayed = run(cwd, ['soaks.test.ts', '-t', 'breaks'], {
+      PROPERTY_SEED: seed,
+      PROPERTY_RUNS: runs,
+    });
 
+    expect(replayed.output).toContain(`Property failed after ${runs} tests`);
     expect(replayed.output).toContain(counterexample);
     expect(replayed.output).not.toContain('Soak passed');
     expect(replayed.status).toBe(1);
   });
 
-  // A path without its seed makes the setup file throw before any test runs, so this shows each
-  // config loads it without running the repository's own properties.
+  // A count of runs without its seed makes the setup file throw before any test runs, so this
+  // shows each config loads it without running the repository's own properties.
   it.each([
     ['vitest.config.ts', 'src/domain/money/currency.property.test.ts'],
     ['vitest.tooling.config.ts', 'scripts/mutation.property.test.ts'],
   ])('is loaded by %s', (config, file) => {
-    const result = run(root, ['-c', config, file], { PROPERTY_PATH: '0' });
+    const result = run(root, ['-c', config, file], { PROPERTY_RUNS: '1' });
 
     expect(result.output).toContain(
-      'PROPERTY_PATH replays an input only with the PROPERTY_SEED it came from.',
+      'PROPERTY_RUNS replays a failure only with the PROPERTY_SEED it came from.',
     );
     expect(result.output).not.toContain('Soak passed');
     expect(result.status).not.toBe(0);

@@ -1,11 +1,11 @@
 # `property-soak`
 
-A [Vitest](https://vitest.dev/) setup file that runs [fast-check](https://fast-check.dev/) property tests for a time budget instead of their usual count, or replays one input, from environment variables. It changes no test file, and with none of its variables set it does nothing.
+A [Vitest](https://vitest.dev/) setup file that runs [fast-check](https://fast-check.dev/) property tests for a time budget instead of their usual count, or replays a failure, from environment variables. It works through fast-check's global configuration, as [fast-check's fuzzing guide](https://fast-check.dev/docs/advanced/fuzzing/) does, so it changes no test file. With none of its variables set, it does nothing.
 
 Two files, with no dependencies but Vitest and fast-check:
 
-- [`property-soak.setup.ts`](property-soak.setup.ts), the setup file, which puts the soak in place of fast-check's `assert` when a variable is set;
-- [`property-soak.ts`](property-soak.ts), which reads the variables and runs the soak.
+- [`property-soak.setup.ts`](property-soak.setup.ts), the setup file, which applies the soak to fast-check's global settings and plugins when a variable is set;
+- [`property-soak.ts`](property-soak.ts), which reads the variables and builds those settings and plugins.
 
 ## Setting it up
 
@@ -20,20 +20,34 @@ Two files, with no dependencies but Vitest and fast-check:
    });
    ```
 
-- **Requirements:** tested with Vitest 5.0.5 and fast-check 4.10.2.
+- **Requirements:** tested with Vitest 5.0.5 and fast-check 4.10.2. It needs fast-check 4.10 or later, for global plugins.
   - **Extension in the import:** the setup file imports `./property-soak.ts` with its extension. A TypeScript project that type-checks it needs `allowImportingTsExtensions` or `rewriteRelativeImportExtensions`.
   - **No enums:** the files use only syntax that erases, so Node can also run them by stripping types.
-- **What it replaces:** `assert` on fast-check's default export and its named export, so a test may `import fc from 'fast-check'` or `import { assert } from 'fast-check'`.
+
+## Writing a property a soak can reach
+
+fast-check's per-assertion parameters override its global ones, so **a property that sets its own `numRuns` isn't soaked**, and one that sets its own `seed` isn't replayed. Leave both out of a new property until it has been soaked. Add `numRuns` afterwards if it should run more than fast-check's default of 100 inputs.
+
+A soak says when it couldn't reach a property:
+
+```text
+Not soaked: this property sets its own numRuns (300), which overrides the soak.
+```
 
 ## The variables
 
-| Variable                | Value                                          | Effect                                                                                                |
-| :---------------------- | :--------------------------------------------- | :---------------------------------------------------------------------------------------------------- |
-| `PROPERTY_SOAK_SECONDS` | A whole number of seconds, more than 0         | Each property runs until the time is up, with no limit on how many inputs                             |
-| `PROPERTY_SEED`         | A whole number, the seed of a run              | The property runs from that seed. With a budget, the soak starts from it                              |
-| `PROPERTY_PATH`         | A path, such as `3:1:0`, from a failure report | With `PROPERTY_SEED` and no budget, replays that input through `fc.assert`, and shrinks it to the end |
+| Variable                | Value                                                 | Effect                                                                  |
+| :---------------------- | :---------------------------------------------------- | :---------------------------------------------------------------------- |
+| `PROPERTY_SOAK_SECONDS` | A whole number of seconds, more than 0                | Each property runs until the time is up, with no limit on inputs        |
+| `PROPERTY_SEED`         | A whole number: the seed from a failure report        | Properties run from that seed, so they generate the same inputs again   |
+| `PROPERTY_RUNS`         | A whole number, more than 0: the tests a failure took | With `PROPERTY_SEED`, runs exactly that many inputs, with no time limit |
 
-An empty value counts as unset. A value that isn't a whole number, a budget of 0 or less, and a path without a seed each fail the run with a message naming the variable.
+An empty value counts as unset. Each of these fails the run, with a message naming the variable:
+
+- a value that isn't a whole number;
+- a budget or count of 0 or less;
+- `PROPERTY_RUNS` without `PROPERTY_SEED`;
+- `PROPERTY_RUNS` with `PROPERTY_SOAK_SECONDS`.
 
 ## Soaking
 
@@ -54,34 +68,33 @@ Each property that passes logs:
 Soak passed: 22375334 inputs in 120 s.
 ```
 
-A property that fails throws fast-check's report: the shrunk counterexample, its seed and its path. When the time limit also cut shrinking short, the report ends with the values to replay, so the shrink can finish.
-
-The soak keeps the test's own parameters, such as `examples`, `plugins` and its `seed`, and replaces only `numRuns` and the time limit. A `PROPERTY_SEED` replaces the test's seed.
+A property that fails throws fast-check's usual report: the shrunk counterexample, the seed, and how many tests it took to fail. When the time limit also cut shrinking short, the soak logs the values to replay, so the shrink can finish.
 
 ## Replaying a failure
 
-Set the seed and path from the report, with no budget, on that test alone:
+Set the seed, and the count from "Property failed after N tests", on that test alone:
 
 ```bash
-PROPERTY_SEED=<seed> PROPERTY_PATH=<path> npx vitest run <file> -t '<test name>'
+PROPERTY_SEED=<seed> PROPERTY_RUNS=<N> npx vitest run <file> -t '<test name>'
 ```
 
-- **One test only:** every property the run reaches replays the same seed and path, and another property's inputs don't match it, so name the test with `-t`.
-- **The usual count:** the replay runs through `fc.assert` with the test's own parameters, so if that input now passes, the run carries on through the test's usual count.
+The same seed generates the same inputs, so the run fails on the same input and shrinks it to the end. For a failure from a normal run, at the test's usual count, `PROPERTY_SEED` alone is enough.
+
+Every property the run reaches uses the same seed, so name the test with `-t`.
 
 ## Limits
 
-- **Async properties:** a replay runs them, but a timed soak refuses one, with an error saying so.
-- **Only `fc.assert` is replaced.** A property run with `fc.check`, or through another runner such as `@fast-check/vitest`'s `test.prop`, runs as written.
+- **A property's own `numRuns` or `seed` wins,** as above.
+- **One process's global settings:** the soak sets fast-check's global configuration in each test file's process, so it reaches every property those files run, through any runner that reads that configuration.
 
 ## What it exports
 
 `property-soak.ts` exports what the setup file uses, for a project that wires it in another way:
 
 - **`readSoak(env)`** reads the variables, and returns `undefined` when none is set.
-- **`soakParameters(soak, parameters)`** gives the parameters a property runs with under a soak.
-- **`soakReport(soak, details)`** gives what a soak logs or throws, from fast-check's run details.
-- **`soakAssert(soak, log)`** gives the function that stands in for `fc.assert`.
+- **`soakSettings(soak)`** gives the global parameters for `fc.configureGlobal`.
+- **`soakPlugins(soak, log)`** gives the plugins for `fc.installGlobalPlugin`: the time limit, and one that logs what the soak found.
+- **`soakReport(soak, details)`** gives the line that plugin logs for a property, if any.
 - **`SOAK_VARIABLES`** names the variables.
 
 ## Changing it

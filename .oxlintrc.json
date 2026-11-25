@@ -152,13 +152,9 @@
           // The end-to-end tests' browser page, and Vitest's browser locator.
           { "from": "package", "package": "playwright-core", "name": ["Page"] },
           { "from": "package", "package": "@vitest/browser", "name": ["Locator"] },
-          // fast-check's parameters, properties and results, which the property soak
-          // (scripts/property-soak.ts) takes and passes on as fast-check gives them.
-          {
-            "from": "package",
-            "package": "fast-check",
-            "name": ["Parameters", "IProperty", "IRawProperty", "RunDetails"]
-          },
+          // fast-check's run results, which the property soak (scripts/property-soak.ts) reads as
+          // fast-check gives them.
+          { "from": "package", "package": "fast-check", "name": ["RunDetails"] },
           // The schema errors Ajv gives oxCrap's config check.
           { "from": "package", "package": "ajv", "name": ["ErrorObject"] }
         ]
