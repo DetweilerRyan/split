@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { storedText } from './storedText';
+import { storedTextSchema } from './storedText';
 
-describe('storedText', () => {
+describe('storedTextSchema', () => {
   it('reads a non-empty string as it is', () => {
-    expect(storedText('Lunch', 'Receipt')).toBe('Lunch');
+    expect(storedTextSchema('Receipt').parse('Lunch')).toBe('Lunch');
   });
 
   it('reads an empty or missing value as the fallback', () => {
-    expect(storedText('', 'Receipt')).toBe('Receipt');
-    expect(storedText(undefined, 'Receipt')).toBe('Receipt');
+    expect(storedTextSchema('Receipt').parse('')).toBe('Receipt');
+    expect(storedTextSchema('Receipt').parse(undefined)).toBe('Receipt');
   });
 
   it('reads a value that is not a string as the fallback, not as its stringified form', () => {
-    expect(storedText(42, 'Receipt')).toBe('Receipt');
-    expect(storedText({ title: 'Lunch' }, 'Receipt')).toBe('Receipt');
+    expect(storedTextSchema('Receipt').parse(42)).toBe('Receipt');
+    expect(storedTextSchema('Receipt').parse({ title: 'Lunch' })).toBe('Receipt');
   });
 });

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import * as Y from 'yjs';
+import { z } from 'zod';
 import { DEFAULT_CURRENCY, normalizeCurrency } from '../domain/money/currency';
 import {
   type ItemId,
@@ -13,8 +14,8 @@ import {
   participantId,
 } from '../domain/receipt/roomSnapshot';
 import { storedParticipantId, storedParticipants } from './storedParticipants';
-import { storedText } from './storedText';
-import { numberOrZero } from '../utils/numberOrZero';
+import { storedTextSchema } from './storedText';
+import { numberOrZeroSchema } from '../utils/numberOrZero';
 
 /** The key of a participant's claim on an item in the room's `claims` map. */
 export type ClaimKey = `${ItemId}::${ParticipantId}`;
@@ -24,12 +25,55 @@ export function claimKey(itemId: ItemId, participantId: ParticipantId): ClaimKey
 }
 
 /**
+ * The room's details as a peer stored them in `meta`, each field with its fallback. Every field
+ * catches, so parsing never fails: a missing or malformed value reads as its fallback, and keys
+ * the app doesn't know are left out.
+ */
+const storedMetaSchema = z.object({
+  title: storedTextSchema('European Receipt'),
+  address: storedTextSchema(''),
+  phone: storedTextSchema(''),
+  website: storedTextSchema(''),
+  purchasedAt: storedTextSchema(''),
+  mealType: storedTextSchema(''),
+  cardTipEur: numberOrZeroSchema,
+  cashTipEur: numberOrZeroSchema,
+  bankUsd: numberOrZeroSchema,
+  currency: z.unknown().optional().transform(normalizeCurrency),
+  displayCurrency: storedTextSchema(''),
+  rate: numberOrZeroSchema,
+  rateDate: storedTextSchema(''),
+});
+
+/** A participant's fields besides its id, as a peer stored them, each with its fallback. */
+const storedParticipantSchema = z.object({
+  id: z.unknown().optional(),
+  name: storedTextSchema('Friend'),
+  colorIdx: numberOrZeroSchema,
+});
+
+/**
+ * An item's fields besides its id and claims, as a peer stored them, each with its fallback. An
+ * `order` that isn't a number reads as `NaN`, and the snapshot then sorts the item by its id.
+ */
+const storedItemSchema = z.object({
+  id: z.unknown().optional(),
+  name: storedTextSchema('Item'),
+  en: storedTextSchema(''),
+  eur: numberOrZeroSchema,
+  order: z
+    .unknown()
+    .optional()
+    .transform((order) => Number(order ?? 999)),
+});
+
+/**
  * The id of an item stored in the room's `items` map under `key`: its `id` field, or `key` when
  * that isn't text. `null`, with a console warning naming it, when that isn't an item id, which
  * leaves the item and its claims out of the snapshot, as the owner chose on #124.
  */
 function storedItemId(value: unknown, key: string): ItemId | null {
-  const stored = storedText(value, key);
+  const stored = storedTextSchema(key).parse(value);
   const id = parseItemId(stored);
   if (id === null) {
     console.warn(
@@ -46,13 +90,9 @@ function storedItemId(value: unknown, key: string): ItemId | null {
  */
 function storedParticipant(map: unknown, key: string): Participant | null {
   if (!(map instanceof Y.Map)) return null;
-  const id = storedParticipantId(map.get('id'), key);
-  if (id === null) return null;
-  return {
-    id,
-    name: storedText(map.get('name'), 'Friend'),
-    colorIdx: numberOrZero(map.get('colorIdx')),
-  };
+  const { id: storedId, ...fields } = storedParticipantSchema.parse(map.toJSON());
+  const id = storedParticipantId(storedId, key);
+  return id === null ? null : { id, ...fields };
 }
 
 /**
@@ -68,7 +108,8 @@ function storedItem(
   claims: Y.Map<boolean>,
 ): ReceiptItem | null {
   if (!(map instanceof Y.Map)) return null;
-  const id = storedItemId(map.get('id'), key);
+  const { id: storedId, ...fields } = storedItemSchema.parse(map.toJSON());
+  const id = storedItemId(storedId, key);
   if (id === null) return null;
   const legacyClaims: unknown = map.get('claims');
   const claimState: Record<ParticipantId, boolean> = {};
@@ -78,14 +119,7 @@ function storedItem(
       ? claims.get(claim) === true
       : legacyClaims instanceof Y.Map && legacyClaims.get(participantId) === true;
   });
-  return {
-    id,
-    name: storedText(map.get('name'), 'Item'),
-    en: storedText(map.get('en'), ''),
-    eur: numberOrZero(map.get('eur')),
-    order: Number(map.get('order') ?? 999),
-    claims: claimState,
-  };
+  return { id, ...fields, claims: claimState };
 }
 
 const configuredProvider: RoomSnapshot['connection']['provider'] =
@@ -266,19 +300,7 @@ export class ReceiptStore {
     });
 
     return {
-      title: storedText(this.meta.get('title'), 'European Receipt'),
-      address: storedText(this.meta.get('address'), ''),
-      phone: storedText(this.meta.get('phone'), ''),
-      website: storedText(this.meta.get('website'), ''),
-      purchasedAt: storedText(this.meta.get('purchasedAt'), ''),
-      mealType: storedText(this.meta.get('mealType'), ''),
-      cardTipEur: numberOrZero(this.meta.get('cardTipEur')),
-      cashTipEur: numberOrZero(this.meta.get('cashTipEur')),
-      bankUsd: numberOrZero(this.meta.get('bankUsd')),
-      currency: normalizeCurrency(this.meta.get('currency')),
-      displayCurrency: storedText(this.meta.get('displayCurrency'), ''),
-      rate: numberOrZero(this.meta.get('rate')),
-      rateDate: storedText(this.meta.get('rateDate'), ''),
+      ...storedMetaSchema.parse(this.meta.toJSON()),
       participants,
       items,
       connection: this.connection,
