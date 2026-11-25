@@ -94,7 +94,6 @@ export function splitItemMinor(
   });
 }
 
-// @crap-allow CRAP 13, complexity 13. Most branches choose the display currency and the rate to convert at; #97 moved the item split out and left those, which read as one rule. Move them into their own function when the conversion rules next change.
 export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   const currency = normalizeCurrency(snapshot.currency);
   const exp = currencyExponent(currency);
@@ -147,26 +146,9 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   const cardTotalMinor = itemsSubtotalMinor + cardTipMinor;
   const cardTotal = fromMinor(cardTotalMinor, currency);
 
-  const displayCurrency =
-    snapshot.displayCurrency !== ''
-      ? normalizeCurrency(snapshot.displayCurrency)
-      : snapshot.bankUsd > 0
-        ? 'USD'
-        : null;
-  let effectiveRate: number | null = null;
-  let isEstimatedRate = true;
-  let converting = false;
-  if (displayCurrency !== null && displayCurrency !== currency) {
-    if (snapshot.bankUsd > 0 && cardTotal > 0) {
-      effectiveRate = snapshot.bankUsd / cardTotal;
-      isEstimatedRate = false;
-    } else if (snapshot.rate > 0) {
-      effectiveRate = snapshot.rate;
-    }
-    converting = effectiveRate !== null;
-  }
-
-  if (converting && effectiveRate !== null && displayCurrency !== null) {
+  const conversion = conversionOf(snapshot, currency, cardTotal);
+  if (conversion.kind === 'converting') {
+    const { displayCurrency, effectiveRate } = conversion;
     const grandMinor = people.reduce((sum, person) => sum + person.totalMinor, 0);
     const convertedMinor = toMinor(
       fromMinor(grandMinor, currency) * effectiveRate,
@@ -189,12 +171,60 @@ export function computeReceiptMath(snapshot: RoomSnapshot): ReceiptMath {
   return {
     currency,
     exponent: exp,
-    displayCurrency: converting ? displayCurrency : null,
+    displayCurrency: conversion.kind === 'converting' ? conversion.displayCurrency : null,
     itemsSubtotal: fromMinor(itemsSubtotalMinor, currency),
     cardTotal,
     grandTotal: fromMinor(cardTotalMinor + cashTipMinor, currency),
-    effectiveRate: converting ? effectiveRate : null,
-    isEstimatedRate,
+    effectiveRate: conversion.kind === 'converting' ? conversion.effectiveRate : null,
+    isEstimatedRate: conversion.kind === 'converting' ? conversion.isEstimatedRate : true,
     perPerson,
   };
+}
+
+/** Whether a receipt's totals are shown in another currency, and at what rate. */
+type Conversion =
+  | { readonly kind: 'none' }
+  | {
+      readonly kind: 'converting';
+      readonly displayCurrency: string;
+      readonly effectiveRate: number;
+      /** False when the rate comes from the bank charge, true when it's the stored rate. */
+      readonly isEstimatedRate: boolean;
+    };
+
+/**
+ * Chooses the currency to show a receipt's totals in, and the rate to convert them at. The display
+ * currency is the one the room set, else USD when a bank charge is entered. The
+ * rate is the bank charge over the card total when both are above zero, else the stored rate.
+ * There's no conversion to the receipt's own currency, nor without a rate above zero.
+ */
+function conversionOf(
+  snapshot: Pick<RoomSnapshot, 'displayCurrency' | 'bankUsd' | 'rate'>,
+  currency: string,
+  cardTotal: number,
+): Conversion {
+  const displayCurrency =
+    snapshot.displayCurrency !== ''
+      ? normalizeCurrency(snapshot.displayCurrency)
+      : snapshot.bankUsd > 0
+        ? 'USD'
+        : null;
+  if (displayCurrency === null || displayCurrency === currency) return { kind: 'none' };
+  if (snapshot.bankUsd > 0 && cardTotal > 0) {
+    return {
+      kind: 'converting',
+      displayCurrency,
+      effectiveRate: snapshot.bankUsd / cardTotal,
+      isEstimatedRate: false,
+    };
+  }
+  if (snapshot.rate > 0) {
+    return {
+      kind: 'converting',
+      displayCurrency,
+      effectiveRate: snapshot.rate,
+      isEstimatedRate: true,
+    };
+  }
+  return { kind: 'none' };
 }
