@@ -149,6 +149,7 @@ function livesWithModule(node: DeclarationNode): boolean {
   if (node.declare) return false;
   let parent: Ancestor | null = node.parent;
   while (parent) {
+    // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- this walks up past every other kind of node oxlint's AST has, so `default` is the open rest, not a case left out.
     switch (parent.type) {
       case 'Program':
         return true;

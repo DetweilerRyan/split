@@ -191,7 +191,7 @@ type Case = Exclude<Parameters<RuleTester['run']>[2]['valid'][number], string>;
 /** Checks that `rule`, given `options`, reports `count` problems in `code`. */
 function reports(
   ruleName: string,
-  rule: typeof noClasses | typeof noThis | typeof noModuleLet,
+  rule: Parameters<RuleTester['run']>[1],
   code: string,
   count: number,
   options?: Case['options'],

@@ -5,7 +5,14 @@
   "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import", "jsx-a11y"],
   // The repository's own rules, in scripts/lint/functional.ts and scripts/lint/readonly.ts.
   "jsPlugins": ["./scripts/lint/functional.ts", "./scripts/lint/readonly.ts"],
+  // The owner's decision (#120): type-aware linting, with tsrs as its backend. oxlint uses tsrs
+  // because it's the only backend installed; don't also install oxlint-tsgolint.
+  "options": { "typeAware": true },
   "rules": {
+    // Least power (docs/engineering/code-design-principles.md, #120): a `switch` over a union
+    // names every case, so adding one makes the linter name each `switch` that must handle it. A
+    // `default` doesn't count, since a new case would fall into it unnoticed.
+    "typescript/switch-exhaustiveness-check": "error",
     // The owner's rule (#81): "always use the function syntax for named functions. only use
     // lambdas when passing a function as data."
     "func-style": ["error", "declaration", { "allowArrowFunctions": false }],
@@ -49,8 +56,14 @@
     {
       // A test nests describe, it, fc.property and the callbacks inside by design (#76), and may use
       // `!` (#119), though not on an indexed read, as docs/engineering/types-and-schemas.md says.
+      // A property test may spread a string of single-code-point characters into the characters
+      // fast-check picks from (#120); no-misused-spread guards user text, which tests don't split.
       "files": ["**/*.test.ts", "**/*.test.tsx"],
-      "rules": { "max-nested-callbacks": "off", "typescript/no-non-null-assertion": "off" }
+      "rules": {
+        "max-nested-callbacks": "off",
+        "typescript/no-non-null-assertion": "off",
+        "typescript/no-misused-spread": "off"
+      }
     },
     {
       // Contained state (#116): src/sync/ keeps the room's long-lived state, so it may hold some

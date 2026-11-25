@@ -17,7 +17,7 @@ export type ExchangeRate = z.infer<typeof exchangeRateSchema>;
 
 /** What the rate provider answers, checked only as far as getExchangeRate reads it. */
 const rateResponseSchema = z.object({
-  date: z.unknown(),
+  date: z.string().catch(''),
   rates: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -70,7 +70,9 @@ async function writeCache(key: string, value: ExchangeRate): Promise<void> {
   });
 }
 
-// @crap-allow CRAP 240, complexity 15. Debt from before the CRAP check (#63): no tests yet.
+// @crap-allow CRAP 210, complexity 14. It reads IndexedDB and fetch, which no unit test fakes
+// yet, so nothing covers it. Tests with a fake for each, as testing conventions say, would
+// bring it under the limits.
 /**
  * Gets a base->quote rate. Fresh cached values are used first; on network failure a stale
  * cached value is returned. Resolves to null when no rate is available (e.g. offline).
@@ -98,7 +100,7 @@ export async function getExchangeRate(
       base,
       quote,
       rate,
-      date: String(data.date ?? ''),
+      date: data.date,
       fetchedAt: now,
     };
     await writeCache(key, fresh);
