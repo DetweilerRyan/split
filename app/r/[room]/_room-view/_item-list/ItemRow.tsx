@@ -24,9 +24,14 @@ type ItemRowProps = {
   readonly onDelete: (itemId: ItemId) => void;
 };
 
-// @crap-allow CRAP 152.6, complexity 12. No test renders it yet: RoomView's test passes a fake
-// ItemList, so no row is drawn. A browser test of claiming and editing a row would bring it under
-// the limits.
+type EditorProps = Pick<ItemRowProps, 'item' | 'currency' | 'onUpdate' | 'onDelete'>;
+
+type ClaimerProps = Pick<
+  ItemRowProps,
+  'item' | 'participants' | 'activeId' | 'currency' | 'onClaim' | 'onClaimAll'
+>;
+
+/** A receipt line: its fields while the receipt is being edited, and its claims otherwise. */
 export function ItemRow({
   item,
   participants,
@@ -38,45 +43,64 @@ export function ItemRow({
   onUpdate,
   onDelete,
 }: ItemRowProps) {
-  const claimedBy = participants.filter((person) => item.claims[person.id] === true);
-  function formatAmount(value: number) {
-    return formatMoney(value, currency);
-  }
-
   if (editing) {
-    return (
-      <div className="grid gap-2 p-4 sm:grid-cols-[1fr_1fr_7rem_auto]">
-        <input
-          aria-label="Item name"
-          className="input"
-          defaultValue={item.name}
-          onBlur={(event) => onUpdate(item.id, 'name', event.target.value)}
-        />
-        <input
-          aria-label="English name"
-          className="input"
-          defaultValue={item.en}
-          onBlur={(event) => onUpdate(item.id, 'en', event.target.value)}
-        />
-        <input
-          aria-label={`Price in ${currency}`}
-          className="input"
-          type="number"
-          step={10 ** -currencyExponent(currency)}
-          defaultValue={item.eur}
-          onBlur={(event) => onUpdate(item.id, 'eur', numberOrZero(event.target.value))}
-        />
-        <button
-          aria-label={`Delete ${item.name}`}
-          className="button-secondary justify-center text-rose-700"
-          onClick={() => onDelete(item.id)}
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
-    );
+    return <ItemEditor item={item} currency={currency} onUpdate={onUpdate} onDelete={onDelete} />;
   }
+  return (
+    <ItemClaimer
+      item={item}
+      participants={participants}
+      activeId={activeId}
+      currency={currency}
+      onClaim={onClaim}
+      onClaimAll={onClaimAll}
+    />
+  );
+}
 
+function ItemEditor({ item, currency, onUpdate, onDelete }: EditorProps) {
+  return (
+    <div className="grid gap-2 p-4 sm:grid-cols-[1fr_1fr_7rem_auto]">
+      <input
+        aria-label="Item name"
+        className="input"
+        defaultValue={item.name}
+        onBlur={(event) => onUpdate(item.id, 'name', event.target.value)}
+      />
+      <input
+        aria-label="English name"
+        className="input"
+        defaultValue={item.en}
+        onBlur={(event) => onUpdate(item.id, 'en', event.target.value)}
+      />
+      <input
+        aria-label={`Price in ${currency}`}
+        className="input"
+        type="number"
+        step={10 ** -currencyExponent(currency)}
+        defaultValue={item.eur}
+        onBlur={(event) => onUpdate(item.id, 'eur', numberOrZero(event.target.value))}
+      />
+      <button
+        aria-label={`Delete ${item.name}`}
+        className="button-secondary justify-center text-rose-700"
+        onClick={() => onDelete(item.id)}
+      >
+        <Trash2 size={15} />
+      </button>
+    </div>
+  );
+}
+
+function ItemClaimer({
+  item,
+  participants,
+  activeId,
+  currency,
+  onClaim,
+  onClaimAll,
+}: ClaimerProps) {
+  const claimedBy = participants.filter((person) => item.claims[person.id] === true);
   const allClaimed = participants.length > 0 && claimedBy.length === participants.length;
   const claimedByMe = activeId !== null && item.claims[activeId] === true;
   return (
@@ -102,7 +126,9 @@ export function ItemRow({
             )}
           </span>
         </button>
-        <span className="shrink-0 font-mono text-sm font-bold">{formatAmount(item.eur)}</span>
+        <span className="shrink-0 font-mono text-sm font-bold">
+          {formatMoney(item.eur, currency)}
+        </span>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pl-8">
         <div className="flex flex-wrap gap-1.5">
@@ -123,13 +149,16 @@ export function ItemRow({
           </button>
         </div>
         <span className="text-xs text-slate-500">
-          {claimedBy.length === 0
-            ? 'Unclaimed'
-            : claimedBy.length > 1
-              ? `${formatAmount(item.eur / claimedBy.length)} each`
-              : 'Solo'}
+          {sharing(claimedBy.length, item.eur, currency)}
         </span>
       </div>
     </article>
   );
+}
+
+/** How the row says the item is shared among the people who claimed it. */
+function sharing(claimants: number, amount: number, currency: string): string {
+  if (claimants === 0) return 'Unclaimed';
+  if (claimants === 1) return 'Solo';
+  return `${formatMoney(amount / claimants, currency)} each`;
 }
