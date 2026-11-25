@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { parsePurchasedAt } from './mealInfo';
-import type { Frozen } from '../../utils/frozen';
+import type { Frozen } from '@/utils/frozen';
 
 /** The first local moment of a year, including years below 100, which `new Date(y, …)` maps to 19xx. */
 function startOfYear(year: number) {

@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { RoomSnapshot } from './roomSnapshot';
 import { buildExportText } from './exportText';
-import type { Frozen } from '../../utils/frozen';
+import type { Frozen } from '@/utils/frozen';
 
 const names = ['Ana', 'Ben', 'Cy', 'Dee'] as const;
 
