@@ -89,3 +89,9 @@ Choices #118 didn't settle:
 - **A module that fits no row,** such as a second kind of outside service that the UI or sync must call directly.
 - **Sync needing a service,** which `sync-imports-sync-domain-and-utils` refuses today.
 - **`RoomSnapshot`'s sync fields growing** ([types and schemas](types-and-schemas.meta.md#where-a-type-lives)), which would put sync state in a domain type.
+
+## Generic schemas in `src/utils/schemas/`
+
+- **Decided by the owner** in review of [#152](https://github.com/DetweilerRyan/split/pull/152), in the session on 2026-11-25, [recorded there](https://github.com/DetweilerRyan/split/pull/152#issuecomment-7173455716): "let's move all utilty schemas into utils/schemas folder (i think it's just numberOrZero for now)".
+- **What moved:** `numberOrZero.ts` and its tests, from `src/utils/` to `src/utils/schemas/`. It was the one generic zod schema in `src/utils/` when #152 made it one.
+- **What didn't:** `storedTextSchema` stays in `src/sync/storedText.ts`. Its body is generic, a non-empty string or a fallback, but it's named and documented for values a peer stored in the room's Yjs document, which is the sync layer's. Move it if another layer needs it.

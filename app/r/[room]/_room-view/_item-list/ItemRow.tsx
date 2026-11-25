@@ -6,7 +6,7 @@ import type {
   ReceiptItem,
 } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, formatMoney } from '@/domain/money/currency';
-import { numberOrZero } from '@/utils/numberOrZero';
+import { numberOrZero } from '@/utils/schemas/numberOrZero';
 
 type ItemRowProps = {
   readonly item: ReceiptItem;
