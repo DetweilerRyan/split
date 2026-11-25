@@ -15,7 +15,7 @@ import {
 } from '../domain/receipt/roomSnapshot';
 import { storedParticipantId, storedParticipants } from './storedParticipants';
 import { storedTextSchema } from './storedText';
-import { numberOrZeroSchema } from '../utils/numberOrZero';
+import { numberOrZeroSchema } from '@/utils/schemas/numberOrZero';
 
 /** The key of a participant's claim on an item in the room's `claims` map. */
 export type ClaimKey = `${ItemId}::${ParticipantId}`;

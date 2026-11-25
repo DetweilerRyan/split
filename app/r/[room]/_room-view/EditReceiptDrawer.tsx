@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { Plus } from 'lucide-react';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, currencyLabel, listCurrencies } from '@/domain/money/currency';
-import { numberOrZero } from '@/utils/numberOrZero';
+import { numberOrZero } from '@/utils/schemas/numberOrZero';
 
 type EditReceiptDrawerProps = {
   readonly snapshot: RoomSnapshot;
