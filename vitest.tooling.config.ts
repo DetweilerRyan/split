@@ -24,8 +24,9 @@ export default defineConfig({
     environment: 'node',
     include: ['scripts/**/*.test.ts'],
     exclude: [...ignored, '**/*.real.test.ts'],
-    // Soaks a property test when PROPERTY_SOAK_SECONDS or PROPERTY_SEED is set; otherwise does
-    // nothing. docs/testing/property-testing.md says how.
+    // Soaks property tests when PROPERTY_SOAK_SECONDS is set, and replays an input when
+    // PROPERTY_SEED and PROPERTY_PATH are; otherwise does nothing. docs/testing/property-testing.md
+    // says how.
     setupFiles: ['scripts/property-soak.setup.ts'],
     coverage: {
       enabled: true,

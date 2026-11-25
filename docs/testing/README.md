@@ -4,11 +4,11 @@ How tests are written and checked in this repository, one kind of test, or check
 
 ## Index
 
-| Document                                                     | Read when                                                                                                                                                                                                                                |
-| :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Testing conventions](../engineering/testing-conventions.md) | Before writing, changing, or moving any test, including a component or hook test, an end-to-end or tooling test, or replacing an external dependency in a test. It holds every kind of test that doesn't have its own document below yet |
-| [Property testing](property-testing.md)                      | Before writing, changing or reviewing a `.property.test.ts`, deciding whether code needs a property test, or when a property test fails, locally or in CI                                                                                |
-| [Mutation testing](mutation-testing.md)                      | When oxCrap's code (`scripts/oxcrap/`) changes and the definition of done passes; before running `npm run test:mutation`, or handling a surviving mutant                                                                                 |
+| Document                                                     | Read when                                                                                                                                                                                                                                                      |
+| :----------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Testing conventions](../engineering/testing-conventions.md) | Before writing, changing, or moving any test, including a component or hook test, an end-to-end or tooling test, or replacing an external dependency in a test, or when a test fails. It holds every kind of test that doesn't have its own document below yet |
+| [Property testing](property-testing.md)                      | Before writing, changing or reviewing a `.property.test.ts`, deciding whether code needs a property test, or when a property test fails, locally or in CI                                                                                                      |
+| [Mutation testing](mutation-testing.md)                      | When oxCrap's code (`scripts/oxcrap/`) changes and the definition of done passes; before running `npm run test:mutation`, or handling a surviving mutant                                                                                                       |
 
 ## Adding a document
 

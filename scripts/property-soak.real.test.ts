@@ -36,6 +36,11 @@ function project() {
   return cwd;
 }
 
+// The parent's environment, without any soak variable a shell may have set.
+const inherited = Object.fromEntries(
+  Object.entries(process.env).filter(([name]) => !name.startsWith('PROPERTY_')),
+);
+
 function run(cwd: string, args: readonly string[], env: Readonly<Record<string, string>>) {
   const result = spawnSync(
     vitest,
@@ -43,7 +48,7 @@ function run(cwd: string, args: readonly string[], env: Readonly<Record<string, 
     {
       cwd,
       encoding: 'utf8',
-      env: { ...process.env, CI: '1', ...env },
+      env: { ...inherited, NODE_ENV: 'test', CI: '1', ...env },
     },
   );
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
@@ -80,13 +85,18 @@ describe('property soak', { timeout: 60_000 }, () => {
     expect(replayed.status).toBe(1);
   });
 
+  // A path without its seed makes the setup file throw before any test runs, so this shows each
+  // config loads it without running the repository's own properties.
   it.each([
     ['vitest.config.ts', 'src/domain/money/currency.property.test.ts'],
     ['vitest.tooling.config.ts', 'scripts/mutation.property.test.ts'],
   ])('is loaded by %s', (config, file) => {
-    const result = run(root, ['-c', config, file], { PROPERTY_SOAK_SECONDS: '1' });
+    const result = run(root, ['-c', config, file], { PROPERTY_PATH: '0' });
 
-    expect(result.output).toContain('Soak passed');
-    expect(result.status).toBe(0);
+    expect(result.output).toContain(
+      'PROPERTY_PATH replays an input only with the PROPERTY_SEED it came from.',
+    );
+    expect(result.output).not.toContain('Soak passed');
+    expect(result.status).not.toBe(0);
   });
 });

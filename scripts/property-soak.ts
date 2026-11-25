@@ -100,31 +100,36 @@ export function soakReport(
   const replay = `${SOAK_VARIABLES.seed}=${String(details.seed)} ${SOAK_VARIABLES.path}=${details.counterexamplePath ?? ''}`;
   return {
     passed: false,
-    message: `${report}\n\nThe time limit cut shrinking short. To finish it, run again with ${replay} and no ${SOAK_VARIABLES.seconds}.`,
+    message: `${report}\n\nThe time limit cut shrinking short. To finish it, run this test alone again, with Vitest's -t, setting ${replay} and no ${SOAK_VARIABLES.seconds}.`,
   };
+}
+
+function isSynchronous(property: fc.IRawProperty<unknown>): property is fc.IProperty<unknown> {
+  return !property.isAsync();
 }
 
 /**
  * Stands in for `fc.assert` under a soak. With a time budget, it runs the property until the
- * clock runs out, logs how many inputs passed, and throws fast-check's report on a failure. With
- * only a seed and path, it replays that input through `fc.assert`, so shrinking runs to the end.
+ * clock runs out, logs how many inputs passed, and throws fast-check's report on a failure; it
+ * takes synchronous properties only. With only a seed and path, it replays that input through
+ * `fc.assert`, async or not, so shrinking runs to the end.
  */
 export function soakAssert(soak: Soak, log: (line: string) => void) {
-  return (property: fc.IProperty<unknown>, parameters?: fc.Parameters<unknown>): void => {
-    // The type says synchronous, but the setup file hands this every property a test asserts.
-    const raw: fc.IRawProperty<unknown> = property;
-    if (raw.isAsync()) {
-      throw new Error('A soak runs synchronous properties only; this one is async.');
-    }
+  return (property: fc.IRawProperty<unknown>, parameters?: fc.Parameters<unknown>): unknown => {
     const soaked = soakParameters(soak, parameters);
     if (soak.seconds === undefined) {
-      fc.assert(property, soaked);
-      return;
+      return fc.assert(property, soaked);
+    }
+    if (!isSynchronous(property)) {
+      throw new Error(
+        'A soak with a time budget runs synchronous properties only; this one is async.',
+      );
     }
     const report = soakReport(soak, fc.check(property, soaked));
     if (!report.passed) {
       throw new Error(report.message);
     }
     log(report.message);
+    return undefined;
   };
 }
