@@ -16,8 +16,6 @@ type EditReceiptDrawerProps = {
   readonly onAddItem: (name: string, en: string, eur: number) => void;
 };
 
-// @crap-allow CRAP 54.9, complexity 7. No test renders it yet: RoomView's test passes a fake in its
-// place. A browser test of its fields, as testing conventions say, would bring it under the limits.
 export function EditReceiptDrawer({
   snapshot,
   onMeta,
