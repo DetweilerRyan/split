@@ -6,7 +6,7 @@ Testing conventions are the rules every test in this repository follows, whateve
 
 ## What a test checks
 
-- **Make the test use the code the way it's really used.** Prefer a test that exercises several units together over one that isolates a single function, unless the function is logic with no collaborators, such as the receipt math.
+- **Make the test use the code the way it's really used.** Prefer a test that exercises several units together over one that isolates a single function, unless the function is logic with no collaborators, such as the receipt math. Code whose job is wiring collaborators that have tests of their own is the exception: [Collaboration and contract tests](#collaboration-and-contract-tests) says how to test it.
 - **Make assertions specific.** Assert the exact thing the test's user sees or relies on: the whole value, the full message, the element by what a person reads on it, rather than that something came back. Each kind's own document shows an example for its tests.
 - **Find elements as a user would.** Find one by its role with its accessible name first (`getByRole`). When no role fits, find it, in this order, by its label (Vitest's `getByLabelText`, Playwright's `getByLabel`), placeholder (`getByPlaceholder`), text (`getByText`), alt text (`getByAltText`) or title (`getByTitle`). Find it by a test id (`getByTestId`) only when none of these can. If an element can't be found by role, check whether the component is missing an accessible name or role, and fix the component.
 - **Name each test after the one behaviour it pins down,** and take its expected values from the requirement, not by running the code and pasting its output.
@@ -41,12 +41,12 @@ The app's tests use [Vitest](https://vitest.dev/), with three [projects](https:/
 
 ## Collaboration and contract tests
 
-Code that composes collaborators with tests of their own, such as a component that renders parts, needn't have its test check their work again. Invert the dependency, as [_core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) describes: the code takes each collaborator as a parameter, typed by what the real one accepts, with the real one as its default.
+Code whose job is wiring collaborators that have tests of their own, such as a component that renders parts, needn't have its test check their work again: a test through the real collaborators would repeat their tests. For such code, invert the dependency, as [_core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) describes: the code takes each collaborator as a parameter, typed by what the real one accepts, with the real one as its default.
 
 - **Test the code with a collaboration test.** Pass fakes of its collaborators, and check only how it uses them: what it gives each one, and what it does with what each gives back or calls. Don't check a collaborator's own work.
-- **A collaborator's own tests are its contract tests.** They check that it does what the code relies on. Fake only a collaborator that has them; one that doesn't runs for real, or gets tests of its own first.
+- **A collaborator's own tests are its contract tests.** They check that it does what the code relies on. Fake only a collaborator that has them; one that doesn't runs for real, or gets tests of its own first. One the code can't take as a parameter runs for real too.
 - **Fake only collaborators the repository owns.** A third-party one is faked only at the edge, as [Replacing external dependencies](#replacing-external-dependencies) says.
-- **Keep the two in step.** When what a collaborator is given or gives back changes meaning, change its fakes in collaboration tests and its contract tests together. Keep at least one test that runs the code with its real collaborators, such as an end-to-end test. When the fakes grow too many to read, split the code.
+- **Keep the two in step.** When what a collaborator is given or gives back changes meaning, change its fakes in collaboration tests and its contract tests together. Keep at least one test that runs the code with its real collaborators, such as a test of the whole running app. When the fakes grow too many to read, split the code.
 - **The parameter is an injection point,** so add it only for a collaboration test that needs it, as [_earned complexity_](../code-design-principles.md#4-earned-complexity-pay-for-complexity-only-when-a-use-needs-it) asks.
 
 ## Fixing a bug
@@ -57,14 +57,15 @@ Changing what an existing test expects needs a reason in the pull request. [Subm
 
 ## Kinds of test
 
-Each of these follows the rules above, and its own document's:
+Each kind of test follows the rules above, and its own document's:
 
 - The `unit` project's own rules are in [Unit testing](unit-testing.md).
 - How and when to write a property test is in [Property testing](property-testing.md).
 - How to write a component or hook test is in [Component and hook testing](component-and-hook-testing.md).
 - How to write an end-to-end test is in [End-to-end testing](end-to-end-testing.md).
 - How to test the repository's own dev tools is in [Tooling testing](tooling-testing.md).
-- The rules every feature test follows, its scenarios, its Screenplay and a deep module's feature contract, are in [Feature testing conventions](feature-testing-conventions.md).
+
+Every feature test also follows [Feature testing conventions](feature-testing-conventions.md): its scenarios, its Screenplay, and a deep module's feature contract.
 
 ## Changing this document
 
