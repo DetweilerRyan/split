@@ -93,6 +93,32 @@ describe('ItemList', () => {
     await expect.element(screen.getByText('€17.00')).toBeVisible();
   });
 
+  it("passes a row's claim for everyone on, with everyone on the bill", async () => {
+    const { screen, onClaimAll } = await renderList({ items: [water] });
+    await userEvent.click(screen.getByRole('button', { name: 'All', exact: true }));
+    expect(onClaimAll).toHaveBeenCalledExactlyOnceWith('item-2', [alex, sam], true);
+  });
+
+  it('offers its rows for editing while editing, and passes their edits on', async () => {
+    const { screen, onUpdate } = await renderList({ items: [water], editing: true });
+    await userEvent.fill(screen.getByRole('textbox', { name: 'Item name' }), 'Sparkling water');
+    await userEvent.tab();
+    expect(onUpdate).toHaveBeenCalledExactlyOnceWith('item-2', 'name', 'Sparkling water');
+  });
+
+  it("passes a row's deletion on while editing", async () => {
+    const { screen, onDelete } = await renderList({ items: [water], editing: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Water' }));
+    expect(onDelete).toHaveBeenCalledExactlyOnceWith('item-2');
+  });
+
+  it('offers no fields to edit while not editing', async () => {
+    const { screen } = await renderList({ items: [water] });
+    await expect
+      .element(screen.getByRole('textbox', { name: 'Item name' }))
+      .not.toBeInTheDocument();
+  });
+
   it("passes a row's claim on, for you", async () => {
     const { row, onClaim } = await renderList();
     await userEvent.click(row('Water'));

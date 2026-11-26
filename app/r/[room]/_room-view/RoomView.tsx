@@ -119,15 +119,7 @@ export type RoomStore = {
   readonly subscribe: (listener: () => void) => () => void;
   readonly getSnapshot: () => RoomSnapshot;
   readonly setMeta: (
-    key:
-      | 'title'
-      | 'cardTipEur'
-      | 'cashTipEur'
-      | 'bankUsd'
-      | 'currency'
-      | 'displayCurrency'
-      | 'rate'
-      | 'rateDate',
+    key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd' | 'currency',
     value: string | number,
   ) => void;
   readonly setExchangeRate: (displayCurrency: string, rate: number, rateDate: string) => void;
@@ -178,7 +170,7 @@ type RoomViewProps = {
 };
 
 /** A receipt room: its header, items and totals, and the dialogs they open. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- `slots` are React's `ComponentType`, whose class-component form has mutable fields, such as `contextType`, that a slot's type can't make readonly.
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- `slots` are React's `ComponentType`, whose function and class forms both declare mutable static fields, such as `displayName`.
 export function RoomView({ roomId, provider, navigate, slots, services }: RoomViewProps) {
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<ItemFilter>('all');
