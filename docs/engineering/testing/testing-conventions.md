@@ -2,7 +2,7 @@
 
 ## What these conventions cover
 
-Testing conventions are the rules every test in this repository follows, whatever its kind: what a test checks, which project it belongs in, what it may touch, how it replaces a dependency, and fixing a bug. Most kinds of test have their own document in the [testing index](README.md), which says how these rules apply to it and adds its own. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
+Testing conventions are the rules every test in this repository follows, whatever its kind: what a test checks, which project it belongs in, what it may touch, how it replaces a dependency, collaboration and contract tests, and fixing a bug. Most kinds of test have their own document in the [testing index](README.md), which says how these rules apply to it and adds its own. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
 
 ## What a test checks
 
@@ -26,30 +26,6 @@ The app's tests use [Vitest](https://vitest.dev/), with three [projects](https:/
 - **Each test file is a sidecar.** It sits beside the one module it covers and is named after it: `src/domain/receipt/math.ts` → `src/domain/receipt/math.test.ts`, `app/r/[room]/_room-view/IdentityModal.tsx` → `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`. When tests for a second module creep into a file, move them to that module's sidecar.
 - **The browser is installed by setup.** [`scripts/prepare-sandbox.sh`](../../../scripts/prepare-sandbox.sh) installs it in a sandbox or the dev container. On another machine, run `npx playwright install --only-shell chromium` once before `npm test`.
 
-## Unit tests
-
-The `unit` project's own rules are in [Unit testing](unit-testing.md).
-
-## Property tests
-
-How and when to write a property test is in [Property testing](property-testing.md).
-
-## Writing component and hook tests
-
-How to write a component or hook test is in [Component and hook testing](component-and-hook-testing.md).
-
-## End-to-end tests
-
-How to write an end-to-end test is in [End-to-end testing](end-to-end-testing.md).
-
-## Tooling tests
-
-How to test the repository's own dev tools is in [Tooling testing](tooling-testing.md).
-
-## Feature tests
-
-The rules every feature test follows, its scenarios, its Screenplay and a deep module's feature contract, are in [Feature testing conventions](feature-testing-conventions.md).
-
 ## Tests stay offline
 
 - **A test never makes a request to the internet,** not even to a public endpoint: no Liveblocks, no WebRTC signaling server, no exchange-rate service, no npm registry. The suite must pass with no network access. The browser is downloaded by setup, never by a test.
@@ -58,16 +34,37 @@ The rules every feature test follows, its scenarios, its Screenplay and a deep m
 
 ## Replacing external dependencies
 
-- **Fake only what can't run in a test,** and fake it at the edge: the network, storage, or a third-party service. Let the app's own logic (Yjs documents, claim math, seed validation) run for real. Don't fake something just to make a test faster.
-- **Prefer passing the dependency in.** When code takes its provider, client, clock or fetcher as a parameter, as [_core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) asks of code that decides, a test can hand it a plain fake object with no mocking at all. Design other new code this way too, where it costs little.
+- **Fake only what can't run in a test,** and fake it at the edge: the network, storage, or a third-party service. Let the app's own logic (Yjs documents, claim math, seed validation) run for real. Don't fake something just to make a test faster. The one exception is a collaborator with contract tests of its own, which a collaboration test may fake, as [Collaboration and contract tests](#collaboration-and-contract-tests) says.
+- **Prefer passing the dependency in.** When code takes its provider, client, clock or fetcher as a parameter, as [_core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) asks of code that decides, a test can hand it a plain fake object with no mocking at all. Design other new code this way too, where it costs little. Taking a collaborator as a parameter is dependency inversion, and it's how a [collaboration test](#collaboration-and-contract-tests) fakes one.
 - **`vi.fn()` is fine for a fake's methods** and for a callback the test passes in, when the test needs to check how they were called.
 - **Use `vi.mock` only for a third-party module the code imports directly** and can't reasonably take as a parameter, as `src/sync/yjsProvider.test.ts` does for Liveblocks, `y-webrtc` and `y-indexeddb`. Never mock React or its hooks. Never `vi.mock` the repository's own modules; test them for real.
+
+## Collaboration and contract tests
+
+Code that composes collaborators with tests of their own, such as a component that renders parts, needn't have its test check their work again. Invert the dependency, as [_core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) describes: the code takes each collaborator as a parameter, typed by what the real one accepts, with the real one as its default.
+
+- **Test the code with a collaboration test.** Pass fakes of its collaborators, and check only how it uses them: what it gives each one, and what it does with what each gives back or calls. Don't check a collaborator's own work.
+- **A collaborator's own tests are its contract tests.** They check that it does what the code relies on. Fake only a collaborator that has them; one that doesn't runs for real, or gets tests of its own first.
+- **Fake only collaborators the repository owns.** A third-party one is faked only at the edge, as [Replacing external dependencies](#replacing-external-dependencies) says.
+- **Keep the two in step.** When what a collaborator is given or gives back changes meaning, change its fakes in collaboration tests and its contract tests together. Keep at least one test that runs the code with its real collaborators, such as an end-to-end test. When the fakes grow too many to read, split the code.
+- **The parameter is an injection point,** so add it only for a collaboration test that needs it, as [_earned complexity_](../code-design-principles.md#4-earned-complexity-pay-for-complexity-only-when-a-use-needs-it) asks.
 
 ## Fixing a bug
 
 Start with a test that reproduces the bug, run it against the unfixed code, and confirm it fails for the reason you expect. Then fix the code and watch the same test pass. If the test passes before the fix, it doesn't reproduce the bug yet.
 
 Changing what an existing test expects needs a reason in the pull request. [Submitting work](../workflow/submitting-work.md#what-the-description-carries) says how to list it.
+
+## Kinds of test
+
+Each of these follows the rules above, and its own document's:
+
+- The `unit` project's own rules are in [Unit testing](unit-testing.md).
+- How and when to write a property test is in [Property testing](property-testing.md).
+- How to write a component or hook test is in [Component and hook testing](component-and-hook-testing.md).
+- How to write an end-to-end test is in [End-to-end testing](end-to-end-testing.md).
+- How to test the repository's own dev tools is in [Tooling testing](tooling-testing.md).
+- The rules every feature test follows, its scenarios, its Screenplay and a deep module's feature contract, are in [Feature testing conventions](feature-testing-conventions.md).
 
 ## Changing this document
 
