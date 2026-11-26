@@ -118,7 +118,7 @@ type Rate =
 
 - **Core and shell wins over earned complexity for a business rule,** which goes in `src/domain/` even with one user, as [Code layout](code-layout.md) says.
 - **Least power and deep modules split a set of cases by where it varies.** A closed set handled in one module is a union with a `switch`. When the same `switch` recurs across modules, or a second implementation of those cases lives outside the module, it's an interface. A registry comes after both, as _least power_ says.
-- **Passing an effect in, as core and shell asks, isn't a parameter or an injection point that earned complexity counts,** and needs no justification under it. An injection point lets a caller swap a whole part, as `RoomView`'s `parts` do, by the owner's exception in [Component and hook testing](testing/component-and-hook-testing.md). Add one only when _earned complexity_'s test is met.
+- **Passing an effect in, as core and shell asks, isn't a parameter or an injection point that earned complexity counts,** and needs no justification under it. An injection point lets a caller swap a whole part, as `RoomView`'s `parts` do for the [collaboration test](testing/testing-conventions.md#collaboration-and-contract-tests) testing conventions describes. Add one only when _earned complexity_'s test is met.
 
 ## Changing this document
 
