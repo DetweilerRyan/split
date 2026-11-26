@@ -24,6 +24,7 @@ const ignored = [
   // vitest.tooling.config.ts's.
   'scripts/**',
   'rev-dep.config.real.test.ts',
+  'oxlintrc.real.test.ts',
 ];
 
 export default defineConfig({
