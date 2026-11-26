@@ -20,7 +20,7 @@ How work on this repository gets done: writing and testing code, choosing depend
 
 ## Adding a procedure
 
-1. Write it as `docs/engineering/<topic>.md` (lowercase, hyphenated), one topic per file. A procedure for a stage of a piece of work, from starting it to cleaning up after its merge, goes in `docs/engineering/workflow/` instead; its [index](workflow/README.md#adding-a-procedure) says how. A document for a kind of test, or a check of the tests, goes in `docs/engineering/testing/`; [its index](testing/README.md#adding-a-document) says how.
+1. Write it as `docs/engineering/<topic>.md` (lowercase, hyphenated), one topic per file. A procedure for a stage of a piece of work, from starting it to cleaning up after its merge, goes in `docs/engineering/workflow/` instead; its [index](workflow/README.md#adding-a-procedure) says how. A document for a kind of test, a check of the tests, or rules several kinds share, goes in `docs/engineering/testing/`; [its index](testing/README.md#adding-a-document) says how.
 2. Add a row to the index above, with a "Read when" trigger specific enough that an agent knows whether it applies.
 3. Don't add it to `AGENTS.md`; this index is the pointer. The exception is a boundary the owner has asked to have loaded in every session, which gets one line in `AGENTS.md`'s boundaries that links to the procedure.
 4. Follow [single source of truth](../prose/single-source-of-truth.md): link to rules that live elsewhere instead of restating them.

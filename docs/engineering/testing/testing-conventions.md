@@ -2,7 +2,7 @@
 
 ## What these conventions cover
 
-Testing conventions are the rules every test in this repository follows, whatever its kind: what a test checks, which project it belongs in, what it may touch, how it replaces a dependency, and fixing a bug. Each kind of test has its own document in the [testing index](README.md), which says how these rules apply to it and adds its own. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
+Testing conventions are the rules every test in this repository follows, whatever its kind: what a test checks, which project it belongs in, what it may touch, how it replaces a dependency, and fixing a bug. Most kinds of test have their own document in the [testing index](README.md), which says how these rules apply to it and adds its own. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
 
 ## What a test checks
 

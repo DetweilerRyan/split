@@ -2,7 +2,7 @@
 
 ## What these conventions cover
 
-A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios. This repository runs them so far with [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/). The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test's own document, in the [testing index](README.md), says where its features live, what its actors can do and how it runs; this document holds the rules they share. The rules every test follows are in [testing conventions](testing-conventions.md).
+A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios. This repository runs them so far with [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/). These rules are for the features playwright-bdd runs, which are all of them so far. A set of features run another way says, in its kind's document, which of them it follows. The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test's own document, in the [testing index](README.md), says where its features live, what its actors can do and how it runs; this document holds the rules they share. The rules every test follows are in [testing conventions](testing-conventions.md).
 
 ## Scenarios
 

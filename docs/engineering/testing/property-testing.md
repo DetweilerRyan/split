@@ -6,7 +6,7 @@ A property test checks a rule that should hold for every input, against many inp
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.
 
-Its file is `<module>.property.test.ts`, beside the module it covers, in the project testing conventions' [bullet for property tests](testing-conventions.md#which-project-a-test-belongs-in), under the project table, gives it.
+Its file is `<module>.property.test.ts`, beside the module it covers, in the project that testing conventions' [bullet for property tests](testing-conventions.md#which-project-a-test-belongs-in), under the project table, gives it.
 
 ## How the conventions apply
 

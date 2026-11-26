@@ -16,7 +16,7 @@ An end-to-end test checks a journey a person or an assistant takes through the r
 
 - **Each actor's abilities** are a browser of their own, a separate context on a phone-sized screen so each has their own storage and identity, and an MCP client session.
 - **Clicks, typing and tool calls belong in tasks, and reading the page or a tool result in questions.** Add one to `tasks.ts` or `questions.ts` rather than using `page` in a step.
-- **The root `.gplintrc` lists the app's own words,** like a tool's name, `button` or `seed`.
+- **The root [`.gplintrc`](../../../.gplintrc)'s `no-restricted-patterns` list bans the words for how the app is built,** like a tool's name, `button` or `seed`.
 - **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For an end-to-end step, what the person reads on the row:
 
   ```ts

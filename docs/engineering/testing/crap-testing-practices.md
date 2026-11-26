@@ -2,7 +2,7 @@
 
 ## What a CRAP score is
 
-oxCrap scores each function in `src/`, `app/` and its own `scripts/oxcrap/` by its complexity and how much of it the tests run, and fails on one that's over the limits without a `@crap-allow` comment. Its [README](../../../scripts/oxcrap/README.md) says what CRAP is, how oxCrap scores, how to run it and how to write a `@crap-allow` comment. This procedure says what to do with a finding in this repository.
+oxCrap scores each function in `src/`, `app/` and its own `scripts/oxcrap/` by its complexity and how much of it the tests run, and fails on one that's over the limits without a `@crap-allow` comment. Its [README](../../../scripts/oxcrap/README.md) says what CRAP is, how oxCrap scores, how to run it and how to write a `@crap-allow` comment. This document says what to do with a finding in this repository.
 
 ## Where findings come from
 
