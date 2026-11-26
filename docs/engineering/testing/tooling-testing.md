@@ -1,6 +1,6 @@
 # Tooling testing
 
-The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for tests of the repository's own dev tools.
+The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for tests of the repository's own dev tools, and for a deep module's feature contract.
 
 Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. They run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't.
 
@@ -9,7 +9,7 @@ Tooling tests check the repository's own dev tools: everything in `scripts/`, an
 | `tooling-unit` | [`vitest.tooling.config.ts`](../../../vitest.tooling.config.ts)           | every `<module>.test.ts` under `scripts/` that isn't `.real.` | Node    |
 | `tooling-real` | [`vitest.tooling-real.config.ts`](../../../vitest.tooling-real.config.ts) | `<module>.real.test.ts`                                       | Node    |
 
-- **Name and place them as the app's tests are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
+- **Name and place them as [the app's tests](testing-conventions.md#which-project-a-test-belongs-in) are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
 - **They get no React Compiler and no `@` alias,** so a tooling test can't import app code.
 - **Only `tooling-unit` collects coverage,** of oxCrap's code, into `coverage-tooling/`, for [its CRAP score](../crap.md). `tooling-real` collects none.
 - **A root file's test is tooling when it tests tooling config.** List it in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
@@ -20,7 +20,7 @@ What a deep module is, is in the code design principles' [_deep modules_](../cod
 
 - **Test a deep module's contract with Gherkin features,** written in its callers' words and kept beside it.
 - **Drive the features through the module's own interface.** Run a program end to end, as a process. A module used through code is driven through its functions, which needn't be end to end.
-- **Keep `tooling-unit` tests for the modules inside it,** for their edge cases.
+- **Keep unit tests for the modules inside it,** for their edge cases.
 - **Don't keep a second test of the same contract,** such as a `real` test of the program, beside the features.
 
 ### Deciding a module is deep
@@ -53,7 +53,7 @@ These rules cover a deep module whose interface is a program, the only kind set 
   - **Steps import `test`, `Given`, `When` and `Then`** from the tool's own `screenplay/fixtures.ts`.
 - **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
 - **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words. Its structural rules are copied from the root `.gplintrc`: change a rule in both.
-- **Keep edge cases in the modules' `tooling-unit` tests.** A scenario covers what the program as a whole does with its arguments and files.
+- **Keep edge cases in the modules' unit tests.** A scenario covers what the program as a whole does with its arguments and files.
 - **Wire a new tool's features into `package.json`:** its config in `test:tooling`; `gplint -c <its .gplintrc> <its folder>` and `-c <its config>` for `check-unused-steps.ts` in `lint`; its folder in `format` and `format:check`.
 
 ## Changing this document

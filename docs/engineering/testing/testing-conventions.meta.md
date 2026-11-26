@@ -65,7 +65,7 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
   - **This file moved into `docs/engineering/testing/` too,** keeping the rules every kind of test shares. So the folder owns every testing rule, and the engineering index's one testing row is the only pointer.
   - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
   - **One pull request for all the moves,** since each changes no rule, and moving them together updates the index and the links once.
-- **The text moved as it was,** apart from links, the headings each document's own title replaced, this file's intro, which named what left it, the project table's "Put here" cells, which now link to each kind's document, the pointers each kind's document gained to this one, and one sentence in tooling testing's sidecar that had said "this section". Outside this folder, the sentences that named testing conventions as the owner of a moved rule now name its new document.
+- **The text moved as it was,** apart from links, the headings each document's own title replaced, this file's intro, which named what left it and now says each kind's document adds to these rules rather than replacing them, the project table's "Put here" cells, which now link to each kind's document, the pointers each kind's document gained to this one, and one sentence in tooling testing's sidecar that had said "this section". Outside this folder, the sentences that named testing conventions as the owner of a moved rule now name its new document.
 
 ## Changed test expectations
 

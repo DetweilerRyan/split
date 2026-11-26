@@ -2,6 +2,8 @@
 
 Why the rules in [component and hook testing](component-and-hook-testing.md) are as they are, where they come from, and what was rejected. Read this only when changing or questioning one of them. Following the rules needs nothing from this file. The sources it cites are listed in [testing conventions' sidecar](testing-conventions.meta.md#sources).
 
+Why component and hook tests run in a real browser, and why jsdom with React Testing Library wasn't taken, is in [testing conventions' sidecar](testing-conventions.meta.md#projects-and-file-names), beside the project table it decided.
+
 These rules come from Kent's [Common mistakes with React Testing Library](testing-conventions.meta.md#common-mistakes) (2020), adapted to Vitest's browser API.
 
 - **Query order** follows Testing Library's [query priority](testing-conventions.meta.md#query-priority): `getByRole` first, test IDs last. Kent says to use `*ByRole` "most of the time", and to query "by the _actual_ text" rather than test IDs. Vitest's locators keep the same names except `getByPlaceholder` (Testing Library's `getByPlaceholderText`). Vitest has no `getByDisplayValue`, so it's left out of the order.
