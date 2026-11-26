@@ -18,6 +18,8 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   expect(screen.container.querySelector('.text-slate-500')).not.toBeNull();
   ```
 
+- **`RoomView` is an exception to [faking only what can't run](testing-conventions.md#replacing-external-dependencies),** as [its rule](#rules-of-its-own) below says.
+
 ## Rules of its own
 
 Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`. Copy the pattern in `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`.

@@ -24,13 +24,14 @@ A tooling test checks the repository's own dev tools: everything in `scripts/`, 
   ```
 
 - **Name and place them as [the app's tests](testing-conventions.md#which-project-a-test-belongs-in) are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
-- **A tool's feature contract has a screenplay of its own, inside the tool's folder,** so the tool imports nothing from outside it. A [dependency-direction](../dependency-direction.md) rule can enforce that, as one does for oxCrap.
-  - **The actor's abilities** are a throwaway project folder and running the program, not a browser or an MCP session.
-  - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
-- **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words.
 
-- **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
-- **A scenario covers what the program as a whole does with its arguments and files.**
+- **For the feature contract of [a deep module that's a program](#a-deep-module-thats-a-program),** feature testing conventions apply with these:
+  - **Its screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it. A [dependency-direction](../dependency-direction.md) rule can enforce that, as one does for oxCrap.
+    - **The actor's abilities** are a throwaway project folder and running the program, not a browser or an MCP session.
+    - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
+  - **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
+  - **A scenario covers what the program as a whole does with its arguments and files.**
+  - **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words.
 
 ## Rules of its own
 

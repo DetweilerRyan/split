@@ -6,7 +6,7 @@ A property test checks a rule that should hold for every input, against many inp
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.
 
-Its file is `<module>.property.test.ts`, beside the module it covers, in the project [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions gives it.
+Its file is `<module>.property.test.ts`, beside the module it covers, in the project testing conventions' [bullet for property tests](testing-conventions.md#which-project-a-test-belongs-in), under the project table, gives it.
 
 ## How the conventions apply
 
@@ -21,6 +21,8 @@ Its file is `<module>.property.test.ts`, beside the module it covers, in the pro
   // ❌ Vague: some shares came back, which passes whatever the split does
   expect(allocateMinor(total, weights)).toBeDefined();
   ```
+
+- **[Fixing a bug](testing-conventions.md#fixing-a-bug) applies to a failing property,** as [When one fails](#when-one-fails) below says.
 
 ## Rules of its own
 
@@ -50,7 +52,7 @@ Its file is `<module>.property.test.ts`, beside the module it covers, in the pro
 - **Build constraints into the arbitraries,** such as `fc.integer({ min: 1 })`, rather than filtering inputs out with `fc.pre` or `.filter`. Filtering wastes runs and can leave few inputs that test anything.
 - **Don't write a property that only restates what the generator guarantees,** such as checking that a generated positive number is positive. It passes whatever the code does.
 - **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.
-  - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [Mutation testing](mutation-testing-practices.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
+  - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [mutation testing practices](mutation-testing-practices.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
 - **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it, and confirm the property fails with the fix undone.
 - **Leave `numRuns` and `seed` out of a new property until it has been soaked.** A soak can't reach a property that sets its own.
 - **Keep it fast.** fast-check runs 100 inputs by default. After the soak, raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is. This is the count CI runs.
