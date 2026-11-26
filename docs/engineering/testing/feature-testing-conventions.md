@@ -2,7 +2,17 @@
 
 ## What these conventions cover
 
-A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios. This repository runs them so far with [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/). The rules under [Scenarios](#scenarios) and [Steps and the Screenplay](#steps-and-the-screenplay) are for the features playwright-bdd runs, which are all of them so far; a set of features run another way says, in its kind's document, which of those it follows. [Feature contracts for deep modules](#feature-contracts-for-deep-modules) applies to every deep module. The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test's own document, in the [testing index](README.md), says where its features live, what its actors can do and how it runs; this document holds the rules they share. The rules every test follows are in [testing conventions](testing-conventions.md).
+A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios. So far, this repository runs them with [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/).
+
+The rules under [Scenarios](#scenarios) and [Steps and the Screenplay](#steps-and-the-screenplay) are for the features playwright-bdd runs. So far, that's all of them. A set of features run another way says which of those rules it follows, in its kind's document. The rules in [Feature contracts for deep modules](#feature-contracts-for-deep-modules) apply to every deep module.
+
+The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test has its own document, listed in the [testing index](README.md). That document says:
+
+- where its features live;
+- what its actors can do;
+- how it runs.
+
+This document holds the rules those kinds share. [Testing conventions](testing-conventions.md) holds the rules every test follows.
 
 ## Scenarios
 
@@ -17,7 +27,7 @@ A feature test checks what a system does for its user, through the interface tha
 
 Steps follow the Screenplay pattern: **actors** use **abilities** to perform **tasks** and answer **questions**. A screenplay holds its cast in `fixtures.ts`, its actor in `actor.ts`, and its tasks and questions.
 
-- **Name an actor in every step,** and get them with `actorCalled(name)`. The same name gives the same actor for the whole scenario. Each actor's abilities are created on first use.
+- **Name an actor in every step,** and get them with `actorCalled(name)`. The same name gives the same actor for the whole scenario. Each actor gets their abilities on first use.
 - **Keep step definitions thin.** A step calls `actor.attemptsTo(...)` with tasks, or asserts on `actor.answer(...)` with a question. What the actor does belongs in tasks, and what they read belongs in questions. When a step needs one that doesn't exist, add it to the screenplay rather than doing the work in the step.
 - **Every step definition is used by some feature, and steps don't call other steps.**
   - **What fails:** running the features fails on a step with no definition, or one that two definitions match. `npm run lint` fails on a definition no feature uses, through `scripts/check-unused-steps.ts`.
@@ -28,16 +38,16 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
 
 ## Feature contracts for deep modules
 
-What a deep module is, is in the code design principles' [_deep modules_](../code-design-principles.md#5-deep-modules-give-each-module-a-small-interface-over-a-lot-of-behaviour). Its contract is what its callers give it and get back, which is the part that survives rewriting its internals.
+The code design principles' [_deep modules_](../code-design-principles.md#5-deep-modules-give-each-module-a-small-interface-over-a-lot-of-behaviour) says what a deep module is. Its contract is what its callers give it and get back, which is the part that survives rewriting its internals.
 
 - **Test a deep module's contract with Gherkin features,** written in its callers' words and kept beside it.
-- **Drive the features through the module's own interface.** Run a program end to end, as a process. A module used through code is driven through its functions, which needn't be end to end.
+- **Drive the features through the module's own interface.** Run a program end to end, as a process. Drive a module used through code through its functions, which needn't be end to end.
 - **Don't keep a second test of the same contract,** such as a `real` test of the program, beside the features.
 - **The first deep module used through code sets up its own layout and runner,** with its rules in the document for its kind of test.
 
 ### Deciding a module is deep
 
-What makes a module deep is how much its internals outweigh its interface, and that isn't measured. So whether a module is deep is the owner's call.
+What makes a module deep is how much its internals outweigh its interface, and nothing measures that. So whether a module is deep is the owner's call.
 
 - **An agent that thinks a module is deep proposes it** in the issue or pull request. It says what the interface is, and what it hides.
 - **Until the owner agrees, test it as any other module.** A script keeps its `real` test.

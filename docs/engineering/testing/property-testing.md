@@ -6,13 +6,13 @@ A property test checks a rule that should hold for every input, against many inp
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.
 
-Its file is `<module>.property.test.ts`, beside the module it covers, in the project that testing conventions' [bullet for property tests](testing-conventions.md#which-project-a-test-belongs-in), under the project table, gives it.
+Its file is `<module>.property.test.ts`, beside the module it covers. Its project is the one that testing conventions' [bullet for property tests](testing-conventions.md#which-project-a-test-belongs-in), under the project table, gives it.
 
 ## How the conventions apply
 
 [Testing conventions](testing-conventions.md) apply as written, with these for property tests:
 
-- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, the rule itself, for weights whose arbitrary keeps their sum positive, such as `fc.array(fc.integer({ min: 1 }), { minLength: 1 })`:
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, assert the rule itself. In this example, the weights' arbitrary keeps their sum positive, such as `fc.array(fc.integer({ min: 1 }), { minLength: 1 })`:
 
   ```ts
   // ✅ Specific: the shares add up to exactly the total, for any of those weights
@@ -47,19 +47,19 @@ Its file is `<module>.property.test.ts`, beside the module it covers, in the pro
 
   A generator of the plainest shape checks the headline claim and none of the decisions around it.
 
-- **For code that recognises a pattern, generate the dodges and the look-alikes:** rewrites that get around it, and code it must leave alone. Each should give the answer the plain version gives, or the answer for no pattern at all, such as the same code reading a name that isn't a table.
+- **For code that recognises a pattern, generate the dodges and the look-alikes:** rewrites that get around it, and code it must leave alone. Each should give the answer the plain version gives, or the answer for no pattern at all. One example is the same code reading a name that isn't a table.
 - **Build inputs from fast-check's arbitraries,** and assert with `expect` inside `fc.property`. Return nothing from the property.
 - **Build constraints into the arbitraries,** such as `fc.integer({ min: 1 })`, rather than filtering inputs out with `fc.pre` or `.filter`. Filtering wastes runs and can leave few inputs that test anything.
 - **Don't write a property that only restates what the generator guarantees,** such as checking that a generated positive number is positive. It passes whatever the code does.
 - **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.
   - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [mutation testing practices](mutation-testing-practices.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
-- **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it, and confirm the property fails with the fix undone.
+- **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it. Then confirm the property fails with the fix undone.
 - **Leave `numRuns` and `seed` out of a new property until it has been soaked.** A soak can't reach a property that sets its own.
 - **Keep it fast.** fast-check runs 100 inputs by default. After the soak, raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is. This is the count CI runs.
 
 ### Soaking a new property
 
-Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. The soak is set by environment variables, which [`property-soak`](../../../scripts/property-soak.md) reads. Don't edit the test to soak it.
+Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. Environment variables set the soak, and [`property-soak`](../../../scripts/property-soak.md) reads them. Don't edit the test to soak it.
 
 1. **Start the soak as a background command,** and keep working until it finishes. For a property under `src/` or `app/`:
 
@@ -73,7 +73,7 @@ Before you commit a new property, run it for two minutes rather than its usual c
    - **`Soak passed:`** gives how many inputs the property ran.
    - **`Not soaked:`** means the property sets its own `numRuns`. Take it out and soak again.
    - **A failure** prints the shrunk input, the seed, and how many tests it took to fail.
-3. **If the soak says the time limit cut shrinking short,** replay the seed and count it gives on that test alone, as [When one fails](#when-one-fails) shows, and use the input that run shrinks to.
+3. **If the soak says the time limit cut shrinking short,** replay the seed and count it gives on that test alone. Use the input that replay shrinks to. The replay command is in [When one fails](#when-one-fails).
 4. **Handle each failure** as [When one fails](#when-one-fails) says.
 5. **Soak it again.**
 
@@ -89,7 +89,7 @@ Once a soak passes, say in the pull request how many inputs it ran and what it f
 
   For a failure from a normal run or CI, rather than a soak, `PROPERTY_SEED` alone is enough. For a file under `scripts/`, add `-c vitest.tooling.config.ts`. A replay of a soak's failure takes about as long as the soak took to reach it, so run it as a background command too.
 
-- **Decide where the fault is.** The property or its generator may be wrong, such as a rule that doesn't hold for an input the code handles correctly, or the code may be.
+- **Decide where the fault is.** Either the property or its generator may be wrong, or the code may be. A wrong property might state a rule that doesn't hold for an input the code handles correctly.
 - **Keep the shrunk input** as [Keeping a failing input](#keeping-a-failing-input) says, before you fix anything.
 - **If the code is wrong,** confirm the new example test fails, then fix the code, as [Fixing a bug](testing-conventions.md#fixing-a-bug) says. If the property is wrong, fix the property.
 

@@ -1,6 +1,6 @@
 # Testing
 
-How tests are written and checked in this repository, one kind of test, or check of the tests, per document, and the conventions several kinds share. The [engineering index](../README.md) points here rather than to each document. Read this index before writing, changing, moving or reviewing a test, then each document whose "Read when" matches.
+This folder says how tests are written and checked in this repository. Each document covers one kind of test, one check of the tests, or conventions several kinds share. The [engineering index](../README.md) points here rather than to each document. Read this index before writing, changing, moving or reviewing a test, then each document whose "Read when" matches.
 
 ## Index
 
@@ -19,12 +19,20 @@ How tests are written and checked in this repository, one kind of test, or check
 
 ## Adding a document
 
-1. Write it as `docs/engineering/testing/<name>.md`, one kind of test, check or set of shared rules per file, named as below, and move its rules out of the document that holds them in the same change, leaving a one-line pointer there.
+1. Write it as `docs/engineering/testing/<name>.md`, named as below, with one kind of test, check or set of shared rules per file. In the same change, move its rules out of the document that holds them, and leave a one-line pointer there.
    - **A document whose rules several kinds share** is named `<topic>-conventions.md`, as `testing-conventions.md` and `feature-testing-conventions.md` are. Its rules don't name the kinds that follow it. Testing conventions' project table and pointers name each kind only to send a reader to its document.
    - **A document for a kind of test** is named `<kind>-testing.md`, as `unit-testing.md` is.
    - **A document for a check of the tests, rather than a kind of test,** is named `<check>-testing-practices.md`, as `mutation-testing-practices.md` and `crap-testing-practices.md` are.
-   - **A kind's document may point to a conventions or practices document,** never to another kind's. A rule two kinds need goes in a conventions document both point to.
-   - **A kind's document has four sections,** in this order: "What this kind of test is", naming its files; "How the conventions apply", with its example of a specific assertion and each bullet that applies a conventions rule to it; "Rules of its own", with the subsections "When to write one", "Writing one" and "When one fails" in that order, and the kind's own subsections where they fit; and "Changing this document". A subsection the kind has no rule for points to the conventions rule that applies. A conventions document opens with what it covers, and a practices document with what its check is.
+   - **A kind's document may point to a conventions or practices document,** never to another kind's. Put a rule two kinds need in a conventions document both point to.
+   - **A kind's document has four sections,** in this order:
+     - "What this kind of test is", naming its files;
+     - "How the conventions apply", with its example of a specific assertion and each bullet that applies a conventions rule to it;
+     - "Rules of its own", with these subsections:
+       - "When to write one", "Writing one" and "When one fails", in that order;
+       - the kind's own subsections, where they fit;
+     - "Changing this document".
+
+     A subsection the kind has no rule for points to the conventions rule that applies. A conventions document opens with what it covers, and a practices document with what its check is.
 2. Add a row to the index above, with a "Read when" trigger specific enough that an agent knows whether it applies.
-3. Put its reasons in a `<name>.meta.md` sidecar beside it, or where they already live, as the CRAP document's are in `scripts/oxcrap/oxcrap.meta.md`, as [Reasons live in a `.meta.md` sidecar](../../prose/single-source-of-truth.md#reasons-live-in-a-metamd-sidecar) says, and move its entries out of the sidecar that holds them, leaving a one-line pointer there. Don't give the sidecar an index row.
-4. Keep this index to the table and these steps. A rule goes in a document, not here.
+3. Put its reasons in a `<name>.meta.md` sidecar beside it, or where they already live, as [Reasons live in a `.meta.md` sidecar](../../prose/single-source-of-truth.md#reasons-live-in-a-metamd-sidecar) says. The CRAP document's reasons, for example, live in `scripts/oxcrap/oxcrap.meta.md`. Move its entries out of the sidecar that holds them, and leave a one-line pointer there. Don't give the sidecar an index row.
+4. Keep this index to the table and these steps. Put a rule in a document, not here.
