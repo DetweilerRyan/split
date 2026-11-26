@@ -35,9 +35,14 @@ A tooling test checks the repository's own dev tools: everything in `scripts/`, 
 
 ## Rules of its own
 
+### When to write one
+
+- **A root file's test is tooling when it tests tooling config.** List it in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
+
+### Writing one
+
 - **They get no React Compiler and no `@` alias,** so a tooling test can't import app code.
 - **Only `tooling-unit` collects coverage,** of oxCrap's code, into `coverage-tooling/`, for [its CRAP score](crap-testing-practices.md). `tooling-real` collects none.
-- **A root file's test is tooling when it tests tooling config.** List it in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
 
 ### A deep module that's a program
 
@@ -52,6 +57,10 @@ These rules cover a deep module whose interface is a program, the only kind set 
 | `scripts/<tool>/features/.gplintrc`             | Its gplint rules                                      |
 
 - **Wire a new tool's features into `package.json`:** its config in `test:tooling`; `gplint -c <its .gplintrc> <its folder>` and `-c <its config>` for `check-unused-steps.ts` in `lint`; its folder in `format` and `format:check`.
+
+### When one fails
+
+[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written.
 
 ## Changing this document
 

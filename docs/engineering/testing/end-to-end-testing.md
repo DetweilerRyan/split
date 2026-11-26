@@ -32,7 +32,17 @@ An end-to-end test checks a journey a person or an assistant takes through the r
 
 ## Rules of its own
 
+### When to write one
+
+[Scenarios](feature-testing-conventions.md#scenarios) in feature testing conventions says when a scenario is worth writing.
+
+### Writing one
+
 - **A question that reads the page returns a `Locator`,** so `await expect(locator)` retries until it passes, with no waits of your own.
+
+### When one fails
+
+[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written.
 
 ## Changing this document
 
