@@ -1,6 +1,6 @@
 # Mutation testing: reasons and sources
 
-Why [mutation testing](mutation-testing.md) works the way it does here. Read this only when changing or questioning a rule there. The decisions were made on [#77](https://github.com/DetweilerRyan/split/issues/77), which holds the full research.
+Why [mutation testing](mutation-testing-practices.md) works the way it does here. Read this only when changing or questioning a rule there. The decisions were made on [#77](https://github.com/DetweilerRyan/split/issues/77), which holds the full research.
 
 ## Why
 

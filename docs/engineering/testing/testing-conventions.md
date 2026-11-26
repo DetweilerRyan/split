@@ -1,6 +1,8 @@
 # Testing conventions
 
-How to write tests in this repository: what they check, which project they belong in, what tests may touch, and fixing a bug. Every test follows these rules. A kind of test with its own document in the [testing index](README.md), such as a property test, follows that document's rules as well. Everything else you need to follow these conventions is in this file. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
+## What these conventions cover
+
+Testing conventions are the rules every test in this repository follows, whatever its kind: what a test checks, which project it belongs in, what it may touch, how it replaces a dependency, and fixing a bug. Each kind of test has its own document in the [testing index](README.md), which says how these rules apply to it and adds its own. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
 
 ## What a test checks
 
@@ -12,7 +14,7 @@ How to write tests in this repository: what they check, which project they belon
 
 ## Which project a test belongs in
 
-The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../../vitest.config.ts). The file name decides the project. `npm test` runs all three; only `unit` and `browser` count towards [CRAP's coverage](../crap.md#where-findings-come-from). A journey through the whole running app is an [end-to-end test](end-to-end-testing.md) instead, and a test of the repository's own dev tools is a [tooling test](tooling-testing.md).
+The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../../vitest.config.ts). The file name decides the project. `npm test` runs all three; only `unit` and `browser` count towards [CRAP's coverage](crap-testing-practices.md#where-findings-come-from). A journey through the whole running app is an [end-to-end test](end-to-end-testing.md) instead, and a test of the repository's own dev tools is a [tooling test](tooling-testing.md).
 
 | Project   | File name                                               | Runs in                               | Put here                                                                                                                                      |
 | :-------- | :------------------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------- |
