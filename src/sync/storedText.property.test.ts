@@ -14,6 +14,7 @@ describe('storedTextSchema', () => {
   it('reads anything a peer could write that is not a non-empty string as the fallback', () => {
     const notText = fc.oneof(
       fc.constant(''),
+      // oxlint-disable-next-line property/no-filter -- fc.anything has no option to leave strings out, and they're a small share of what it makes.
       fc.anything().filter((value) => typeof value !== 'string'),
     );
     fc.assert(
