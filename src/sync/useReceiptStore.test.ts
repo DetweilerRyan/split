@@ -76,6 +76,31 @@ describe('Yjs synchronization and seed hydration', () => {
   });
 });
 
+describe('hydrating a seed through the store', () => {
+  it("writes the seed into the store's own document, and resets it when asked", () => {
+    const store = new ReceiptStore(new Y.Doc());
+    const seed = receiptSeedSchema.parse({
+      title: 'Lunch',
+      cardTipEur: 0,
+      cashTipEur: 0,
+      bankUsd: 0,
+      roster: ['Alex'],
+      items: [{ id: 'item-0', name: 'Soup', en: 'Soup', eur: 5 }],
+    });
+    store.addItem('Bread', '', 3);
+    store.hydrateSeed(seed);
+    expect(store.getSnapshot().title).toBe('Lunch');
+    expect(
+      store
+        .getSnapshot()
+        .items.map((item) => item.name)
+        .toSorted(),
+    ).toStrictEqual(['Bread', 'Soup']);
+    store.hydrateSeed(seed, { forceReset: true });
+    expect(store.getSnapshot().items.map((item) => item.name)).toStrictEqual(['Soup']);
+  });
+});
+
 describe('adding a participant', () => {
   it('returns the colour it stores for each participant', () => {
     const store = new ReceiptStore(new Y.Doc());

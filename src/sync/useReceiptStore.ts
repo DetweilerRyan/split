@@ -13,6 +13,8 @@ import {
   parseItemId,
   participantId,
 } from '../domain/receipt/roomSnapshot';
+import type { ReceiptSeed } from '../domain/receipt/receiptSeed';
+import { type HydrationOptions, hydrateFromSeed } from './seedCodec';
 import { storedParticipantId, storedParticipants } from './storedParticipants';
 import { storedTextSchema } from './storedText';
 import { numberOrZeroSchema } from '@/utils/schemas/numberOrZero';
@@ -277,6 +279,11 @@ export class ReceiptStore {
 
   deleteItem(id: ItemId): void {
     this.items.delete(id);
+  }
+
+  /** Writes `seed` into the room's document, as `hydrateFromSeed` does. */
+  hydrateSeed(seed: ReceiptSeed, options?: HydrationOptions): void {
+    hydrateFromSeed(this.ydoc, seed, options);
   }
 
   private publish(): void {
