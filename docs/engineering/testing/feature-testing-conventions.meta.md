@@ -19,7 +19,6 @@ Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/s
 
 Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 and `gplint` 2.6.1 in the session that day, to add to [PR #57](https://github.com/DetweilerRyan/split/pull/57).
 
-- **Every other `.gplintrc` copies the root's structural rules,** decided on [#65](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227) for oxCrap's features, because gplint 2.6.1 can't extend another config.
 - **Precedents:** the owner's `gol` and `gol2` repositories.
   - **`gol`** formats features with Prettier's `prettier-plugin-gherkin` and gates them with `gherkin-lint-plus`. Its config turns on every structure rule, plus `no-restricted-patterns` as a check that scenarios stay at domain altitude. It also has a report-only checker for duplicated step wording.
   - **`gol2`** lints Markdown beside oxfmt. Its rule is that only one tool formats, and the linter's style rules are pinned to what the formatter writes, because "the two tools rewrite each other's output".
@@ -32,6 +31,10 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 - **Linter: `gplint`,** with `gol`'s rules and a list of banned implementation words. Why gplint, where each rule comes from, and the research behind the word list are in [`.gplintrc.meta.md`](../../../.gplintrc.meta.md).
 - **Not taken: a checker for duplicated step wording** like `gol`'s. Two features don't have enough steps to drift.
   - **Reopen when:** features grow enough that similar steps are written twice.
+
+## Shared `.gplintrc` rules
+
+- **Every other `.gplintrc` copies the root's structural rules,** decided on [#65](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227) for oxCrap's features, because gplint 2.6.1 can't extend another config.
 
 ## Unused step definitions fail lint
 

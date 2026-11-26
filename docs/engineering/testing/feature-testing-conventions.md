@@ -2,7 +2,7 @@
 
 ## What these conventions cover
 
-A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios that [Playwright Test](https://playwright.dev/docs/intro) runs through [playwright-bdd](https://vitalets.github.io/playwright-bdd/). The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test's own document, in the [testing index](README.md), says where its features live, what its actors can do and how it runs; this document holds the rules they share. The rules every test follows are in [testing conventions](testing-conventions.md).
+A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios. This repository runs them so far with [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/). The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test's own document, in the [testing index](README.md), says where its features live, what its actors can do and how it runs; this document holds the rules they share. The rules every test follows are in [testing conventions](testing-conventions.md).
 
 ## Scenarios
 
@@ -15,7 +15,7 @@ A feature test checks what a system does for its user, through the interface tha
 
 ## Steps and the Screenplay
 
-Steps follow the Screenplay pattern: **actors** use **abilities** to perform **tasks** and answer **questions**. Each set of features has a screenplay of its own: its cast in `fixtures.ts`, its actor in `actor.ts`, and its tasks and questions.
+Steps follow the Screenplay pattern: **actors** use **abilities** to perform **tasks** and answer **questions**. A screenplay holds its cast in `fixtures.ts`, its actor in `actor.ts`, and its tasks and questions.
 
 - **Name an actor in every step,** and get them with `actorCalled(name)`. The same name gives the same actor for the whole scenario. Each actor's abilities are created on first use.
 - **Keep step definitions thin.** A step calls `actor.attemptsTo(...)` with tasks, or asserts on `actor.answer(...)` with a question. What the actor does belongs in tasks, and what they read belongs in questions. When a step needs one that doesn't exist, add it to the screenplay rather than doing the work in the step.
@@ -24,7 +24,7 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
   - **Removing a scenario:** delete any definitions only it used.
   - **Sharing behaviour between steps:** put it in a task or question, not in a call from one step to another.
 - **Carry what an actor learns to a later step** with `remember` and `recall`, adding the key and its type to `Notes` in the screenplay's `actor.ts`.
-- **Import `test`, `Given`, `When` and `Then` from the screenplay's `fixtures.ts` only.** `createBdd` works only with the `test` that playwright-bdd exports.
+- **Import `test`, `Given`, `When` and `Then` from the screenplay's `fixtures.ts` only,** for features that playwright-bdd runs. `createBdd` works only with the `test` that playwright-bdd exports.
 
 ## Feature contracts for deep modules
 

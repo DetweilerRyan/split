@@ -2,12 +2,14 @@
 
 ## What this kind of test is
 
-A tooling test checks the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. Tooling tests run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't. A tool that's a deep module also has a feature contract, which is a feature test.
+A tooling test checks the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. Tooling tests run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't. A tool that's a deep module also has a feature contract, which is a feature test, with its files as [A deep module that's a program](#a-deep-module-thats-a-program) below lists them.
 
 | Project        | Config                                                                    | File name                                                     | Runs in |
 | :------------- | :------------------------------------------------------------------------ | :------------------------------------------------------------ | :------ |
 | `tooling-unit` | [`vitest.tooling.config.ts`](../../../vitest.tooling.config.ts)           | every `<module>.test.ts` under `scripts/` that isn't `.real.` | Node    |
 | `tooling-real` | [`vitest.tooling-real.config.ts`](../../../vitest.tooling-real.config.ts) | `<module>.real.test.ts`                                       | Node    |
+
+A root file's test is tooling when it tests tooling config. List it in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
 
 ## How the conventions apply
 
@@ -37,7 +39,7 @@ A tooling test checks the repository's own dev tools: everything in `scripts/`, 
 
 ### When to write one
 
-- **A root file's test is tooling when it tests tooling config.** List it in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
+[What a test checks](testing-conventions.md#what-a-test-checks) in testing conventions says when a function is worth testing on its own.
 
 ### Writing one
 
@@ -60,7 +62,7 @@ These rules cover a deep module whose interface is a program, the only kind set 
 
 ### When one fails
 
-[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written.
+[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written. For a step with no definition, one two definitions match, or one no feature uses, [Steps and the Screenplay](feature-testing-conventions.md#steps-and-the-screenplay) in feature testing conventions says what fails and what to do.
 
 ## Changing this document
 

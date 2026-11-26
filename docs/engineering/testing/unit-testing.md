@@ -2,7 +2,7 @@
 
 ## What this kind of test is
 
-A test in Vitest's `unit` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it. Its file is `<module>.test.ts` or `<module>.test.tsx`, beside the module it covers.
+A test in Vitest's `unit` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it. Its file is `<module>.test.ts` or `<module>.test.tsx`, beside the module it covers. An app's `<module>.property.test.ts` runs in this project too.
 
 ## How the conventions apply
 
