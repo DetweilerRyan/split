@@ -25,12 +25,11 @@ const amount = fc.double({ noNaN: true, noDefaultInfinity: true });
 /** Currency codes the schema accepts, in the cases a receipt or an agent might write them. */
 const currency = fc.constantFrom('USD', 'EUR', 'JPY', 'KWD', 'jpy', 'Chf');
 
-const item = fc.record({ id: text(64), name: text(), en: text(), eur: amount });
+// No written id starts `item-`, which an empty id is stored as followed by its position, so ids
+// that differ as written differ as stored too. The capital keeps the id's length.
+const itemId = text(64).map((id) => (id.startsWith('item-') ? `I${id.slice(1)}` : id));
 
-/** Each item's id as hydrateFromSeed stores it: as written, or `item-<index>` when it's empty. */
-function storedIds(items: readonly { readonly id: string }[]) {
-  return items.map(({ id }, index) => (id === '' ? `item-${index}` : id));
-}
+const item = fc.record({ id: itemId, name: text(), en: text(), eur: amount });
 
 /** A seed within the limits, with items whose ids, as they're stored, are all different. */
 function seedWith(itemCount: { readonly minLength: number; readonly maxLength: number }) {
@@ -50,10 +49,7 @@ function seedWith(itemCount: { readonly minLength: number; readonly maxLength: n
       rate: fc.double({ min: Number.MIN_VALUE, max: 1e9, noNaN: true }),
       rateDate: text(32),
       roster: fc.array(text(), { maxLength: MAX_ROSTER }),
-      items: fc
-        .uniqueArray(item, { selector: (i) => i.id, ...itemCount })
-        // oxlint-disable-next-line property/no-filter -- an empty id is stored by its position, which uniqueArray's selector can't see, and a clash is rare.
-        .filter((items) => new Set(storedIds(items)).size === items.length),
+      items: fc.uniqueArray(item, { selector: (i) => i.id, ...itemCount }),
     },
     { requiredKeys: ['title', 'cardTipEur', 'cashTipEur', 'bankUsd', 'roster', 'items'] },
   ) satisfies fc.Arbitrary<ReceiptSeed>;
