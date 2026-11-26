@@ -18,6 +18,16 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
   - **What fails:** `npm run test:e2e` fails on a step with no definition, or one that two definitions match. `npm run lint` fails on a definition no feature uses, through `scripts/check-unused-steps.ts`.
   - **Removing a scenario:** delete any definitions only it used.
   - **Sharing behaviour between steps:** put it in a task or question, not in a call from one step to another.
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For an end-to-end step, what the person reads on the row:
+
+  ```ts
+  // ✅ Specific: the share the person reads on the item
+  await expect(actorCalled(person).answer(ItemRow(item))).toContainText(share);
+
+  // ❌ Vague: the row is on the page
+  await expect(actorCalled(person).answer(ItemRow(item))).toBeVisible();
+  ```
+
 - **A question that reads the page returns a `Locator`,** so `await expect(locator)` retries until it passes, with no waits of your own. Find elements in the order [component tests](component-and-hook-testing.md) use, by role and accessible name first, and assert the text a user reads.
 - **Carry what an actor learns to a later step** with `remember` and `recall`, adding the key and its type to `Notes` in `actor.ts`.
 - **Import `test`, `Given`, `When` and `Then` from `e2e/screenplay/fixtures.ts` only.** `createBdd` works only with the `test` that playwright-bdd exports.

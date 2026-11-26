@@ -38,9 +38,7 @@ Moved with the rules to [component and hook testing's sidecar](component-and-hoo
 
 ## Mocking
 
-- **Fake only what can't run, at the edge.** Kent: "Mocking severs the real-world connection between what you're testing and what you're mocking", and the payoff is "usually practicality". In UI tests, "I never make actual network calls." On speed: "trading confidence for a minute or two faster test suite is a bad trade" ([The Merits of Mocking](#merits-of-mocking)).
-- **Never mock React's hooks.** Kent: "You throw away a LOT of confidence in doing so" ([How to test custom React hooks](#custom-hooks)).
-- **`vi.mock` for directly imported third-party modules.** A repository rule, kept because `yjsProvider.ts` imports Liveblocks, `y-webrtc` and `y-indexeddb` directly. Passing them in would change its public interface for tests alone. A strict no-mocks rule, as market-research has, was not taken because it would contradict that existing test.
+Moved with the rules to [unit testing's sidecar](unit-testing.meta.md#mocking).
 
 ## End-to-end tests
 
@@ -63,6 +61,7 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
   - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
   - **One pull request for all the moves,** since each changes no rule, and moving them together updates the index and the links once.
 - **Three rules that apply to one kind of test moved on the owner's review** of #159, which said of "Check what a user can see and do": "this line seems only relevant to the component-and-hook-testing.md doc. scan through this file to see if there are others." That rule and "Tests run through the React Compiler" went to component and hook testing, and "End-to-end tests use servers on this machine only" to end-to-end testing, each with its reasons.
+- **On the owner's answers on #159** ([recorded](https://github.com/DetweilerRyan/split/pull/159#issuecomment-7195098152)): "Replacing external dependencies" moved to unit testing with its reasons, and "Make assertions specific" stayed here, reworded in general terms, with an example for its own kind of test in each kind's document, the component one being the example it had here.
 - **The text moved as it was,** apart from links and these edits:
   - **Headings:** each document's own title replaced its section's heading, and the headings under it moved up a level, keeping their anchors.
   - **`testing-conventions.md`'s intro,** which named what left it, and now says each kind's document adds to these rules rather than replacing them.

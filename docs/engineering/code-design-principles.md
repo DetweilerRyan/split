@@ -21,7 +21,7 @@ Essential logic is the users' problem itself: how a receipt is split, rounded an
 
 - **Write essential logic as pure functions over plain data, in `src/domain/`,** named in the domain's own words, such as receipt, item, claim, participant and share.
 - **Keep effects in the shell, and decisions out of it where you can.** The shell reads and writes the outside world, and passes plain values to the code that decides. A decision that exists only because of the machinery, such as whether a dialog is open, stays out of `src/domain/`. If it's more than wiring, write it as a pure function beside the shell code that uses it.
-- **Pass effects into the code that decides as arguments,** typed by an interface holding only what the code uses (interface segregation), as `useActiveIdentity` takes `Pick<RoomProvider, 'setIdentity'>`. When the deciding code declares that interface in its own terms, importing nothing from the layer that implements it, the dependency is inverted too (dependency inversion). `useExchangeRate` declares `FetchRate` that way, and `RoomView` passes in `src/services/`'s `getExchangeRate`. Pure logic then needs no fakes, and the rest fakes only the effects that can't run in a test, with plain objects, as [Testing conventions](testing/testing-conventions.md#replacing-external-dependencies) says.
+- **Pass effects into the code that decides as arguments,** typed by an interface holding only what the code uses (interface segregation), as `useActiveIdentity` takes `Pick<RoomProvider, 'setIdentity'>`. When the deciding code declares that interface in its own terms, importing nothing from the layer that implements it, the dependency is inverted too (dependency inversion). `useExchangeRate` declares `FetchRate` that way, and `RoomView` passes in `src/services/`'s `getExchangeRate`. Pure logic then needs no fakes, and the rest fakes only the effects that can't run in a test, with plain objects, as [Unit testing](testing/unit-testing.md#replacing-external-dependencies) says.
 - **A business decision your change adds or edits in a component or hook goes in the domain,** and the UI calls it.
 
 ```ts
@@ -32,7 +32,7 @@ const share = item.eur / claimants.length;
 const { perPerson } = computeReceiptMath(snapshot);
 ```
 
-Where code goes is in [Code layout](code-layout.md), and what each layer may import is in [Dependency direction](dependency-direction.md). How to pass a fake in a test is in [Testing conventions](testing/testing-conventions.md#replacing-external-dependencies).
+Where code goes is in [Code layout](code-layout.md), and what each layer may import is in [Dependency direction](dependency-direction.md). How to pass a fake in a test is in [Unit testing](testing/unit-testing.md#replacing-external-dependencies).
 
 ## 2. Contained state: keep state minimal, immutable and contained
 
