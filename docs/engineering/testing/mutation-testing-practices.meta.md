@@ -1,4 +1,4 @@
-# Mutation testing: reasons and sources
+# Mutation testing practices: reasons and sources
 
 Why [mutation testing](mutation-testing-practices.md) works the way it does here. Read this only when changing or questioning a rule there. The decisions were made on [#77](https://github.com/DetweilerRyan/split/issues/77), which holds the full research.
 
@@ -92,7 +92,7 @@ The owner had the survivors split into three batches, each worked by a subagent 
 
 ## Where it lives
 
-- **In `docs/engineering/testing/`, moved from `docs/engineering/` on [#154](https://github.com/DetweilerRyan/split/pull/154).** The session advised that `crap.md` stay in engineering, since a CRAP finding is a check on the code that is often fixed by refactoring or a `@crap-allow`, and that mutation testing was the stronger candidate, since it checks how strong the tests are and [property testing](property-testing.md) relies on it to show a property can fail. The owner said: "move mutation testing in this pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7175415375)).
+- **In `docs/engineering/testing/`, moved from `docs/engineering/` on [#154](https://github.com/DetweilerRyan/split/pull/154).** The session advised that `crap.md` stay in engineering, since a CRAP finding is a check on the code that is often fixed by refactoring or a `@crap-allow`, and that mutation testing was the stronger candidate, since it checks how strong the tests are and [property testing](property-testing.md) relies on it to show a property can fail. The owner said: "move mutation testing in this pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7175415375)). `crap.md` later moved here too, as `crap-testing-practices.md`, which [testing conventions' sidecar](testing-conventions.meta.md#split-into-documents) records.
 - **Its trigger stays in the engineering index's testing row,** since it fires when oxCrap's code changes, not only when someone sets out to test.
 
 ## What would reopen this

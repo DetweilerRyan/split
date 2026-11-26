@@ -1,12 +1,12 @@
 # Property testing
 
-## What a property test is
+## What this kind of test is
 
 A property test checks a rule that should hold for every input, against many inputs [fast-check](https://fast-check.dev/) generates. When one fails, fast-check shrinks the input to the smallest one that still breaks the rule.
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.
 
-Its file is `<module>.property.test.ts`, beside the module it covers, and it runs in the project its module's other tests would, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions sets.
+Its file is `<module>.property.test.ts`, beside the module it covers, in the project [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions gives it.
 
 ## How the conventions apply
 
@@ -22,7 +22,7 @@ Its file is `<module>.property.test.ts`, beside the module it covers, and it run
   expect(allocateMinor(total, weights)).toBeDefined();
   ```
 
-## Rules for property tests
+## Rules of its own
 
 ### When to write one
 
@@ -47,7 +47,6 @@ Its file is `<module>.property.test.ts`, beside the module it covers, and it run
 
 - **For code that recognises a pattern, generate the dodges and the look-alikes:** rewrites that get around it, and code it must leave alone. Each should give the answer the plain version gives, or the answer for no pattern at all, such as the same code reading a name that isn't a table.
 - **Build inputs from fast-check's arbitraries,** and assert with `expect` inside `fc.property`. Return nothing from the property.
-
 - **Build constraints into the arbitraries,** such as `fc.integer({ min: 1 })`, rather than filtering inputs out with `fc.pre` or `.filter`. Filtering wastes runs and can leave few inputs that test anything.
 - **Don't write a property that only restates what the generator guarantees,** such as checking that a generated positive number is positive. It passes whatever the code does.
 - **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.

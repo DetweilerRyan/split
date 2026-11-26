@@ -1,6 +1,6 @@
 # Tooling testing
 
-## What a tooling test is
+## What this kind of test is
 
 A tooling test checks the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. Tooling tests run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't. A tool that's a deep module also has a feature contract, which is a feature test.
 
@@ -29,7 +29,10 @@ A tooling test checks the repository's own dev tools: everything in `scripts/`, 
   - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
 - **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words.
 
-## Rules for tooling tests
+- **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
+- **A scenario covers what the program as a whole does with its arguments and files.**
+
+## Rules of its own
 
 - **They get no React Compiler and no `@` alias,** so a tooling test can't import app code.
 - **Only `tooling-unit` collects coverage,** of oxCrap's code, into `coverage-tooling/`, for [its CRAP score](crap-testing-practices.md). `tooling-real` collects none.
@@ -47,8 +50,6 @@ These rules cover a deep module whose interface is a program, the only kind set 
 | `scripts/<tool>/features/playwright.config.ts`  | Its playwright-bdd config, with no browser            |
 | `scripts/<tool>/features/.gplintrc`             | Its gplint rules                                      |
 
-- **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
-- **A scenario covers what the program as a whole does with its arguments and files.**
 - **Wire a new tool's features into `package.json`:** its config in `test:tooling`; `gplint -c <its .gplintrc> <its folder>` and `-c <its config>` for `check-unused-steps.ts` in `lint`; its folder in `format` and `format:check`.
 
 ## Changing this document

@@ -1,8 +1,8 @@
 # End-to-end testing
 
-## What an end-to-end test is
+## What this kind of test is
 
-An end-to-end test checks a journey a person or an assistant takes through the running app, such as an assistant creating a room through `/api/mcp` and two people splitting it live. It is a feature test: a Gherkin scenario, run by [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/) as [`playwright.config.ts`](../../../playwright.config.ts) sets up, and `npm run test:e2e` runs them all. Its files are under `e2e/`:
+An end-to-end test checks a journey a person or an assistant takes through the running app, such as an assistant creating a room through `/api/mcp` and two people splitting it live. It is a feature test, set up by [`playwright.config.ts`](../../../playwright.config.ts), and `npm run test:e2e` runs them all. Its files are under `e2e/`:
 
 | Path                             | Holds                                                                                                                     |
 | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------ |
@@ -27,10 +27,12 @@ An end-to-end test checks a journey a person or an assistant takes through the r
   await expect(actorCalled(person).answer(ItemRow(item))).toBeVisible();
   ```
 
-## Rules for end-to-end tests
-
-- **A question that reads the page returns a `Locator`,** so `await expect(locator)` retries until it passes, with no waits of your own. Find elements as [testing conventions](testing-conventions.md#what-a-test-checks) says, and assert the text a user reads.
 - **End-to-end tests use servers on this machine only.** `playwright.config.ts` starts the app and a local WebRTC signaling server, and every actor's browser refuses requests to any other host. Use receipts in USD, so no exchange rate is fetched. A scenario that needs another outside service waits until that service can be replaced at its edge.
+- **Find elements as [testing conventions](testing-conventions.md#what-a-test-checks) says,** by role and accessible name first, and assert the text a user reads.
+
+## Rules of its own
+
+- **A question that reads the page returns a `Locator`,** so `await expect(locator)` retries until it passes, with no waits of your own.
 
 ## Changing this document
 
