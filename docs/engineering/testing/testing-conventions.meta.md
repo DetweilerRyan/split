@@ -101,7 +101,7 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md), an
   - **No blind references:** a path with no note on when or why to read it is a smell ([Configuration Smells in AGENTS.md Files](https://agentpatterns.ai/patterns/anti-patterns/configuration-smells-agents-md/)), which "Kinds of test" already avoided; it now leads each item with its link.
   - **The site has no page on sentence length or active voice;** the 25-word limit and the active voice are the owner's.
 - **Checked by a script** that counts the words in each sentence outside code, tables and link targets.
-- **The other testing documents had the same pass,** as the owner asked: "run the same review on the other testing docs" ([recorded](https://github.com/DetweilerRyan/split/pull/159#issuecomment-7201084924)). It covered the index and every kind's and practices document, following [Clarity and brevity](../../prose/clarity-and-brevity.md) from #167:
+- **The other testing documents had the same pass,** as the owner asked: "run the same review on the other testing docs" ([recorded](https://github.com/DetweilerRyan/split/pull/159#issuecomment-7201084924)). It covered the index and every kind's and practices document, following `docs/prose/clarity-and-brevity.md` from #167:
   - **Before:** 38 sentences over 25 words across nine documents; `unit-testing.md` had none, and needed no edits.
   - **After:** none, by the same script, now fixed to split a sentence that starts with a link.
   - **Kept:** every heading, code block, quotation, number, command and bold rule name. "Keep actions, such as clicks, outside the assertion" became its own bold bullet in component testing, the same rule as before.
