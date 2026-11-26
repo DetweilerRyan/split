@@ -1,5 +1,7 @@
 # Property testing
 
+The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for property tests.
+
 A property test checks a rule that should hold for every input, against many inputs [fast-check](https://fast-check.dev/) generates. When one fails, fast-check shrinks the input to the smallest one that still breaks the rule.
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.

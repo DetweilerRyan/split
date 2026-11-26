@@ -1,6 +1,6 @@
 # Testing conventions
 
-How to write tests in this repository: what they check, which project they belong in, what tests may touch, and fixing a bug. A kind of test with its own document in the [testing index](README.md), such as a property test, follows that document instead of a section here. Everything else you need to follow these conventions is in this file. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
+How to write tests in this repository: what they check, which project they belong in, what tests may touch, and fixing a bug. Every test follows these rules. A kind of test with its own document in the [testing index](README.md), such as a property test, follows that document's rules as well. Everything else you need to follow these conventions is in this file. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
 
 ## What a test checks
 
@@ -36,7 +36,7 @@ The app's tests use [Vitest](https://vitest.dev/), with three [projects](https:/
 
 ## Unit tests
 
-How to write a unit test is in [Unit testing](unit-testing.md).
+The `unit` project's own rules are in [Unit testing](unit-testing.md).
 
 ## Property tests
 
