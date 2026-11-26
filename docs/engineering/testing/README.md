@@ -20,9 +20,10 @@ How tests are written and checked in this repository, one kind of test, or check
 
 1. Write it as `docs/engineering/testing/<name>.md`, one kind of test, check or set of shared rules per file, named as below, and move that kind's rules out of [testing conventions](testing-conventions.md) in the same change, leaving a one-line pointer there.
    - **A document whose rules several kinds share** is named `<topic>-conventions.md`, as `testing-conventions.md` and `feature-testing-conventions.md` are. Its rules don't name the kinds that follow it. Testing conventions' project table and pointers name each kind only to send a reader to its document.
+   - **A document for a kind of test** is named `<kind>-testing.md`, as `unit-testing.md` is.
    - **A document for a check of the tests, rather than a kind of test,** is named `<check>-testing-practices.md`, as `mutation-testing-practices.md` and `crap-testing-practices.md` are.
    - **A kind's document may point to a conventions or practices document,** never to another kind's. A rule two kinds need goes in a conventions document both point to.
-   - **A kind's document has four sections,** in this order: "What this kind of test is", with its files' names; "How the conventions apply"; "Rules of its own"; and "Changing this document". A conventions or practices document opens with what it covers.
+   - **A kind's document has four sections,** in this order: "What this kind of test is", naming its files; "How the conventions apply", with its example of a specific assertion and each bullet that applies a conventions rule to it; "Rules of its own"; and "Changing this document". A conventions or practices document opens with what it covers.
 2. Add a row to the index above, with a "Read when" trigger specific enough that an agent knows whether it applies.
 3. Put its reasons in a `<name>.meta.md` sidecar beside it, as [Reasons live in a `.meta.md` sidecar](../../prose/single-source-of-truth.md#reasons-live-in-a-metamd-sidecar) says, and move that kind's entries out of `testing-conventions.meta.md` with it. Don't give the sidecar an index row.
 4. Keep this index to the table and these steps. A rule goes in a document, not here.
