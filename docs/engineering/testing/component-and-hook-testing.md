@@ -24,7 +24,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
 
 ### When to write one
 
-[What a test checks](testing-conventions.md#what-a-test-checks) in testing conventions says when a function is worth testing on its own.
+[What a test checks](testing-conventions.md#what-a-test-checks) in testing conventions says when a function is worth testing on its own. When a hook gets a `renderHook` test of its own is in [Writing one](#writing-one).
 
 ### Writing one
 

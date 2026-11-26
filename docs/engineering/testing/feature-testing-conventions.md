@@ -2,7 +2,7 @@
 
 ## What these conventions cover
 
-A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios. This repository runs them so far with [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/). These rules are for the features playwright-bdd runs, which are all of them so far. A set of features run another way says, in its kind's document, which of them it follows. The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test's own document, in the [testing index](README.md), says where its features live, what its actors can do and how it runs; this document holds the rules they share. The rules every test follows are in [testing conventions](testing-conventions.md).
+A feature test checks what a system does for its user, through the interface that user has, in Gherkin scenarios. This repository runs them so far with [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/). The rules under [Scenarios](#scenarios) and [Steps and the Screenplay](#steps-and-the-screenplay) are for the features playwright-bdd runs, which are all of them so far; a set of features run another way says, in its kind's document, which of those it follows. [Feature contracts for deep modules](#feature-contracts-for-deep-modules) applies to every deep module. The user can be a person using the app, or a developer or an agent using a deep module. Each kind of feature test's own document, in the [testing index](README.md), says where its features live, what its actors can do and how it runs; this document holds the rules they share. The rules every test follows are in [testing conventions](testing-conventions.md).
 
 ## Scenarios
 
@@ -24,7 +24,7 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
   - **Removing a scenario:** delete any definitions only it used.
   - **Sharing behaviour between steps:** put it in a task or question, not in a call from one step to another.
 - **Carry what an actor learns to a later step** with `remember` and `recall`, adding the key and its type to `Notes` in the screenplay's `actor.ts`.
-- **Import `test`, `Given`, `When` and `Then` from the screenplay's `fixtures.ts` only,** for features that playwright-bdd runs. `createBdd` works only with the `test` that playwright-bdd exports.
+- **Import `test`, `Given`, `When` and `Then` from the screenplay's `fixtures.ts` only.** `createBdd` works only with the `test` that playwright-bdd exports.
 
 ## Feature contracts for deep modules
 

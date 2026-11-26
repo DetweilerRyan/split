@@ -37,4 +37,4 @@ All three run oxCrap on a fresh report, so they print the same findings.
 
 ## Changing this document
 
-The reasons for this procedure and for oxCrap, their sources, and the options not taken are in [`scripts/oxcrap/oxcrap.meta.md`](../../../scripts/oxcrap/oxcrap.meta.md). Read it only when changing or questioning a rule here.
+The reasons for this document and for oxCrap, their sources, and the options not taken are in [`scripts/oxcrap/oxcrap.meta.md`](../../../scripts/oxcrap/oxcrap.meta.md). Read it only when changing or questioning a rule here.
