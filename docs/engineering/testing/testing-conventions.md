@@ -21,7 +21,7 @@ Most kinds of test also have their own document in the [testing index](README.md
 - **Make assertions specific.** Assert the exact thing the test's user sees or relies on, not just that something came back:
   - the whole value;
   - the full message;
-  - an element, found by what a person reads on it.
+  - an element, by what a person reads on it.
 
   Each kind's own document shows an example for its tests.
 
@@ -60,7 +60,7 @@ Two kinds of test sit outside these projects:
 
   When tests for a second module creep into a file, move them to that module's sidecar.
 
-- **Install the browser once before `npm test`.** In a sandbox or the dev container, [`scripts/prepare-sandbox.sh`](../../../scripts/prepare-sandbox.sh) installs it. On another machine, run `npx playwright install --only-shell chromium`.
+- **Let setup install the browser.** In a sandbox or the dev container, [`scripts/prepare-sandbox.sh`](../../../scripts/prepare-sandbox.sh) installs it. On another machine, run `npx playwright install --only-shell chromium` once before `npm test`.
 
 ## Tests stay offline
 
@@ -72,44 +72,56 @@ Two kinds of test sit outside these projects:
 
   The suite must pass with no network access. Setup downloads the browser; a test never does.
 
-- **Run only local programs and temporary files in a `.real.test.ts`,** whichever project runs it. Use a temporary directory, and clean it up. `scripts/prepare-sandbox.real.test.ts` does this, with fakes of `npm`, Playwright's CLI, `ldd` and `sudo`.
-- **Depend on no state outside the test,** such as files in the home folder or IndexedDB from an earlier run. Clear `localStorage` before a test that reads it.
+- **Run only local programs and temporary files in a `.real.test.ts`,** whichever project runs it. Use a temporary directory, and clean it up. `scripts/prepare-sandbox.real.test.ts` runs the setup script there, with fakes of `npm`, Playwright's CLI, `ldd` and `sudo`.
+- **Set up every piece of state the test reads inside the test.** Never rely on files in the home folder, or on IndexedDB left by an earlier run. Clear `localStorage` before a test that reads it.
 
 ## Replacing external dependencies
 
-- **Fake only what can't run in a test,** and fake it at the edge: the network, storage, or a third-party service.
-  - **Run the app's own logic for real,** such as Yjs documents, claim math and seed validation.
-  - **Keep a fake for what can't run,** never to make a test faster.
-  - **The exceptions** are the fakes that [Collaboration and contract tests](#collaboration-and-contract-tests) allows.
-- **Prefer passing the dependency in.** [_Core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) asks code that decides to take its provider, client, clock or fetcher as a parameter. A test can then hand it a plain fake object, with no mocking. Design other new code this way too, where it costs little.
-- **Know passing in from inverting.** Taking a collaborator as a parameter passes it in. The code inverts the dependency when it also does both of these:
+- **Fake only what can't run in a test,** and fake it at the edge:
+  - the network;
+  - storage;
+  - a third-party service.
+
+  Run the app's own logic for real, such as Yjs documents, claim math and seed validation. Never fake something just to make a test faster. The exceptions are the fakes that [Collaboration and contract tests](#collaboration-and-contract-tests) allows.
+
+- **Prefer passing the dependency in.** [_Core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) asks code that decides to take each of these as a parameter:
+  - its provider;
+  - its client;
+  - its clock;
+  - its fetcher.
+
+  A test can then hand it a plain fake object, with no mocking. Design other new code this way too, where it costs little.
+
+- **Passing in isn't inverting.** Taking a collaborator as a parameter passes it in. The code inverts the dependency when it also does both of these:
   - declares the collaborator's interface in its own terms;
   - imports no value or type that implements it.
 
   A [collaboration test](#collaboration-and-contract-tests) needs the dependency inverted.
 
-- **Use `vi.fn()` for a fake's methods,** and for a callback the test passes in, when the test checks how they were called.
+- **You may use `vi.fn()` when the test checks how something was called:** for a fake's methods, or for a callback the test passes in.
 - **Use `vi.mock` only for a third-party module the code imports directly,** and can't reasonably take as a parameter. `src/sync/yjsProvider.test.ts` does this for Liveblocks, `y-webrtc` and `y-indexeddb`.
 - **Never mock React or its hooks.**
 - **Never `vi.mock` the repository's own modules.** Test them for real.
 
 ## Collaboration and contract tests
 
-Some code's job is wiring collaborators that have tests of their own, such as a component that renders what's passed into its slots. A test through the real collaborators would repeat their tests. So test such code with a collaboration test instead, and invert its dependencies so the test can pass them in. First check [When a collaboration test earns its cost](#when-a-collaboration-test-earns-its-cost).
+Some code's job is wiring collaborators that have tests of their own, such as a component that renders what a caller passes into its slots. A test through the real collaborators would repeat their tests. Once [When a collaboration test earns its cost](#when-a-collaboration-test-earns-its-cost) says it's worth it, test such code with a collaboration test. Then invert its dependencies, so the test can pass them in.
 
-- **Its dependencies are of two sorts,** whether the code uses them or hands them on:
+- **Its dependencies are of two sorts:**
   - **A _collaborator_** does work the code delegates to it, such as a component a container renders in a slot.
-  - **A _store or service_** is state the code reads and changes, such as a document's store. Or it's an effect the code reaches outside itself for, such as an exchange-rate fetcher, or the clipboard at the edge.
+  - **A _store or service_** is state the code reads and changes, such as a document's store. Or it's an effect the code reaches outside itself for, such as an exchange-rate fetcher, or the clipboard at the edge. It counts whether the code uses it or hands it on.
 - **Invert every dependency the code can take as a parameter,** as [_core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) defines it:
   - **Declare the interface** each dependency must meet in the code's own terms, listing only what the code uses.
   - **Import no value or type that implements it.** Importing something else from the same module, such as a hook, is fine.
   - **Take each as a parameter, with no default.**
-  - **Call the rest directly:** what the code can't take as a parameter, such as a hook, and pure functions, which need no fake. They run for real.
+  - **Call the rest directly,** and let them run for real:
+    - what the code can't take as a parameter, such as a hook;
+    - pure functions, which need no fake.
 - **Wire in the real dependencies at a composition root.** That's the nearest code above that isn't itself inverted this way. It imports the real dependencies and passes them in, and the type checker checks each against its interface there.
 - **Bind nested inverted code at the root.** The root binds the nested code's dependencies to it before passing it in, so the outer code never sees them. Create the binding once, so the bound code keeps its identity across renders:
   - at module level;
   - or with a `useState` initializer, when the dependencies come from the root's own state.
-- **Fake the collaborators the code takes as parameters, in the collaboration test.** Check only how the code uses them: what it gives each one, and what it does with what each gives back or calls. Leave a collaborator's own work to its own tests.
+- **In the collaboration test, fake each collaborator that has contract tests.** Check only how the code uses them: what it gives each one, and what it does with what each gives back or calls. Leave a collaborator's own work to its own tests.
 - **A collaborator's own tests are its contract tests.** They check that it meets the interface the code declares, and does what the code relies on. That includes what the type checker can't see, such as something it's given but ignores.
   - **Fake only a collaborator that has contract tests.**
   - **Pass in a real one where it has none,** until it has tests of its own.
@@ -132,8 +144,6 @@ The interfaces, parameters, composition root and fakes in [Collaboration and con
 - [_least power_](../code-design-principles.md#3-least-power-use-the-least-powerful-construct-that-does-the-job);
 - [_deep modules_](../code-design-principles.md#5-deep-modules-give-each-module-a-small-interface-over-a-lot-of-behaviour).
 
-The rules:
-
 - **Start with a test through the real collaborators,** as [What a test checks](#what-a-test-checks) says. Write a collaboration test only when all three of these hold:
   - the code's job is wiring;
   - most of its collaborators have tests of their own;
@@ -143,9 +153,9 @@ The rules:
 
 - **Earn it with a current use, not an expected one,** as _earned complexity_ asks.
   - **Invert code when its test would start repeating its collaborators' tests,** not because it may grow into a container.
-  - **Give a collaborator a parameter only for a collaboration test that's already earned,** not in case a test wants to fake it later.
-- **The collaboration test earns the parameters as a set.** Once it's earned, make every collaborator a parameter, even one passed in real until it has tests. Then one composition root wires them all.
-- **A store's or service's parameter isn't an injection point.** It passes a dependency in rather than swapping a whole collaborator. Keep its interface as small as any other.
+  - **In code no collaboration test has earned yet, don't give a collaborator a parameter** just so a test can fake it later.
+- **The collaboration test earns the parameters as a set.** Once you've earned it, make every collaborator a parameter, even one the test passes in real until it has tests. Then one composition root wires them all.
+- **A store's or service's parameter isn't an injection point,** so earned complexity doesn't count it, as [code design principles](../code-design-principles.md#when-two-principles-pull-apart) say. It passes a dependency in rather than swapping a whole collaborator. Keep its interface as small as any other.
 - **Use the least powerful seam that works,** as _least power_ asks.
   - **Prefer an element slot:** `children`, or another prop typed `ReactNode`. It takes what the caller already rendered, so the test passes its own elements, and the code declares no other interface.
   - **Use a component slot, typed `ComponentType<…>`,** only when the code renders the component with props it computes.
