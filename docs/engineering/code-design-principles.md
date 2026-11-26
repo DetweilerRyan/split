@@ -21,7 +21,7 @@ Essential logic is the users' problem itself: how a receipt is split, rounded an
 
 - **Write essential logic as pure functions over plain data, in `src/domain/`,** named in the domain's own words, such as receipt, item, claim, participant and share.
 - **Keep effects in the shell, and decisions out of it where you can.** The shell reads and writes the outside world, and passes plain values to the code that decides. A decision that exists only because of the machinery, such as whether a dialog is open, stays out of `src/domain/`. If it's more than wiring, write it as a pure function beside the shell code that uses it.
-- **Pass effects into the code that decides as arguments,** typed by an interface holding only what the code uses (interface segregation), as `useActiveIdentity` takes `Pick<RoomProvider, 'setIdentity'>`. When the deciding code declares that interface in its own terms, importing nothing from the layer that implements it, the dependency is inverted too (dependency inversion). `useExchangeRate` declares `FetchRate` that way, and `RoomView` passes in `src/services/`'s `getExchangeRate`. Pure logic then needs no fakes, and the rest fakes only the effects that can't run in a test, with plain objects, as [Testing conventions](testing-conventions.md#replacing-external-dependencies) says.
+- **Pass effects into the code that decides as arguments,** typed by an interface holding only what the code uses (interface segregation), as `useActiveIdentity` takes `Pick<RoomProvider, 'setIdentity'>`. When the deciding code declares that interface in its own terms, importing no value or type that implements it, the dependency is inverted too (dependency inversion). `useExchangeRate` declares `FetchRate` that way, and `RoomView` passes in `src/services/`'s `getExchangeRate`. Pure logic then needs no fakes, and the rest fakes only the effects that can't run in a test, and what [collaboration tests](testing/collaboration-testing-conventions.md#collaboration-and-contract-tests) allow, with plain objects, as [Testing conventions](testing/testing-conventions.md#replacing-external-dependencies) says.
 - **A business decision your change adds or edits in a component or hook goes in the domain,** and the UI calls it.
 
 ```ts
@@ -32,7 +32,7 @@ const share = item.eur / claimants.length;
 const { perPerson } = computeReceiptMath(snapshot);
 ```
 
-Where code goes is in [Code layout](code-layout.md), and what each layer may import is in [Dependency direction](dependency-direction.md). How to pass a fake in a test is in [Testing conventions](testing-conventions.md#replacing-external-dependencies).
+Where code goes is in [Code layout](code-layout.md), and what each layer may import is in [Dependency direction](dependency-direction.md). How to pass a fake in a test is in [Testing conventions](testing/testing-conventions.md#replacing-external-dependencies).
 
 ## 2. Contained state: keep state minimal, immutable and contained
 
@@ -118,7 +118,9 @@ type Rate =
 
 - **Core and shell wins over earned complexity for a business rule,** which goes in `src/domain/` even with one user, as [Code layout](code-layout.md) says.
 - **Least power and deep modules split a set of cases by where it varies.** A closed set handled in one module is a union with a `switch`. When the same `switch` recurs across modules, or a second implementation of those cases lives outside the module, it's an interface. A registry comes after both, as _least power_ says.
-- **Passing an effect in, as core and shell asks, isn't a parameter or an injection point that earned complexity counts,** and needs no justification under it. An injection point lets a caller swap a whole part, as `RoomView`'s `parts` do, by the owner's exception in [Testing conventions](testing-conventions.md#writing-component-and-hook-tests). Add one only when _earned complexity_'s test is met.
+- **Earned complexity gives way to true inversion for a collaborator of code inverted for a collaboration test:** it's a parameter even while it's passed in real, before it has tests of its own, because the collaboration test earns the parameters as a set, and one composition root wires them all, as [When a collaboration test earns its cost](testing/collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
+- **A collaborator, store or service of code inverted for a collaboration test has no default,** even an effect such as a browser global, so earned complexity's "default each option" doesn't apply to it: its composition root passes it in, as [Collaboration and contract tests](testing/collaboration-testing-conventions.md#collaboration-and-contract-tests) says. The interface it's declared by is a type the code owns, not a seam earned complexity or deep modules counts, even with one implementation behind it. Code not inverted for one, such as a hook, may still default a browser global, as [Code layout](code-layout.md) says.
+- **Passing an effect in, as core and shell asks, isn't a parameter or an injection point that earned complexity counts,** and needs no justification under it. An injection point lets a caller swap a whole collaborator, as a container's slots do for the [collaboration test](testing/collaboration-testing-conventions.md#collaboration-and-contract-tests) that collaboration testing conventions describe. Add one only when _earned complexity_'s test is met, which for a collaboration test is [When a collaboration test earns its cost](testing/collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost).
 
 ## Changing this document
 

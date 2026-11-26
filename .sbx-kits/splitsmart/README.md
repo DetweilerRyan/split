@@ -16,7 +16,7 @@ Replace `claude` with another supported v3 agent. Kit selection and `--clone` ap
 
 Startup runs alongside the agent. Inside the sandbox, wait until `~/.cache/splitsmart-kit.log` says `SplitSmart setup complete` before using the dependencies. Inspect the log for errors; retry from the repository root with `sh scripts/prepare-sandbox.sh`. The script serializes its own installs and skips `npm ci` when the manifests, Node and npm versions have not changed. If `node_modules` needs repair, remove its `.splitsmart-install` marker and rerun the script. Do not run other package installations concurrently.
 
-On every start the script also provisions headless Chromium for the [browser test project](../../docs/engineering/testing-conventions.md#which-project-a-test-belongs-in):
+On every start the script also provisions headless Chromium for the [browser test project](../../docs/engineering/testing/testing-conventions.md#which-project-a-test-belongs-in):
 
 - It installs the Chromium build that the `playwright` version pinned in the lockfile names, about 273 MB on a first start.
 - It installs the system libraries Chromium needs, through `sudo` and Playwright's `install-deps`, only while `ldd` reports one missing. The sandbox image lacks about a hundred packages on a first start.

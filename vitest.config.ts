@@ -4,12 +4,12 @@ import react from '@vitejs/plugin-react';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 // The app's tests, which `npm test` runs, in three projects chosen by file name;
-// docs/engineering/testing-conventions.md says which a test belongs in.
+// docs/engineering/testing/testing-conventions.md says which a test belongs in.
 // `<module>.browser.test.ts(x)` runs in headless Chromium through Playwright,
 // `<module>.real.test.ts` runs in Node with real programs and files, and every other
 // `<module>.test.ts(x)` runs in jsdom, `<module>.property.test.ts` included. Only the unit and
 // browser projects count towards the coverage report oxCrap reads: `npm test` runs `real` in a
-// second pass with coverage off, as docs/engineering/crap.md says. The tooling tests, in scripts/
+// second pass with coverage off, as docs/engineering/testing/crap-testing-practices.md says. The tooling tests, in scripts/
 // and of root tooling config, are vitest.tooling.config.ts's, which `npm run test:tooling` runs.
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'] as const;
 const realTests = ['**/*.real.test.ts'] as const;

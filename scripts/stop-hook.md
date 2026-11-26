@@ -25,7 +25,7 @@ The app is `src/`, `app/`, `vitest.config.ts`, `vitest.config.browser.test.ts`, 
 CRAP findings:
 - src/rate.ts:1 rate: CRAP 182, complexity 13, coverage 0%, but its @crap-allow comment says CRAP 156, complexity 12. Update the comment to `// @crap-allow CRAP 182, complexity 13.`, and check its reason still holds.
 
-Get help: docs/engineering/crap.md
+Get help: docs/engineering/testing/crap-testing-practices.md
 
 This is advice; CI fails on each of these.
 ```

@@ -3,12 +3,12 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // The tooling's unit and property tests: every `<module>.test.ts` under scripts/,
 // `<module>.property.test.ts` included. `npm run test:tooling` runs them, then the real tests
 // (vitest.tooling-real.config.ts) and oxCrap's features. `npm test` runs only the app's, from
-// vitest.config.ts. docs/engineering/testing-conventions.md says which a test belongs in.
+// vitest.config.ts. docs/engineering/testing/tooling-testing.md says which a test belongs in.
 //
 // Unlike the app's config, this has no React Compiler and no `@` alias: tooling isn't React, and
 // without the alias a tooling test can't import app code by accident. Its coverage, of oxCrap's
 // own code, is the report scripts/oxcrap/.oxcraprc.json scores. Only these unit tests count
-// towards it, as docs/engineering/crap.md says. Stryker runs these tests too (stryker.config.json).
+// towards it, as docs/engineering/testing/crap-testing-practices.md says. Stryker runs these tests too (stryker.config.json).
 const ignored = [
   ...configDefaults.exclude,
   '**/.next/**',
