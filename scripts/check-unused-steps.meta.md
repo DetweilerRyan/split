@@ -1,6 +1,6 @@
 # `check-unused-steps.ts`: reasons and sources
 
-Why [`check-unused-steps.ts`](check-unused-steps.ts) exists and works the way it does. Read this only when changing or questioning the script. Writing a step definition needs nothing from this file: [testing conventions](../docs/engineering/testing/end-to-end-testing.md) say what to do when the lint fails.
+Why [`check-unused-steps.ts`](check-unused-steps.ts) exists and works the way it does. Read this only when changing or questioning the script. Writing a step definition needs nothing from this file: [end-to-end testing](../docs/engineering/testing/end-to-end-testing.md) say what to do when the lint fails.
 
 Decided by the owner in the session on 2026-11-22 ("i want the gate"), on [#59](https://github.com/DetweilerRyan/split/issues/59), after web research that day. The owner asked for this sidecar in review on [#60](https://github.com/DetweilerRyan/split/pull/60#discussion_r4658384821), so the reasons sit beside the script.
 
@@ -18,7 +18,7 @@ Decided by the owner in the session on 2026-11-22 ("i want the gate"), on [#59](
 ## Why gate here
 
 - **The usual objection is a false positive:** a step called only from another step looks unused ([makandra](#makandra-unused-steps)).
-- **It can't arise here:** steps don't call other steps. The testing conventions say so, and shared behaviour lives in `e2e/screenplay` tasks and questions.
+- **It can't arise here:** steps don't call other steps. [End-to-end testing](../docs/engineering/testing/end-to-end-testing.md) says so, and shared behaviour lives in `e2e/screenplay` tasks and questions.
 - **Part of `npm run lint`,** not a command of its own, so the definition-of-done table and CI don't change.
 
 ## How it works
