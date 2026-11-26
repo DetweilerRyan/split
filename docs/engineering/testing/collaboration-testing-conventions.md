@@ -2,7 +2,7 @@
 
 ## What these conventions cover
 
-These rules are for testing code whose job is to render or call other code that has tests of its own. You may know this as mocking child components, stubbing a store, or dependency injection. They say:
+These rules are for testing code whose job is to render or call other code that has tests of its own. You may know this as mocking child components, stubbing a store, or dependency injection. This document calls the code such code renders or calls its _collaborators_. They say:
 
 - when such code earns a test that fakes what it uses;
 - how the code takes what it uses, so a test can pass fakes;
@@ -41,7 +41,7 @@ Some code's job is wiring collaborators that have tests of their own, such as a 
 - **Fake a store or service that opens its effects itself,** as `yjsProvider` opens `y-indexeddb`. The test passes a fake that implements the interface. The real one's contract tests check what the code relies on.
 - **The edge is a browser or third-party API itself,** such as the clipboard. Fake it as [Replacing external dependencies](testing-conventions.md#replacing-external-dependencies) says. It needs no contract tests. Fake a third-party collaborator only at the edge too.
 - **Keep fakes and contract tests in step.** When what a dependency is given or gives back changes meaning, change its fakes and its contract tests together.
-- **Keep at least one test that runs the code with its real dependencies,** such as a test of the whole running app.
+- **Keep at least one test that runs the code with its real dependencies,** such as one that runs the whole app.
 
 ## When a collaboration test earns its cost
 
@@ -72,4 +72,4 @@ The interfaces, parameters, composition root and fakes in [Collaboration and con
 
 ## Changing this document
 
-The reasons for these conventions, their sources, and the options not taken are in [collaboration-testing-conventions.meta.md](collaboration-testing-conventions.meta.md). Read it only when you change or question a convention here.
+The reasons for these conventions and the options not taken are in [collaboration-testing-conventions.meta.md](collaboration-testing-conventions.meta.md). Their sources are listed in [testing conventions' sidecar](testing-conventions.meta.md#sources). Read them only when you change or question a convention here.
