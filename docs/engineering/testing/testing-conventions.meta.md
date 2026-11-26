@@ -26,7 +26,6 @@ Most of the advice comes from Kent C. Dodds. Each source below was opened and ch
   - **Why not `.integration.test.ts`:** it's what a Vitest maintainer suggests for separating such tests, with projects named `unit` and `integration` and files `**/*.unit.test.ts` and `**/*.integration.test.ts` ([Vitest discussion #4675](#vitest-4675)). But "integration" names scope, so it would mislabel a narrow test.
   - **Precedent:** `.real.` names the size property, and matches the `_real.py` tests in the owner's market-research repository, which use real binaries and loopback without the internet.
   - **Not taken:** Google's own `.medium.test.ts`, a term readers would have to look up.
-- **No layout assertions in jsdom.** jsdom does no layout, so `toBeVisible` there checks only attributes and inline styles.
 - **Tests run through the React Compiler.** Decided by the owner in the session on 2026-11-21: "add the @vitejs/plugin-react package to make sure the tests do run through React Compiler. memoisation can affect the results of tests." `next.config.ts` builds the app with `reactCompiler: true`.
   - **What changed:** `vitest.config.ts` runs `babel-plugin-react-compiler` first through `@vitejs/plugin-react`.
   - **Version:** 5.2.0, the newest release that supports the Vite 6 inside Vitest 5.0.5, since 6.x needs Vite 8.
@@ -59,7 +58,7 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
 ## Split into documents
 
 - **Asked for by the owner on #154,** on 2026-11-25: "testing-conventions.md is getting too large, let's break it apart. make a docs/testing/ folder with an index readme with read triggers and seperate out a property-testing.md doc. the other testing types can be decomposed from testing-convetions.md in another pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7174979414)). #154 moved property and mutation testing; [#156](https://github.com/DetweilerRyan/split/issues/156) moved the rest.
-- **What moved, on #156's pull request:** component and hook tests, end-to-end tests, and tooling tests with feature contracts, each into a document of its own in this folder, with its sidecar entries. Each left a one-line pointer here, as [the index's steps](README.md#adding-a-document) say.
+- **What moved, on #156's pull request:** component and hook tests, end-to-end tests, tooling tests with feature contracts, and the `unit` project's own rule, which the owner asked for on that pull request, each into a document of its own in this folder, with its sidecar entries. Each left a one-line pointer here, as [the index's steps](README.md#adding-a-document) say.
 - **The issue's open decisions, as that pull request took them:**
   - **This file moved into `docs/engineering/testing/` too,** keeping the rules every kind of test shares. So the folder owns every testing rule, and the engineering index's one testing row is the only pointer.
   - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
