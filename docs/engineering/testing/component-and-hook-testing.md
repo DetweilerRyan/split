@@ -19,7 +19,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   ```
 
 - **A container component's slots are its collaborators,** as [Collaboration and contract tests](testing-conventions.md#collaboration-and-contract-tests) describes, which says how they're inverted and tested. [When a collaboration test earns its cost](testing-conventions.md#when-a-collaboration-test-earns-its-cost) says when a component is worth making one.
-  - **What a container is:** a component whose job is to call hooks and render components a caller passes through a `slots` prop, as React libraries such as MUI name it.
+  - **What a container is:** a component whose job is to call hooks and render components a caller passes in, with props it computes, through a `slots` prop, as MUI names such a prop. Where it renders what the caller already rendered, it takes an element slot instead, as [When a collaboration test earns its cost](testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
   - **Each slot's type** is a component of the props the container passes, such as `ComponentType<{ readonly title: string; readonly onShare: () => void }>`.
   - **A nested container** is bound to its dependencies by the composition root, as a component created once, at module level or with a `useState` initializer, that renders the nested container with them.
   - **A React context a slot's component reads** is part of what it relies on, which the type checker can't see, so the component's contract tests cover it. The container may import that context to provide it, from the component's module or one of its own: it isn't a value that implements the slot.
