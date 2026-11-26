@@ -9,7 +9,7 @@ A tooling test checks the repository's own dev tools: everything in `scripts/`, 
 | `tooling-unit` | [`vitest.tooling.config.ts`](../../../vitest.tooling.config.ts)           | every `<module>.test.ts` under `scripts/` that isn't `.real.` | Node    |
 | `tooling-real` | [`vitest.tooling-real.config.ts`](../../../vitest.tooling-real.config.ts) | `<module>.real.test.ts`                                       | Node    |
 
-A root file's test is tooling when it tests tooling config. List it in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
+A root file's test is tooling when it tests tooling config.
 
 ## How the conventions apply
 
@@ -43,12 +43,13 @@ A root file's test is tooling when it tests tooling config. List it in `include`
 
 ### Writing one
 
-- **They get no React Compiler and no `@` alias,** so a tooling test can't import app code.
+- **List a root file's tooling test** in `include` in `vitest.tooling-real.config.ts`, and in `ignored` in `vitest.config.ts`. `vitest.config.browser.test.ts` stays an app test, since it guards the app's compiler setup.
+- **Tooling tests get no React Compiler and no `@` alias,** so a tooling test can't import app code.
 - **Only `tooling-unit` collects coverage,** of oxCrap's code, into `coverage-tooling/`, for [its CRAP score](crap-testing-practices.md). `tooling-real` collects none.
 
 ### A deep module that's a program
 
-These rules cover a deep module whose interface is a program, the only kind set up so far.
+This subsection holds the layout and wiring of a deep module whose interface is a program, the only kind set up so far. How its features apply feature testing conventions is under [How the conventions apply](#how-the-conventions-apply).
 
 | Path                                            | Holds                                                 |
 | :---------------------------------------------- | :---------------------------------------------------- |
