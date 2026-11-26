@@ -69,10 +69,10 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
   - **Headings:** each document's own title replaced its section's heading, and the headings under it moved up a level, keeping their anchors.
   - **`testing-conventions.md`'s intro,** which named what left it, and now says each kind's document adds to these rules rather than replacing them.
   - **The project table's "Put here" cells,** which now link to each kind's own rules.
-  - **Pointers:** each moved section left a one-line pointer in `testing-conventions.md`, and each kind's document opens with one back to it.
+  - **Pointers:** each moved section left a one-line pointer in `testing-conventions.md`, and each moved entry one in this sidecar. Each kind's document opens with one back to `testing-conventions.md`, and each new sidecar's intro links to its document and, where it cites them, to the Sources below. Component and hook testing's sidecar also points to the Browser Mode decision kept here.
   - **Tooling testing's sidecar:** a sentence that had said "this section" now names tooling testing's feature contracts, and the pronoun after it agrees.
   - **`mutation-testing.md`:** its step for a surviving mutant now names testing conventions and tooling testing, where it had said "testing conventions" alone, and property testing where it had said "those".
-  - **Outside this folder:** sentences that named testing conventions as the owner of a moved rule now name its new document.
+  - **Outside this folder:** sentences that named testing conventions as the owner of a moved rule now name its new document. In `.gplintrc.meta.md`, the sentence whose link said tooling testing "says why" now says it's where the rule is, since the reason isn't there.
 
 ## Changed test expectations
 
