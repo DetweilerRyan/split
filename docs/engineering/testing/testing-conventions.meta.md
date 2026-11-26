@@ -6,7 +6,8 @@ Most of the advice comes from Kent C. Dodds. Each source below was opened and ch
 
 ## What a test checks
 
-- **User-visible behaviour, not implementation details.** Kent defines implementation details as "things which users of your code will not typically use, see, or even know about". He names two users of a component, "End-users and developers", and says a test "should typically only see/interact with the props that are passed, and the rendered output" ([Testing Implementation Details](#testing-implementation-details)). Vitest's component testing guide gives the same advice: test user-facing behaviour, not state or internals ([Vitest](#vitest-component-testing)).
+Why a component test checks only what a user can see and do moved with the rule to [component and hook testing's sidecar](component-and-hook-testing.meta.md).
+
 - **Use the code the way it's really used.** "The more your tests resemble the way your software is used, the more confidence they can give you", and Kent endorses Guillermo Rauch's "Write tests. Not too many. Mostly integration." ([The Testing Trophy](#testing-trophy)). The exception for collaborator-free logic is this repository's own: functions like `computeReceiptMath` have many edge cases that are clearest tested directly.
 - **Specific assertions.** "Make assertions specific" and "Tests should resemble users" are two of [Epic Web's principles](#epic-web-principles). The Epic Stack's `epic-testing` skill shows the good-and-bad example pattern used in the doc ([epic-testing](#epic-testing)). It was written by a contributor and merged by Kent, so its wording isn't his.
 - **Test files are exempt from `max-nested-callbacks`.** Decided by the owner on [#76](https://github.com/DetweilerRyan/split/issues/76), on 2026-11-24: "Tighter, tests exempt", with `max-depth` 3 and `max-nested-callbacks` 3 everywhere else. A test's callbacks nest by structure, not by logic: a property test is already three deep at `describe`, `it` and `fc.property`, so a fourth callback inside it, such as an `arbitrary.map`, would fail. When the rule was turned on, every place it flagged was in a test file. Flattening them would move a test's setup away from the property it serves.
@@ -16,6 +17,8 @@ Most of the advice comes from Kent C. Dodds. Each source below was opened and ch
 ## Projects and file names
 
 Why the `unit` project has no layout assertions moved with the rule to [unit testing's sidecar](unit-testing.meta.md).
+
+Why tests run through the React Compiler moved with the rule to [component and hook testing's sidecar](component-and-hook-testing.meta.md).
 
 - **Component and hook tests run in a real browser.** Decided by the owner on [#38](https://github.com/DetweilerRyan/split/issues/38#issuecomment-7053714472) ("approved"), choosing Vitest Browser Mode over jsdom with React Testing Library.
   - **Kent:** in 2026 he recommends Vitest's or Playwright's built-in user events and locators for new browser tests, and moving important interaction tests to a real browser rather than relying more on simulated events ([user-event#1319](#user-event-1319)).
@@ -28,12 +31,6 @@ Why the `unit` project has no layout assertions moved with the rule to [unit tes
   - **Why not `.integration.test.ts`:** it's what a Vitest maintainer suggests for separating such tests, with projects named `unit` and `integration` and files `**/*.unit.test.ts` and `**/*.integration.test.ts` ([Vitest discussion #4675](#vitest-4675)). But "integration" names scope, so it would mislabel a narrow test.
   - **Precedent:** `.real.` names the size property, and matches the `_real.py` tests in the owner's market-research repository, which use real binaries and loopback without the internet.
   - **Not taken:** Google's own `.medium.test.ts`, a term readers would have to look up.
-- **Tests run through the React Compiler.** Decided by the owner in the session on 2026-11-21: "add the @vitejs/plugin-react package to make sure the tests do run through React Compiler. memoisation can affect the results of tests." `next.config.ts` builds the app with `reactCompiler: true`.
-  - **What changed:** `vitest.config.ts` runs `babel-plugin-react-compiler` first through `@vitejs/plugin-react`.
-  - **Version:** 5.2.0, the newest release that supports the Vite 6 inside Vitest 5.0.5, since 6.x needs Vite 8.
-  - **Guard:** `vitest.config.browser.test.ts` checks a component compiles to the compiler's memo cache (`const $ = _c(<slots>)`). With the plugin line removed it fails, and every other test still passes.
-  - **Reopen when:** Vitest moves to Vite 8; plugin-react can then move to 6.x.
-  - **The case that showed why it matters:** with the compiler on, it memoized a `localStorage` read in `useActiveIdentity` on inputs that didn't include storage. See [#37](https://github.com/DetweilerRyan/split/pull/37#discussion_r4649234960).
 
 ## Writing component and hook tests
 
@@ -65,12 +62,13 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
   - **`testing-conventions.md` moved into `docs/engineering/testing/` too,** keeping the rules every kind of test shares. So the folder owns every testing rule, and the engineering index's one testing row is the only pointer.
   - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
   - **One pull request for all the moves,** since each changes no rule, and moving them together updates the index and the links once.
+- **Three rules that apply to one kind of test moved on the owner's review** of #159, which said of "Check what a user can see and do": "this line seems only relevant to the component-and-hook-testing.md doc. scan through this file to see if there are others." That rule and "Tests run through the React Compiler" went to component and hook testing, and "End-to-end tests use servers on this machine only" to end-to-end testing, each with its reasons.
 - **The text moved as it was,** apart from links and these edits:
   - **Headings:** each document's own title replaced its section's heading, and the headings under it moved up a level, keeping their anchors.
   - **`testing-conventions.md`'s intro,** which named what left it, and now says each kind's document adds to these rules rather than replacing them.
   - **The project table's "Put here" cells,** which now link to each kind's own rules.
   - **Pointers:** each moved section left a one-line pointer in `testing-conventions.md`, and each moved entry one in this sidecar. Each kind's document opens with one back to `testing-conventions.md`, and each new sidecar's intro links to its document and, where it cites them, to the Sources below. Component and hook testing's sidecar also points to the Browser Mode decision kept here.
-  - **Tooling testing's sidecar:** a sentence that had said "this section" now names tooling testing's feature contracts, and the pronoun after it agrees.
+  - **Tooling testing's sidecar:** a sentence that had said "this section" now names tooling testing's "Feature contracts for deep modules" section, and the owner's quote about where a convention is written gains "then the only testing document".
   - **`mutation-testing.md`:** its step for a surviving mutant now names testing conventions and tooling testing, where it had said "testing conventions" alone, and property testing where it had said "those".
   - **Outside this folder:** sentences that named testing conventions as the owner of a moved rule now name its new document. In `.gplintrc.meta.md`, the sentence whose link said tooling testing "says why" now says it's where the rule is, since the reason isn't there.
 

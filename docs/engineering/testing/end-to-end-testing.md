@@ -24,6 +24,7 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
 - **Leave a feature's layout to `npm run format`,** table alignment included, and fix what `npm run lint` reports in it. The rules are in [`.gplintrc`](../../../.gplintrc).
 - **When a feature names how the app is built, reword it in the words of the person doing it.** `.gplintrc`'s `no-restricted-patterns` list fails on such words, like a tool's name, `button` or `seed`. When a scenario uses a new one, add it to the list rather than to the scenario.
 - **Don't edit `.features-gen/`.** `bddgen` writes the Playwright tests there from the features, and git ignores it.
+- **End-to-end tests use servers on this machine only.** `playwright.config.ts` starts the app and a local WebRTC signaling server, and every actor's browser refuses requests to any other host. Use receipts in USD, so no exchange rate is fetched. A scenario that needs another outside service waits until that service can be replaced at its edge.
 
 ## Changing this document
 
