@@ -1,0 +1,91 @@
+# Testing conventions: reasons and sources
+
+Why the rules in [testing conventions](testing-conventions.md) are as they are, where they come from, and what was rejected. Read this only when changing or questioning one of them. Following the conventions needs nothing from this file.
+
+Most of the advice comes from Kent C. Dodds. Each source below was opened and checked against what is attributed to it on 2026-11-20 or 2026-11-21.
+
+## What a test checks
+
+- **User-visible behaviour, not implementation details.** Kent defines implementation details as "things which users of your code will not typically use, see, or even know about". He names two users of a component, "End-users and developers", and says a test "should typically only see/interact with the props that are passed, and the rendered output" ([Testing Implementation Details](#testing-implementation-details)). Vitest's component testing guide gives the same advice: test user-facing behaviour, not state or internals ([Vitest](#vitest-component-testing)).
+- **Use the code the way it's really used.** "The more your tests resemble the way your software is used, the more confidence they can give you", and Kent endorses Guillermo Rauch's "Write tests. Not too many. Mostly integration." ([The Testing Trophy](#testing-trophy)). The exception for collaborator-free logic is this repository's own: functions like `computeReceiptMath` have many edge cases that are clearest tested directly.
+- **Specific assertions.** "Make assertions specific" and "Tests should resemble users" are two of [Epic Web's principles](#epic-web-principles). The Epic Stack's `epic-testing` skill shows the good-and-bad example pattern used in the doc ([epic-testing](#epic-testing)). It was written by a contributor and merged by Kent, so its wording isn't his.
+- **Test files are exempt from `max-nested-callbacks`.** Decided by the owner on [#76](https://github.com/DetweilerRyan/split/issues/76), on 2026-11-24: "Tighter, tests exempt", with `max-depth` 3 and `max-nested-callbacks` 3 everywhere else. A test's callbacks nest by structure, not by logic: a property test is already three deep at `describe`, `it` and `fc.property`, so a fourth callback inside it, such as an `arbitrary.map`, would fail. When the rule was turned on, every place it flagged was in a test file. Flattening them would move a test's setup away from the property it serves.
+  - **Not taken:** the issue's other options, ESLint's default limit of 10, which nothing broke, or a limit test files fit.
+  - **What would reopen it:** a test whose nesting hides its logic, rather than its structure.
+
+## Projects and file names
+
+- **Component and hook tests run in a real browser.** Decided by the owner on [#38](https://github.com/DetweilerRyan/split/issues/38#issuecomment-7053714472) ("approved"), choosing Vitest Browser Mode over jsdom with React Testing Library.
+  - **Kent:** in 2026 he recommends Vitest's or Playwright's built-in user events and locators for new browser tests, and moving important interaction tests to a real browser rather than relying more on simulated events ([user-event#1319](#user-event-1319)).
+  - **Courses and tools:** his Epic Web workshop teaches Browser Mode, with a section titled "Sunsetting JSDOM" ([Epic Web workshop](#epic-web-workshop)). Vitest calls Browser Mode "the recommended approach for component testing" ([Vitest](#vitest-component-testing)).
+  - **Not taken:** jsdom with React Testing Library. It's cheaper to set up, but it keeps testing in the simulated DOM Kent and Vitest are moving away from, and it would need `@testing-library/user-event`, which is no longer getting feature work. The trial and comparison are on #38.
+- **`<module>.browser.test.ts(x)` names browser tests.** Decided by the owner on #38: "go with `<module>.browser.test.ts(x)`". The alternative was choosing the project by folder (`src/components/`, `src/hooks/`). A suffix keeps the file a sidecar and shows the environment in its name.
+- **`<module>.real.test.ts` names tests that run real programs or touch the file system.** Asked for by the owner in review on [#39](https://github.com/DetweilerRyan/split/pull/39#discussion_r4649529184), who suggested `.real.test.ts` and asked for precedent.
+  - **The distinction:** Google's _Software Engineering at Google_ separates a test's size, "the resources that are required to run a test case", from its scope, "the specific code paths we are verifying" ([test size and scope](#swe-test-sizes)). A small test "must run in a single process" and isn't "allowed to access the network or disk". A medium test "can span multiple processes" but reaches no system other than `localhost`.
+  - **Where `prepare-sandbox` falls:** its test is narrow in scope, one script, but medium in size: it runs subprocesses and writes files.
+  - **Why not `.integration.test.ts`:** it's what a Vitest maintainer suggests for separating such tests, with projects named `unit` and `integration` and files `**/*.unit.test.ts` and `**/*.integration.test.ts` ([Vitest discussion #4675](#vitest-4675)). But "integration" names scope, so it would mislabel a narrow test.
+  - **Precedent:** `.real.` names the size property, and matches the `_real.py` tests in the owner's market-research repository, which use real binaries and loopback without the internet.
+  - **Not taken:** Google's own `.medium.test.ts`, a term readers would have to look up.
+- **No layout assertions in jsdom.** jsdom does no layout, so `toBeVisible` there checks only attributes and inline styles.
+- **Tests run through the React Compiler.** Decided by the owner in the session on 2026-11-21: "add the @vitejs/plugin-react package to make sure the tests do run through React Compiler. memoisation can affect the results of tests." `next.config.ts` builds the app with `reactCompiler: true`.
+  - **What changed:** `vitest.config.ts` runs `babel-plugin-react-compiler` first through `@vitejs/plugin-react`.
+  - **Version:** 5.2.0, the newest release that supports the Vite 6 inside Vitest 5.0.5, since 6.x needs Vite 8.
+  - **Guard:** `vitest.config.browser.test.ts` checks a component compiles to the compiler's memo cache (`const $ = _c(<slots>)`). With the plugin line removed it fails, and every other test still passes.
+  - **Reopen when:** Vitest moves to Vite 8; plugin-react can then move to 6.x.
+  - **The case that showed why it matters:** with the compiler on, it memoized a `localStorage` read in `useActiveIdentity` on inputs that didn't include storage. See [#37](https://github.com/DetweilerRyan/split/pull/37#discussion_r4649234960).
+
+## Writing component and hook tests
+
+Moved with the rules to [component and hook testing's sidecar](component-and-hook-testing.meta.md).
+
+## Mocking
+
+- **Fake only what can't run, at the edge.** Kent: "Mocking severs the real-world connection between what you're testing and what you're mocking", and the payoff is "usually practicality". In UI tests, "I never make actual network calls." On speed: "trading confidence for a minute or two faster test suite is a bad trade" ([The Merits of Mocking](#merits-of-mocking)).
+- **Never mock React's hooks.** Kent: "You throw away a LOT of confidence in doing so" ([How to test custom React hooks](#custom-hooks)).
+- **`vi.mock` for directly imported third-party modules.** A repository rule, kept because `yjsProvider.ts` imports Liveblocks, `y-webrtc` and `y-indexeddb` directly. Passing them in would change its public interface for tests alone. A strict no-mocks rule, as market-research has, was not taken because it would contradict that existing test.
+
+## End-to-end tests
+
+Moved with the rules to [end-to-end testing's sidecar](end-to-end-testing.meta.md).
+
+## Property tests
+
+Moved with the rules to [property testing's sidecar](property-testing.meta.md).
+
+## Tooling tests and feature contracts
+
+Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
+
+## Split into documents
+
+- **Asked for by the owner on #154,** on 2026-11-25: "testing-conventions.md is getting too large, let's break it apart. make a docs/testing/ folder with an index readme with read triggers and seperate out a property-testing.md doc. the other testing types can be decomposed from testing-convetions.md in another pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7174979414)). #154 moved property and mutation testing; [#156](https://github.com/DetweilerRyan/split/issues/156) moved the rest.
+- **What moved, on #156's pull request:** component and hook tests, end-to-end tests, and tooling tests with feature contracts, each into a document of its own in this folder, with its sidecar entries. Each left a one-line pointer here, as [the index's steps](README.md#adding-a-document) say.
+- **The issue's open decisions, as that pull request took them:**
+  - **This file moved into `docs/engineering/testing/` too,** keeping the rules every kind of test shares. So the folder owns every testing rule, and the engineering index's one testing row is the only pointer.
+  - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
+  - **One pull request for all three moves,** since each changes no rule, and moving them together updates the index and the links once.
+- **The text moved as it was,** apart from links and the headings each document's own title replaced.
+
+## Changed test expectations
+
+The rule that a changed expectation needs a reason in the pull request is owned by [reviewing work](../workflow/reviewing-work.md#changed-test-expectations); its source is in that document's sidecar.
+
+## Sources
+
+- <a id="testing-implementation-details"></a>Kent C. Dodds, [Testing Implementation Details](https://kentcdodds.com/blog/testing-implementation-details), 2020-08-17.
+- <a id="testing-trophy"></a>Kent C. Dodds, [The Testing Trophy and Testing Classifications](https://kentcdodds.com/blog/the-testing-trophy-and-testing-classifications), 2021-06-03.
+- <a id="common-mistakes"></a>Kent C. Dodds, [Common mistakes with React Testing Library](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library), 2020-05-04.
+- <a id="custom-hooks"></a>Kent C. Dodds, [How to test custom React hooks](https://kentcdodds.com/blog/how-to-test-custom-react-hooks), 2020-03-22.
+- <a id="merits-of-mocking"></a>Kent C. Dodds, [The Merits of Mocking](https://kentcdodds.com/blog/the-merits-of-mocking), 2018-11-05.
+- <a id="user-event-1319"></a>Kent C. Dodds, [Migration recommendation: prefer Vitest browser mode or Playwright for new work](https://github.com/testing-library/user-event/issues/1319), testing-library/user-event#1319, opened 2026-08-03.
+- <a id="epic-web-workshop"></a>Epic Web, [React Component Testing with Vitest](https://www.epicweb.dev/workshops/react-component-testing-with-vitest), taught by Artem Zakharenko.
+- <a id="epic-web-principles"></a>Epic Web, [Principles](https://www.epicweb.dev/principles).
+- <a id="epic-testing"></a>Epic Stack, [`epic-testing` skill](https://github.com/epicweb-dev/epic-stack/blob/main/docs/skills/epic-testing/SKILL.md), added in [epic-stack#1078](https://github.com/epicweb-dev/epic-stack/pull/1078).
+- <a id="query-priority"></a>Testing Library, [About Queries: Priority](https://testing-library.com/docs/queries/about/#priority).
+- <a id="vitest-component-testing"></a>Vitest, [Component Testing](https://vitest.dev/guide/browser/component-testing), v5.1.1.
+- <a id="swe-test-sizes"></a>Titus Winters, Tom Manshreck and Hyrum Wright (eds.), _Software Engineering at Google_, [chapter 11, "Testing Overview"](https://abseil.io/resources/swe-book/html/ch11.html): test size and test scope.
+- <a id="vitest-4675"></a>Vitest, [How to separate unit and integration test](https://github.com/vitest-dev/vitest/discussions/4675), discussion #4675.
+- <a id="playwright-bdd"></a>Vitaliy Potapov, [playwright-bdd](https://github.com/vitalets/playwright-bdd), v9.2.1.
+- <a id="screenplay"></a>John Ferguson Smart and Jan Molak, _BDD in Action_, 2nd ed., [chapter 12, "Scalable test automation with the Screenplay Pattern"](https://livebook.manning.com/book/bdd-in-action-second-edition/chapter-12).
+- <a id="serenity-js"></a>Serenity/JS, [Playwright Test integration](https://serenity-js.org/handbook/test-runners/playwright-test/), v3.49.0.
+- <a id="mcp-sdk-testing"></a>Model Context Protocol TypeScript SDK, [Test a server](https://ts.sdk.modelcontextprotocol.io/v2/testing.html), v2.

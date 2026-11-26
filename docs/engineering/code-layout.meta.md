@@ -37,7 +37,7 @@ Why [code layout](code-layout.md) puts code where it does, where its layers came
 
 - **"Hooks per concern":** the owner's answer on [#93](https://github.com/DetweilerRyan/split/issues/93) for splitting `RoomView`: `useIdentity`, `useSeedImport`, `useSharing`, `useExchangeRate`, `useToast` and so on, each a function of its inputs, with `RoomView` composing them and rendering.
 - **Where they live** is the next decision's: beside `RoomView`, not in `src/hooks/`, where they first went as the reversible default, since #93 didn't name a folder.
-- **Inputs are arguments** so that each hook is tested with fakes, as [testing conventions](testing-conventions.md#replacing-external-dependencies) prefer, and so the owner's "each hook and component" are tested on their own.
+- **Inputs are arguments** so that each hook is tested with fakes, as [testing conventions](testing/testing-conventions.md#replacing-external-dependencies) prefer, and so the owner's "each hook and component" are tested on their own.
 - **Only outside effects and browser state are arguments.** A pure domain function, such as `createRoomId` or `localeCurrency`, runs the same in a test, so a hook calls it directly. A browser global, such as `sessionStorage` or `location`, defaults to the real one, so callers needn't pass it. Found in review of #93's pull request.
 - **Not taken:** components that own their dialog's state, the other option #93 offered.
 
@@ -64,7 +64,7 @@ Why [code layout](code-layout.md) puts code where it does, where its layers came
 
 - **A second user is "Another folder":** two importers in one folder count as one user. The other option was any second module, which would let a route's own two components share code through `src/components/`.
 - **Imports into a private `_` folder from outside it stay left to review,** as on #112, so the check doesn't look at them.
-- **Tests aren't users,** so a test importing a module doesn't keep it in a shared folder. A test is a file whose name holds `.test.`, as [testing conventions](testing-conventions.md#which-project-a-test-belongs-in) name them. Nothing under `e2e/` imports from the two folders, so its files aren't counted as tests; one that did would count as a user.
+- **Tests aren't users,** so a test importing a module doesn't keep it in a shared folder. A test is a file whose name holds `.test.`, as [testing conventions](testing/testing-conventions.md#which-project-a-test-belongs-in) name them. Nothing under `e2e/` imports from the two folders, so its files aren't counted as tests; one that did would count as a user.
 
 Choices #118 didn't settle:
 
