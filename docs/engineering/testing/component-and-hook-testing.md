@@ -1,5 +1,7 @@
 # Component and hook testing
 
+The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for component and hook tests.
+
 Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`. Copy the pattern in `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`.
 
 - **Render with `render` from `vitest-browser-react`,** and import the app's stylesheet (`import '../index.css'`) so that visibility reflects the real styles. Cleanup is automatic.

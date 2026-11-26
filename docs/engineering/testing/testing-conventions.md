@@ -23,11 +23,11 @@ How to write tests in this repository: what they check, which project they belon
 
 The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../../vitest.config.ts). The file name decides the project. `npm test` runs all three; only `unit` and `browser` count towards [CRAP's coverage](../crap.md#where-findings-come-from). A journey through the whole running app is an [end-to-end test](end-to-end-testing.md) instead, and a test of the repository's own dev tools is a [tooling test](tooling-testing.md).
 
-| Project   | File name                                               | Runs in                               | Put here                                                                                |
-| :-------- | :------------------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------------------------------- |
-| `browser` | `<module>.browser.test.ts`, `<module>.browser.test.tsx` | headless Chromium, through Playwright | every test of a React component or hook                                                 |
-| `real`    | `<module>.real.test.ts`                                 | Node                                  | a test that runs real programs or touches the file system                               |
-| `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code |
+| Project   | File name                                               | Runs in                               | Put here                                                                                                                         |
+| :-------- | :------------------------------------------------------ | :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------- |
+| `browser` | `<module>.browser.test.ts`, `<module>.browser.test.tsx` | headless Chromium, through Playwright | every test of a React component or hook, as [component and hook testing](component-and-hook-testing.md) says                     |
+| `real`    | `<module>.real.test.ts`                                 | Node                                  | a test that runs real programs or touches the file system                                                                        |
+| `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code, as [unit testing](unit-testing.md) says |
 
 - **A [property test](property-testing.md) is named `<module>.property.test.ts`,** and runs in the project its module's other tests would: `unit` for the app, `tooling-unit` for tooling.
 - **Each test file is a sidecar.** It sits beside the one module it covers and is named after it: `src/domain/receipt/math.ts` → `src/domain/receipt/math.test.ts`, `app/r/[room]/_room-view/IdentityModal.tsx` → `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`. When tests for a second module creep into a file, move them to that module's sidecar.

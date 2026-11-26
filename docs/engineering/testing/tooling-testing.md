@@ -1,5 +1,7 @@
 # Tooling testing
 
+The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for tests of the repository's own dev tools.
+
 Tooling tests check the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. They run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't.
 
 | Project        | Config                                                                    | File name                                                     | Runs in |

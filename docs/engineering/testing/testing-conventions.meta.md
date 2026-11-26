@@ -58,12 +58,12 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
 ## Split into documents
 
 - **Asked for by the owner on #154,** on 2026-11-25: "testing-conventions.md is getting too large, let's break it apart. make a docs/testing/ folder with an index readme with read triggers and seperate out a property-testing.md doc. the other testing types can be decomposed from testing-convetions.md in another pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7174979414)). #154 moved property and mutation testing; [#156](https://github.com/DetweilerRyan/split/issues/156) moved the rest.
-- **What moved, on #156's pull request:** component and hook tests, end-to-end tests, tooling tests with feature contracts, and the `unit` project's own rule, which the owner asked for on that pull request, each into a document of its own in this folder, with its sidecar entries. Each left a one-line pointer here, as [the index's steps](README.md#adding-a-document) say.
+- **What moved, on [#159](https://github.com/DetweilerRyan/split/pull/159), the pull request for #156:** component and hook tests, end-to-end tests, tooling tests with feature contracts, and the `unit` project's own rule, which the owner asked for on that pull request, each into a document of its own in this folder, with its sidecar entries. Each left a one-line pointer here, as [the index's steps](README.md#adding-a-document) say.
 - **The issue's open decisions, as that pull request took them:**
   - **This file moved into `docs/engineering/testing/` too,** keeping the rules every kind of test shares. So the folder owns every testing rule, and the engineering index's one testing row is the only pointer.
   - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
-  - **One pull request for all three moves,** since each changes no rule, and moving them together updates the index and the links once.
-- **The text moved as it was,** apart from links and the headings each document's own title replaced.
+  - **One pull request for all the moves,** since each changes no rule, and moving them together updates the index and the links once.
+- **The text moved as it was,** apart from links, the headings each document's own title replaced, this file's intro, which named what left it, and one sentence in tooling testing's sidecar that had said "this section".
 
 ## Changed test expectations
 
