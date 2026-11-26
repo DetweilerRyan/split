@@ -15,6 +15,8 @@ Most of the advice comes from Kent C. Dodds. Each source below was opened and ch
 
 ## Projects and file names
 
+Why the `unit` project has no layout assertions moved with the rule to [unit testing's sidecar](unit-testing.meta.md).
+
 - **Component and hook tests run in a real browser.** Decided by the owner on [#38](https://github.com/DetweilerRyan/split/issues/38#issuecomment-7053714472) ("approved"), choosing Vitest Browser Mode over jsdom with React Testing Library.
   - **Kent:** in 2026 he recommends Vitest's or Playwright's built-in user events and locators for new browser tests, and moving important interaction tests to a real browser rather than relying more on simulated events ([user-event#1319](#user-event-1319)).
   - **Courses and tools:** his Epic Web workshop teaches Browser Mode, with a section titled "Sunsetting JSDOM" ([Epic Web workshop](#epic-web-workshop)). Vitest calls Browser Mode "the recommended approach for component testing" ([Vitest](#vitest-component-testing)).
@@ -63,7 +65,7 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
   - **This file moved into `docs/engineering/testing/` too,** keeping the rules every kind of test shares. So the folder owns every testing rule, and the engineering index's one testing row is the only pointer.
   - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
   - **One pull request for all the moves,** since each changes no rule, and moving them together updates the index and the links once.
-- **The text moved as it was,** apart from links, the headings each document's own title replaced, this file's intro, which named what left it, and one sentence in tooling testing's sidecar that had said "this section".
+- **The text moved as it was,** apart from links, the headings each document's own title replaced, this file's intro, which named what left it, the project table's "Put here" cells, which now link to each kind's document, the pointers each kind's document gained to this one, and one sentence in tooling testing's sidecar that had said "this section". Outside this folder, the sentences that named testing conventions as the owner of a moved rule now name its new document.
 
 ## Changed test expectations
 
