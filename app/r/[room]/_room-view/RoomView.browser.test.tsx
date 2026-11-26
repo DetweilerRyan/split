@@ -11,12 +11,12 @@ import { roomIdSchema } from '@/domain/room/roomId';
 import { parseRoomPath } from '@/sync/seedCodec';
 import { ReceiptStore } from '@/sync/useReceiptStore';
 import { type RoomSlots, RoomView } from './RoomView';
-import { type RateSources, getExchangeRate } from '@/services/exchangeRates';
+import { type ExchangeRate, type RateSources, getExchangeRate } from '@/services/exchangeRates';
 
 // Each fake shows what RoomView gives it, and offers a button for each callback it's handed, so
-// these tests check only how RoomView wires its slots and hooks together. Each slot's component and hook has
-// tests of its own, so what a hook does with a call is checked here only far enough to tell which
-// handler the call reached.
+// these tests check only how RoomView wires its slots and hooks together. Each slot's component
+// and each hook has tests of its own, so what a hook does with a call is checked here only far
+// enough to tell which handler the call reached.
 type PropsOf<Slot extends keyof RoomSlots> = Readonly<ComponentProps<RoomSlots[Slot]>>;
 
 const roomId = roomIdSchema.parse('split-r1');
@@ -184,7 +184,10 @@ const fakeSlots: RoomSlots = {
   Toast: FakeToast,
 };
 
-async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
+async function renderRoom(
+  names: readonly string[] = ['Alex', 'Sam'],
+  cached: ReadonlyMap<string, ExchangeRate> = new Map(),
+) {
   const doc = new Y.Doc();
   const store = new ReceiptStore(doc);
   store.setMeta('title', 'Trattoria Da Enzo');
@@ -195,7 +198,7 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
   const navigate = vi.fn<(path: string) => void>();
   const clipboard = { writeText: vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()) };
   // The real exchange-rate service runs, over a fake network and an in-memory cache.
-  const rates = new Map<string, Awaited<ReturnType<RateSources['cache']['read']>>>();
+  const rates = new Map(cached);
   const network = vi.fn<RateSources['fetch']>((url) => {
     const quote = new URL(url).searchParams.get('symbols') ?? '';
     return Promise.resolve({
@@ -345,6 +348,24 @@ describe('RoomView', () => {
     await button('Receipt in pounds');
     expect(network).toHaveBeenLastCalledWith(expect.stringContaining('?base=GBP&symbols=USD'));
     await expect.element(screen.getByText('Receipt in GBP, shown in USD at 1.08')).toBeVisible();
+  });
+
+  it("uses a fresh cached rate for the edit drawer's display currency, without asking again", async () => {
+    const fresh: ExchangeRate = {
+      base: 'EUR',
+      quote: 'USD',
+      rate: 1.05,
+      date: '2026-11-19',
+      fetchedAt: Date.now(),
+    };
+    const { screen, button, network } = await renderRoom(
+      ['Alex', 'Sam'],
+      new Map([['EUR:USD', fresh]]),
+    );
+    await button('Edit');
+    await button('Show in dollars');
+    await expect.element(screen.getByText('Receipt in EUR, shown in USD at 1.05')).toBeVisible();
+    expect(network).not.toHaveBeenCalled();
   });
 
   it("saves the edit drawer's rate to the room", async () => {
