@@ -103,7 +103,7 @@ export function RestaurantModal({ open, snapshot, roomId, onClose }: RestaurantM
           No restaurant details were found on this receipt.
         </p>
       )}
-      <p className="mt-4 truncate font-mono text-xs text-slate-400">room: {roomId}</p>
+      <p className="mt-4 truncate font-mono text-xs text-slate-500">room: {roomId}</p>
     </ModalDialog>
   );
 }

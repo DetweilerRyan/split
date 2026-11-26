@@ -29,9 +29,13 @@ async function renderHeader(props: Partial<Parameters<typeof Header>[0]> = {}) {
 describe('Header', () => {
   it('names the receipt, when it was and the meal, and opens its details', async () => {
     const { banner, onDetails } = await renderHeader();
-    const details = banner.getByRole('button', {
-      name: 'Restaurant details for Trattoria Da Enzo',
-    });
+    // Named by what it shows, then what it opens, so its visible label is part of its name.
+    const details = banner.getByRole('button', { name: /\(restaurant details\)$/ });
+    await expect
+      .element(details)
+      .toHaveAccessibleName(
+        /^Trattoria Da Enzo Fri, Mar 6, 2026 · 7:30\sPM Dinner \(restaurant details\)$/,
+      );
     await expect.element(details.getByText('T', { exact: true })).toBeVisible();
     await expect.element(details.getByText(/^Fri, Mar 6, 2026 · 7:30\sPM$/)).toBeVisible();
     await expect.element(details.getByText('Dinner')).toBeVisible();

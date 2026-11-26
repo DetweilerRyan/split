@@ -47,13 +47,17 @@ export function Header({
       <div className="mx-auto max-w-6xl px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
+            {/* The button is named by what it shows, so people who speak or see its label can find
+                it (WCAG 2.5.3, Label in Name); the hidden suffix says what it opens. */}
             <button
               type="button"
-              aria-label={`Restaurant details for ${title}`}
               className="flex min-w-0 items-center gap-2 rounded-xl py-0.5 pr-1 text-left active:bg-slate-100"
               onClick={onDetails}
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-indigo-600 font-extrabold text-white">
+              <span
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-indigo-600 font-extrabold text-white"
+                aria-hidden="true"
+              >
                 {initial !== '' ? initial : '¤'}
               </span>
               <span className="min-w-0">
@@ -76,6 +80,7 @@ export function Header({
                     {mealType}
                   </span>
                 )}
+                <span className="sr-only">(restaurant details)</span>
               </span>
             </button>
           </div>

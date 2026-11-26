@@ -34,6 +34,8 @@ export type Actor = {
   readonly browseTheWeb: () => Promise<Page>;
   /** The browser page, for questions; throws if the actor never opened one. */
   readonly page: Page;
+  /** Whether the actor has opened a browser page, so `page` won't throw. */
+  readonly hasBrowsed: () => boolean;
   readonly useMcpServer: () => Promise<McpSession>;
   readonly remember: <K extends keyof Notes>(key: K, value: Notes[K]) => void;
   readonly recall: <K extends keyof Notes>(key: K) => Notes[K];
@@ -99,6 +101,7 @@ export function createActor(name: string, browser: Browser, baseURL: string): Ac
     get page() {
       return openedPage();
     },
+    hasBrowsed: () => page !== undefined,
     useMcpServer,
     remember,
     recall,

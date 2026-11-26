@@ -1,14 +1,23 @@
 import { expect } from '@playwright/test';
 import type { DataTable } from 'playwright-bdd';
+import { assertNoBarriers } from '../screenplay/accessibility';
 import { Given, Then, When } from '../screenplay/fixtures';
 import {
+  BarriersOnScreen,
   ItemRow,
   ReceiptTitle,
   ToolCallFailed,
   ToolResultText,
   TotalsFor,
 } from '../screenplay/questions';
-import { Claim, CreateReceiptRoom, JoinRoomOf, OpenRoomLinkFrom } from '../screenplay/tasks';
+import {
+  Claim,
+  CreateReceiptRoom,
+  isRoomWindow,
+  JoinRoomOf,
+  OpenRoomLinkFrom,
+  OpenWindow,
+} from '../screenplay/tasks';
 
 Given(
   '{word} has read a receipt from {string} for {string} and {string}:',
@@ -86,6 +95,23 @@ Given("{word} has joined {word}'s room", async ({ actorCalled }, person: string,
 When('{word} claims {string}', async ({ actorCalled }, person: string, item: string) => {
   await actorCalled(person).attemptsTo(Claim(item));
 });
+
+When(/^(\w+) opens the (.+) window$/, async ({ actorCalled }, person: string, window: string) => {
+  if (!isRoomWindow(window)) {
+    throw new Error(
+      `The room has no "${window}" window. Use share, restaurant details, who's at the table ` +
+        'or receipt presets, or add the window to RoomWindow in e2e/screenplay/tasks.ts.',
+    );
+  }
+  await actorCalled(person).attemptsTo(OpenWindow(window));
+});
+
+Then(
+  '{word} finds no accessibility barriers on the screen',
+  async ({ actorCalled }, person: string) => {
+    assertNoBarriers(`What ${person} sees`, await actorCalled(person).answer(BarriersOnScreen));
+  },
+);
 
 Then(
   '{word} sees the receipt titled {string}',
