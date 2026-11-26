@@ -1,8 +1,8 @@
 # Component and hook testing
 
-## What a component or hook test is
+## What this kind of test is
 
-A component or hook test checks a React component, or a hook, through what its users see and do. It runs in Vitest's `browser` project, in headless Chromium through Playwright. Its file is `<module>.browser.test.ts` or `<module>.browser.test.tsx`, beside the module it covers, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions sets.
+A test of a React component or hook, in Vitest's `browser` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it. Its file is `<module>.browser.test.ts` or `<module>.browser.test.tsx`, beside the module it covers.
 
 ## How the conventions apply
 
@@ -18,13 +18,12 @@ A component or hook test checks a React component, or a hook, through what its u
   expect(screen.container.querySelector('.text-slate-500')).not.toBeNull();
   ```
 
-- **A component's callback props are part of what it shows its developer user.** Checking that `onSelect` was called with the chosen id is fine. Checking which internal function ran is not.
-
-## Rules for component and hook tests
+## Rules of its own
 
 Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`. Copy the pattern in `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`.
 
 - **Check what a user can see and do.** A component has two users: the person using the app, and the developer rendering it. So a component test works only through the component's props and its rendered output. Don't assert on state, internal functions, how many times something rendered, or CSS classes.
+- **A component's callback props are part of what it shows its developer user.** Checking that `onSelect` was called with the chosen id is fine. Checking which internal function ran is not.
 - **Render with `render` from `vitest-browser-react`,** and import the app's stylesheet (`import '../index.css'`) so that visibility reflects the real styles. Cleanup is automatic.
 - **Interact with `userEvent` from `vitest/browser`.** Don't add `@testing-library/user-event`, and don't dispatch DOM events by hand.
 - **Assert with `await expect.element(locator)`.** It retries until the assertion passes or times out, so don't add waits, sleeps or retry loops of your own. Keep actions such as clicks outside the assertion.

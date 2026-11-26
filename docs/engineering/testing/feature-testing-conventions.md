@@ -7,7 +7,7 @@ A feature test checks what a system does for its user, through the interface tha
 ## Scenarios
 
 - **Write scenarios in the words of the feature's user,** such as the people at the table, or a developer using a tool.
-- **Write a scenario only for what the whole system is needed to show.** Keep edge cases in the unit tests of the modules inside it.
+- **Write a scenario only for what the whole system is needed to show.** Keep edge cases in the Vitest tests of the modules inside it.
 - **Leave a feature's layout to `npm run format`,** table alignment included, and fix what `npm run lint` reports in it. Each set of features has its rules in a `.gplintrc`.
 - **When a feature names how the system is built, reword it in its user's words.** A `.gplintrc`'s `no-restricted-patterns` list fails on such words. When a scenario uses a new one, add it to the list rather than to the scenario.
 - **Every other `.gplintrc` copies the root `.gplintrc`'s structural rules:** change a structural rule in each of them.
@@ -33,7 +33,7 @@ What a deep module is, is in the code design principles' [_deep modules_](../cod
 - **Test a deep module's contract with Gherkin features,** written in its callers' words and kept beside it.
 - **Drive the features through the module's own interface.** Run a program end to end, as a process. A module used through code is driven through its functions, which needn't be end to end.
 - **Don't keep a second test of the same contract,** such as a `real` test of the program, beside the features.
-- **The first deep module used through code sets up its own layout and runner,** with its rules in the document for its kind of test. Only the program kind is set up so far.
+- **The first deep module used through code sets up its own layout and runner,** with its rules in the document for its kind of test.
 
 ### Deciding a module is deep
 

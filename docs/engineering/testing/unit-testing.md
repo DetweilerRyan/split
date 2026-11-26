@@ -1,14 +1,14 @@
 # Unit testing
 
-## What a unit test is
+## What this kind of test is
 
-A unit test checks logic with no React, such as the receipt math, seed codecs, stores and server code, through the functions that use it. It runs in Vitest's `unit` project, in jsdom. Its file is `<module>.test.ts` or `<module>.test.tsx`, beside the module it covers, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions sets.
+A test in Vitest's `unit` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it. Its file is `<module>.test.ts` or `<module>.test.tsx`, beside the module it covers.
 
 ## How the conventions apply
 
-[Testing conventions](testing-conventions.md) apply as written, with this for unit tests:
+[Testing conventions](testing-conventions.md) apply as written, with this for the `unit` project's tests:
 
-- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a unit test, the whole value:
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a test in the `unit` project, the whole value:
 
   ```ts
   // ✅ Specific: each share, in minor units
@@ -18,7 +18,7 @@ A unit test checks logic with no React, such as the receipt math, seed codecs, s
   expect(allocateMinor(1000, [1, 1, 1]).length).toBeGreaterThan(0);
   ```
 
-## Rules for unit tests
+## Rules of its own
 
 - **Don't assert on layout or visibility in the `unit` project.** jsdom does no layout, so `toBeVisible` there doesn't reflect what a user would see. Write that test in the `browser` project.
 
