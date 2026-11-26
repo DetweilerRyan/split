@@ -20,7 +20,17 @@ A test in Vitest's `unit` project, as [the project table](testing-conventions.md
 
 ## Rules of its own
 
+### When to write one
+
+[What a test checks](testing-conventions.md#what-a-test-checks) in testing conventions says when a function is worth testing on its own.
+
+### Writing one
+
 - **Don't assert on layout or visibility in the `unit` project.** jsdom does no layout, so `toBeVisible` there doesn't reflect what a user would see. Write that test in the `browser` project.
+
+### When one fails
+
+[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written.
 
 ## Changing this document
 
