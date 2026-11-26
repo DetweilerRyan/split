@@ -1,0 +1,76 @@
+# Testing conventions
+
+How to write tests in this repository: what they check, which project they belong in, what tests may touch, and fixing a bug. A kind of test with its own document in the [testing index](README.md), such as a property test, follows that document instead of a section here. Everything else you need to follow these conventions is in this file. The command that runs the tests is in [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done).
+
+## What a test checks
+
+- **Check what a user can see and do.** A component has two users: the person using the app, and the developer rendering it. So a component test works only through the component's props and its rendered output. Don't assert on state, internal functions, how many times something rendered, or CSS classes.
+- **Make the test use the code the way it's really used.** Prefer a test that exercises several units together over one that isolates a single function, unless the function is logic with no collaborators, such as the receipt math.
+- **Make assertions specific.** Assert the exact thing a user would see: the button with its accessible name, the full message.
+
+  ```ts
+  // ✅ Specific: the message the user reads
+  await expect.element(screen.getByText('Add the first person to this receipt.')).toBeVisible();
+
+  // ❌ Vague: some element with a class is on the page
+  expect(screen.container.querySelector('.text-slate-500')).not.toBeNull();
+  ```
+
+- **Name each test after the one behaviour it pins down,** and take its expected values from the requirement, not by running the code and pasting its output.
+- **Nest a test's callbacks as its structure needs,** and keep its blocks within the depth [`.oxlintrc.json`](../../../.oxlintrc.json) allows.
+
+## Which project a test belongs in
+
+The app's tests use [Vitest](https://vitest.dev/), with three [projects](https://vitest.dev/guide/projects) in [`vitest.config.ts`](../../../vitest.config.ts). The file name decides the project. `npm test` runs all three; only `unit` and `browser` count towards [CRAP's coverage](../crap.md#where-findings-come-from). A journey through the whole running app is an [end-to-end test](#end-to-end-tests) instead, and a test of the repository's own dev tools is a [tooling test](#tooling-tests).
+
+| Project   | File name                                               | Runs in                               | Put here                                                                                |
+| :-------- | :------------------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------------------------------- |
+| `browser` | `<module>.browser.test.ts`, `<module>.browser.test.tsx` | headless Chromium, through Playwright | every test of a React component or hook                                                 |
+| `real`    | `<module>.real.test.ts`                                 | Node                                  | a test that runs real programs or touches the file system                               |
+| `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code |
+
+- **A [property test](property-testing.md) is named `<module>.property.test.ts`,** and runs in the project its module's other tests would: `unit` for the app, `tooling-unit` for tooling.
+- **Each test file is a sidecar.** It sits beside the one module it covers and is named after it: `src/domain/receipt/math.ts` → `src/domain/receipt/math.test.ts`, `app/r/[room]/_room-view/IdentityModal.tsx` → `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`. When tests for a second module creep into a file, move them to that module's sidecar.
+- **Don't assert on layout or visibility in the `unit` project.** jsdom does no layout, so `toBeVisible` there doesn't reflect what a user would see. Write that test in the `browser` project.
+- **Tests run through the React Compiler,** as the app build does. Don't remove the compiler from `vitest.config.ts`; `vitest.config.browser.test.ts` fails if a component stops being compiled.
+- **The browser is installed by setup.** [`scripts/prepare-sandbox.sh`](../../../scripts/prepare-sandbox.sh) installs it in a sandbox or the dev container. On another machine, run `npx playwright install --only-shell chromium` once before `npm test`.
+
+## Property tests
+
+How and when to write a property test is in [Property testing](property-testing.md).
+
+## Writing component and hook tests
+
+How to write a component or hook test is in [Component and hook testing](component-and-hook-testing.md).
+
+## End-to-end tests
+
+How to write an end-to-end test is in [End-to-end testing](end-to-end-testing.md).
+
+## Tooling tests
+
+How to test the repository's own dev tools, and a deep module's feature contract, is in [Tooling testing](tooling-testing.md).
+
+## Tests stay offline
+
+- **A test never makes a request to the internet,** not even to a public endpoint: no Liveblocks, no WebRTC signaling server, no exchange-rate service, no npm registry. The suite must pass with no network access. The browser is downloaded by setup, never by a test.
+- **End-to-end tests use servers on this machine only.** `playwright.config.ts` starts the app and a local WebRTC signaling server, and every actor's browser refuses requests to any other host. Use receipts in USD, so no exchange rate is fetched. A scenario that needs another outside service waits until that service can be replaced at its edge.
+- **A `real` test runs local programs and temporary files only,** in a temporary directory it cleans up. `scripts/prepare-sandbox.real.test.ts` runs the setup script there with fakes of `npm`, Playwright's CLI, `ldd` and `sudo`.
+- **Don't depend on state outside the test,** such as files in the home folder or IndexedDB from an earlier run. Clear `localStorage` before a test that reads it.
+
+## Replacing external dependencies
+
+- **Fake only what can't run in a test,** and fake it at the edge: the network, storage, or a third-party service. Let the app's own logic (Yjs documents, claim math, seed validation) run for real. Don't fake something just to make a test faster.
+- **Prefer passing the dependency in.** When code takes its provider, client, clock or fetcher as a parameter, as [_core and shell_](../code-design-principles.md#1-core-and-shell-keep-essential-logic-apart-from-the-machinery-around-it) asks of code that decides, a test can hand it a plain fake object with no mocking at all. Design other new code this way too, where it costs little.
+- **`vi.fn()` is fine for a fake's methods** and for a component's callback props, when the test needs to check how they were called.
+- **Use `vi.mock` only for a third-party module the code imports directly** and can't reasonably take as a parameter, as `src/sync/yjsProvider.test.ts` does for Liveblocks, `y-webrtc` and `y-indexeddb`. Never mock React or its hooks. Never `vi.mock` the repository's own modules; test them for real.
+
+## Fixing a bug
+
+Start with a test that reproduces the bug, run it against the unfixed code, and confirm it fails for the reason you expect. Then fix the code and watch the same test pass. If the test passes before the fix, it doesn't reproduce the bug yet.
+
+Changing what an existing test expects needs a reason in the pull request. [Submitting work](../workflow/submitting-work.md#what-the-description-carries) says how to list it.
+
+## Changing this document
+
+The reasons for these conventions, their sources, and the options not taken are in [testing-conventions.meta.md](testing-conventions.meta.md). Read it only when changing or questioning a convention here.

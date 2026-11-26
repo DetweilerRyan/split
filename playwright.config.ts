@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 import { defineBddConfig } from 'playwright-bdd';
 
 // End-to-end acceptance tests: Gherkin features in e2e/features, run by Playwright Test through
-// playwright-bdd. docs/engineering/testing-conventions.md says how to write them. Both servers
+// playwright-bdd. docs/engineering/testing/end-to-end-testing.md says how to write them. Both servers
 // are started here and stay on this machine, so a run makes no request to the internet.
 const appPort = 3100;
 const signalingPort = 4455;

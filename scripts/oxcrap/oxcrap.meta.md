@@ -40,7 +40,7 @@ Checked 2026-11-22. Most sources are practitioner posts, vendor posts, tool docu
   - **It replaces a merge-base comparison:** with the numbers in the comment, there's nothing to compare against.
 - **A comment applies to the function starting on the next line of code.** Lines holding only other comments are skipped. It's an error, not a guess, when two functions that don't contain each other start on that line.
 - **The 15 functions over the limits when the check started have comments** saying so ("Debt from before the CRAP check (#63)"). Replace a reason with a real justification when you next work on its function.
-- **Coverage comes from all three Vitest projects together.** Components and hooks are tested in the `browser` project ([testing conventions](../../docs/engineering/testing-conventions.md#which-project-a-test-belongs-in)), so `unit` coverage alone would score every component at 0%.
+- **Coverage comes from all three Vitest projects together.** Components and hooks are tested in the `browser` project ([testing conventions](../../docs/engineering/testing/testing-conventions.md#which-project-a-test-belongs-in)), so `unit` coverage alone would score every component at 0%.
 
 ### The script reads coverage; it doesn't run the tests
 
