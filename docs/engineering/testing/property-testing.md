@@ -12,7 +12,7 @@ Its file is `<module>.property.test.ts`, beside the module it covers. Its projec
 
 [Testing conventions](testing-conventions.md) apply as written, with these for property tests:
 
-- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, assert the rule itself. In this example, the weights' arbitrary keeps their sum positive, such as `fc.array(fc.integer({ min: 1 }), { minLength: 1 })`:
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, assert the rule itself. In this example, the weights' arbitrary, `fc.array(fc.integer({ min: 1 }), { minLength: 1 })`, keeps their sum positive:
 
   ```ts
   // ✅ Specific: the shares add up to exactly the total, for any of those weights
