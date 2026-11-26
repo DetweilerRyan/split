@@ -1,12 +1,30 @@
 # Property testing
 
-The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for property tests.
+## What a property test is
 
 A property test checks a rule that should hold for every input, against many inputs [fast-check](https://fast-check.dev/) generates. When one fails, fast-check shrinks the input to the smallest one that still breaks the rule.
 
 `scripts/oxcrap/complexity.property.test.ts` is an example.
 
-## When to write one
+Its file is `<module>.property.test.ts`, beside the module it covers, and it runs in the project its module's other tests would, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions sets.
+
+## How the conventions apply
+
+[Testing conventions](testing-conventions.md) apply as written, with these for property tests:
+
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, the rule itself, for weights whose arbitrary keeps their sum positive, such as `fc.array(fc.integer({ min: 1 }), { minLength: 1 })`:
+
+  ```ts
+  // ✅ Specific: the shares add up to exactly the total, for any of those weights
+  expect(allocateMinor(total, weights).reduce((sum, share) => sum + share, 0)).toBe(total);
+
+  // ❌ Vague: some shares came back, which passes whatever the split does
+  expect(allocateMinor(total, weights)).toBeDefined();
+  ```
+
+## Rules for property tests
+
+### When to write one
 
 - **Write one when you can state a rule for all inputs, and check it without working out the answer the way the code does.** For example:
   - **a round trip:** decoding what was encoded gives back the original;
@@ -15,9 +33,8 @@ A property test checks a rule that should hold for every input, against many inp
   - **agreement with a simpler version** of the same code.
 - **Don't write one** for components, or for code whose right answer you'd have to work out the same way the code does. Example tests say those more clearly.
 - **Keep the example tests too.** A property test adds inputs nobody thought of; it doesn't replace the cases a reader needs to see.
-- **Put it in its own sidecar,** named as [testing conventions](testing-conventions.md#which-project-a-test-belongs-in) say.
 
-## Writing one
+### Writing one
 
 `npm run lint` checks several of these rules in every `*.property.test.ts`, through the local plugin [`property/*`](../../../scripts/lint/property.md). Its README lists what each rule reports and what to write instead.
 
@@ -30,25 +47,16 @@ A property test checks a rule that should hold for every input, against many inp
 
 - **For code that recognises a pattern, generate the dodges and the look-alikes:** rewrites that get around it, and code it must leave alone. Each should give the answer the plain version gives, or the answer for no pattern at all, such as the same code reading a name that isn't a table.
 - **Build inputs from fast-check's arbitraries,** and assert with `expect` inside `fc.property`. Return nothing from the property.
-- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, the rule itself, for weights whose arbitrary keeps their sum positive, such as `fc.array(fc.integer({ min: 1 }), { minLength: 1 })`:
-
-  ```ts
-  // ✅ Specific: the shares add up to exactly the total, for any of those weights
-  expect(allocateMinor(total, weights).reduce((sum, share) => sum + share, 0)).toBe(total);
-
-  // ❌ Vague: some shares came back, which passes whatever the split does
-  expect(allocateMinor(total, weights)).toBeDefined();
-  ```
 
 - **Build constraints into the arbitraries,** such as `fc.integer({ min: 1 })`, rather than filtering inputs out with `fc.pre` or `.filter`. Filtering wastes runs and can leave few inputs that test anything.
 - **Don't write a property that only restates what the generator guarantees,** such as checking that a generated positive number is positive. It passes whatever the code does.
 - **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.
-  - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [Mutation testing](mutation-testing.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
+  - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [Mutation testing](mutation-testing-practices.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
 - **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it, and confirm the property fails with the fix undone.
 - **Leave `numRuns` and `seed` out of a new property until it has been soaked.** A soak can't reach a property that sets its own.
 - **Keep it fast.** fast-check runs 100 inputs by default. After the soak, raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is. This is the count CI runs.
 
-## Soaking a new property
+### Soaking a new property
 
 Before you commit a new property, run it for two minutes rather than its usual count, and keep running it until a full run passes. The soak is set by environment variables, which [`property-soak`](../../../scripts/property-soak.md) reads. Don't edit the test to soak it.
 
@@ -70,7 +78,7 @@ Before you commit a new property, run it for two minutes rather than its usual c
 
 Once a soak passes, say in the pull request how many inputs it ran and what it found.
 
-## When one fails
+### When one fails
 
 - **Its output gives a seed, and how many tests it took to fail.** Run the same input again, with full shrinking, on that test alone. Every property the command runs uses the seed, so name the file and the test:
 
@@ -84,7 +92,7 @@ Once a soak passes, say in the pull request how many inputs it ran and what it f
 - **Keep the shrunk input** as [Keeping a failing input](#keeping-a-failing-input) says, before you fix anything.
 - **If the code is wrong,** confirm the new example test fails, then fix the code, as [Fixing a bug](testing-conventions.md#fixing-a-bug) says. If the property is wrong, fix the property.
 
-## Keeping a failing input
+### Keeping a failing input
 
 Keep every shrunk input a property test fails on, whether a soak, a local run or CI found it, in two places:
 

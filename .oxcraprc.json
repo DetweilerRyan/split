@@ -2,10 +2,10 @@
   "$schema": "./scripts/oxcrap/configuration_schema.json",
   // What `npm run oxcrap` scores in the app, and against what; scripts/oxcrap/.oxcraprc.json
   // scores oxCrap itself. The options are in
-  // scripts/oxcrap/README.md; how to respond to a finding is in docs/engineering/crap.md.
+  // scripts/oxcrap/README.md; how to respond to a finding is in docs/engineering/testing/crap-testing-practices.md.
   "files": ["src/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"],
   "limits": { "crap": 30, "complexity": 10 },
   // Every `npm test` writes this report, so run the tests first.
   "coverage": "coverage/coverage-final.json",
-  "helpUrl": "docs/engineering/crap.md"
+  "helpUrl": "docs/engineering/testing/crap-testing-practices.md"
 }

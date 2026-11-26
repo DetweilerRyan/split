@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Runs Stryker's mutation testing on oxCrap, as docs/engineering/testing/mutation-testing.md says: a full
+// Runs Stryker's mutation testing on oxCrap, as docs/engineering/testing/mutation-testing-practices.md says: a full
 // run, or only the lines of scripts/oxcrap/ changed since the merge base with origin/main. It's
 // expensive: run it once, after the definition of done passes. Each worktree keeps its own
 // incremental results file in git's folder, seeded from a baseline every worktree shares. Why is
-// in mutation-testing.meta.md.
+// in mutation-testing-practices.meta.md.
 //
 // Usage: npm run test:mutation [-- ...] or npm run test:mutation:changed
 // Node runs this as TypeScript by stripping the types, so use only syntax that erases.

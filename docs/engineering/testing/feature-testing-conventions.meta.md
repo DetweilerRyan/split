@@ -4,7 +4,7 @@ Why the rules in [feature testing conventions](feature-testing-conventions.md) a
 
 ## Gherkin and the Screenplay
 
-Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/split/issues/55), for the end-to-end tests, which were the first feature tests.
+Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/split/issues/55), for the end-to-end tests, which were the first feature tests; the owner's decisions are in [this comment](https://github.com/DetweilerRyan/split/issues/55#issuecomment-7071299115).
 
 - **Gherkin run by Playwright Test through playwright-bdd.** Approved by the owner in the session on 2026-11-21, with `@playwright/test` 1.65.0 and `playwright-bdd` 9.2.1.
   - **How it works:** playwright-bdd turns each feature into an ordinary Playwright test file, so traces, sharding, fixtures and the HTML report all still work ([playwright-bdd](testing-conventions.meta.md#playwright-bdd)).
@@ -17,10 +17,9 @@ Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/s
 
 ## Linting and formatting features
 
-- **Every other `.gplintrc` copies the root's structural rules,** decided on [#65](https://github.com/DetweilerRyan/split/issues/65) for oxCrap's features, because gplint 2.6.1 can't extend another config.
-
 Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 and `gplint` 2.6.1 in the session that day, to add to [PR #57](https://github.com/DetweilerRyan/split/pull/57).
 
+- **Every other `.gplintrc` copies the root's structural rules,** decided on [#65](https://github.com/DetweilerRyan/split/issues/65#issuecomment-7091028227) for oxCrap's features, because gplint 2.6.1 can't extend another config.
 - **Precedents:** the owner's `gol` and `gol2` repositories.
   - **`gol`** formats features with Prettier's `prettier-plugin-gherkin` and gates them with `gherkin-lint-plus`. Its config turns on every structure rule, plus `no-restricted-patterns` as a check that scenarios stay at domain altitude. It also has a report-only checker for duplicated step wording.
   - **`gol2`** lints Markdown beside oxfmt. Its rule is that only one tool formats, and the linter's style rules are pinned to what the formatter writes, because "the two tools rewrite each other's output".

@@ -1,10 +1,13 @@
 # Component and hook testing
 
-The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for component and hook tests.
+## What a component or hook test is
 
-Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`. Copy the pattern in `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`.
+A component or hook test checks a React component, or a hook, through what its users see and do. It runs in Vitest's `browser` project, in headless Chromium through Playwright. Its file is `<module>.browser.test.ts` or `<module>.browser.test.tsx`, beside the module it covers, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions sets.
 
-- **Check what a user can see and do.** A component has two users: the person using the app, and the developer rendering it. So a component test works only through the component's props and its rendered output. Don't assert on state, internal functions, how many times something rendered, or CSS classes.
+## How the conventions apply
+
+[Testing conventions](testing-conventions.md) apply as written, with these for component and hook tests:
+
 - **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a component, the button by its accessible name, or the full message:
 
   ```ts
@@ -15,6 +18,13 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
   expect(screen.container.querySelector('.text-slate-500')).not.toBeNull();
   ```
 
+- **A component's callback props are part of what it shows its developer user.** Checking that `onSelect` was called with the chosen id is fine. Checking which internal function ran is not.
+
+## Rules for component and hook tests
+
+Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`. Copy the pattern in `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`.
+
+- **Check what a user can see and do.** A component has two users: the person using the app, and the developer rendering it. So a component test works only through the component's props and its rendered output. Don't assert on state, internal functions, how many times something rendered, or CSS classes.
 - **Render with `render` from `vitest-browser-react`,** and import the app's stylesheet (`import '../index.css'`) so that visibility reflects the real styles. Cleanup is automatic.
 - **Interact with `userEvent` from `vitest/browser`.** Don't add `@testing-library/user-event`, and don't dispatch DOM events by hand.
 - **Assert with `await expect.element(locator)`.** It retries until the assertion passes or times out, so don't add waits, sleeps or retry loops of your own. Keep actions such as clicks outside the assertion.
@@ -22,7 +32,6 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
 - **Don't wrap calls in React's `act`.** Rendering and `userEvent` already handle it. The one exception is the `act` that `renderHook` returns, which you use to call a hook's own functions.
 - **Test a hook through the component that uses it.** Use `renderHook` from `vitest-browser-react` instead only when the hook is complex enough that a component would obscure it, or when several components share it. `app/r/[room]/_room-view/useActiveIdentity.browser.test.ts` is an example.
 - **`RoomView` is the exception to both rules above it and to [faking only what can't run](testing-conventions.md#replacing-external-dependencies).** Its hooks are tested on their own with `renderHook`, and its own test passes fake components through its `parts` prop and fakes of its `services`, checking only how it wires them together, as the owner decided on [#93](https://github.com/DetweilerRyan/split/issues/93#issuecomment-7122174580). Its hooks aren't passed in: it calls the real ones.
-- **A component's callback props are part of what it shows its developer user.** Checking that `onSelect` was called with the chosen id is fine. Checking which internal function ran is not.
 - **Tests run through the React Compiler,** as the app build does. Don't remove the compiler from `vitest.config.ts`; `vitest.config.browser.test.ts` fails if a component stops being compiled.
 
 ## Changing this document

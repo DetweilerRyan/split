@@ -1,4 +1,6 @@
-# Mutation testing
+# Mutation testing practices
+
+## What mutation testing is
 
 Mutation testing makes small changes to code, such as flipping `<` to `<=` or deleting a statement, and runs the tests against each one. A change no test fails on, a _surviving mutant_, marks code the tests run but don't check. [Stryker](https://stryker-mutator.io/docs/stryker-js/introduction/) does it here, for oxCrap (`scripts/oxcrap/`) only, and only locally: it's in neither CI nor the Stop hook.
 
@@ -37,4 +39,4 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
 
 ## Changing this document
 
-The reasons for these rules, the measurements and the research behind them are in [mutation-testing.meta.md](mutation-testing.meta.md). Read it only when changing or questioning a rule here.
+The reasons for these rules, the measurements and the research behind them are in [mutation-testing-practices.meta.md](mutation-testing-practices.meta.md). Read it only when changing or questioning a rule here.

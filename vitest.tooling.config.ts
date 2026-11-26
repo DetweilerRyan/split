@@ -8,7 +8,7 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // Unlike the app's config, this has no React Compiler and no `@` alias: tooling isn't React, and
 // without the alias a tooling test can't import app code by accident. Its coverage, of oxCrap's
 // own code, is the report scripts/oxcrap/.oxcraprc.json scores. Only these unit tests count
-// towards it, as docs/engineering/crap.md says. Stryker runs these tests too (stryker.config.json).
+// towards it, as docs/engineering/testing/crap-testing-practices.md says. Stryker runs these tests too (stryker.config.json).
 const ignored = [
   ...configDefaults.exclude,
   '**/.next/**',

@@ -8,7 +8,7 @@ Most of the advice comes from Kent C. Dodds. Each source below was opened and ch
 
 Why a component test checks only what a user can see and do moved with the rule to [component and hook testing's sidecar](component-and-hook-testing.meta.md).
 
-- **Query order** comes from Kent's [Common mistakes with React Testing Library](#common-mistakes) (2020), and follows Testing Library's [query priority](#query-priority): `getByRole` first, test IDs last. Kent says to use `*ByRole` "most of the time", and to query "by the _actual_ text" rather than test IDs. Vitest's locators keep the same names except `getByPlaceholder` (Testing Library's `getByPlaceholderText`). Vitest has no `getByDisplayValue`, so it's left out of the order.
+- **Query order** comes from Kent's [Common mistakes with React Testing Library](#common-mistakes) (2020), and follows Testing Library's [query priority](#query-priority): `getByRole` first, test IDs last. Kent says to use `*ByRole` "most of the time", and to query "by the _actual_ text" rather than test IDs. Vitest's locators keep the same names except `getByPlaceholder` (Testing Library's `getByPlaceholderText`). Vitest has no `getByDisplayValue`, so it's left out of the order. Playwright names the label locator `getByLabel`, so the rule names both.
 
 - **Use the code the way it's really used.** "The more your tests resemble the way your software is used, the more confidence they can give you", and Kent endorses Guillermo Rauch's "Write tests. Not too many. Mostly integration." ([The Testing Trophy](#testing-trophy)). The exception for collaborator-free logic is this repository's own: functions like `computeReceiptMath` have many edge cases that are clearest tested directly.
 - **Specific assertions.** "Make assertions specific" and "Tests should resemble users" are two of [Epic Web's principles](#epic-web-principles). The Epic Stack's `epic-testing` skill shows the good-and-bad example pattern each kind's document uses ([epic-testing](#epic-testing)). It was written by a contributor and merged by Kent, so its wording isn't his.
@@ -46,7 +46,7 @@ Moved with the rules to [component and hook testing's sidecar](component-and-hoo
 
 ## End-to-end tests
 
-Moved with the rules to [end-to-end testing's sidecar](end-to-end-testing.meta.md).
+Moved with the rules to [end-to-end testing's sidecar](end-to-end-testing.meta.md), and, for what every feature test shares, to [feature testing conventions' sidecar](feature-testing-conventions.meta.md).
 
 ## Property tests
 
@@ -54,7 +54,7 @@ Moved with the rules to [property testing's sidecar](property-testing.meta.md).
 
 ## Tooling tests and feature contracts
 
-Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
+Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md), and, for feature contracts, to [feature testing conventions' sidecar](feature-testing-conventions.meta.md#feature-contracts).
 
 ## Split into documents
 
@@ -70,8 +70,27 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
   - **`feature-testing-conventions.md`** holds what end-to-end and tooling testing shared: scenarios, steps and the Screenplay, and feature contracts for deep modules with deciding that a module is deep. Their wording was made general where it named the app or a tool. The concrete documents keep the abilities, paths and words that are theirs.
   - **"Find elements as a user would" and "Replacing external dependencies"** moved to `testing-conventions.md`, since component and end-to-end tests, and unit and component tests, share them.
   - **Rule text made general or merged for it:** "Find elements as a user would" names what each locator matches, with Vitest's and Playwright's names for a label; feature testing's "Every other `.gplintrc`" names the root as the one copied; and its edge-case rule for deep modules merged into the scenario rule it repeated.
+  - **Other wording the move changed:**
+    - **Feature testing conventions:**
+      - "Write scenarios in the words of the feature's user" gathers what the two path tables said;
+      - "Each set of features has its rules in a `.gplintrc`" is new;
+      - "change a rule in both" became "change a structural rule in each of them";
+      - the sentence listing a screenplay's files is new;
+      - "rather than using `page` in the step" became "rather than doing the work in the step".
+    - **Tooling testing:** "Follow the end-to-end tests' Screenplay rules, with these differences" and "Steps import…" are gone, since feature testing conventions now holds those rules, and the tool's screenplay rule leads its abilities and fixtures.
+    - **Sidecars:**
+      - the "Query order" entry gained its source and Playwright's label locator;
+      - "pattern used in the doc" became "each kind's document uses";
+      - feature testing conventions' sidecar notes that the end-to-end tests were the first feature tests;
+      - the `.gplintrc` copy decision cites #65;
+      - feature contracts' entry names the section it links to.
   - **The naming rule** is in [the index's steps](README.md#adding-a-document): `<topic>-conventions.md` for a shared document, `<kind>-testing.md` for a kind's.
   - **Mutation testing isn't a kind of test,** it checks them, so its links to and from property and tooling testing stay, and it shows no example of a specific assertion.
+- **Each document's structure,** on the owner's comment on #159 ([recorded](https://github.com/DetweilerRyan/split/pull/159#issuecomment-7195935985)): "each of the testing files needs to defined their kind of testing at the top … including a section in each kind doc that explains how the general rules from the convention documents applies to this kind of testing", with the answers [recorded here](https://github.com/DetweilerRyan/split/pull/159#issuecomment-7196053471).
+  - **A kind's document** opens with what its kind of test is, naming its files as the owner asked, then "How the conventions apply", which holds each specific-assertion example and the bullets that apply a conventions rule to that kind, then its own rules. The index's steps set this order.
+  - **A conventions document** opens with what it covers.
+  - **Mutation testing and the CRAP score are checks of the tests,** in `<check>-testing-practices.md` documents. The owner suggested `mutation-testing-practice.md` and `crap-testing-practices.md`; both use the plural so the suffix is one. `crap.md` moved into this folder for it, and its row from the engineering index to this one, reversing the session's earlier advice that it stay in engineering: like mutation testing, it scores the code against what its tests cover.
+  - **Wording changed for it:** testing conventions' intro now defines its scope; each kind's definition states its files' names, which the project table also sets; property testing's "Put it in its own sidecar" folded into its definition; and the first deep module used through code now puts its rules in its kind's document, a sentence that moved from tooling testing to feature testing conventions.
 - **The text moved as it was,** apart from links and these edits:
   - **Headings:** each document's own title replaced its section's heading, and the headings under it moved up a level, keeping their anchors.
   - **`testing-conventions.md`'s intro,** which named what left it, and now says each kind's document adds to these rules rather than replacing them.

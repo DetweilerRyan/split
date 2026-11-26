@@ -9,7 +9,7 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // `<module>.real.test.ts` runs in Node with real programs and files, and every other
 // `<module>.test.ts(x)` runs in jsdom, `<module>.property.test.ts` included. Only the unit and
 // browser projects count towards the coverage report oxCrap reads: `npm test` runs `real` in a
-// second pass with coverage off, as docs/engineering/crap.md says. The tooling tests, in scripts/
+// second pass with coverage off, as docs/engineering/testing/crap-testing-practices.md says. The tooling tests, in scripts/
 // and of root tooling config, are vitest.tooling.config.ts's, which `npm run test:tooling` runs.
 const browserTests = ['**/*.browser.test.ts', '**/*.browser.test.tsx'] as const;
 const realTests = ['**/*.real.test.ts'] as const;
