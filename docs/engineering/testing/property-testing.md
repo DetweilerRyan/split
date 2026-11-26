@@ -30,10 +30,10 @@ A property test checks a rule that should hold for every input, against many inp
 
 - **For code that recognises a pattern, generate the dodges and the look-alikes:** rewrites that get around it, and code it must leave alone. Each should give the answer the plain version gives, or the answer for no pattern at all, such as the same code reading a name that isn't a table.
 - **Build inputs from fast-check's arbitraries,** and assert with `expect` inside `fc.property`. Return nothing from the property.
-- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, the rule itself:
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, the rule itself, for weights whose arbitrary keeps their sum positive, such as `fc.array(fc.integer({ min: 1 }), { minLength: 1 })`:
 
   ```ts
-  // ✅ Specific: the shares add up to exactly the total
+  // ✅ Specific: the shares add up to exactly the total, for any of those weights
   expect(allocateMinor(total, weights).reduce((sum, share) => sum + share, 0)).toBe(total);
 
   // ❌ Vague: some shares came back, which passes whatever the split does

@@ -1,6 +1,6 @@
 // gplint rules for oxCrap's contract features, scripts/oxcrap/features/*.feature, run by
 // `npm run lint`. The structural rules below are copied from the root .gplintrc, as
-// docs/engineering/testing/tooling-testing.md says; .gplintrc.meta.md says why. Only the
+// docs/engineering/testing/feature-testing-conventions.md says; .gplintrc.meta.md says why. Only the
 // vocabulary differs: these features are about a developer tool, so they say function,
 // complexity, coverage report, config and @crap-allow, and ban how oxCrap is built instead.
 // docs/engineering/testing/tooling-testing.md says how to write them.

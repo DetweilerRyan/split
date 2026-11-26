@@ -8,8 +8,10 @@ Most of the advice comes from Kent C. Dodds. Each source below was opened and ch
 
 Why a component test checks only what a user can see and do moved with the rule to [component and hook testing's sidecar](component-and-hook-testing.meta.md).
 
+- **Query order** follows Testing Library's [query priority](testing-conventions.meta.md#query-priority): `getByRole` first, test IDs last. Kent says to use `*ByRole` "most of the time", and to query "by the _actual_ text" rather than test IDs. Vitest's locators keep the same names except `getByPlaceholder` (Testing Library's `getByPlaceholderText`). Vitest has no `getByDisplayValue`, so it's left out of the order.
+
 - **Use the code the way it's really used.** "The more your tests resemble the way your software is used, the more confidence they can give you", and Kent endorses Guillermo Rauch's "Write tests. Not too many. Mostly integration." ([The Testing Trophy](#testing-trophy)). The exception for collaborator-free logic is this repository's own: functions like `computeReceiptMath` have many edge cases that are clearest tested directly.
-- **Specific assertions.** "Make assertions specific" and "Tests should resemble users" are two of [Epic Web's principles](#epic-web-principles). The Epic Stack's `epic-testing` skill shows the good-and-bad example pattern used in the doc ([epic-testing](#epic-testing)). It was written by a contributor and merged by Kent, so its wording isn't his.
+- **Specific assertions.** "Make assertions specific" and "Tests should resemble users" are two of [Epic Web's principles](#epic-web-principles). The Epic Stack's `epic-testing` skill shows the good-and-bad example pattern each kind's document uses ([epic-testing](#epic-testing)). It was written by a contributor and merged by Kent, so its wording isn't his.
 - **Test files are exempt from `max-nested-callbacks`.** Decided by the owner on [#76](https://github.com/DetweilerRyan/split/issues/76), on 2026-11-24: "Tighter, tests exempt", with `max-depth` 3 and `max-nested-callbacks` 3 everywhere else. A test's callbacks nest by structure, not by logic: a property test is already three deep at `describe`, `it` and `fc.property`, so a fourth callback inside it, such as an `arbitrary.map`, would fail. When the rule was turned on, every place it flagged was in a test file. Flattening them would move a test's setup away from the property it serves.
   - **Not taken:** the issue's other options, ESLint's default limit of 10, which nothing broke, or a limit test files fit.
   - **What would reopen it:** a test whose nesting hides its logic, rather than its structure.
@@ -38,7 +40,9 @@ Moved with the rules to [component and hook testing's sidecar](component-and-hoo
 
 ## Mocking
 
-Moved with the rules to [unit testing's sidecar](unit-testing.meta.md#mocking).
+- **Fake only what can't run, at the edge.** Kent: "Mocking severs the real-world connection between what you're testing and what you're mocking", and the payoff is "usually practicality". In UI tests, "I never make actual network calls." On speed: "trading confidence for a minute or two faster test suite is a bad trade" ([The Merits of Mocking](#merits-of-mocking)).
+- **Never mock React's hooks.** Kent: "You throw away a LOT of confidence in doing so" ([How to test custom React hooks](#custom-hooks)).
+- **`vi.mock` for directly imported third-party modules.** A repository rule, kept because `yjsProvider.ts` imports Liveblocks, `y-webrtc` and `y-indexeddb` directly. Passing them in would change its public interface for tests alone. A strict no-mocks rule, as market-research has, was not taken because it would contradict that existing test.
 
 ## End-to-end tests
 
@@ -59,9 +63,14 @@ Moved with the rules to [tooling testing's sidecar](tooling-testing.meta.md).
 - **The issue's open decisions, as that pull request took them:**
   - **`testing-conventions.md` moved into `docs/engineering/testing/` too,** keeping the rules every kind of test shares. So the folder owns every testing rule, and the engineering index's one testing row is the only pointer.
   - **The Sources list stays in this sidecar,** shared, since most entries back more than one document and each already has an anchor. The other sidecars link to it.
-  - **One pull request for all the moves,** since each changes no rule, and moving them together updates the index and the links once.
+  - **One pull request for all the moves,** since they share one index and one set of links, and moving them together updates the index and the links once.
 - **Three rules that apply to one kind of test moved on the owner's review** of #159, which said of "Check what a user can see and do": "this line seems only relevant to the component-and-hook-testing.md doc. scan through this file to see if there are others." That rule and "Tests run through the React Compiler" went to component and hook testing, and "End-to-end tests use servers on this machine only" to end-to-end testing, each with its reasons.
 - **On the owner's answers on #159** ([recorded](https://github.com/DetweilerRyan/split/pull/159#issuecomment-7195098152)): "Replacing external dependencies" moved to unit testing with its reasons, and "Make assertions specific" stayed here, reworded in general terms, with an example for its own kind of test in each kind's document, the component one being the example it had here.
+- **Kinds' documents don't point to each other,** on the owner's comments on #159 ([recorded](https://github.com/DetweilerRyan/split/pull/159#issuecomment-7195510825)): "the kind-testing files should not point to eachother", then "feature testing (gherkin rules and screenplay) should be moved into a feature-testing.md file as a kind of abstraction that doesn't mention e2e testing or tooling testing … maybe we can distinguish \"abstract\" testing docs from concrete ones with a naming convention. i.e. feature-testing-conventions.md". A rule two kinds share moves to a conventions document, the owner's answer to how such a rule is handled.
+  - **`feature-testing-conventions.md`** holds what end-to-end and tooling testing shared: scenarios, steps and the Screenplay, and feature contracts for deep modules with deciding that a module is deep. Their wording was made general where it named the app or a tool. The concrete documents keep the abilities, paths and words that are theirs.
+  - **"Find elements as a user would" and "Replacing external dependencies"** moved to `testing-conventions.md`, since component and end-to-end tests, and unit and component tests, share them.
+  - **The naming rule** is in [the index's steps](README.md#adding-a-document): `<topic>-conventions.md` for a shared document, `<kind>-testing.md` for a kind's.
+  - **Mutation testing isn't a kind of test,** it checks them, so its links to and from property and tooling testing stay, and it shows no example of a specific assertion.
 - **The text moved as it was,** apart from links and these edits:
   - **Headings:** each document's own title replaced its section's heading, and the headings under it moved up a level, keeping their anchors.
   - **`testing-conventions.md`'s intro,** which named what left it, and now says each kind's document adds to these rules rather than replacing them.
