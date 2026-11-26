@@ -1,6 +1,6 @@
 # oxCrap: reasons and sources
 
-Why oxCrap, the CRAP script in this folder, its `@crap-allow` comments and the CI step work the way they do, and why [CRAP testing practices](../../docs/engineering/testing/crap-testing-practices.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only the procedure.
+Why oxCrap, the CRAP script in this folder, its `@crap-allow` comments and the CI step work the way they do, and why [CRAP testing practices](../../docs/engineering/testing/crap-testing-practices.md) says what it says. Read this only when changing or questioning them. Responding to a finding needs only that document.
 
 Decided by the owner on [#63](https://github.com/DetweilerRyan/split/issues/63), which records the trial, the research and each decision, all approved on 2026-11-22. In feedback on [#64](https://github.com/DetweilerRyan/split/pull/64) the same day, the owner then changed it in three rounds:
 
@@ -181,7 +181,7 @@ The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap
   - the `@crap-allow` directive;
   - the `CRAP score` CI step;
   - the "CRAP findings" messages;
-  - the [CRAP testing practices](../../docs/engineering/testing/crap-testing-practices.md).
+  - [CRAP testing practices](../../docs/engineering/testing/crap-testing-practices.md).
 
   They name the metric, not the tool, as `@ts-expect-error` names the language rather than `tsc`. Renaming the directive would also have meant rewriting every comment in `src/`.
 
@@ -195,7 +195,7 @@ The project's Claude Code Stop hook runs `npm run oxcrap:app` or `npm run oxcrap
   - how oxCrap scores;
   - the command line, its options and output;
   - the `@crap-allow` rules.
-- **The `@crap-allow` rules moved there from the [CRAP testing practices](../../docs/engineering/testing/crap-testing-practices.md), and the usage from `oxcrap.ts`'s header,** so each is written once ([single source of truth](../../docs/prose/single-source-of-truth.md)). The procedure keeps what's particular to this repository: where findings come from, how to respond, when to allow a function, and replacing the stand-in reasons.
+- **The `@crap-allow` rules moved there from [CRAP testing practices](../../docs/engineering/testing/crap-testing-practices.md), and the usage from `oxcrap.ts`'s header,** so each is written once ([single source of truth](../../docs/prose/single-source-of-truth.md)). The procedure keeps what's particular to this repository: where findings come from, how to respond, when to allow a function, and replacing the stand-in reasons.
 - **The README links to the counting rules** in `complexity.ts` rather than restating them, since the code owns them. It does list the config's options and defaults, for people to read; `config.ts` owns them, `config.test.ts` checks the schema against it, and [`README.real.test.ts`](README.real.test.ts) checks the README. Its output example is real output, from a run on a small throwaway project.
 - **It's written to stand alone,** with only a short "In this repository" section at the end, so it could serve as the README of a published package.
 
