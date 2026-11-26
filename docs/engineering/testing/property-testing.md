@@ -30,6 +30,16 @@ A property test checks a rule that should hold for every input, against many inp
 
 - **For code that recognises a pattern, generate the dodges and the look-alikes:** rewrites that get around it, and code it must leave alone. Each should give the answer the plain version gives, or the answer for no pattern at all, such as the same code reading a name that isn't a table.
 - **Build inputs from fast-check's arbitraries,** and assert with `expect` inside `fc.property`. Return nothing from the property.
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a property, the rule itself:
+
+  ```ts
+  // ✅ Specific: the shares add up to exactly the total
+  expect(allocateMinor(total, weights).reduce((sum, share) => sum + share, 0)).toBe(total);
+
+  // ❌ Vague: some shares came back, which passes whatever the split does
+  expect(allocateMinor(total, weights)).toBeDefined();
+  ```
+
 - **Build constraints into the arbitraries,** such as `fc.integer({ min: 1 })`, rather than filtering inputs out with `fc.pre` or `.filter`. Filtering wastes runs and can leave few inputs that test anything.
 - **Don't write a property that only restates what the generator guarantees,** such as checking that a generated positive number is positive. It passes whatever the code does.
 - **Show a new property can fail.** Break the code it checks, for example by removing a branch or changing a rule, and confirm the property fails. Then put the code back. A property that passes either way tests nothing.

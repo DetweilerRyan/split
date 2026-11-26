@@ -9,6 +9,16 @@ Tooling tests check the repository's own dev tools: everything in `scripts/`, an
 | `tooling-unit` | [`vitest.tooling.config.ts`](../../../vitest.tooling.config.ts)           | every `<module>.test.ts` under `scripts/` that isn't `.real.` | Node    |
 | `tooling-real` | [`vitest.tooling-real.config.ts`](../../../vitest.tooling-real.config.ts) | `<module>.real.test.ts`                                       | Node    |
 
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a tool, everything its user gets back: the exit status and each line it prints:
+
+  ```ts
+  // ✅ Specific: the exit status and the whole message
+  expect(oxcrap(args, files, times)).toEqual({ status: 1, stdout: [], stderr: [message] });
+
+  // ❌ Vague: it failed somehow
+  expect(oxcrap(args, files, times).status).not.toBe(0);
+  ```
+
 - **Name and place them as [the app's tests](testing-conventions.md#which-project-a-test-belongs-in) are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
 - **They get no React Compiler and no `@` alias,** so a tooling test can't import app code.
 - **Only `tooling-unit` collects coverage,** of oxCrap's code, into `coverage-tooling/`, for [its CRAP score](../crap.md). `tooling-real` collects none.
