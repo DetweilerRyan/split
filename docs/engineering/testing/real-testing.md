@@ -2,7 +2,7 @@
 
 ## What this kind of test is
 
-A test in Vitest's `real` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it: one that runs real programs or touches the file system, in Node. Its file is `<module>.real.test.ts`, beside the module it covers.
+A test in Vitest's `real` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it: one that runs real programs or touches the file system, in Node. Its file is `<module>.real.test.ts`, beside the module it covers. Today the project's include matches only `oxlintrc.real.test.ts`; the tooling's real tests run in its own `tooling-real` project.
 
 ## How the conventions apply
 
@@ -14,11 +14,11 @@ A test in Vitest's `real` project, as [the project table](testing-conventions.md
   // ✅ Specific: the file the program wrote, in full
   expect(await readFile(path.join(dir, 'out.txt'), 'utf8')).toBe('done\n');
 
-  // ❌ Vague: the program exited
-  expect(result.exitCode).toBe(0);
+  // ❌ Vague: only that the program exited
+  expect(result.status).toBe(0);
   ```
 
-- **It stays offline,** as [Tests stay offline](testing-conventions.md#tests-stay-offline) says: it runs local programs and temporary files only, in a temporary directory it cleans up. `scripts/prepare-sandbox.real.test.ts` runs the setup script there with fakes of `npm`, Playwright's CLI, `ldd` and `sudo`.
+- **It runs local programs and temporary files only,** as [Tests stay offline](testing-conventions.md#tests-stay-offline) says.
 
 ## Rules of its own
 

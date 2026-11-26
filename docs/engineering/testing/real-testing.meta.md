@@ -11,12 +11,9 @@ The reasons for [Real testing](real-testing.md)'s rules.
   - **Precedent:** `.real.` names the size property, and matches the `_real.py` tests in the owner's market-research repository, which use real binaries and loopback without the internet.
   - **Not taken:** Google's own `.medium.test.ts`, a term readers would have to look up.
 
-## Writing component and hook tests
+## Split from testing conventions
 
-Moved with the rules to [component and hook testing's sidecar](component-and-hook-testing.meta.md).
-
-## Mocking
-
-- **Split from testing conventions** on #159, as the owner asked in review: "real-teasting.md should be split from this doc" ([comment](https://github.com/DetweilerRyan/split/pull/159#discussion_r4712132812)). It holds the rule on what a `real` test may run, which was in testing conventions' "Tests stay offline", and this entry, which was in its sidecar.
+- **Split from testing conventions** on #159, as the owner asked in review: "real-teasting.md should be split from this doc" ([comment](https://github.com/DetweilerRyan/split/pull/159#discussion_r4712132812)). It holds the `real` project's definition and this sidecar's naming entry, which was in testing conventions' sidecar.
 - **Its example assertion is the repository's own pattern,** reading back what a program wrote, written for this document rather than copied from a test.
-- **The `real` project's include today** matches only `oxlintrc.real.test.ts`, since `scripts/**` and `rev-dep.config.real.test.ts` run in tooling's `tooling-real` instead; the rules here apply to both, as the offline rule always did.
+- **The offline rule stayed in testing conventions,** in "Tests stay offline", worded for every `.real.test.ts`, because the tooling's real tests run in `tooling-real` and need it too; this document points to it.
+- **The `real` project's include matches only `oxlintrc.real.test.ts` today,** which `tooling-real` also runs ([#166](https://github.com/DetweilerRyan/split/issues/166)).
