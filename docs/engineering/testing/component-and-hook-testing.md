@@ -18,14 +18,13 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   expect(screen.container.querySelector('.text-slate-500')).not.toBeNull();
   ```
 
-- **`RoomView` is an exception to [faking only what can't run](testing-conventions.md#replacing-external-dependencies),** as [its rule](#rules-of-its-own) below says.
+- **`RoomView` is an exception to [faking only what can't run](testing-conventions.md#replacing-external-dependencies),** as [its rule](#writing-one) below says.
 
 ## Rules of its own
 
 ### When to write one
 
-- **Test a hook through the component that uses it.** Use `renderHook` from `vitest-browser-react` instead only when the hook is complex enough that a component would obscure it, or when several components share it. `app/r/[room]/_room-view/useActiveIdentity.browser.test.ts` is an example.
-- **`RoomView` is the exception to testing a hook through its component, above, and to [faking only what can't run](testing-conventions.md#replacing-external-dependencies).** Its hooks are tested on their own with `renderHook`, and its own test passes fake components through its `parts` prop and fakes of its `services`, checking only how it wires them together, as the owner decided on [#93](https://github.com/DetweilerRyan/split/issues/93#issuecomment-7122174580). Its hooks aren't passed in: it calls the real ones.
+[What a test checks](testing-conventions.md#what-a-test-checks) in testing conventions says when a function is worth testing on its own.
 
 ### Writing one
 
@@ -38,6 +37,8 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
 - **Assert with `await expect.element(locator)`.** It retries until the assertion passes or times out, so don't add waits, sleeps or retry loops of your own. Keep actions such as clicks outside the assertion.
 - **Assert absence with `await expect.element(locator).not.toBeInTheDocument()`.**
 - **Don't wrap calls in React's `act`.** Rendering and `userEvent` already handle it. The one exception is the `act` that `renderHook` returns, which you use to call a hook's own functions.
+- **Test a hook through the component that uses it.** Use `renderHook` from `vitest-browser-react` instead only when the hook is complex enough that a component would obscure it, or when several components share it. `app/r/[room]/_room-view/useActiveIdentity.browser.test.ts` is an example.
+- **`RoomView` is the exception to testing a hook through its component, above, and to [faking only what can't run](testing-conventions.md#replacing-external-dependencies).** Its hooks are tested on their own with `renderHook`, and its own test passes fake components through its `parts` prop and fakes of its `services`, checking only how it wires them together, as the owner decided on [#93](https://github.com/DetweilerRyan/split/issues/93#issuecomment-7122174580). Its hooks aren't passed in: it calls the real ones.
 - **Tests run through the React Compiler,** as the app build does. Don't remove the compiler from `vitest.config.ts`; `vitest.config.browser.test.ts` fails if a component stops being compiled.
 
 ### When one fails

@@ -42,7 +42,7 @@ An end-to-end test checks a journey a person or an assistant takes through the r
 
 ### When one fails
 
-[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written.
+[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written. For a step with no definition, one two definitions match, or one no feature uses, [Steps and the Screenplay](feature-testing-conventions.md#steps-and-the-screenplay) in feature testing conventions says what fails and what to do.
 
 ## Changing this document
 
