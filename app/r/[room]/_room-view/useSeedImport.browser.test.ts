@@ -16,7 +16,7 @@ async function setup(storage?: Pick<Storage, 'setItem'>, language?: string) {
   store.addItem('Bread', '', 3);
   const showToast = vi.fn();
   const navigate = vi.fn<(path: string) => void>();
-  const hook = await renderHook(() => useSeedImport(doc, showToast, navigate, storage, language));
+  const hook = await renderHook(() => useSeedImport(store, showToast, navigate, storage, language));
   function current() {
     return hook.result.current;
   }

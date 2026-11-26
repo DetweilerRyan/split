@@ -8,16 +8,16 @@ import { ToastContext } from './Toast';
 import { PRESETS } from '@/data/presets';
 import { participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { roomIdSchema } from '@/domain/room/roomId';
-import type { FetchRate } from './useExchangeRate';
 import { parseRoomPath } from '@/sync/seedCodec';
 import { ReceiptStore } from '@/sync/useReceiptStore';
-import { type RoomParts, RoomView } from './RoomView';
+import { type RoomSlots, RoomView } from './RoomView';
+import { type RateSources, getExchangeRate } from '@/services/exchangeRates';
 
 // Each fake shows what RoomView gives it, and offers a button for each callback it's handed, so
-// these tests check only how RoomView wires its parts and hooks together. Each part and hook has
+// these tests check only how RoomView wires its slots and hooks together. Each slot's component and hook has
 // tests of its own, so what a hook does with a call is checked here only far enough to tell which
 // handler the call reached.
-type PropsOf<Part extends keyof RoomParts> = Readonly<ComponentProps<RoomParts[Part]>>;
+type PropsOf<Slot extends keyof RoomSlots> = Readonly<ComponentProps<RoomSlots[Slot]>>;
 
 const roomId = roomIdSchema.parse('split-r1');
 const plitvice = PRESETS.plitvice;
@@ -170,7 +170,7 @@ function FakeToast() {
   return message !== '' ? <output>{message}</output> : null;
 }
 
-const fakeParts: RoomParts = {
+const fakeSlots: RoomSlots = {
   Header: FakeHeader,
   UnclaimedBanner: FakeUnclaimedBanner,
   EditReceiptDrawer: FakeEditReceiptDrawer,
@@ -191,10 +191,29 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
   store.setMeta('currency', 'EUR');
   store.addItem('Pizza', '', 10);
   names.forEach((name) => store.addParticipant(name));
-  const provider = { doc, store, setIdentity: vi.fn() };
+  const provider = { store, setIdentity: vi.fn() };
   const navigate = vi.fn<(path: string) => void>();
   const clipboard = { writeText: vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()) };
-  const fetchRate = vi.fn<FetchRate>(() => Promise.resolve({ rate: 1.08, date: '2026-11-20' }));
+  // The real exchange-rate service runs, over a fake network and an in-memory cache.
+  const rates = new Map<string, Awaited<ReturnType<RateSources['cache']['read']>>>();
+  const network = vi.fn<RateSources['fetch']>((url) => {
+    const quote = new URL(url).searchParams.get('symbols') ?? '';
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ date: '2026-11-20', rates: { [quote]: 1.08 } }),
+    });
+  });
+  const sources: RateSources = {
+    cache: {
+      read: (key) => Promise.resolve(rates.get(key) ?? null),
+      write: (key, rate) => Promise.resolve(void rates.set(key, rate)),
+    },
+    fetch: network,
+  };
+  function fetchRate(base: string, quote: string, options: { readonly force: boolean }) {
+    return getExchangeRate(base, quote, options, sources);
+  }
   // Long enough that no toast clears during a test.
   const services = { clipboard, fetchRate, toastMs: 60_000 };
   const screen = await render(
@@ -202,7 +221,7 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
       roomId={roomId}
       provider={provider}
       navigate={navigate}
-      parts={fakeParts}
+      slots={fakeSlots}
       services={services}
     />,
   );
@@ -212,7 +231,7 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
   function dialog(name: string) {
     return screen.getByRole('dialog', { name });
   }
-  return { screen, button, dialog, navigate, clipboard, fetchRate };
+  return { screen, button, dialog, navigate, clipboard, network };
 }
 
 beforeEach(() => {
@@ -318,13 +337,13 @@ describe('RoomView', () => {
   });
 
   it("fetches the rate for the edit drawer's display currency, and for its receipt currency", async () => {
-    const { screen, button, fetchRate } = await renderRoom();
+    const { screen, button, network } = await renderRoom();
     await button('Edit');
     await button('Show in dollars');
-    expect(fetchRate).toHaveBeenLastCalledWith('EUR', 'USD', { force: false });
+    expect(network).toHaveBeenLastCalledWith(expect.stringContaining('?base=EUR&symbols=USD'));
     await expect.element(screen.getByText('Receipt in EUR, shown in USD at 1.08')).toBeVisible();
     await button('Receipt in pounds');
-    expect(fetchRate).toHaveBeenLastCalledWith('GBP', 'USD', { force: false });
+    expect(network).toHaveBeenLastCalledWith(expect.stringContaining('?base=GBP&symbols=USD'));
     await expect.element(screen.getByText('Receipt in GBP, shown in USD at 1.08')).toBeVisible();
   });
 

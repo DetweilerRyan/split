@@ -1,18 +1,18 @@
 import { useState } from 'react';
-import type { Doc } from 'yjs';
 import { localeCurrency } from '@/domain/money/currency';
 import type { ReceiptSeed } from '@/domain/receipt/receiptSeed';
 import { createRoomId } from '@/domain/room/roomId';
-import { hydrateFromSeed, pendingSeedKey, roomPath } from '@/sync/seedCodec';
+import { pendingSeedKey, roomPath } from '@/sync/seedCodec';
+import type { ReceiptStore } from '@/sync/useReceiptStore';
 
 /**
- * The seed dialog: whether it's open, importing a seed or a preset into the room's document, and
+ * The seed dialog: whether it's open, importing a seed or a preset into the room's store, and
  * starting a new blank room, which `navigate` goes to. The new room's seed is saved in `storage`,
  * `window.sessionStorage` when it's left out, in the currency of `language`'s region,
  * `navigator.language` when it's left out.
  */
 export function useSeedImport(
-  doc: Doc,
+  store: Pick<ReceiptStore, 'hydrateSeed'>,
   showToast: (message: string) => void,
   navigate: (path: string) => void,
   storage?: Pick<Storage, 'setItem'>,
@@ -29,7 +29,7 @@ export function useSeedImport(
   }
 
   function importSeed(seed: ReceiptSeed, forceReset: boolean) {
-    hydrateFromSeed(doc, seed, { forceReset });
+    store.hydrateSeed(seed, { forceReset });
     setOpen(false);
     showToast(`Imported ${seed.items.length} receipt items.`);
   }
