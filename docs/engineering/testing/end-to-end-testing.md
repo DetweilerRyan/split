@@ -1,5 +1,7 @@
 # End-to-end testing
 
+The rules every test follows, such as staying offline, are in [testing conventions](testing-conventions.md); this document adds the ones for end-to-end tests and the code under `e2e/` that runs them.
+
 An end-to-end test checks a journey a person or an assistant takes through the running app, such as an assistant creating a room through `/api/mcp` and two people splitting it live. It is a Gherkin scenario, run by [Playwright Test](https://playwright.dev/docs/intro) through [playwright-bdd](https://vitalets.github.io/playwright-bdd/) as [`playwright.config.ts`](../../../playwright.config.ts) sets up, and `npm run test:e2e` runs them all. Keep edge cases in Vitest. Write a scenario only for what the whole app is needed to show.
 
 | Path                             | Holds                                                                                                                     |

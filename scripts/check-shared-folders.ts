@@ -22,7 +22,10 @@ export type Use = { readonly file: string; readonly importers: readonly string[]
 
 const revDep = fileURLToPath(new URL('../node_modules/.bin/rev-dep', import.meta.url));
 
-/** Whether a file is a test, as testing-conventions.md names them: `<module>.<kind>.test.<ext>`. */
+/**
+ * Whether a file is a test, as docs/engineering/testing/testing-conventions.md names them:
+ * `<module>.<kind>.test.<ext>`.
+ */
 export function isTest(path: string): boolean {
   return basename(path).includes('.test.');
 }
