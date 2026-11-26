@@ -51,7 +51,11 @@ Asked for by the owner in [review on #71](https://github.com/DetweilerRyan/split
   - **No rule for an un-awaited async property:** `typescript/no-floating-promises` already reports one, as a warning that `--deny-warnings` makes fail. Checked on 2026-11-26 with a throwaway file.
   - **`example-origin` included,** since #154 made the `// Found by…` comment part of [Keeping a failing input](property-testing.md#keeping-a-failing-input).
   - **`predicate` asks for a call or a throw, not a call to `expect`:** four predicates in the lint plugins' own property tests assert through a helper, which a syntax rule can't see into.
-- **Three filters stay, each with a disable comment saying why:** `storedText`'s `fc.anything()` has no option to leave strings out, `roomSnapshot`'s drops one rare pair no constraint can name, and `receiptSeed`'s checks ids as they're stored by position, which `uniqueArray`'s selector can't see. Each drops a small share of inputs.
+- **The three filters the rule found were rewritten as constraints,** after the owner asked whether they could be ("will it be possible to refactor the three property tests such that they won't need the disable comments", then "do it and then soak the three property tests to be sure that they have not become flakey", [recorded on #157](https://github.com/DetweilerRyan/split/pull/157#issuecomment-7183444859)):
+  - **`storedText`:** `fc.anything()` takes the leaf values it builds from, so given its defaults without strings it makes no string. The filter had dropped 9% of inputs (checked over 200,000 samples).
+  - **`roomSnapshot`:** the empty prefix has a branch of its own, with a name whose first word isn't `p`, at the weight it had among the prefixes. `p` on its own, which that leaves out, joins `p-` as a constant.
+  - **`receiptSeed`:** no generated id starts `item-`, which an empty id is stored as, so ids that `uniqueArray` keeps apart stay apart once stored. Only ids starting `item-` are lost, which a random 64-character string almost never is.
+  - **Soaked for two minutes per property afterwards,** each property whose generator changed, with no failures.
 
 ## Its own document
 

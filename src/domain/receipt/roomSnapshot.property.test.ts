@@ -34,16 +34,29 @@ function write(c: string, how: Writing): string {
  */
 const kept = [...'abcdefghijklmnopqrstuvwxyz0123456789kéëøßñ李王мжبع٣'];
 
+/** A word of `letters`, from the characters an id keeps, written in any of those ways. */
+function wordOf(letters: fc.Arbitrary<readonly string[]>) {
+  return fc
+    .tuple(
+      letters,
+      fc.array(fc.constantFrom<Writing>('plain', 'upper', 'decomposed', 'fullwidth', 'lookalike')),
+    )
+    .map(([chars, how]) => ({
+      id: chars.join(''),
+      written: chars.map((c, i) => write(c, how[i] ?? 'plain')).join(''),
+    }));
+}
+
 /** A word of the characters an id keeps, written in any of those ways. */
-const word = fc
-  .tuple(
-    fc.array(fc.constantFrom(...kept), { minLength: 1 }),
-    fc.array(fc.constantFrom<Writing>('plain', 'upper', 'decomposed', 'fullwidth', 'lookalike')),
-  )
-  .map(([letters, how]) => ({
-    id: letters.join(''),
-    written: letters.map((c, i) => write(c, how[i] ?? 'plain')).join(''),
-  }));
+const word = wordOf(fc.array(fc.constantFrom(...kept), { minLength: 1 }));
+
+/** A word whose id isn't `p`: two characters or more, or one that isn't `p`. */
+const notP = wordOf(
+  fc.oneof(
+    fc.array(fc.constantFrom(...kept), { minLength: 2 }),
+    fc.constantFrom(...kept.filter((c) => c !== 'p')).map((c) => [c]),
+  ),
+);
 
 /**
  * Characters with no letter or digit in them: spacing, punctuation, hyphens, symbols and emoji.
@@ -55,21 +68,34 @@ const separator = fc.string({
   minLength: 1,
 });
 
+/** A name as a person might type it, starting with a `first` word, with the id it should give. */
+function nameOf(first: typeof word) {
+  return fc
+    .record({
+      first,
+      rest: fc.array(word, { maxLength: 3 }),
+      between: fc.array(separator, { minLength: 3, maxLength: 3 }),
+      before: fc.option(separator, { nil: '' }),
+      after: fc.option(separator, { nil: '' }),
+    })
+    .map(
+      ({ first: head, rest, between, before, after }) =>
+        [[head, ...rest], between, before, after] as const,
+    )
+    .map(([words, between, before, after]) => ({
+      written:
+        before +
+        words.map((w) => w.written).reduce((acc, w, i) => acc + between[(i - 1) % 3] + w) +
+        after,
+      id: `p-${words.map((w) => w.id).join('-')}`,
+    }));
+}
+
 /** A name as a person might type it, with the id it should give. */
-const name = fc
-  .record({
-    words: fc.array(word, { minLength: 1, maxLength: 4 }),
-    between: fc.array(separator, { minLength: 3, maxLength: 3 }),
-    before: fc.option(separator, { nil: '' }),
-    after: fc.option(separator, { nil: '' }),
-  })
-  .map(({ words, between, before, after }) => ({
-    written:
-      before +
-      words.map((w) => w.written).reduce((acc, w, i) => acc + between[(i - 1) % 3] + w) +
-      after,
-    id: `p-${words.map((w) => w.id).join('-')}`,
-  }));
+const name = nameOf(word);
+
+/** A name whose first word isn't `p`, so that dropping its `p-` doesn't leave another id. */
+const notPName = nameOf(notP);
 
 /** A name with no letter or digit, including combining marks with nothing to attach to. */
 const nameless = fc.string({
@@ -116,17 +142,23 @@ const codeUnit = fc.integer({ min: 0, max: 0xffff }).map((code) => String.fromCh
  */
 const notAnId = fc.oneof(
   fc
-    .tuple(name, fc.constantFrom('', 'P-', 'p_', 'p', 'q-', '-', ' p-', 'pp-', 'p–'))
-    // Dropping the prefix of `p-p-a`, a name whose first word is "p", leaves `p-a`, an id.
-    // oxlint-disable-next-line property/no-filter -- only that one rare pair is dropped, and no constraint on the tuple can name it.
-    .filter(([{ id }, prefix]) => !(prefix === '' && id.slice(2).startsWith('p-')))
+    .oneof(
+      {
+        arbitrary: fc.tuple(name, fc.constantFrom('P-', 'p_', 'p', 'q-', '-', ' p-', 'pp-', 'p–')),
+        weight: 8,
+      },
+      // Dropping the prefix of `p-p-a`, a name whose first word is "p", leaves `p-a`, an id, so
+      // with no prefix the first word is anything but "p".
+      { arbitrary: fc.tuple(notPName, fc.constant('')), weight: 1 },
+    )
     .map(([{ id }, prefix]) => prefix + id.slice(2)),
   name.map(({ id }) => `${id}-`),
   name.map(({ id }) => id.replace('p-', 'p--')),
   fc
     .tuple(name, fc.constantFrom(' ', '_', '.', '/', '\n'), name)
     .map(([first, join, second]) => first.id + join + second.id.slice(2)),
-  fc.constant('p-'),
+  // `p` on its own, which no name's id less its prefix can be, now that none starts with "p".
+  fc.constantFrom('p-', 'p'),
 );
 
 describe('parseParticipantId', () => {
