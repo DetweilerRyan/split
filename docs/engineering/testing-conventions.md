@@ -77,6 +77,10 @@ Steps follow the Screenplay pattern: **actors** use **abilities** to perform **t
 - **Leave a feature's layout to `npm run format`,** table alignment included, and fix what `npm run lint` reports in it. The rules are in [`.gplintrc`](../../.gplintrc).
 - **When a feature names how the app is built, reword it in the words of the person doing it.** `.gplintrc`'s `no-restricted-patterns` list fails on such words, like a tool's name, `button` or `seed`. When a scenario uses a new one, add it to the list rather than to the scenario.
 - **Don't edit `.features-gen/`.** `bddgen` writes the Playwright tests there from the features, and git ignores it.
+- **Every passing scenario is scanned for accessibility barriers where each actor ends it.** `actorCalled` in `e2e/screenplay/fixtures.ts` scans each actor's page with axe's WCAG 2.0 to 2.2 A and AA rules, and fails the scenario on a barrier. [`e2e/screenplay/accessibility.ts`](../../e2e/screenplay/accessibility.ts) holds the configuration; change the rules there only.
+- **Scan a screen a journey passes through with `Then <actor> finds no accessibility barriers on the screen`,** after a task that waits for that screen, such as an open window. [`use-the-room-without-barriers.feature`](../../e2e/features/use-the-room-without-barriers.feature) scans each of the room's windows. When the app gets a new window, add it to that feature's examples.
+- **Fix a barrier a scan finds, in the same change.** Don't `exclude()` an element or disable a rule to pass. If one can't be fixed there, ask the owner: the agreed way to record it is a snapshot of its rule and the elements it hit, as Playwright's guide shows, and `disableRules()` only for a short time, with an issue.
+- **Checks axe can't decide don't fail a scenario.** They're attached to its report as "accessibility checks to do by eye", such as contrast over a blurred background. Look at them when you change what they name.
 
 ## Tooling tests
 

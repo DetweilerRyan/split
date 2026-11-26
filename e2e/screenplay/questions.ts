@@ -1,4 +1,5 @@
 import type { Locator } from '@playwright/test';
+import { type Scan, scanForBarriers } from './accessibility';
 import type { Actor, Question } from './actor';
 
 const linkPattern = /https?:\/\/\S+/;
@@ -51,4 +52,9 @@ export function TotalsFor(person: string): Question<Locator> {
 /** The receipt's title, as the room shows it. */
 export function ReceiptTitle(title: string): Question<Locator> {
   return ({ page }) => page.getByRole('heading', { name: title, exact: true });
+}
+
+/** The accessibility barriers an automated check finds in what the actor sees now. */
+export function BarriersOnScreen({ page }: Actor): Promise<Scan> {
+  return scanForBarriers(page);
 }

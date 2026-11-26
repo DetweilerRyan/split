@@ -99,6 +99,33 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 - **Not taken: a checker for duplicated step wording** like `gol`'s. Two features don't have enough steps to drift.
   - **Reopen when:** features grow enough that similar steps are written twice.
 
+### Accessibility scans
+
+Researched on 2026-11-26 and settled on [#72](https://github.com/DetweilerRyan/split/issues/72). The owner approved `@axe-core/playwright` on 2026-11-25 ([comment](https://github.com/DetweilerRyan/split/issues/72#issuecomment-7177782952)) and accepted the revised recommendations the next day ([comment](https://github.com/DetweilerRyan/split/issues/72#issuecomment-7181036500)).
+
+- **`@axe-core/playwright` 4.14.0,** pinned because 4.14.1 was under the two-week minimum. It resolves `axe-core ~4.14.0` to 4.14.1, published 2026-11-16, ten days before it was added; the two-week rule is written for the package added, not what it pulls in. Both are MPL-2.0. axe runs inside the page, so the suite stays offline.
+  - **Why:** Playwright's own [accessibility guide](https://playwright.dev/docs/accessibility-testing) uses it. Lint, through oxlint's `jsx-a11y` (#67), sees only static JSX; axe checks the rendered page, such as contrast, target size and names computed at run time.
+  - **Not taken:** `axe-core` in Vitest component tests. That's a second package in a second role, needing its own approval. It would scan each modal without a journey to reach it.
+- **One configuration, and a scan where each actor ends a scenario,** as a catch-all.
+  - **Why:** Playwright's guide puts shared `AxeBuilder` configuration in a fixture.
+  - **Not enough on its own:** no source recommends scanning only where a test ends. The guide and [a state-based guide](https://cursa.app/en/path/front-end/run-state-based-accessibility-scans-with-playwright) say to scan each state that matters, after waiting for it. So the windows have their own scenarios.
+  - **Skipped for a failed scenario,** which is reported for that failure already.
+- **The window scenarios open each window through the room,** as people do, and scan it while it's open.
+  - **Not taken:** scanning a window in isolation with `include()`. It would miss how the window and the page behind it fit together, such as the backdrop.
+  - **The identity window's opener:** the header names whoever the room knows you as, or asks "Who are you?", so the task accepts either. That's narrower than this section's earlier note that no stable name finds the button.
+- **WCAG 2.0, 2.1 and 2.2 at A and AA; no `best-practice` yet.**
+  - **Why:** Playwright's example uses the WCAG 2.0 and 2.1 tags, matching Accessibility Insights. `wcag22aa` is the common addition for a WCAG 2.2 AA target ([Pa11y #666](https://www.github.com/pa11y/pa11y/issues/666)), and it adds target size, which matters on a phone. Every source treats `best-practice` as opt-in.
+  - **Reopen when:** the WCAG set has passed for a while. Then try `best-practice`, whose `region` rule wants all content in landmarks.
+- **A barrier fails the run,** as a lint warning fails lint. The message lists each rule, its help link and the elements it hit, so CI's output says what to fix.
+  - **Known issues, if one can't be fixed:** Playwright's guide recommends snapshotting a fingerprint of each violation (its rule id and targets), not the whole violations array, and calls `exclude()` simpler but coarse, since it skips every rule for an element and everything inside it. Lullabot's Playwright package moved to [a committed baseline](https://lullabot.github.io/playwright-drupal/1.7.4/working-with-tests/accessibility-tests/) for the same reason.
+  - **Not built yet:** the first runs found three barriers and all were fixable, so there's no snapshot to keep.
+- **Undecided results are attached, not failed.** axe returns a check it can't settle as `incomplete`, such as contrast it can't measure, and those need a person ([why contrast changes outside a real browser](https://dev.to/jangwook_kim_e31e7291ad98/why-color-contrast-disappears-when-you-put-axe-core-in-ci-2ak8)). On the first run the only one was the header badge's decorative `·`, over its blurred background.
+- **What the first runs found and fixed:**
+  - **Label in Name (WCAG 2.5.3):** the header's restaurant button was named "Restaurant details for …", which left out the date and meal it shows. It's now named by what it shows, plus hidden "(restaurant details)".
+  - **Contrast (1.4.3):** the room id in the restaurant window was `text-slate-400` on white, about 2.6:1; it's now `text-slate-500`.
+  - **Target size (2.5.8):** the identity window's remove buttons were 22px; they're now 30px.
+- **Automated checks are a floor.** Deque reports its axe-core rules found [57% of issues by volume](https://www.deque.com/blog/automated-testing-study-identifies-57-percent-of-digital-accessibility-issues) in 2021, covering 16 of WCAG 2.1 AA's 50 criteria. Deque sells axe tools, so treat the figure with care. Focus, Escape and keyboard behaviour are tested in the component tests, such as `ModalDialog`'s.
+
 ### Unused step definitions fail lint
 
 - **The rule:** every step definition is used by some feature, and steps don't call other steps. `scripts/check-unused-steps.ts` enforces the first half, and the second half keeps it free of its usual false positive.

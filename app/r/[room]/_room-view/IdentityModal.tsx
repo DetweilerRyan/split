@@ -66,7 +66,7 @@ export function IdentityModal({
             {participants.length > 1 && (
               <button
                 aria-label={`Remove ${person.name}`}
-                className="p-1 text-slate-400 hover:text-rose-600"
+                className="p-2 text-slate-400 hover:text-rose-600"
                 onClick={() => onRemove(person.id)}
               >
                 <X size={14} />
