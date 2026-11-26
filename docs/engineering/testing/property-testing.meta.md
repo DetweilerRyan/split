@@ -42,6 +42,17 @@ Asked for by the owner in [review on #71](https://github.com/DetweilerRyan/split
     - **Why coverage is off for a soak:** both configs write their coverage report on every run, and empty it first, so a soak with coverage on would replace the report oxCrap reads with one file's coverage.
   - **Every failure gets the full treatment, with a comment for where it was found:** the review noted that the first version applied the soak's steps to every failure without saying so, and that its comment fitted only a soak. The owner chose to keep the full treatment (as above), so the comment gains forms for CI and local runs.
 
+## Checked by lint
+
+- **Asked for by the owner on 2026-11-25:** "are there any lint rules that can help us write better property tests", then "open an issue to write our own lint plugin for property tests", which became [#155](https://github.com/DetweilerRyan/split/issues/155). No fast-check plugin exists for ESLint or oxlint, and Bun's `fast-check-no-unseeded-random` runs only in Bun, so the repository wrote its own, beside `functional.ts` and `readonly.ts`. Why each rule works as it does is in [its sidecar](../../../scripts/lint/property.meta.md).
+- **The issue's open decisions, as #155's pull request took them:**
+  - **All seven rules,** as the issue proposed.
+  - **`.filter` only on a chain that starts with fast-check,** as proposed.
+  - **No rule for an un-awaited async property:** `typescript/no-floating-promises` already reports one, as a warning that `--deny-warnings` makes fail. Checked on 2026-11-26 with a throwaway file.
+  - **`example-origin` included,** since #154 made the `// Found by…` comment part of [Keeping a failing input](property-testing.md#keeping-a-failing-input).
+  - **`predicate` asks for a call or a throw, not a call to `expect`:** four predicates in the lint plugins' own property tests assert through a helper, which a syntax rule can't see into.
+- **Three filters stay, each with a disable comment saying why:** `storedText`'s `fc.anything()` has no option to leave strings out, `roomSnapshot`'s drops one rare pair no constraint can name, and `receiptSeed`'s checks ids as they're stored by position, which `uniqueArray`'s selector can't see. Each drops a small share of inputs.
+
 ## Its own document
 
 - **Moved out of testing conventions on [#154](https://github.com/DetweilerRyan/split/pull/154),** the owner saying "testing-conventions.md is getting too large, let's break it apart. make a docs/testing/ folder with an index readme with read triggers and seperate out a property-testing.md doc. the other testing types can be decomposed from testing-convetions.md in another pr" ([recorded](https://github.com/DetweilerRyan/split/pull/154#issuecomment-7174979414)). This file's entries came with it from `testing-conventions.meta.md`.

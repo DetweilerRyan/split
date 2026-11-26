@@ -4,7 +4,11 @@
   // and that plugin in https://github.com/DetweilerRyan/split/issues/67.
   "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import", "jsx-a11y"],
   // The repository's own rules, in scripts/lint/functional.ts and scripts/lint/readonly.ts.
-  "jsPlugins": ["./scripts/lint/functional.ts", "./scripts/lint/readonly.ts"],
+  "jsPlugins": [
+    "./scripts/lint/functional.ts",
+    "./scripts/lint/readonly.ts",
+    "./scripts/lint/property.ts"
+  ],
   // The owner's decision (#120): type-aware linting, with tsrs as its backend. oxlint uses tsrs
   // because it's the only backend installed; don't also install oxlint-tsgolint.
   "options": { "typeAware": true },
@@ -145,7 +149,15 @@
           {
             "from": "package",
             "package": "oxlint",
-            "name": ["Node$1", "ThisExpression", "VariableDeclaration", "TSTypeReference", "Rule"]
+            "name": [
+              "Node$1",
+              "ThisExpression",
+              "VariableDeclaration",
+              "TSTypeReference",
+              "CallExpression",
+              "Rule",
+              "Context"
+            ]
           },
           // zod's brand, a type-only marker on a branded id, and the issues a failed parse gives.
           { "from": "package", "package": "zod", "name": ["$brand", "$ZodIssue"] },
@@ -165,6 +177,20 @@
     "typescript/no-non-null-assertion": "error"
   },
   "overrides": [
+    {
+      // #155: property tests are checked for the mistakes that make one pass without testing
+      // anything, or fail where it can't be replayed. scripts/lint/property.md lists the rules.
+      "files": ["**/*.property.test.ts"],
+      "rules": {
+        "property/asserted": "error",
+        "property/no-leftovers": "error",
+        "property/no-filter": "error",
+        "property/predicate": "error",
+        "property/no-try": "error",
+        "property/no-random": "error",
+        "property/example-origin": "error"
+      }
+    },
     {
       // A test nests describe, it, fc.property and the callbacks inside by design (#76), and may use
       // `!` (#119), though not on an indexed read, as docs/engineering/types-and-schemas.md says.

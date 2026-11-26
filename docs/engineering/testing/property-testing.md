@@ -17,6 +17,8 @@ A property test checks a rule that should hold for every input, against many inp
 
 ## Writing one
 
+`npm run lint` checks several of these rules in every `*.property.test.ts`, through the local plugin [`property/*`](../../../scripts/lint/property.md). Its README lists what each rule reports and what to write instead.
+
 - **Generate every way the input can be written, not just its plainest form.** List the rules the code decides, from its issue's decisions or its README, and give the arbitrary a dimension for each:
   - **where the thing lives,** such as in the file or imported from another;
   - **the forms it can take,** such as wrappers, casts or aliases;

@@ -118,6 +118,7 @@ const notAnId = fc.oneof(
   fc
     .tuple(name, fc.constantFrom('', 'P-', 'p_', 'p', 'q-', '-', ' p-', 'pp-', 'p–'))
     // Dropping the prefix of `p-p-a`, a name whose first word is "p", leaves `p-a`, an id.
+    // oxlint-disable-next-line property/no-filter -- only that one rare pair is dropped, and no constraint on the tuple can name it.
     .filter(([{ id }, prefix]) => !(prefix === '' && id.slice(2).startsWith('p-')))
     .map(([{ id }, prefix]) => prefix + id.slice(2)),
   name.map(({ id }) => `${id}-`),

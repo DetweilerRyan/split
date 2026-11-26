@@ -52,6 +52,7 @@ function seedWith(itemCount: { readonly minLength: number; readonly maxLength: n
       roster: fc.array(text(), { maxLength: MAX_ROSTER }),
       items: fc
         .uniqueArray(item, { selector: (i) => i.id, ...itemCount })
+        // oxlint-disable-next-line property/no-filter -- an empty id is stored by its position, which uniqueArray's selector can't see, and a clash is rare.
         .filter((items) => new Set(storedIds(items)).size === items.length),
     },
     { requiredKeys: ['title', 'cardTipEur', 'cashTipEur', 'bankUsd', 'roster', 'items'] },
