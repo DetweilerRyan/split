@@ -6,7 +6,7 @@ How to write tests in this repository: what they check, which project they belon
 
 - **Make the test use the code the way it's really used.** Prefer a test that exercises several units together over one that isolates a single function, unless the function is logic with no collaborators, such as the receipt math.
 - **Make assertions specific.** Assert the exact thing the test's user sees or relies on: the whole value, the full message, the element by what a person reads on it, rather than that something came back. Each kind's own document shows an example for its tests.
-- **Find elements as a user would.** Use `getByRole` with the accessible name first. When no role fits, use, in this order: `getByLabelText`, `getByPlaceholder`, `getByText`, `getByAltText`, `getByTitle`. Use `getByTestId` only when none of these can find the element. If an element can't be found by role, check whether the component is missing an accessible name or role, and fix the component.
+- **Find elements as a user would.** Find one by its role with its accessible name first (`getByRole`). When no role fits, find it, in this order, by its label (Vitest's `getByLabelText`, Playwright's `getByLabel`), placeholder (`getByPlaceholder`), text (`getByText`), alt text (`getByAltText`) or title (`getByTitle`). Find it by a test id (`getByTestId`) only when none of these can. If an element can't be found by role, check whether the component is missing an accessible name or role, and fix the component.
 - **Name each test after the one behaviour it pins down,** and take its expected values from the requirement, not by running the code and pasting its output.
 - **Nest a test's callbacks as its structure needs,** and keep its blocks within the depth [`.oxlintrc.json`](../../../.oxlintrc.json) allows.
 
@@ -42,7 +42,11 @@ How to write an end-to-end test is in [End-to-end testing](end-to-end-testing.md
 
 ## Tooling tests
 
-How to test the repository's own dev tools, and a deep module's feature contract, is in [Tooling testing](tooling-testing.md).
+How to test the repository's own dev tools is in [Tooling testing](tooling-testing.md).
+
+## Feature tests
+
+The rules every feature test follows, its scenarios, its Screenplay and a deep module's feature contract, are in [Feature testing conventions](feature-testing-conventions.md).
 
 ## Tests stay offline
 
