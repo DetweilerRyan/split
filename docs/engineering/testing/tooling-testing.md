@@ -2,7 +2,12 @@
 
 ## What this kind of test is
 
-A tooling test checks the repository's own dev tools: everything in `scripts/`, and root tooling config such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`. Tooling tests run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't. A tool that's a deep module also has a feature contract, which is a feature test, with its files as [A deep module that's a program](#a-deep-module-thats-a-program) below lists them.
+A tooling test checks the repository's own dev tools:
+
+- everything in `scripts/`;
+- root tooling config, such as `.rev-dep.config.jsonc`, whose sidecar is `rev-dep.config.real.test.ts`.
+
+Tooling tests run apart from the app's, from two configs, and `npm run test:tooling` runs both. `npm test` doesn't. A tool that's a deep module also has a feature contract, which is a feature test. The subsection [A deep module that's a program](#a-deep-module-thats-a-program) below lists that contract's files.
 
 | Project        | Config                                                                    | File name                                                     | Runs in |
 | :------------- | :------------------------------------------------------------------------ | :------------------------------------------------------------ | :------ |
@@ -25,7 +30,9 @@ A root file's test is tooling when it tests tooling config.
   expect(oxcrap(args, files, times).status).not.toBe(0);
   ```
 
-- **Name and place them as [the app's tests](testing-conventions.md#which-project-a-test-belongs-in) are:** a sidecar beside its module (`scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`), `.real.` when it runs programs or touches the file system.
+- **Name and place them as [the app's tests](testing-conventions.md#which-project-a-test-belongs-in) are:**
+  - a sidecar beside its module, such as `scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`;
+  - `.real.` in its name when it runs programs or touches the file system.
 
 - **For the feature contract of [a deep module that's a program](#a-deep-module-thats-a-program),** feature testing conventions apply with these:
   - **Its screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it. A [dependency-direction](../dependency-direction.md) rule can enforce that, as one does for oxCrap.
@@ -59,11 +66,18 @@ This subsection holds the layout and wiring of a deep module whose interface is 
 | `scripts/<tool>/features/playwright.config.ts`  | Its playwright-bdd config, with no browser            |
 | `scripts/<tool>/features/.gplintrc`             | Its gplint rules                                      |
 
-- **Wire a new tool's features into `package.json`:** its config in `test:tooling`; `gplint -c <its .gplintrc> <its folder>` and `-c <its config>` for `check-unused-steps.ts` in `lint`; its folder in `format` and `format:check`.
+- **Wire a new tool's features into `package.json`:**
+  - its config, in `test:tooling`;
+  - `gplint -c <its .gplintrc> <its folder>`, and `-c <its config>` for `check-unused-steps.ts`, in `lint`;
+  - its folder, in `format` and `format:check`.
 
 ### When one fails
 
-[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written. For a step with no definition, one two definitions match, or one no feature uses, [Steps and the Screenplay](feature-testing-conventions.md#steps-and-the-screenplay) in feature testing conventions says what fails and what to do.
+In testing conventions, [Fixing a bug](testing-conventions.md#fixing-a-bug) applies as written. In feature testing conventions, [Steps and the Screenplay](feature-testing-conventions.md#steps-and-the-screenplay) says what fails, and what to do, for each of these:
+
+- a step with no definition;
+- a step that two definitions match;
+- a step definition no feature uses.
 
 ## Changing this document
 

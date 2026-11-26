@@ -2,7 +2,7 @@
 
 ## What mutation testing is
 
-Mutation testing makes small changes to code, such as flipping `<` to `<=` or deleting a statement, and runs the tests against each one. A change no test fails on, a _surviving mutant_, marks code the tests run but don't check. [Stryker](https://stryker-mutator.io/docs/stryker-js/introduction/) does it here, for oxCrap (`scripts/oxcrap/`) only, and only locally: it's in neither CI nor the Stop hook.
+Mutation testing makes small changes to code, such as flipping `<` to `<=` or deleting a statement, and runs the tests against each one. A change no test fails on is a _surviving mutant_. It marks code the tests run but don't check. Here, [Stryker](https://stryker-mutator.io/docs/stryker-js/introduction/) runs it for oxCrap (`scripts/oxcrap/`) only. Stryker runs only locally: it's in neither CI nor the Stop hook.
 
 ## What it runs
 
@@ -20,7 +20,13 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
   - **A full run** starts from no results, tests every mutant, and writes the file.
   - **A changed-lines run** reuses its results for mutants whose code and tests haven't changed, and doesn't write it back.
 - **A worktree without one starts its changed-lines runs from the baseline:** `stryker/baseline.json` in the folder `git rev-parse --git-common-dir` names, which every worktree shares. A full run writes it when oxCrap hasn't changed on the branch, so it describes `main`'s oxCrap.
-- **Run a full run on a branch that hasn't changed oxCrap** after a pull request that changed it merges, after `npm install`, or when a change to a shared helper or a dependency should be retested. Incremental mode only notices changes to mutated files and test files.
+- **Run a full run on a branch that hasn't changed oxCrap** at any of these times:
+  - after a pull request that changed oxCrap merges;
+  - after `npm install`;
+  - when a change to a shared helper or a dependency should be retested.
+
+  Incremental mode only notices changes to mutated files and test files.
+
 - **A run scoring below `thresholds.break`** in [`stryker.config.json`](../../../stryker.config.json) exits non-zero. When a full run on `main`'s oxCrap scores higher, raise `break` to that score rounded down, in the pull request that raised it. Lower it only with the owner's approval.
 - **The report** is in `reports/mutation/mutation.html`, and Stryker's working copy is in `.stryker-tmp/`. Both are gitignored, and the Vitest configs leave the working copy out.
 
@@ -29,7 +35,7 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
 1. **Run it once, after the [definition of done](../../../AGENTS.md#definition-of-done) passes.** It's expensive. Don't run it in the middle of a change, or to probe.
 2. **Take each survivor in turn:**
    - **Add a test with an assertion that fails on that mutant,** as [testing conventions](testing-conventions.md) and [tooling testing](tooling-testing.md) say. Make it a [property test](property-testing.md#when-to-write-one) where property testing says one is called for.
-   - **If it's in a guard for a case that can't happen, delete the guard:** restructure so the type proves the value is there, as `NestedFn`'s `parents` in `scripts/oxcrap/functions.ts` does. Keep the guard only when a library's type forces it.
+   - **If it's in a guard for a case that can't happen, delete the guard:** restructure so the type proves the value is there. `NestedFn`'s `parents` in `scripts/oxcrap/functions.ts` shows how. Keep the guard only when a library's type forces it.
    - **Or propose it as equivalent:** a change that can't alter what the code does. Mark it with `// Stryker disable next-line <mutator>: <reason>`, saying why no test could fail on it.
 
    Never weaken, edit away or delete an existing test to kill a mutant.

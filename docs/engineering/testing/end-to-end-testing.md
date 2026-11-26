@@ -2,7 +2,7 @@
 
 ## What this kind of test is
 
-An end-to-end test checks a journey a person or an assistant takes through the running app, such as an assistant creating a room through `/api/mcp` and two people splitting it live. It is a feature test, set up by [`playwright.config.ts`](../../../playwright.config.ts), and `npm run test:e2e` runs them all. Its files are under `e2e/`:
+An end-to-end test checks a journey that a person or an assistant takes through the running app. One example is an assistant creating a room through `/api/mcp`, and two people splitting it live. It's a feature test. [`playwright.config.ts`](../../../playwright.config.ts) sets it up, and `npm run test:e2e` runs them all. Its files are under `e2e/`:
 
 | Path                             | Holds                                                                                                                     |
 | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------ |
@@ -14,7 +14,9 @@ An end-to-end test checks a journey a person or an assistant takes through the r
 
 [Testing conventions](testing-conventions.md) and [feature testing conventions](feature-testing-conventions.md) apply as written, with these for end-to-end tests:
 
-- **Each actor's abilities** are a browser of their own, a separate context on a phone-sized screen so each has their own storage and identity, and an MCP client session.
+- **Each actor's abilities** are these:
+  - a browser of their own: a separate context on a phone-sized screen, so each actor has their own storage and identity;
+  - an MCP client session.
 - **Clicks, typing and tool calls belong in tasks, and reading the page or a tool result in questions.** Add one to `tasks.ts` or `questions.ts` rather than using `page` in a step.
 - **The root [`.gplintrc`](../../../.gplintrc)'s `no-restricted-patterns` list bans the words for how the app is built,** like a tool's name, `button` or `seed`.
 - **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For an end-to-end step, what the person reads on the row:
@@ -27,7 +29,7 @@ An end-to-end test checks a journey a person or an assistant takes through the r
   await expect(actorCalled(person).answer(ItemRow(item))).toBeVisible();
   ```
 
-- **End-to-end tests use servers on this machine only.** `playwright.config.ts` starts the app and a local WebRTC signaling server, and every actor's browser refuses requests to any other host. Use receipts in USD, so no exchange rate is fetched. A scenario that needs another outside service waits until that service can be replaced at its edge.
+- **End-to-end tests use servers on this machine only.** `playwright.config.ts` starts the app and a local WebRTC signaling server, and every actor's browser refuses requests to any other host. Use receipts in USD, so nothing fetches an exchange rate. A scenario that needs another outside service waits until a test can replace that service at its edge.
 - **Find elements as [testing conventions](testing-conventions.md#what-a-test-checks) says,** by role and accessible name first, and assert the text a user reads.
 
 ## Rules of its own
@@ -42,7 +44,11 @@ An end-to-end test checks a journey a person or an assistant takes through the r
 
 ### When one fails
 
-[Fixing a bug](testing-conventions.md#fixing-a-bug) in testing conventions applies as written. For a step with no definition, one two definitions match, or one no feature uses, [Steps and the Screenplay](feature-testing-conventions.md#steps-and-the-screenplay) in feature testing conventions says what fails and what to do.
+In testing conventions, [Fixing a bug](testing-conventions.md#fixing-a-bug) applies as written. In feature testing conventions, [Steps and the Screenplay](feature-testing-conventions.md#steps-and-the-screenplay) says what fails, and what to do, for each of these:
+
+- a step with no definition;
+- a step that two definitions match;
+- a step definition no feature uses.
 
 ## Changing this document
 

@@ -2,7 +2,7 @@
 
 ## What this kind of test is
 
-A test in Vitest's `real` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it: one that runs real programs or touches the file system, in Node. Its file is `<module>.real.test.ts`, beside the module it covers. Today the project's include matches only `oxlintrc.real.test.ts`; the tooling's real tests run in its own `tooling-real` project.
+A test in Vitest's `real` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it. It runs real programs or touches the file system, in Node. Its file is `<module>.real.test.ts`, beside the module it covers. Today the project's include matches only `oxlintrc.real.test.ts`; the tooling's real tests run in its own `tooling-real` project.
 
 ## How the conventions apply
 
@@ -24,7 +24,7 @@ A test in Vitest's `real` project, as [the project table](testing-conventions.md
 
 ### When to write one
 
-When a test must run a real program or touch the file system, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) says; otherwise the test belongs in another project.
+Write one when a test must run a real program or touch the file system, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) says. Otherwise, the test belongs in another project.
 
 ### Writing one
 
