@@ -18,8 +18,8 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   expect(screen.container.querySelector('.text-slate-500')).not.toBeNull();
   ```
 
-- **A container component's slots are its collaborators,** as [Collaboration and contract tests](testing-conventions.md#collaboration-and-contract-tests) describes. That section says how to invert and test them. [When a collaboration test earns its cost](testing-conventions.md#when-a-collaboration-test-earns-its-cost) says when a component is worth making one.
-  - **What a container is:** a component whose job is to call hooks and render components a caller passes in. The caller passes them through a `slots` prop, as MUI names such a prop, and the container renders them with props it computes. Where it renders what the caller already rendered, it takes an element slot instead, as [When a collaboration test earns its cost](testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
+- **A container component's slots are its collaborators,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) describes. That section says how to invert and test them. [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says when a component is worth making one.
+  - **What a container is:** a component whose job is to call hooks and render components a caller passes in. The caller passes them through a `slots` prop, as MUI names such a prop, and the container renders them with props it computes. Where it renders what the caller already rendered, it takes an element slot instead, as [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
   - **Each slot's type** is a component of the props the container passes, such as `ComponentType<{ readonly title: string; readonly onShare: () => void }>`.
   - **A nested container** has the composition root bind it to its dependencies. The root does it with a component, created once, at module level or with a `useState` initializer, that renders the nested container with them.
   - **A React context a slot's component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it. The container may import that context to provide it, from the component's module or a module of its own: the context doesn't implement the slot.
@@ -32,7 +32,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
 
   So each custom hook the container calls from its folder gets a test of its own, with `renderHook`.
 
-- **A container's store and services are dependencies it inverts too,** as [Collaboration and contract tests](testing-conventions.md#collaboration-and-contract-tests) says. That holds whether it calls them or hands them to its hooks. The interface it declares for each must fit its hooks' own narrower ones.
+- **A container's store and services are dependencies it inverts too,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) says. That holds whether it calls them or hands them to its hooks. The interface it declares for each must fit its hooks' own narrower ones.
   - **`RoomView`'s `provider` and `services` are meant to be.** Its test builds a real `ReceiptStore` over an in-memory Yjs document, and its provider fakes only presence, which can't run offline.
   - **Not yet:** [#165](https://github.com/DetweilerRyan/split/issues/165) covers these gaps:
     - `provider` has the type `RoomProvider` from `src/sync`;
