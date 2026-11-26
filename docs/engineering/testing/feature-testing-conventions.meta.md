@@ -14,9 +14,10 @@ Researched on 2026-11-21 and settled on [#55](https://github.com/DetweilerRyan/s
   - **Not taken: Serenity/JS** 3.49.0, the main TypeScript Screenplay library. Its Playwright packages pin `playwright-core ~1.64.0` while the repository is on 1.65.0, and its Gherkin support runs through Cucumber ([Serenity/JS](testing-conventions.meta.md#serenity-js)).
   - **Not taken: page objects,** which most comparisons find simpler but less reusable once journeys span several users or interfaces.
   - **Reopen when:** the layer grows enough that maintaining it costs more than adopting a library that follows Playwright's releases.
-- **The tooling `.gplintrc` copies the root's structural rules** because gplint 2.6.1 can't extend another config.
 
 ## Linting and formatting features
+
+- **Every other `.gplintrc` copies the root's structural rules,** decided on [#65](https://github.com/DetweilerRyan/split/issues/65) for oxCrap's features, because gplint 2.6.1 can't extend another config.
 
 Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 and `gplint` 2.6.1 in the session that day, to add to [PR #57](https://github.com/DetweilerRyan/split/pull/57).
 
@@ -40,7 +41,7 @@ Researched on 2026-11-22. The owner approved `@cucumber/gherkin-utils` 12.0.2 an
 
 ## Feature contracts
 
-**The definition of a deep module lives in [code design principles](../code-design-principles.md)' _deep modules_,** since #115, at the owner's request. Why it covers more than dev tools is in [that document's sidecar](../code-design-principles.meta.md#added-on-115). The owner also asked, on #66, that "deep modules in general will leverage bdd", so tooling testing's [Feature contracts for deep modules](feature-testing-conventions.md#feature-contracts-for-deep-modules) section sets up features for them. It sets up only the program kind, as oxCrap is the only one yet.
+**The definition of a deep module lives in [code design principles](../code-design-principles.md)' _deep modules_,** since #115, at the owner's request. Why it covers more than dev tools is in [that document's sidecar](../code-design-principles.meta.md#added-on-115). The owner also asked, on #66, that "deep modules in general will leverage bdd", so [Feature contracts for deep modules](feature-testing-conventions.md#feature-contracts-for-deep-modules) sets up features for them. Only the program kind is set up so far, in tooling testing's "A deep module that's a program", as oxCrap is the only one yet.
 
 **Whether a module is deep is the owner's call.** A second draft listed checks for when a script is deep: its own folder, a README describing its interface, and modules with unit tests. The owner said in [review](https://github.com/DetweilerRyan/split/pull/66#discussion_r4668423016) that "a script may check all three of them but still not be a deep module", and "really, the only definition is that the complexity ratio from a modules interface to it's internals exceeds a certain threshold". They went on: "in lieu of measuring the complexity ratio we'll just have to leave the deep module distinction to a judgment call made by the owner with input from an agent." So an agent proposes, and the owner decides. The table of deep modules records each decision.
 

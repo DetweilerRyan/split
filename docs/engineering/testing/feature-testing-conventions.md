@@ -8,7 +8,7 @@ A feature test checks what a system does for its user, through the interface tha
 - **Write a scenario only for what the whole system is needed to show.** Keep edge cases in the tests of the modules inside it.
 - **Leave a feature's layout to `npm run format`,** table alignment included, and fix what `npm run lint` reports in it. Each set of features has its rules in a `.gplintrc`.
 - **When a feature names how the system is built, reword it in its user's words.** A `.gplintrc`'s `no-restricted-patterns` list fails on such words. When a scenario uses a new one, add it to the list rather than to the scenario.
-- **Every `.gplintrc` copies the root `.gplintrc`'s structural rules:** change a structural rule in each of them.
+- **Every other `.gplintrc` copies the root `.gplintrc`'s structural rules:** change a structural rule in each of them.
 - **Don't edit `.features-gen/`.** `bddgen` writes the Playwright tests there from the features, and git ignores it.
 
 ## Steps and the Screenplay
@@ -30,7 +30,6 @@ What a deep module is, is in the code design principles' [_deep modules_](../cod
 
 - **Test a deep module's contract with Gherkin features,** written in its callers' words and kept beside it.
 - **Drive the features through the module's own interface.** Run a program end to end, as a process. A module used through code is driven through its functions, which needn't be end to end.
-- **Keep unit tests for the modules inside it,** for their edge cases.
 - **Don't keep a second test of the same contract,** such as a `real` test of the program, beside the features.
 
 ### Deciding a module is deep

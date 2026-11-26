@@ -26,7 +26,7 @@ Tooling tests check the repository's own dev tools: everything in `scripts/`, an
 
 ## A deep module that's a program
 
-These rules cover a deep module whose interface is a program, the only kind set up so far, and add to [feature testing conventions](feature-testing-conventions.md#feature-contracts-for-deep-modules). The first deep module used through code sets up its own layout and runner, and adds its rules beside them.
+These rules cover a deep module whose interface is a program, the only kind set up so far, and add to [feature testing conventions](feature-testing-conventions.md#feature-contracts-for-deep-modules). The first deep module used through code sets up its own layout and runner, and adds its rules here.
 
 | Path                                            | Holds                                                 |
 | :---------------------------------------------- | :---------------------------------------------------- |
@@ -40,6 +40,7 @@ These rules cover a deep module whose interface is a program, the only kind set 
   - **The actor's abilities** are a throwaway project folder and running the program, not a browser or an MCP session.
   - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
 - **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
+- **A scenario covers what the program as a whole does with its arguments and files.**
 - **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words.
 - **Wire a new tool's features into `package.json`:** its config in `test:tooling`; `gplint -c <its .gplintrc> <its folder>` and `-c <its config>` for `check-unused-steps.ts` in `lint`; its folder in `format` and `format:check`.
 
