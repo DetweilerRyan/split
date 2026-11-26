@@ -10,7 +10,7 @@ Every test in this repository follows these rules, whatever its kind. They cover
 - how a test replaces a dependency;
 - fixing a bug.
 
-A test of code that renders or calls other tested code also follows [Collaboration testing conventions](collaboration-testing-conventions.md). Most kinds of test also have their own document in the [testing index](README.md). It says how these rules apply to that kind, and adds its own. [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done) gives the command that runs the tests.
+A test that fakes a child component, store or service also follows [Collaboration testing conventions](collaboration-testing-conventions.md). So does a test of code whose job is wiring other tested code. Most kinds of test also have their own document in the [testing index](README.md). It says how these rules apply to that kind, and adds its own. [`AGENTS.md`'s definition of done](../../../AGENTS.md#definition-of-done) gives the command that runs the tests.
 
 ## What a test checks
 
@@ -91,8 +91,8 @@ Two kinds of test sit outside these projects:
 
   A test can then hand it a plain fake object, with no mocking. Design other new code this way too, where it costs little.
 
-- **Passing in isn't inverting.** Taking a collaborator as a parameter passes it in. The code inverts the dependency when it also does both of these:
-  - declares the collaborator's interface in its own terms;
+- **Passing in isn't inverting.** Taking a dependency as a parameter passes it in. The code inverts the dependency when it also does both of these:
+  - declares the dependency's interface in its own terms;
   - imports no value or type that implements it.
 
   A [collaboration test](collaboration-testing-conventions.md#collaboration-and-contract-tests) needs the dependency inverted.
