@@ -8,7 +8,7 @@ Piloted on oxCrap in [#65](https://github.com/DetweilerRyan/split/issues/65), wh
 - **They have a separate config file,** `vitest.tooling.config.ts`, with no React Compiler, coverage or `@` alias.
 - **The Stop hook watches tooling too:** "Yes, watch scripts/ too".
 - **The tooling `.gplintrc` copies the root's structural rules** because gplint 2.6.1 can't extend another config.
-- **The pull request proposes the rule,** and merging it adopts the rule: "each pull request writes the convention it pilots into `testing-conventions.md`". Since #156, a tooling convention goes into [tooling testing](tooling-testing.md).
+- **The pull request proposes the rule,** and merging it adopts the rule: "each pull request writes the convention it pilots into `testing-conventions.md`".
 
 **Why apart:**
 
