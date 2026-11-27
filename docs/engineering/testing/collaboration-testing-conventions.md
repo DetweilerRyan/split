@@ -25,9 +25,7 @@ Some code's job is wiring collaborators that have tests of their own, such as a 
     - what the code can't take as a parameter, such as a hook;
     - pure functions, which need no fake.
 - **Wire in the real dependencies at a composition root.** That's the nearest code above that isn't itself inverted this way. It imports the real dependencies and passes them in, and the type checker checks each against its interface there.
-- **Bind nested inverted code at the root.** The root binds the nested code's dependencies to it before passing it in, so the outer code never sees them. Create the binding once, so the bound code keeps its identity across renders:
-  - at module level;
-  - or with a `useState` initializer, when the dependencies come from the root's own state.
+- **Bind nested inverted code at the root.** The root binds the nested code's dependencies to it before passing it in, so the outer code never sees them. For a slot, it binds them in the slot's render function, which renders the nested code with them, such as `(props) => <Nested {...props} slots={nestedSlots} />`.
 - **In the collaboration test, fake each collaborator that has contract tests.** Check only how the code uses them: what it gives each one, and what it does with what each gives back or calls. Leave a collaborator's own work to its own tests.
 - **A collaborator's own tests are its contract tests.** They check that it meets the interface the code declares, and does what the code relies on. That includes what the type checker can't see, such as something it's given but ignores.
   - **Fake only a collaborator that has contract tests.**
