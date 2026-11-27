@@ -22,7 +22,11 @@ export type RoomSlots = {
   readonly appBar: (props: {
     /** Where the bar sits: it sticks to the top of the page. */
     readonly className: string;
-    readonly snapshot: RoomSnapshot;
+    readonly title: string;
+    readonly purchasedAt: string;
+    readonly mealType: string;
+    readonly connection: RoomSnapshot['connection'];
+    readonly peers: RoomSnapshot['peers'];
     readonly you: Participant | null;
     readonly editing: boolean;
     readonly onDetails: () => void;
@@ -49,7 +53,8 @@ export type RoomSlots = {
   readonly people: (props: { readonly snapshot: RoomSnapshot }) => ReactNode;
   /** The card that opens the seed dialog. */
   readonly seedCard: (props: {
-    readonly snapshot: RoomSnapshot;
+    readonly participantCount: number;
+    readonly itemCount: number;
     readonly onOpen: () => void;
   }) => ReactNode;
   readonly identityModal: (
@@ -93,7 +98,10 @@ export type RoomStore = {
   readonly getSnapshot: () => RoomSnapshot;
   readonly addParticipant: (name: string) => Participant | null;
   readonly removeParticipant: (id: ParticipantId) => void;
-  readonly hydrateSeed: (seed: ReceiptSeed, options?: { readonly forceReset?: boolean }) => void;
+  readonly hydrateSeed: (
+    seed: ReceiptSeed,
+    options?: { readonly forceReset?: boolean | undefined },
+  ) => void;
 };
 
 /** The room's store, and who you are to its peers, in the room's own terms. */
@@ -108,17 +116,12 @@ export type RoomConnection = {
   ) => void;
 };
 
-/**
- * What the room reaches outside itself for, and how long its toasts last, which a test lengthens.
- * Its composition root passes the real ones.
- */
+/** What the room reaches outside itself for. Its composition root passes the real ones. */
 export type RoomServices = {
   /** Where the room's link and summary are copied to. */
   readonly clipboard: CopyTarget;
   /** Goes to another page of the app, such as a new room. */
   readonly navigate: (path: string) => void;
-  /** How long a toast stays up, in milliseconds. */
-  readonly toastMs: number;
 };
 
 type RoomViewProps = {
@@ -138,7 +141,7 @@ export function RoomView({ roomId, provider, slots, services }: RoomViewProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { store } = provider;
   const snapshot = useReceiptStore(store);
-  const toast = useToast(services.toastMs);
+  const toast = useToast();
   const identity = useIdentity(provider, roomId, snapshot.participants, toast.showToast);
   const sharing = useSharing(roomId, snapshot, services.clipboard, toast.showToast);
   const seed = useSeedImport(store, toast.showToast, services.navigate);
@@ -147,7 +150,11 @@ export function RoomView({ roomId, provider, slots, services }: RoomViewProps) {
   return (
     <div className="min-h-screen pb-12">
       {slots.appBar({
-        snapshot,
+        title: snapshot.title,
+        purchasedAt: snapshot.purchasedAt,
+        mealType: snapshot.mealType,
+        connection: snapshot.connection,
+        peers: snapshot.peers,
         you: identity.you,
         editing,
         onDetails: () => setDetailsOpen(true),
@@ -156,7 +163,7 @@ export function RoomView({ roomId, provider, slots, services }: RoomViewProps) {
         onShare: sharing.openDialog,
         className: 'sticky top-0 z-20',
       })}
-      <main className="mx-auto mt-3 grid max-w-6xl gap-4 px-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
+      <main className="page-column mt-3 grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
         {slots.items({
           you: identity.you,
           mode: editing
@@ -166,7 +173,11 @@ export function RoomView({ roomId, provider, slots, services }: RoomViewProps) {
         <aside className="space-y-4">
           {slots.summary({ snapshot, onCopySummary: sharing.copySummary })}
           {slots.people({ snapshot })}
-          {slots.seedCard({ snapshot, onOpen: seed.openDialog })}
+          {slots.seedCard({
+            participantCount: snapshot.participants.length,
+            itemCount: snapshot.items.length,
+            onOpen: seed.openDialog,
+          })}
         </aside>
       </main>
       <ToastContext value={toast.message}>

@@ -54,7 +54,7 @@ The interfaces, parameters, composition root and fakes in [Collaboration and con
   - most of its collaborators have tests of their own;
   - a test through them would repeat what those tests check.
 
-  Test code through its real collaborators when it has only one or two simple ones. Do the same when most of them have no tests.
+  Test code through its real collaborators when every one is simple, however many there are. A simple collaborator is fast, deterministic, yours, and easy to set up, with no effects outside the process. Do the same when most of them have no tests.
 
 - **Earn it with a current use, not an expected one,** as _earned complexity_ asks.
   - **Invert code when its test would start repeating its collaborators' tests,** not because it may grow into wiring code.

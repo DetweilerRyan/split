@@ -22,6 +22,7 @@ Who decides where a component sits, and who decides how it looks. A component th
   ```
 
 - **Let an overlay place itself.** A dialog or a toast is fixed to the viewport, so it takes no `className` for placement.
+- **Line a full-width component's content up with the page through the `page-column` class.** It sets the page's content width, centring and side padding in one place. The component's border and background still span the page.
 - **A container places the slots it renders.** It places each with its own wrapper's spacing, or with a `className` it passes where a wrapper can't, such as making a slot sticky. [Containers](#containers) says how a container's slots work.
 
 ## Containers
@@ -39,6 +40,7 @@ A container is a component whose job is to call hooks and render components a ca
 - **Bind a nested container in its slot's render function.** Render it with the props the outer container passes, plus its own slots and dependencies, such as `(props) => <Nested {...props} store={store} slots={nestedSlots} />`. A nested container has no root file: its parent's root binds it.
 - **A container may import a context that a slot's component reads,** to provide it. It may import it from the component's own module, since the context doesn't fill the slot.
 - **A browser global a hook defaults,** such as `location`, isn't one of the container's services.
+- **Keep a value that's the same in every deploy a constant in its module,** such as how long a toast shows. Test the timing it sets with fake timers. Pass it in only once a caller needs a different value, and then with the services.
 
 ## Code design principles
 
@@ -63,7 +65,8 @@ How each of the [code design principles](code-design-principles.md) applies to a
   - **Keep a component beside its one user.** It moves to `src/components/` only once two folders import it, which `npm run lint` checks.
 - **[Deep modules](code-design-principles.md#5-deep-modules-give-each-module-a-small-interface-over-a-lot-of-behaviour):**
   - **A component's interface is its props, the contexts it reads, and what the user sees and does.** Test it through those.
-  - **Keep props few:** take the snapshot's fields a component needs, and compute the rest inside it, rather than having each caller compute them.
+  - **Keep props few, and give each value a component reads a prop of its own,** such as a title, or a count it shows. Compute the rest inside the component, rather than in each caller.
+  - **Don't pass a `Pick` of the snapshot.** It narrows only the type: the component still gets the whole snapshot, and renders again whenever any of it changes.
   - **Remove a component that only forwards its props** to another, so callers use the one it wraps.
   - **A container wires, and a component presents.** Split a component when two people would ask to change it for different reasons, such as the receipt's rules and the screen's design.
   - **A fake in a slot keeps the contract the container relies on,** such as calling the handler it's given.
@@ -72,7 +75,9 @@ How each of the [code design principles](code-design-principles.md) applies to a
   - **Write a component's states as a discriminated union prop,** not booleans and optional props that could contradict each other.
   - **Don't make a caller choose what a component does with a literal `true` or `false`.** Take a variant named by a union member, or write two components. A boolean passed through from data is fine.
   - **Parse what the user types where it enters,** in the form's handler, and pass the parsed value to the store.
-  - **Type an optional prop `?: T | undefined`,** since `exactOptionalPropertyTypes` is on, so a caller can pass a value that may be missing.
+  - **Type every optional property `?: T | undefined`,** a prop or an option object's, since `exactOptionalPropertyTypes` is on. A caller can then pass on a value that may be missing.
+  - **Keep `?: T` only where code checks whether the property is there,** such as with `in`, or by spreading it over defaults. Say why in a comment.
+  - **Don't add `| undefined` to an optional parameter.** The setting doesn't apply to parameters.
 
 ## Changing this document
 

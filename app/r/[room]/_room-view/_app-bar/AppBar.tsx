@@ -5,11 +5,13 @@ import { mergeClasses } from '@/utils/mergeClasses';
 import { getConnectionStatusDisplay } from './connectionStatus';
 
 type AppBarProps = {
-  /** The receipt it names, and the room's connection. */
-  readonly snapshot: Pick<
-    RoomSnapshot,
-    'title' | 'purchasedAt' | 'mealType' | 'connection' | 'peers'
-  >;
+  /** The receipt it names, when it was bought and which meal it was. */
+  readonly title: string;
+  readonly purchasedAt: string;
+  readonly mealType: string;
+  /** How the room is connected, and who's online. */
+  readonly connection: RoomSnapshot['connection'];
+  readonly peers: RoomSnapshot['peers'];
   /** Who you are in the room, or `null` before you choose. */
   readonly you: Participant | null;
   readonly editing: boolean;
@@ -23,7 +25,11 @@ type AppBarProps = {
 
 /** The room's bar: the receipt it's for, who you are, the edit and share actions, and the connection. */
 export function AppBar({
-  snapshot,
+  title,
+  purchasedAt,
+  mealType,
+  connection,
+  peers,
   you,
   editing,
   onDetails,
@@ -32,7 +38,6 @@ export function AppBar({
   onShare,
   className,
 }: AppBarProps) {
-  const { title, purchasedAt, mealType, connection, peers } = snapshot;
   const purchase = parsePurchasedAt(purchasedAt);
   const when = purchase !== null ? formatPurchaseTime(purchase) : null;
   const initial = title.trim().charAt(0).toUpperCase();
@@ -49,7 +54,7 @@ export function AppBar({
         className,
       )}
     >
-      <div className="mx-auto max-w-6xl px-3 py-3">
+      <div className="page-column py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <button

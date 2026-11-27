@@ -1,14 +1,13 @@
-import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
-
 type SeedCardProps = {
-  /** The receipt whose people and items it counts. */
-  readonly snapshot: Pick<RoomSnapshot, 'participants' | 'items'>;
+  /** How many people and items the receipt has. */
+  readonly participantCount: number;
+  readonly itemCount: number;
   /** Opens the seed dialog. */
   readonly onOpen: () => void;
 };
 
 /** The card that opens the seed dialog, and counts the receipt's people and items. */
-export function SeedCard({ snapshot, onOpen }: SeedCardProps) {
+export function SeedCard({ participantCount, itemCount, onOpen }: SeedCardProps) {
   return (
     <section className="card p-4">
       <div className="flex items-center justify-between">
@@ -21,7 +20,7 @@ export function SeedCard({ snapshot, onOpen }: SeedCardProps) {
         Data persists on this device and syncs with room peers.
       </p>
       <p className="mt-2 text-xs text-slate-500">
-        {snapshot.participants.length} people · {snapshot.items.length} items
+        {participantCount} people · {itemCount} items
       </p>
     </section>
   );

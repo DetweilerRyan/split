@@ -21,6 +21,11 @@ body {
 }
 
 @layer components {
+  /* The page's content column: the room's main area, and the app bar's content, which lines up with it. */
+  .page-column {
+    @apply mx-auto max-w-6xl px-4;
+  }
+
   .card {
     @apply rounded-3xl border border-slate-200 bg-white shadow-sm;
   }
