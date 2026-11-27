@@ -43,6 +43,7 @@ describe('useIdentity', () => {
     await hook.act(() => hook.current().openPicker());
     await hook.act(() => hook.current().choose(participantIdSchema.parse('p-sam')));
     expect(hook.current().activeId).toBe('p-sam');
+    expect(hook.current().you?.name).toBe('Sam');
     expect(hook.current().pickerOpen).toBe(false);
   });
 

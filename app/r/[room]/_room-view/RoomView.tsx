@@ -1,13 +1,15 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { EditReceiptDrawer } from './EditReceiptDrawer';
-import { Header } from './_header/Header';
+import { AppBar } from './_app-bar/AppBar';
 import { IdentityModal } from './IdentityModal';
 import { ItemList } from './_item-list/ItemList';
 import { ParticipantCards } from './ParticipantCards';
+import { ReceiptEditor } from './ReceiptEditor';
 import { ReceiptSummary } from './ReceiptSummary';
 import { RestaurantModal } from './RestaurantModal';
+import { type ItemsSlots, type ItemsStore, RoomItems } from './RoomItems';
 import { type RoomServices, type RoomSlots, RoomViewRoot } from './RoomViewRoot';
+import { SeedCard } from './SeedCard';
 import { SeedModal } from './SeedModal';
 import { ShareModal } from './ShareModal';
 import { Toast } from './Toast';
@@ -17,20 +19,30 @@ import { TOAST_MS } from './useToast';
 import type { RoomId } from '@/domain/room/roomId';
 import { getExchangeRate } from '@/services/exchangeRates';
 
+/** The real components the room's items render. They need nothing of the room, so they're fixed. */
+const itemsSlots: ItemsSlots = {
+  claimProgress: (props) => <UnclaimedBanner {...props} />,
+  itemList: (props) => <ItemList {...props} />,
+};
+
 /**
  * Renders the real components into `RoomViewRoot`'s slots. TypeScript checks here that each
- * component accepts what its slot passes; contract tests check it uses them. A component's props
- * that the room doesn't compute, such as the restaurant dialog's `roomId`, are added here, so
- * `RoomViewRoot` never sees them.
+ * component accepts what its slot passes; contract tests check it uses them. What a component
+ * needs that the room doesn't compute is added here, so `RoomViewRoot` never sees it: the
+ * restaurant dialog's `roomId`, the store the items and the editor read and change, and the
+ * editor's exchange-rate service.
  */
-function roomSlots(roomId: RoomId): RoomSlots {
+function roomSlots(
+  roomId: RoomId,
+  store: ItemsStore & Parameters<typeof ReceiptEditor>[0]['store'],
+): RoomSlots {
   return {
-    header: (props) => <Header {...props} />,
-    unclaimedBanner: (props) => <UnclaimedBanner {...props} />,
-    editReceiptDrawer: (props) => <EditReceiptDrawer {...props} />,
-    itemList: (props) => <ItemList {...props} />,
-    receiptSummary: (props) => <ReceiptSummary {...props} />,
-    participantCards: (props) => <ParticipantCards {...props} />,
+    appBar: (props) => <AppBar {...props} />,
+    items: (props) => <RoomItems {...props} store={store} slots={itemsSlots} />,
+    editor: (props) => <ReceiptEditor {...props} store={store} fetchRate={getExchangeRate} />,
+    summary: (props) => <ReceiptSummary {...props} />,
+    people: (props) => <ParticipantCards {...props} />,
+    seedCard: (props) => <SeedCard {...props} />,
     identityModal: (props) => <IdentityModal {...props} />,
     restaurantModal: (props) => <RestaurantModal {...props} roomId={roomId} />,
     shareModal: (props) => <ShareModal {...props} />,
@@ -40,7 +52,7 @@ function roomSlots(roomId: RoomId): RoomSlots {
 }
 
 function browserServices(): RoomServices {
-  return { clipboard: navigator.clipboard, fetchRate: getExchangeRate, toastMs: TOAST_MS };
+  return { clipboard: navigator.clipboard, toastMs: TOAST_MS };
 }
 
 /**
@@ -56,7 +68,7 @@ export default function RoomView({ roomId }: { readonly roomId: RoomId }) {
       roomId={roomId}
       provider={provider}
       navigate={(path) => router.push(path)}
-      slots={roomSlots(roomId)}
+      slots={roomSlots(roomId, provider.store)}
       services={services}
     />
   );
