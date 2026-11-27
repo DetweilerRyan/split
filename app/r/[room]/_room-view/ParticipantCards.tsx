@@ -2,22 +2,20 @@ import { useId } from 'react';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { formatMoney } from '@/domain/money/currency';
 import { computeReceiptMath } from '@/domain/receipt/math';
-import { mergeClasses } from '@/utils/mergeClasses';
 
 type ParticipantCardsProps = {
   readonly snapshot: RoomSnapshot;
-  /** Where the caller places it; merged with its own classes. */
-  readonly className?: string | undefined;
 };
 
-export function ParticipantCards({ snapshot, className }: ParticipantCardsProps) {
+export function ParticipantCards({ snapshot }: ParticipantCardsProps) {
   const math = computeReceiptMath(snapshot);
   const headingId = useId();
   return (
-    <section className={mergeClasses('card p-4', className)} aria-labelledby={headingId}>
+    <section className="card p-4" aria-labelledby={headingId}>
       <h2 id={headingId} className="mb-3 font-extrabold text-slate-900">
         Per-person totals
       </h2>
+      {snapshot.participants.length === 0 && <p className="sr-only">No participants yet.</p>}
       <div className="space-y-3">
         {snapshot.participants.map((participant) => {
           const totals = math.perPerson[participant.id];

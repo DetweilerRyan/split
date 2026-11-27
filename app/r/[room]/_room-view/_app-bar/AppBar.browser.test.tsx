@@ -95,4 +95,9 @@ describe('AppBar', () => {
       .element(banner.getByRole('status'))
       .toHaveAccessibleName('Liveblocks reconnecting, 1 connections online');
   });
+
+  it('sits where its caller places it, keeping its own look', async () => {
+    const { banner } = await renderBar({ className: 'sticky top-0' });
+    await expect.element(banner).toHaveClass('sticky', 'top-0', 'border-b', 'bg-white/95');
+  });
 });

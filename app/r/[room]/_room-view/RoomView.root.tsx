@@ -51,8 +51,12 @@ function roomSlots(
   };
 }
 
-function browserServices(): RoomServices {
-  return { clipboard: navigator.clipboard, toastMs: TOAST_MS };
+function browserServices(navigate: (path: string) => void): RoomServices {
+  return {
+    clipboard: navigator.clipboard,
+    navigate,
+    toastMs: TOAST_MS,
+  };
 }
 
 /**
@@ -62,12 +66,11 @@ function browserServices(): RoomServices {
 export default function RoomViewRoot({ roomId }: { readonly roomId: RoomId }) {
   const router = useRouter();
   const provider = useRoomProvider(roomId);
-  const [services] = useState(browserServices);
+  const [services] = useState(() => browserServices((path) => router.push(path)));
   return (
     <RoomView
       roomId={roomId}
       provider={provider}
-      navigate={(path) => router.push(path)}
       slots={roomSlots(roomId, provider.store)}
       services={services}
     />

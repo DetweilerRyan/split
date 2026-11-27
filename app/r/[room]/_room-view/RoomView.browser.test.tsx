@@ -24,7 +24,7 @@ const plitvice = PRESETS.plitvice;
 
 function FakeAppBar(props: PropsOf<'appBar'>) {
   return (
-    <header>
+    <header className={props.className}>
       <h1>{props.snapshot.title}</h1>
       <p>You are {props.you?.id ?? 'nobody'}</p>
       <p>{props.editing ? 'Editing' : 'Not editing'}</p>
@@ -40,9 +40,10 @@ function FakeItems(props: PropsOf<'items'>) {
   return (
     <section aria-label="Items">
       <p>
-        Items for {props.you?.id ?? 'nobody'}, {props.editing ? 'editing' : 'not editing'}
+        Items for {props.you?.id ?? 'nobody'},{' '}
+        {props.mode.kind === 'editing' ? 'editing' : 'not editing'}
       </p>
-      {props.editor}
+      {props.mode.kind === 'editing' && props.mode.editor}
     </section>
   );
 }
@@ -83,6 +84,7 @@ function FakeIdentityModal(props: PropsOf<'identityModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Identity">
+      <FakeToast />
       <p>Picking among {props.participants.length} people</p>
       <button onClick={() => props.onSelect(participantIdSchema.parse('p-sam'))}>Pick Sam</button>
       <button onClick={() => props.onAdd('Jamie')}>Join as Jamie</button>
@@ -96,6 +98,7 @@ function FakeRestaurantModal(props: PropsOf<'restaurantModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Details">
+      <FakeToast />
       <p>Details of {props.snapshot.title}</p>
       <button onClick={props.onClose}>Close details</button>
     </dialog>
@@ -106,6 +109,7 @@ function FakeShareModal(props: PropsOf<'shareModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Share">
+      <FakeToast />
       <p>Link {props.url}</p>
       <button onClick={props.onCopy}>Copy link</button>
       <button onClick={props.onClose}>Close share</button>
@@ -117,6 +121,7 @@ function FakeSeedModal(props: PropsOf<'seedModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Seed">
+      <FakeToast />
       <button onClick={() => props.onImport(plitvice, true)}>Import Plitvice</button>
       <button onClick={() => props.onPreset(plitvice)}>Load Plitvice</button>
       <button onClick={props.onBlankRoom}>Blank room</button>
@@ -154,15 +159,9 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
   const navigate = vi.fn<(path: string) => void>();
   const clipboard = { writeText: vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()) };
   // Long enough that no toast clears during a test.
-  const services = { clipboard, toastMs: 60_000 };
+  const services = { clipboard, navigate, toastMs: 60_000 };
   const screen = await render(
-    <RoomView
-      roomId={roomId}
-      provider={provider}
-      navigate={navigate}
-      slots={fakeSlots}
-      services={services}
-    />,
+    <RoomView roomId={roomId} provider={provider} slots={fakeSlots} services={services} />,
   );
   function button(name: string) {
     return userEvent.click(screen.getByRole('button', { name, exact: true }));
@@ -187,17 +186,21 @@ describe('RoomView', () => {
     await expect.element(screen.getByText('Seed for 2 people, 1 items')).toBeVisible();
   });
 
-  it('tells screen readers there are no participants while there are none', async () => {
+  it('gives the app bar and the items nobody while there are no participants', async () => {
     const { screen } = await renderRoom([]);
-    await expect.element(screen.getByText('No participants yet.')).toBeInTheDocument();
     await expect.element(screen.getByText('You are nobody')).toBeVisible();
+    await expect.element(screen.getByText('Items for nobody, not editing')).toBeVisible();
   });
 
-  it('gives the app bar and the items who you are, and says nothing of participants once there are some', async () => {
+  it('gives the app bar and the items who you are', async () => {
     const { screen } = await renderRoom();
     await expect.element(screen.getByText('You are p-alex')).toBeVisible();
     await expect.element(screen.getByText('Items for p-alex, not editing')).toBeVisible();
-    await expect.element(screen.getByText('No participants yet.')).not.toBeInTheDocument();
+  });
+
+  it('sticks the app bar to the top of the page', async () => {
+    const { screen } = await renderRoom();
+    await expect.element(screen.getByRole('banner')).toHaveClass('sticky', 'top-0');
   });
 
   it('opens the identity picker from the app bar, and gives the app bar and the items who you pick', async () => {
@@ -299,12 +302,13 @@ describe('RoomView', () => {
     await expect.element(dialog('Seed')).not.toBeInTheDocument();
   });
 
-  it('hides its toast while a dialog is open', async () => {
-    const { screen, button } = await renderRoom();
+  it('leaves its toast to an open dialog, which shows it', async () => {
+    const { screen, button, dialog } = await renderRoom();
     await button('Copy summary');
     await expect.element(screen.getByRole('status')).toBeVisible();
     await button('Share');
-    await expect.element(screen.getByRole('status')).not.toBeInTheDocument();
+    await expect.element(dialog('Share').getByRole('status')).toBeVisible();
+    expect(screen.getByRole('status').all()).toHaveLength(1);
     await button('Close share');
     await expect.element(screen.getByRole('status')).toBeVisible();
   });

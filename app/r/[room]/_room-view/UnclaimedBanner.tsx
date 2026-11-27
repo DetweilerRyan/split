@@ -1,6 +1,5 @@
 import type { ReceiptItem } from '@/domain/receipt/roomSnapshot';
 import { formatMoney } from '@/domain/money/currency';
-import { mergeClasses } from '@/utils/mergeClasses';
 
 type UnclaimedBannerProps = {
   readonly items: readonly ReceiptItem[];
@@ -8,8 +7,6 @@ type UnclaimedBannerProps = {
   readonly currency: string;
   readonly filter: 'all' | 'unclaimed' | 'mine';
   readonly onFilter: (filter: 'all' | 'unclaimed' | 'mine') => void;
-  /** Where the caller places it; merged with its own classes. */
-  readonly className?: string | undefined;
 };
 
 export function UnclaimedBanner({
@@ -18,7 +15,6 @@ export function UnclaimedBanner({
   currency,
   filter,
   onFilter,
-  className,
 }: UnclaimedBannerProps) {
   const claimed = items.reduce((sum, item) => {
     return sum + (Object.values(item.claims).some(Boolean) ? item.eur : 0);
@@ -30,9 +26,7 @@ export function UnclaimedBanner({
   }
 
   return (
-    <section
-      className={mergeClasses('flex flex-wrap items-center justify-between gap-3', className)}
-    >
+    <section className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-56 flex-1 items-center gap-3">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
           <div className="h-full bg-emerald-500 transition-all" style={{ width: `${percent}%` }} />

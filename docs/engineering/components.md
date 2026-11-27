@@ -15,14 +15,14 @@ Who decides where a component sits, and who decides how it looks. A component th
 - **The component owns what's inside its border:** its look, its padding, and its root's whole `display` value. A root's `flex` or `grid` arranges the component's own children.
 - **Hide a component with `hidden`,** or a responsive form such as `max-md:hidden`. Never pass a component another `display` value: it replaces the component's own and breaks how it lays out its children.
 - **Give a component a variant** when it must sit differently, such as inline. The caller then chooses the variant, not a `display` class.
-- **Take the caller's classes as an optional `className`,** and merge them into the root last, with `mergeClasses` from `src/utils/`:
+- **When a caller places a component, take its classes as an optional `className`,** and merge them into the root last, with `mergeClasses` from `src/utils/`:
 
   ```tsx
   <section className={mergeClasses('card p-4', className)}>
   ```
 
 - **Let an overlay place itself.** A dialog or a toast is fixed to the viewport, so it takes no `className` for placement.
-- **A container places the slots it renders.** It places each with its own wrapper's spacing, or with a `className` it passes. [Containers](#containers) says how a container's slots work.
+- **A container places the slots it renders.** It places each with its own wrapper's spacing, or with a `className` it passes where a wrapper can't, such as making a slot sticky. [Containers](#containers) says how a container's slots work.
 
 ## Containers
 

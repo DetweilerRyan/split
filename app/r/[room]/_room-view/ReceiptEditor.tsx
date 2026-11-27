@@ -12,12 +12,10 @@ type ReceiptEditorProps = {
   readonly fetchRate: FetchRate;
   /** Tells the person something, such as that a rate is unavailable offline. */
   readonly notify: (message: string) => void;
-  /** Where the caller places it; merged with the drawer's own classes. */
-  readonly className?: string | undefined;
 };
 
 /** Editing the receipt: its details, currencies, exchange rate and new items. */
-export function ReceiptEditor({ store, fetchRate, notify, className }: ReceiptEditorProps) {
+export function ReceiptEditor({ store, fetchRate, notify }: ReceiptEditorProps) {
   const snapshot = useReceiptStore(store);
   const rates = useExchangeRate(store, snapshot, fetchRate, notify);
   return (
@@ -28,7 +26,6 @@ export function ReceiptEditor({ store, fetchRate, notify, className }: ReceiptEd
       onDisplayCurrency={(code, force) => void rates.changeDisplayCurrency(code, force)}
       onRate={rates.setRate}
       onAddItem={(name, en, eur) => store.addItem(name, en, eur)}
-      className={className}
     />
   );
 }
