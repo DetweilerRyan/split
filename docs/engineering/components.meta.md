@@ -42,6 +42,12 @@ The reasons for [Components](components.md)' rules.
 - **Why slots and not hooks:** React's docs sanction components passed as props and children, like slots in other libraries ([Composition vs Inheritance](testing/testing-conventions.meta.md#react-composition)), and forbid passing hooks as values, naming dependency injection through a hook prop as the thing not to do ([React calls Components and Hooks](testing/testing-conventions.meta.md#react-rules-hooks)). So a container's slots are collaborators, and its hooks aren't.
 - **The least powerful seam:** _least power_ ranks plain data before an interface passed in. React elements are plain objects that can be passed as props, which React likens to slots ([Composition vs Inheritance](testing/testing-conventions.meta.md#react-composition)), so an element slot is a seam the code only places, never calls, with no interface beyond `ReactNode`; a component slot is an interface passed in.
 
+## Code design principles
+
+- **Asked for by the owner on #169** ([recorded](https://github.com/DetweilerRyan/split/pull/169#issuecomment-7224950578)): "make sure the new components doc mentions specifics of how each code design principle is applied".
+- **Each bullet applies a principle, and links to it rather than restating it,** so the principle stays the one source of its reason.
+- **The applications are React's usual ones:** deriving state during render, and not mirroring props into state, are what React's docs advise in [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect) and [Choosing the State Structure](https://react.dev/learn/choosing-the-state-structure).
+
 ## What would reopen this
 
 - **Tailwind gains outer-only display utilities,** or a caller keeps needing to change a component's outer type.
