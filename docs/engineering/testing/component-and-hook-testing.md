@@ -18,17 +18,9 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   expect(screen.container.querySelector('.text-slate-500')).not.toBeNull();
   ```
 
-- **A container component's slots are its collaborators,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) describes. That section says how to invert and test them. [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says when a component is worth making one.
-  - **What a container is:** a component whose job is to call hooks and render what a caller passes in. The caller passes render functions through a `slots` prop, as MUI names such a prop, and the container calls each with props it computes. Where it renders what the caller already rendered, it takes an element slot instead, as [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
-  - **Each slot's type** is a render function of only the props the container passes, such as `(props: { readonly title: string; readonly onShare: () => void }) => ReactNode`.
-  - **A render function only returns elements of components defined outside it, and calls no hooks.** The container may call it conditionally, and the React Compiler may skip a call, so a hook inside it breaks React's rules of hooks. A component created inside it would remount on every render, losing its state.
-  - **The container lays out its slots,** and each slot's component merges the `className` it's given, as [Component layout](../component-layout.md) says.
-  - **The composition root renders the real components** in the render functions it passes. It adds there any props the container doesn't compute, so the container's slot types needn't list them.
-  - **A nested container** has the composition root bind it to its dependencies, in the render function for its slot.
-  - **Name a container `<Name>.tsx`, and its composition root `<Name>.root.tsx`,** exporting `<Name>Root`. The root is the container's only caller, and only the end-to-end tests run it. A nested container has no root of its own: its parent's root binds it.
-  - **A React context a slot's real component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it. The container may import that context to provide it, from the component's module or a module of its own: the context doesn't fill the slot.
-  - **A browser global a hook defaults,** such as `location`, isn't one of the container's services.
-  - **Its collaboration test** passes render functions of fakes, and checks which props each slot is called with and which handler its callback reaches.
+- **A container component's slots are its collaborators,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) describes. [Containers](../components.md#containers) in components says how a container is written.
+  - **Its collaboration test** passes render functions of fakes. It checks which props each slot is called with, and which handler its callback reaches.
+  - **A React context a slot's real component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it.
   - **`RoomView` is one,** with `RoomViewRoot` as its composition root. `RoomView` declares `RoomSlots`, and `RoomViewRoot` renders the real components in them, adding what `RoomView` doesn't compute. `RoomItems` is a container nested in one of its slots.
 - **A container's hooks are collaborators it can't take as parameters.** React's rules forbid passing a hook around as a value. So a container calls its real hooks, and they run for real in its collaboration test. That test sees a hook's work only through:
   - the props a slot is called with;
@@ -36,7 +28,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
 
   So each custom hook the container calls from its folder gets a test of its own, with `renderHook`.
 
-- **A container's store and services are dependencies it inverts too,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) says. That holds whether it calls them or hands them to its hooks. The interface it declares for each must fit its hooks' own narrower ones.
+- **A container's store and services run for real in its test where they can,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) says. [Containers](../components.md#containers) says how a container takes them.
   - **`RoomView` declares `RoomConnection` and `RoomServices` for them.** Its test builds a real `ReceiptStore` over an in-memory Yjs document, and its provider fakes only presence, which can't run offline.
 
 ## Rules of its own

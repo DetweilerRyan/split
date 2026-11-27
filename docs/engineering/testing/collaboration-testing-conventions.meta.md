@@ -49,3 +49,7 @@ The reasons for [Collaboration testing conventions](collaboration-testing-conven
   - **Narrow interfaces, and splitting the code when the fakes grow too many,** are interface segregation's and _deep modules_', and Freeman and Pryce's "Too Many Mocks" ([Mock Roles, not Objects](testing-conventions.meta.md#mock-roles)).
 - **The parameters are earned as a set,** moved here from "Collaboration and contract tests", where it was the session's call after round 19.
 - **Reopen when:** a collaboration test turns up where a test through the real collaborators would have been shorter, or the section keeps code from being inverted that the owner wanted inverted.
+
+## Kept general
+
+- **These conventions name no framework,** as the owner asked on #169 ([recorded](https://github.com/DetweilerRyan/split/pull/169#issuecomment-7224537910)). React's specifics, such as element and render-function slots, hooks, and binding a nested container in JSX, are in [Components](../components.md#containers), which points here.
