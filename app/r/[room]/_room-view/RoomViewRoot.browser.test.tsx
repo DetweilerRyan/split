@@ -10,11 +10,11 @@ import { participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { roomIdSchema } from '@/domain/room/roomId';
 import { parseRoomPath } from '@/sync/seedCodec';
 import { ReceiptStore } from '@/sync/useReceiptStore';
-import { type RoomSlots, RoomView } from './RoomView';
+import { type RoomSlots, RoomViewRoot } from './RoomViewRoot';
 import { type ExchangeRate, type RateSources, getExchangeRate } from '@/services/exchangeRates';
 
-// Each fake shows what RoomView gives it, and offers a button for each callback it's handed, so
-// these tests check only how RoomView wires its slots and hooks together. Each slot's component
+// Each fake shows what RoomViewRoot gives it, and offers a button for each callback it's handed, so
+// these tests check only how RoomViewRoot wires its slots and hooks together. Each slot's component
 // and each hook has tests of its own, so what a hook does with a call is checked here only far
 // enough to tell which handler the call reached.
 type PropsOf<Slot extends keyof RoomSlots> = Readonly<ComponentProps<RoomSlots[Slot]>>;
@@ -220,7 +220,7 @@ async function renderRoom(
   // Long enough that no toast clears during a test.
   const services = { clipboard, fetchRate, toastMs: 60_000 };
   const screen = await render(
-    <RoomView
+    <RoomViewRoot
       roomId={roomId}
       provider={provider}
       navigate={navigate}
@@ -242,7 +242,7 @@ beforeEach(() => {
   window.sessionStorage.clear();
 });
 
-describe('RoomView', () => {
+describe('RoomViewRoot', () => {
   it("gives each part the room's receipt and its totals", async () => {
     const { screen } = await renderRoom();
     await expect.element(screen.getByRole('heading', { name: 'Trattoria Da Enzo' })).toBeVisible();

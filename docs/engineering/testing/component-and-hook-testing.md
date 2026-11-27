@@ -25,7 +25,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   - **A React context a slot's component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it. The container may import that context to provide it, from the component's module or a module of its own: the context doesn't implement the slot.
   - **A browser global a hook defaults,** such as `location`, isn't one of the container's services.
   - **Its collaboration test** checks which props each slot's component gets and which handler its callback reaches.
-  - **`RoomView` is one,** with `LoadedRoomView` as its composition root. `RoomView` declares `RoomSlots`, and `LoadedRoomView` passes the real components in.
+  - **`RoomViewRoot` is one,** with `RoomView` as its composition root. `RoomViewRoot` declares `RoomSlots`, and `RoomView` passes the real components in.
 - **A container's hooks are collaborators it can't take as parameters.** React's rules forbid passing a hook around as a value. So a container calls its real hooks, and they run for real in its collaboration test. That test sees a hook's work only through:
   - the props a fake slot's component gets;
   - the calls a fake service, or the fakes under a real one, receive.
@@ -33,7 +33,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   So each custom hook the container calls from its folder gets a test of its own, with `renderHook`.
 
 - **A container's store and services are dependencies it inverts too,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) says. That holds whether it calls them or hands them to its hooks. The interface it declares for each must fit its hooks' own narrower ones.
-  - **`RoomView` declares `RoomConnection` and `RoomServices` for them.** Its test builds a real `ReceiptStore` over an in-memory Yjs document, and its provider fakes only presence, which can't run offline. The exchange-rate service runs for real, over a fake network and cache.
+  - **`RoomViewRoot` declares `RoomConnection` and `RoomServices` for them.** Its test builds a real `ReceiptStore` over an in-memory Yjs document, and its provider fakes only presence, which can't run offline. The exchange-rate service runs for real, over a fake network and cache.
 
 ## Rules of its own
 

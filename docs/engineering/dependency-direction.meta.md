@@ -37,7 +37,7 @@ Why [dependency direction](dependency-direction.md) works the way it does, where
   - **Server packages are kept out too:** `@vercel/functions`, `mcp-handler`, `@modelcontextprotocol/*` and `dialog-closedby-polyfill` serve the MCP route or patch the browser, so they aren't plain libraries. Added in the review of #94's third pull request.
 - **`src/services/`:** nothing UI or sync, as the owner's choice of `src/services/` was described ([code layout's sidecar](code-layout.meta.md#srcservices-for-code-at-the-edge)).
   - **Packages:** React, Next, `lucide-react`, Yjs, the `y-*` providers and Liveblocks are kept out of `src/services/`. Browser storage stays allowed, since `exchangeRates.ts` caches rates in IndexedDB.
-  - **`next/server` is kept out with the rest of `next`.** A service is called from the browser, as `LoadedRoomView` passes `exchangeRates.ts`'s `getExchangeRate` to `RoomView`, and `next/server` is the framework's server runtime, so it would tie a service to Next and to the server. The rule's single `next` entry bans it without a list of Next's subpaths.
+  - **`next/server` is kept out with the rest of `next`.** A service is called from the browser, as `RoomView` passes `exchangeRates.ts`'s `getExchangeRate` to `RoomViewRoot`, and `next/server` is the framework's server runtime, so it would tie a service to Next and to the server. The rule's single `next` entry bans it without a list of Next's subpaths.
 
 ### rev-dep checks the rules
 
