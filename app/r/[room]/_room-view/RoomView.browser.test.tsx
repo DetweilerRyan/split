@@ -3,17 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import * as Y from 'yjs';
-import '../../../index.css';
 import { ToastContext } from './Toast';
 import { PRESETS } from '@/data/presets';
 import { participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { roomIdSchema } from '@/domain/room/roomId';
 import { parseRoomPath } from '@/sync/seedCodec';
 import { ReceiptStore } from '@/sync/useReceiptStore';
-import { type RoomSlots, RoomViewRoot } from './RoomViewRoot';
+import { type RoomSlots, RoomView } from './RoomView';
 
-// Each fake shows what RoomViewRoot gives it, and offers a button for each callback it's handed, so
-// these tests check only how RoomViewRoot wires its slots and hooks together. Each slot's component
+// Each fake shows what RoomView gives it, and offers a button for each callback it's handed, so
+// these tests check only how RoomView wires its slots and hooks together. Each slot's component
 // and each hook has tests of its own, so what a hook does with a call is checked here only far
 // enough to tell which handler the call reached.
 type PropsOf<Slot extends keyof RoomSlots> = Readonly<Parameters<RoomSlots[Slot]>[0]>;
@@ -155,7 +154,7 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
   // Long enough that no toast clears during a test.
   const services = { clipboard, toastMs: 60_000 };
   const screen = await render(
-    <RoomViewRoot
+    <RoomView
       roomId={roomId}
       provider={provider}
       navigate={navigate}
@@ -177,7 +176,7 @@ beforeEach(() => {
   window.sessionStorage.clear();
 });
 
-describe('RoomViewRoot', () => {
+describe('RoomView', () => {
   it("gives each slot the room's receipt", async () => {
     const { screen } = await renderRoom();
     await expect.element(screen.getByRole('heading', { name: 'Trattoria Da Enzo' })).toBeVisible();

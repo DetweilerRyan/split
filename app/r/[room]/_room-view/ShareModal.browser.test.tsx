@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import '../../../index.css';
 import { ShareModal } from './ShareModal';
 
 const url = 'https://split.example/r/split-r1';

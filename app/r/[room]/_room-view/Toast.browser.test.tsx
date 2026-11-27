@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
-import '../../../index.css';
 import { Toast, ToastContext } from './Toast';
 
 describe('Toast', () => {

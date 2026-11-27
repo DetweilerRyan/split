@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import '../../../../index.css';
 import { type ReceiptItem, itemIdSchema, participantIdSchema } from '@/domain/receipt/roomSnapshot';
 import { ItemList } from './ItemList';
 

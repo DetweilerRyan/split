@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import '../../app/index.css';
 import { receiptSeedSchema } from '../domain/receipt/receiptSeed';
 import { isUuidRoomId, type RoomId } from '../domain/room/roomId';
 import { buildIngestUrl, decodeRoomSegment, encodeSeed, pendingSeedKey } from '../sync/seedCodec';

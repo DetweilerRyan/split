@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import * as Y from 'yjs';
-import '../../../index.css';
 import { ReceiptEditor } from './ReceiptEditor';
 import { type ExchangeRate, type RateSources, getExchangeRate } from '@/services/exchangeRates';
 import { ReceiptStore } from '@/sync/useReceiptStore';
