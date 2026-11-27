@@ -47,7 +47,7 @@ function roomSlots(
     restaurantModal: (props) => <RestaurantModal {...props} roomId={roomId} />,
     shareModal: (props) => <ShareModal {...props} />,
     seedModal: (props) => <SeedModal {...props} />,
-    toast: () => <Toast />,
+    toast: <Toast />,
   };
 }
 

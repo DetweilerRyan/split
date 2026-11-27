@@ -80,8 +80,8 @@ export type RoomSlots = {
     readonly onPreset: (seed: ReceiptSeed) => void;
     readonly onBlankRoom: () => void;
   }) => ReactNode;
-  /** Shows the message in `ToastContext`, which the room provides. */
-  readonly toast: () => ReactNode;
+  /** Shows the message in `ToastContext`, which the room provides, while no dialog is open. */
+  readonly toast: ReactNode;
 };
 
 /** The receipt store the room reads, and what its hooks need of it, in its own terms. */
@@ -191,7 +191,7 @@ export function RoomView({ roomId, provider, navigate, slots, services }: RoomVi
           onPreset: seed.loadPreset,
           onBlankRoom: seed.newBlankRoom,
         })}
-        {!dialogOpen && slots.toast()}
+        {!dialogOpen && slots.toast}
       </ToastContext>
       {Object.keys(math.perPerson).length === 0 && (
         <div className="sr-only">No participants yet.</div>

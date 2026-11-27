@@ -15,7 +15,9 @@ import { type RoomSlots, RoomView } from './RoomView';
 // these tests check only how RoomView wires its slots and hooks together. Each slot's component
 // and each hook has tests of its own, so what a hook does with a call is checked here only far
 // enough to tell which handler the call reached.
-type PropsOf<Slot extends keyof RoomSlots> = Readonly<Parameters<RoomSlots[Slot]>[0]>;
+type PropsOf<Slot extends keyof RoomSlots> = RoomSlots[Slot] extends (props: infer Props) => unknown
+  ? Readonly<Props>
+  : never;
 
 const roomId = roomIdSchema.parse('split-r1');
 const plitvice = PRESETS.plitvice;
@@ -139,7 +141,7 @@ const fakeSlots: RoomSlots = {
   restaurantModal: (props) => <FakeRestaurantModal {...props} />,
   shareModal: (props) => <FakeShareModal {...props} />,
   seedModal: (props) => <FakeSeedModal {...props} />,
-  toast: () => <FakeToast />,
+  toast: <FakeToast />,
 };
 
 async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {

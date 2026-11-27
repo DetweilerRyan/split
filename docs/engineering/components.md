@@ -28,16 +28,16 @@ Who decides where a component sits, and who decides how it looks. A component th
 
 A container is a component whose job is to call hooks and render components a caller passes in. It's code whose job is wiring, so [Collaboration testing conventions](testing/collaboration-testing-conventions.md) say when it earns a collaboration test and how to invert its dependencies. These rules are those conventions for React.
 
-- **Take the components through a `slots` prop,** as MUI names such a prop, once the container earns a collaboration test. Before then, render the real components directly.
-- **Prefer an element slot,** `children` or another prop typed `ReactNode`, which takes what the caller already rendered. It's the least powerful seam, as the conventions' [least power rule](testing/collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) asks.
-- **Use a render-function slot** only when the container renders the component with props it computes. Type it as a function of only those props, such as `(props: { readonly title: string; readonly onShare: () => void }) => ReactNode`.
+- **Take what the caller passes in through a `slots` prop,** as MUI names such a prop.
+- **Make a slot an element,** typed `ReactNode`, when the container only places what the caller rendered, or decides only whether to show it. It's the least powerful seam, as the conventions' [least power rule](testing/collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) asks. `children` is an element slot too.
+- **Make a slot a render function** only when the container renders the component with props it computes. Type it as a function of only those props, such as `(props: { readonly title: string; readonly onShare: () => void }) => ReactNode`.
 - **A render function only returns elements of components defined outside it, and calls no hooks.** The container may call it conditionally, and the React Compiler may skip a call, so a hook inside it breaks React's rules of hooks. A component created inside it would remount on every render, losing its state.
-- **Call hooks directly, and let them run for real.** React's rules forbid passing a hook around as a value, so a hook is something the code can't take as a parameter.
-- **Take the container's store and services as props,** typed by interfaces it declares, which its hooks' own narrower interfaces must fit. That holds whether it calls them or hands them to its hooks.
-- **Name a container `<Name>.tsx`, and its composition root `<Name>.root.tsx`,** exporting `<Name>Root`. The root is the container's only caller, and only the end-to-end tests run it.
+- **Call hooks directly, and let them run for real.** React's rules forbid passing a hook around as a value, so a hook is something the code can't take as a parameter. That's why each custom hook a container calls gets a test of its own, as [Component and hook testing](testing/component-and-hook-testing.md) says.
+- **Take the container's store and services as props,** typed by interfaces it declares, each of which must fit its hooks' own narrower ones. That holds whether it calls them or hands them to its hooks.
+- **Name a container `<Name>.tsx`, and its composition root `<Name>.root.tsx`,** exporting `<Name>Root`. The root is the container's only caller. It gets no browser test of its own: only the end-to-end tests run it.
 - **Render the real components in the composition root's render functions.** Add there any props the container doesn't compute, so the container's slot types needn't list them.
-- **Bind a nested container in its slot's render function,** by rendering it with its own slots and dependencies, such as `(props) => <Nested {...props} slots={nestedSlots} />`. A nested container has no root file: its parent's root binds it.
-- **A container may import a context that a slot's component reads,** to provide it. The context may live in the component's module or a module of its own. The context doesn't fill the slot.
+- **Bind a nested container in its slot's render function.** Render it with the props the outer container passes, plus its own slots and dependencies, such as `(props) => <Nested {...props} store={store} slots={nestedSlots} />`. A nested container has no root file: its parent's root binds it.
+- **A container may import a context that a slot's component reads,** to provide it. It may import it from the component's own module, since the context doesn't fill the slot.
 - **A browser global a hook defaults,** such as `location`, isn't one of the container's services.
 
 ## Changing this document
