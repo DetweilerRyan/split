@@ -43,6 +43,10 @@ The reasons for [Collaboration testing conventions](collaboration-testing-conven
   - **The least powerful seam:** _least power_ ranks plain data before an interface passed in, so a result the code only places or passes on comes before a function or object it calls. React's version of this, element slots before render functions, is in [components' sidecar](../components.meta.md#containers).
   - **Narrow interfaces, and splitting the code when the fakes grow too many,** are interface segregation's and _deep modules_', and Freeman and Pryce's "Too Many Mocks" ([Mock Roles, not Objects](testing-conventions.meta.md#mock-roles)).
 - **The parameters are earned as a set,** moved here from "Collaboration and contract tests", where it was the session's call after round 19.
+- **Simple means what a collaborator is like, not how many there are,** as the owner decided on #169 ([recorded](https://github.com/DetweilerRyan/split/pull/169#issuecomment-7225941414)), after research found no source that counts them. The rule had said "one or two simple ones".
+  - **Fowler** stays with real collaborators: "we made no attempt to go solitary unless communicating with the collaborators was awkward" ([Unit Test](https://martinfowler.com/bliki/UnitTest.html)).
+  - **Seemann** doubles only what's volatile, "Those that represent non-deterministic behavior or side effects", since the rest "are implementation details, likely to make your test code more brittle" ([Favor real dependencies for unit testing](https://stackoverflow.blog/2022/01/03/favor-real-dependencies-for-unit-testing/)).
+  - **The room's items** were a container with two slots, and went back to a component tested through them.
 - **Reopen when:** a collaboration test turns up where a test through the real collaborators would have been shorter, or the section keeps code from being inverted that the owner wanted inverted.
 
 ## Kept general

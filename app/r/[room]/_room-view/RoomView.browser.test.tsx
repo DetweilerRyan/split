@@ -25,7 +25,7 @@ const plitvice = PRESETS.plitvice;
 function FakeAppBar(props: PropsOf<'appBar'>) {
   return (
     <header className={props.className}>
-      <h1>{props.snapshot.title}</h1>
+      <h1>{props.title}</h1>
       <p>You are {props.you?.id ?? 'nobody'}</p>
       <p>{props.editing ? 'Editing' : 'Not editing'}</p>
       <button onClick={props.onIdentity}>Who am I</button>
@@ -73,7 +73,7 @@ function FakeSeedCard(props: PropsOf<'seedCard'>) {
   return (
     <section aria-label="Seed card">
       <p>
-        Seed for {props.snapshot.participants.length} people, {props.snapshot.items.length} items
+        Seed for {props.participantCount} people, {props.itemCount} items
       </p>
       <button onClick={props.onOpen}>Seed / presets</button>
     </section>
@@ -158,8 +158,7 @@ async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
   const provider = { store, setIdentity: vi.fn() };
   const navigate = vi.fn<(path: string) => void>();
   const clipboard = { writeText: vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()) };
-  // Long enough that no toast clears during a test.
-  const services = { clipboard, navigate, toastMs: 60_000 };
+  const services = { clipboard, navigate };
   const screen = await render(
     <RoomView roomId={roomId} provider={provider} slots={fakeSlots} services={services} />,
   );

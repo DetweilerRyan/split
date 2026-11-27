@@ -53,6 +53,20 @@ The reasons for [Components](components.md)' rules.
 - **Asked for by the owner on #169** ([recorded](https://github.com/DetweilerRyan/split/pull/169#issuecomment-7225318267)), after a review of the room's code against this document: "go with your recommendation".
 - **A `className` only when a caller places the component:** the rule first read as applying to every component, so every slot component of the room took one, and only the app bar was given one. Earned complexity asks for a prop a current caller needs.
 
+## Research into the review's open questions
+
+The owner asked for web research on seven questions the review left open, and chose on #169 ([recorded](https://github.com/DetweilerRyan/split/pull/169#issuecomment-7225941414)).
+
+- **One page column, used by the page and inside a full-width bar.** GOV.UK puts its `govuk-width-container` inside its full-width header and around `<main>` ([Layout](https://design-system.service.gov.uk/styles/layout/)). MUI's and Radix's `Container`, Braid's `PageBlock` and Bootstrap's navbar container do the same.
+  - **A class, not a component,** as _least power_ asks: it only sets classes, as `.card` does.
+  - **Not taken:** the page passing its column into the bar, which GOV.UK offers only as an override (`containerClasses`); and full-bleed grids or subgrid, which need the bar inside the page's grid.
+- **Separate props, not a `Pick`.** React's docs allow either for style ([Passing Props](https://react.dev/learn/passing-props-to-a-component)), but for rendering they advise "the minimum necessary information in its props. For example, it could accept individual values instead of a whole object" ([memo](https://react.dev/reference/react/memo)). Redux's style guide says the same of selectors.
+- **A constant for a value that's the same in every deploy.** The twelve-factor app says such config "does not vary between deploys, and so is best done in the code" ([Config](https://12factor.net/config)). Testing Library tests time with fake timers ([Using Fake Timers](https://testing-library.com/docs/using-fake-timers/)). Seemann's "Primitives are dependencies, too" ([Primitive Dependencies](https://blog.ploeh.dk/2012/07/02/PrimitiveDependencies/)) is why one that varies goes with the services.
+- **`| undefined` on every optional property, never on a parameter.** TypeScript's setting applies to properties only ([exactOptionalPropertyTypes](https://www.typescriptlang.org/tsconfig/exactOptionalPropertyTypes.html)). DefinitelyTyped's lint rule "Forbids optional parameters from including an explicit `undefined` in their type; requires it in optional properties" ([redundant-undefined](https://github.com/microsoft/DefinitelyTyped-tools/blob/main/packages/eslint-plugin/src/rules/redundant-undefined.ts)).
+  - **`?: T` where presence matters:** TkDodo says "The important part is to know the difference and be explicit about intent" ([Optional vs. undefined](https://tkdodo.eu/blog/optional-vs-undefined)).
+- **Dialogs, an `open` prop or conditional rendering,** went to [#177](https://github.com/DetweilerRyan/split/issues/177) rather than a rule here.
+- **Simple collaborators** are defined in [collaboration testing conventions' sidecar](testing/collaboration-testing-conventions.meta.md#when-a-collaboration-test-earns-its-cost).
+
 ## What would reopen this
 
 - **Tailwind gains outer-only display utilities,** or a caller keeps needing to change a component's outer type.

@@ -14,19 +14,10 @@ const enzo = {
   peers: [{ id: 'peer-1', name: 'Alex' }],
 } as const;
 
-async function renderBar(
-  props: Partial<Parameters<typeof AppBar>[0]> = {},
-  snapshot: Partial<Parameters<typeof AppBar>[0]['snapshot']> = {},
-) {
+async function renderBar(props: Partial<Parameters<typeof AppBar>[0]> = {}) {
   const handlers = { onDetails: vi.fn(), onIdentity: vi.fn(), onEdit: vi.fn(), onShare: vi.fn() };
   const screen = await render(
-    <AppBar
-      snapshot={{ ...enzo, ...snapshot }}
-      you={null}
-      editing={false}
-      {...handlers}
-      {...props}
-    />,
+    <AppBar {...enzo} you={null} editing={false} {...handlers} {...props} />,
   );
   return { screen, banner: screen.getByRole('banner'), ...handlers };
 }
@@ -45,18 +36,18 @@ describe('AppBar', () => {
   });
 
   it('shows only the day when the receipt has no time', async () => {
-    const { banner } = await renderBar({}, { purchasedAt: '2026-03-06' });
+    const { banner } = await renderBar({ purchasedAt: '2026-03-06' });
     await expect.element(banner.getByText('Fri, Mar 6, 2026', { exact: true })).toBeVisible();
   });
 
   it('says the date is missing, and shows no meal, when the receipt has neither', async () => {
-    const { banner } = await renderBar({}, { purchasedAt: '', mealType: '' });
+    const { banner } = await renderBar({ purchasedAt: '', mealType: '' });
     await expect.element(banner.getByText('Date not on receipt')).toBeVisible();
     await expect.element(banner.getByText('Dinner')).not.toBeInTheDocument();
   });
 
   it('shows a placeholder initial for an untitled receipt', async () => {
-    const { banner } = await renderBar({}, { title: '  ' });
+    const { banner } = await renderBar({ title: '  ' });
     await expect.element(banner.getByText('¤', { exact: true })).toBeVisible();
   });
 
@@ -87,10 +78,9 @@ describe('AppBar', () => {
   });
 
   it('says how the room is connected and how many people are online', async () => {
-    const { banner } = await renderBar(
-      {},
-      { connection: { provider: 'Liveblocks', status: 'reconnecting' } },
-    );
+    const { banner } = await renderBar({
+      connection: { provider: 'Liveblocks', status: 'reconnecting' },
+    });
     await expect
       .element(banner.getByRole('status'))
       .toHaveAccessibleName('Liveblocks reconnecting, 1 connections online');

@@ -2,28 +2,19 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AppBar } from './_app-bar/AppBar';
 import { IdentityModal } from './IdentityModal';
-import { ItemList } from './_item-list/ItemList';
 import { ParticipantCards } from './ParticipantCards';
 import { ReceiptEditor } from './ReceiptEditor';
 import { ReceiptSummary } from './ReceiptSummary';
 import { RestaurantModal } from './RestaurantModal';
-import { type ItemsSlots, type ItemsStore, RoomItems } from './RoomItems';
+import { type ItemsStore, RoomItems } from './RoomItems';
 import { type RoomServices, type RoomSlots, RoomView } from './RoomView';
 import { SeedCard } from './SeedCard';
 import { SeedModal } from './SeedModal';
 import { ShareModal } from './ShareModal';
 import { Toast } from './Toast';
-import { UnclaimedBanner } from './UnclaimedBanner';
 import { useRoomProvider } from './useRoomProvider';
-import { TOAST_MS } from './useToast';
 import type { RoomId } from '@/domain/room/roomId';
 import { getExchangeRate } from '@/services/exchangeRates';
-
-/** The real components the room's items render. They need nothing of the room, so they're fixed. */
-const itemsSlots: ItemsSlots = {
-  claimProgress: (props) => <UnclaimedBanner {...props} />,
-  itemList: (props) => <ItemList {...props} />,
-};
 
 /**
  * Renders the real components into `RoomView`'s slots. TypeScript checks here that each
@@ -38,7 +29,7 @@ function roomSlots(
 ): RoomSlots {
   return {
     appBar: (props) => <AppBar {...props} />,
-    items: (props) => <RoomItems {...props} store={store} slots={itemsSlots} />,
+    items: (props) => <RoomItems {...props} store={store} />,
     editor: (props) => <ReceiptEditor {...props} store={store} fetchRate={getExchangeRate} />,
     summary: (props) => <ReceiptSummary {...props} />,
     people: (props) => <ParticipantCards {...props} />,
@@ -55,7 +46,6 @@ function browserServices(navigate: (path: string) => void): RoomServices {
   return {
     clipboard: navigator.clipboard,
     navigate,
-    toastMs: TOAST_MS,
   };
 }
 

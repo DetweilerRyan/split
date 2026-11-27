@@ -7,7 +7,7 @@ import { type RoomId, createRoomId, isUuidRoomId, parseRoomId } from '../domain/
 import { storedParticipants } from './storedParticipants';
 
 export type HydrationOptions = {
-  readonly forceReset?: boolean;
+  readonly forceReset?: boolean | undefined;
 };
 
 export type ParsedIngestUrl = {

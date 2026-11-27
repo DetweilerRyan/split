@@ -22,7 +22,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   - **A container's composition root,** its `.root.tsx`, gets no browser test of its own: only the end-to-end tests run it.
   - **Its collaboration test** passes render functions of fakes. It checks which props each slot is called with, and which handler its callback reaches.
   - **A React context a slot's real component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it.
-  - **`RoomView` is one,** with `RoomViewRoot` as its composition root. `RoomView` declares `RoomSlots`, and `RoomViewRoot` renders the real components in them, adding what `RoomView` doesn't compute. `RoomItems` is a container nested in one of its slots.
+  - **`RoomView` is one,** with `RoomViewRoot` as its composition root. `RoomView` declares `RoomSlots`, and `RoomViewRoot` renders the real components in them, adding what `RoomView` doesn't compute.
 - **A container's hooks are collaborators it can't take as parameters,** as [Containers](../components.md#containers) says. So a container calls its real hooks, and they run for real in its collaboration test. That test sees a hook's work only through:
   - the props a slot is called with;
   - the calls a fake service, or the fakes under a real one, receive.
