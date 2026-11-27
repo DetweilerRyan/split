@@ -4,82 +4,85 @@ import { useIdentity } from './useIdentity';
 import { useSeedImport } from './useSeedImport';
 import { type CopyTarget, useSharing } from './useSharing';
 import { useToast } from './useToast';
-import { computeReceiptMath } from '@/domain/receipt/math';
 import type { ReceiptSeed } from '@/domain/receipt/receiptSeed';
 import type { Participant, ParticipantId, RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import type { RoomId } from '@/domain/room/roomId';
 import { useReceiptStore } from '@/sync/useReceiptStore';
 
-/** Where a slot sits in the room's layout: Tailwind classes its component merges with its own. */
-type Placed = { readonly className?: string | undefined };
+/** What a dialog's slot is given; its dialog also shows the toast, which the page hides meanwhile. */
+type DialogProps = { readonly onClose: () => void };
 
 /**
  * What a room renders, in its own terms: each slot is a render function given only the props the
- * room computes, and a slot in the page's flow is given where it sits. Its composition root renders
- * the real components from them, adding any props of its own; a test renders fakes, to check only
- * how the room wires them.
+ * room computes, or an element it only shows. Its composition root renders the real components from
+ * them, adding any props of its own; a test renders fakes, to check only how the room wires them.
  */
 export type RoomSlots = {
   /** The bar: the receipt, who you are, and the details, identity, edit and share actions. */
-  readonly appBar: (
-    props: Placed & {
-      readonly snapshot: RoomSnapshot;
-      readonly you: Participant | null;
-      readonly editing: boolean;
-      readonly onDetails: () => void;
-      readonly onIdentity: () => void;
-      readonly onEdit: () => void;
-      readonly onShare: () => void;
-    },
-  ) => ReactNode;
-  /** The receipt's items: how much is unclaimed, and the items to claim, or to edit while editing. */
-  readonly items: (
-    props: Placed & {
-      readonly you: Participant | null;
-      readonly editing: boolean;
-      /** The editor, shown between the items' progress and their list while editing. */
-      readonly editor: ReactNode;
-    },
-  ) => ReactNode;
-  /** Editing the receipt's details, currencies and new items, shown while editing. */
-  readonly editor: (props: Placed & { readonly notify: (message: string) => void }) => ReactNode;
-  /** The receipt's totals. */
-  readonly summary: (
-    props: Placed & { readonly snapshot: RoomSnapshot; readonly onCopySummary: () => void },
-  ) => ReactNode;
-  /** What each person pays. */
-  readonly people: (props: Placed & { readonly snapshot: RoomSnapshot }) => ReactNode;
-  /** The card that opens the seed dialog. */
-  readonly seedCard: (
-    props: Placed & { readonly snapshot: RoomSnapshot; readonly onOpen: () => void },
-  ) => ReactNode;
-  readonly identityModal: (props: {
-    readonly open: boolean;
-    readonly participants: readonly Participant[];
-    readonly activeId: ParticipantId | null;
-    readonly onClose: () => void;
-    readonly onSelect: (id: ParticipantId) => void;
-    readonly onAdd: (name: string) => void;
-    readonly onRemove: (id: ParticipantId) => void;
-  }) => ReactNode;
-  readonly restaurantModal: (props: {
-    readonly open: boolean;
+  readonly appBar: (props: {
+    /** Where the bar sits: it sticks to the top of the page. */
+    readonly className: string;
     readonly snapshot: RoomSnapshot;
-    readonly onClose: () => void;
+    readonly you: Participant | null;
+    readonly editing: boolean;
+    readonly onDetails: () => void;
+    readonly onIdentity: () => void;
+    readonly onEdit: () => void;
+    readonly onShare: () => void;
   }) => ReactNode;
-  readonly shareModal: (props: {
-    readonly open: boolean;
-    readonly url: string;
-    readonly onClose: () => void;
-    readonly onCopy: () => void;
+  /** The receipt's items: how much is unclaimed, and the items to claim, or to edit while editing. */
+  readonly items: (props: {
+    readonly you: Participant | null;
+    /** Claiming, or editing with the editor shown between the items' progress and their list. */
+    readonly mode:
+      | { readonly kind: 'claiming' }
+      | { readonly kind: 'editing'; readonly editor: ReactNode };
   }) => ReactNode;
-  readonly seedModal: (props: {
-    readonly open: boolean;
-    readonly onClose: () => void;
-    readonly onImport: (seed: ReceiptSeed, forceReset: boolean) => void;
-    readonly onPreset: (seed: ReceiptSeed) => void;
-    readonly onBlankRoom: () => void;
+  /** Editing the receipt's details, currencies and new items, shown while editing. */
+  readonly editor: (props: { readonly notify: (message: string) => void }) => ReactNode;
+  /** The receipt's totals. */
+  readonly summary: (props: {
+    readonly snapshot: RoomSnapshot;
+    readonly onCopySummary: () => void;
   }) => ReactNode;
+  /** What each person pays. */
+  readonly people: (props: { readonly snapshot: RoomSnapshot }) => ReactNode;
+  /** The card that opens the seed dialog. */
+  readonly seedCard: (props: {
+    readonly snapshot: RoomSnapshot;
+    readonly onOpen: () => void;
+  }) => ReactNode;
+  readonly identityModal: (
+    props: DialogProps & {
+      readonly open: boolean;
+      readonly participants: readonly Participant[];
+      readonly activeId: ParticipantId | null;
+      readonly onSelect: (id: ParticipantId) => void;
+      readonly onAdd: (name: string) => void;
+      readonly onRemove: (id: ParticipantId) => void;
+    },
+  ) => ReactNode;
+  readonly restaurantModal: (
+    props: DialogProps & {
+      readonly open: boolean;
+      readonly snapshot: RoomSnapshot;
+    },
+  ) => ReactNode;
+  readonly shareModal: (
+    props: DialogProps & {
+      readonly open: boolean;
+      readonly url: string;
+      readonly onCopy: () => void;
+    },
+  ) => ReactNode;
+  readonly seedModal: (
+    props: DialogProps & {
+      readonly open: boolean;
+      readonly onImport: (seed: ReceiptSeed, forceReset: boolean) => void;
+      readonly onPreset: (seed: ReceiptSeed) => void;
+      readonly onBlankRoom: () => void;
+    },
+  ) => ReactNode;
   /** Shows the message in `ToastContext`, which the room provides, while no dialog is open. */
   readonly toast: ReactNode;
 };
@@ -105,10 +108,15 @@ export type RoomConnection = {
   ) => void;
 };
 
-/** What the room reaches outside itself for. Its composition root passes the real ones. */
+/**
+ * What the room reaches outside itself for, and how long its toasts last, which a test lengthens.
+ * Its composition root passes the real ones.
+ */
 export type RoomServices = {
   /** Where the room's link and summary are copied to. */
   readonly clipboard: CopyTarget;
+  /** Goes to another page of the app, such as a new room. */
+  readonly navigate: (path: string) => void;
   /** How long a toast stays up, in milliseconds. */
   readonly toastMs: number;
 };
@@ -117,8 +125,6 @@ type RoomViewProps = {
   readonly roomId: RoomId;
   /** The room's store and presence. Pass the same one on every render. */
   readonly provider: RoomConnection;
-  /** Goes to another page of the app, such as a new room. */
-  readonly navigate: (path: string) => void;
   readonly slots: RoomSlots;
   readonly services: RoomServices;
 };
@@ -127,16 +133,15 @@ type RoomViewProps = {
  * A receipt room: its bar, items and totals, and the dialogs they open. It lays its slots out, and
  * holds what crosses them: who you are, whether you're editing, which dialog is open, and the toast.
  */
-export function RoomView({ roomId, provider, navigate, slots, services }: RoomViewProps) {
+export function RoomView({ roomId, provider, slots, services }: RoomViewProps) {
   const [editing, setEditing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { store } = provider;
   const snapshot = useReceiptStore(store);
-  const math = computeReceiptMath(snapshot);
   const toast = useToast(services.toastMs);
   const identity = useIdentity(provider, roomId, snapshot.participants, toast.showToast);
   const sharing = useSharing(roomId, snapshot, services.clipboard, toast.showToast);
-  const seed = useSeedImport(store, toast.showToast, navigate);
+  const seed = useSeedImport(store, toast.showToast, services.navigate);
   const dialogOpen = [identity.pickerOpen, detailsOpen, sharing.open, seed.open].some(Boolean);
 
   return (
@@ -154,8 +159,9 @@ export function RoomView({ roomId, provider, navigate, slots, services }: RoomVi
       <main className="mx-auto mt-3 grid max-w-6xl gap-4 px-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
         {slots.items({
           you: identity.you,
-          editing,
-          editor: editing && slots.editor({ notify: toast.showToast }),
+          mode: editing
+            ? { kind: 'editing', editor: slots.editor({ notify: toast.showToast }) }
+            : { kind: 'claiming' },
         })}
         <aside className="space-y-4">
           {slots.summary({ snapshot, onCopySummary: sharing.copySummary })}
@@ -193,9 +199,6 @@ export function RoomView({ roomId, provider, navigate, slots, services }: RoomVi
         })}
         {!dialogOpen && slots.toast}
       </ToastContext>
-      {Object.keys(math.perPerson).length === 0 && (
-        <div className="sr-only">No participants yet.</div>
-      )}
     </div>
   );
 }

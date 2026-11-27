@@ -3,7 +3,6 @@ import { Plus } from 'lucide-react';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
 import { currencyExponent, currencyLabel, listCurrencies } from '@/domain/money/currency';
 import { numberOrZero } from '@/utils/schemas/numberOrZero';
-import { mergeClasses } from '@/utils/mergeClasses';
 
 type EditReceiptDrawerProps = {
   readonly snapshot: RoomSnapshot;
@@ -15,8 +14,6 @@ type EditReceiptDrawerProps = {
   readonly onDisplayCurrency: (code: string, force?: boolean) => void;
   readonly onRate: (rate: number) => void;
   readonly onAddItem: (name: string, en: string, eur: number) => void;
-  /** Where the caller places it; merged with its own classes. */
-  readonly className?: string | undefined;
 };
 
 export function EditReceiptDrawer({
@@ -26,7 +23,6 @@ export function EditReceiptDrawer({
   onDisplayCurrency,
   onRate,
   onAddItem,
-  className,
 }: EditReceiptDrawerProps) {
   const [name, setName] = useState('');
   const [english, setEnglish] = useState('');
@@ -45,9 +41,7 @@ export function EditReceiptDrawer({
   }
 
   return (
-    <section
-      className={mergeClasses('card space-y-4 border-amber-300 bg-amber-50/70 p-4', className)}
-    >
+    <section className="card space-y-4 border-amber-300 bg-amber-50/70 p-4">
       <h2 className="font-extrabold text-amber-950">Edit receipt and bank reconciliation</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="field-label">

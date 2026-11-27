@@ -48,6 +48,11 @@ The reasons for [Components](components.md)' rules.
 - **Each bullet applies a principle, and links to it rather than restating it,** so the principle stays the one source of its reason.
 - **The applications are React's usual ones:** deriving state during render, and not mirroring props into state, are what React's docs advise in [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect) and [Choosing the State Structure](https://react.dev/learn/choosing-the-state-structure).
 
+## Review against this document
+
+- **Asked for by the owner on #169** ([recorded](https://github.com/DetweilerRyan/split/pull/169#issuecomment-7225318267)), after a review of the room's code against this document: "go with your recommendation".
+- **A `className` only when a caller places the component:** the rule first read as applying to every component, so every slot component of the room took one, and only the app bar was given one. Earned complexity asks for a prop a current caller needs.
+
 ## What would reopen this
 
 - **Tailwind gains outer-only display utilities,** or a caller keeps needing to change a component's outer type.

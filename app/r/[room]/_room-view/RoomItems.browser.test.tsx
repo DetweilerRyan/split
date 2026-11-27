@@ -76,7 +76,12 @@ async function renderItems({ editing = false, signedIn = true, editor = null as 
   store.addParticipant('Sam');
   const you: Participant | null = signedIn ? alex : null;
   const screen = await render(
-    <RoomItems store={store} you={you} editing={editing} editor={editor} slots={fakeSlots} />,
+    <RoomItems
+      store={store}
+      you={you}
+      mode={editing ? { kind: 'editing', editor } : { kind: 'claiming' }}
+      slots={fakeSlots}
+    />,
   );
   function button(name: string) {
     return userEvent.click(screen.getByRole('button', { name, exact: true }));

@@ -92,6 +92,16 @@ describe('ParticipantCards', () => {
       .toBeVisible();
   });
 
+  it('tells screen readers there are no participants while there are none', async () => {
+    const { region } = await renderCards({ ...dinner, participants: [] });
+    await expect.element(region.getByText('No participants yet.')).toBeInTheDocument();
+  });
+
+  it('says nothing of participants once there are some', async () => {
+    const { region } = await renderCards(dinner);
+    await expect.element(region.getByText('No participants yet.')).not.toBeInTheDocument();
+  });
+
   it('says the date of an estimated rate is unknown when the receipt has none', async () => {
     const { region } = await renderCards({ ...dinner, bankUsd: 0, rate: 1.2, rateDate: '' });
     await expect
