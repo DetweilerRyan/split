@@ -10,6 +10,7 @@ Every fact in this repository is written in one place, its **owner**, and everyt
 4. **Prefer owners that code reads.** When code depends on a fact, the code or its schema is the owner, and documents link to it. The receipt seed's extraction rules, for example, are the field descriptions in `src/domain/receipt/receiptSeed.ts`.
 5. **Moving a fact is one change.** Delete the old copy in the same commit, and check that the fact still exists at its owner.
 6. **A document holds instructions; its sidecar holds the reasons.** See [Reasons live in a `.meta.md` sidecar](#reasons-live-in-a-metamd-sidecar).
+7. **A rule doesn't catalogue the code that follows it.** See [Referencing code](#referencing-code).
 
 | Kind of fact                                                                       | Owner                                                                            |
 | :--------------------------------------------------------------------------------- | :------------------------------------------------------------------------------- |
@@ -26,6 +27,19 @@ Every fact in this repository is written in one place, its **owner**, and everyt
 | Why a config or a script is as it is, when that's longer than a comment            | Its `.meta.md` sidecar, such as `.gplintrc.meta.md`                              |
 | Writing conventions like this one                                                  | `docs/prose/`                                                                    |
 | Why a document's rules are as they are: reasons, sources, cases, options not taken | That document's `<name>.meta.md` sidecar                                         |
+
+## Referencing code
+
+Code changes far more often than the rules it follows. A document that names the code applying each rule has to change whenever that code does. Over time, a document should change less often, not more.
+
+- **Write a rule in terms of what to do,** not of where the code already does it. Don't list the files, components or functions that follow a rule.
+- **Name code only where the name is the point:**
+  - the file the reader opens or changes, such as the config file a rule is about, or the script a procedure runs;
+  - a fact the code owns, as [rule 4](#rules) says;
+  - one example, when a rule is unclear without it.
+- **Prefer an example written in the document** to a pointer at the code. A short snippet stays true when the code that inspired it changes.
+- **A tool's own documentation describes the tool's code.** A script's README names its files and options, since they're what it documents.
+- **A sidecar records cases as they were.** Its history names the code of the time; leave that as it is.
 
 ## Reasons live in a `.meta.md` sidecar
 
