@@ -53,7 +53,9 @@ Two kinds of test sit outside these projects:
 | `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code; its own rules are in [unit testing](unit-testing.md) |
 
 - **Name a [property test](property-testing.md) `<module>.property.test.ts`.** It runs in the project its module's other tests run in: `unit` for the app, `tooling-unit` for tooling.
-- **Make each test file a sidecar.** Put it beside the one module it covers, and name it after that module: `<folder>/<module>.ts` → `<folder>/<module>.test.ts`.
+- **Make each test file a sidecar.** Put it beside the one module it covers, and name it after that module, with the suffix the table gives:
+  - `<module>.ts` → `<module>.test.ts`;
+  - `<Component>.tsx` → `<Component>.browser.test.tsx`.
 
   When tests for a second module creep into a file, move them to that module's sidecar.
 

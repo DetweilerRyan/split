@@ -40,6 +40,17 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
 
 Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`.
 
+A test of a component looks like this:
+
+```tsx
+const onJoin = vi.fn();
+const screen = await render(<JoinForm onJoin={onJoin} />);
+await userEvent.fill(screen.getByRole('textbox', { name: 'Your name' }), 'Ana');
+await userEvent.click(screen.getByRole('button', { name: 'Join' }));
+expect(onJoin).toHaveBeenCalledExactlyOnceWith('Ana');
+await expect.element(screen.getByRole('textbox', { name: 'Your name' })).toHaveValue('');
+```
+
 - **Check what a user can see and do.** A component has two users: the person using the app, and the developer rendering it. So a component test works only through the component's props and its rendered output. Don't assert on state, internal functions, how many times something rendered, or CSS classes.
 - **A component's callback props are part of what it shows its developer user.** You may check that `onSelect` was called with the chosen id. Don't check which internal function ran.
 - **Render with `render` from `vitest-browser-react`.** Cleanup is automatic.
@@ -53,7 +64,6 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
   - the hook is complex enough that a component would obscure it;
   - several components share it;
   - it belongs to a container, as above.
-
 - **Tests run through the React Compiler,** as the app build does. Don't remove the compiler from `vitest.config.ts`; `vitest.config.browser.test.ts` fails if a component stops being compiled.
 
 ### When one fails

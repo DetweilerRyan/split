@@ -32,7 +32,9 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
 
   ```ts
   type DraftKey = `draft:${RoomId}`;
-  const draftKey = (room: RoomId): DraftKey => `draft:${room}`;
+  function draftKey(room: RoomId): DraftKey {
+    return `draft:${room}`;
+  }
   ```
 
 ## Readonly by default
@@ -47,6 +49,7 @@ To meet both:
 - **Write each type readonly, level by level, as `readonly/types` requires.** [Its README](../../scripts/lint/readonly.md) lists what it reports and what to write instead, and allows a mutable working value in a variable declared inside a function.
 - **Don't change a readonly value in place.** Build a new one with `map`, `filter`, spread or a sorted copy.
 - **Give a zod schema that owns a type `.readonly()`** on each object and array, so `z.infer` gives a readonly type.
+- **Clear the `readOnly` that `.readonly()` adds where a schema's JSON Schema is served,** as an MCP tool's input is, with `.meta({ readOnly: undefined })`. A client told a field is `readOnly` leaves it out.
 - **Write a module-level constant built from literals `as const`.** When a library's parameter takes a mutable array, pass it a copy, as in `[...urls]`.
 - **Give a parameter only what the function reads,** such as `Pick<Store, 'subscribe' | 'getSnapshot'>`, when the whole type isn't readonly.
 - **When a type must stay mutable,** such as a library's type, a global cache or a list a recursive walk fills in place, disable the rule on that line with a reason, as [`AGENTS.md`](../../AGENTS.md#definition-of-done) requires. A parameter that takes the list needs its own disable:
@@ -62,7 +65,7 @@ To meet both:
 
 [`tsconfig.json`](../../tsconfig.json) turns on `noUncheckedIndexedAccess`, so `npm run typecheck` types a read by index or key, such as `items[i]` or `record[key]`, as possibly `undefined`. [`.oxlintrc.json`](../../.oxlintrc.json) turns on `typescript/no-non-null-assertion` outside tests.
 
-- **Restructure so the type proves the value is there,** where it always is. Iterate instead of indexing, or destructure (`const [first] = items;`) and check what you get. Or carry the value along with what you'd have indexed by, such as each part paired with its share.
+- **Restructure so the type proves the value is there,** where it always is. Iterate instead of indexing, or destructure (`const [first] = items;`) and check what you get. Or carry the value along with what you'd have indexed by, such as pairing each part of a split with its share.
 - **Otherwise handle the missing case** where you read it: skip it, return early, or throw an error that says what's missing.
 - **Don't silence a read with `!` or a cast,** tests included, though tests may use `!` elsewhere.
 - **In a test, read through `?.`** so the assertion fails when the value is missing, or narrow with Vitest's `assert(value !== undefined, message)` when the value is passed on. Write the comparison: `typescript/strict-boolean-expressions` refuses a bare value.

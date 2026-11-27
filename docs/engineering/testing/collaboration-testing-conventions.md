@@ -30,7 +30,7 @@ Some code's job is wiring collaborators that have tests of their own. For exampl
 - **A collaborator's own tests are its contract tests.** They check that it meets the interface the code declares, and does what the code relies on. That includes what the type checker can't see, such as something it's given but ignores.
   - **Fake only a collaborator that has contract tests.**
   - **Pass in a real one where it has none,** until it has tests of its own.
-- **Run a store or service for real when it takes its effects as parameters,** over fakes of those effects. For example, run a store over an in-memory document, in place of its sync and persistence.
+- **Run a store or service for real when it takes its effects as parameters,** over fakes of those effects. For example, run a store over an in-memory document, in place of its sync and persistence, or a fetcher over a fake network.
 
   Write new ones that way where it costs little, as [Prefer passing the dependency in](testing-conventions.md#replacing-external-dependencies) asks.
 
