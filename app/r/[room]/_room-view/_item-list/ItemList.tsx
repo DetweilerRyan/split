@@ -7,6 +7,7 @@ import type {
 } from '@/domain/receipt/roomSnapshot';
 import { formatMoney } from '@/domain/money/currency';
 import { ItemRow } from './ItemRow';
+import { mergeClasses } from '@/utils/mergeClasses';
 
 type ItemListProps = {
   readonly items: readonly ReceiptItem[];
@@ -23,6 +24,8 @@ type ItemListProps = {
   ) => void;
   readonly onUpdate: (itemId: ItemId, field: 'name' | 'en' | 'eur', value: string | number) => void;
   readonly onDelete: (itemId: ItemId) => void;
+  /** Where the caller places it; merged with its own classes. */
+  readonly className?: string | undefined;
 };
 
 export function ItemList(props: ItemListProps) {
@@ -35,7 +38,10 @@ export function ItemList(props: ItemListProps) {
   });
 
   return (
-    <section className="card overflow-hidden" aria-labelledby={headingId}>
+    <section
+      className={mergeClasses('card overflow-hidden', props.className)}
+      aria-labelledby={headingId}
+    >
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
         <div>
           <h2 id={headingId} className="font-extrabold text-slate-900">

@@ -1,41 +1,41 @@
 import { CalendarDays, ChevronRight, Pencil, Share2, Users } from 'lucide-react';
 import { formatPurchaseTime, parsePurchasedAt } from '@/domain/receipt/mealInfo';
-import type { Participant, ParticipantId, RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import type { Participant, RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import { mergeClasses } from '@/utils/mergeClasses';
 import { getConnectionStatusDisplay } from './connectionStatus';
 
-type HeaderProps = {
-  readonly title: string;
-  readonly purchasedAt: string;
-  readonly mealType: string;
-  readonly onDetails: () => void;
-  readonly activeId: ParticipantId | null;
-  readonly connection: RoomSnapshot['connection'];
-  readonly peers: RoomSnapshot['peers'];
-  readonly participants: readonly Participant[];
+type AppBarProps = {
+  /** The receipt it names, and the room's connection. */
+  readonly snapshot: Pick<
+    RoomSnapshot,
+    'title' | 'purchasedAt' | 'mealType' | 'connection' | 'peers'
+  >;
+  /** Who you are in the room, or `null` before you choose. */
+  readonly you: Participant | null;
   readonly editing: boolean;
+  readonly onDetails: () => void;
   readonly onIdentity: () => void;
   readonly onEdit: () => void;
   readonly onShare: () => void;
+  /** Where the caller places it, such as `sticky top-0`; merged with its own classes. */
+  readonly className?: string | undefined;
 };
 
-export function Header({
-  title,
-  purchasedAt,
-  mealType,
-  onDetails,
-  activeId,
-  connection,
-  peers,
-  participants,
+/** The room's bar: the receipt it's for, who you are, the edit and share actions, and the connection. */
+export function AppBar({
+  snapshot,
+  you,
   editing,
+  onDetails,
   onIdentity,
   onEdit,
   onShare,
-}: HeaderProps) {
+  className,
+}: AppBarProps) {
+  const { title, purchasedAt, mealType, connection, peers } = snapshot;
   const purchase = parsePurchasedAt(purchasedAt);
   const when = purchase !== null ? formatPurchaseTime(purchase) : null;
   const initial = title.trim().charAt(0).toUpperCase();
-  const identity = participants.find((person) => person.id === activeId);
   const {
     label: statusLabel,
     indicatorColor,
@@ -43,7 +43,12 @@ export function Header({
   } = getConnectionStatusDisplay(connection.status);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+    <header
+      className={mergeClasses(
+        'border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur',
+        className,
+      )}
+    >
       <div className="mx-auto max-w-6xl px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -81,7 +86,7 @@ export function Header({
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <button className="button-secondary" onClick={onIdentity}>
-              {identity?.name ?? 'Who are you?'}
+              {you?.name ?? 'Who are you?'}
             </button>
             <button
               aria-label={editing ? 'Done editing receipt' : 'Edit receipt'}

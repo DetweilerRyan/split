@@ -11,7 +11,6 @@ import { roomIdSchema } from '@/domain/room/roomId';
 import { parseRoomPath } from '@/sync/seedCodec';
 import { ReceiptStore } from '@/sync/useReceiptStore';
 import { type RoomSlots, RoomViewRoot } from './RoomViewRoot';
-import { type ExchangeRate, type RateSources, getExchangeRate } from '@/services/exchangeRates';
 
 // Each fake shows what RoomViewRoot gives it, and offers a button for each callback it's handed, so
 // these tests check only how RoomViewRoot wires its slots and hooks together. Each slot's component
@@ -22,11 +21,11 @@ type PropsOf<Slot extends keyof RoomSlots> = Readonly<Parameters<RoomSlots[Slot]
 const roomId = roomIdSchema.parse('split-r1');
 const plitvice = PRESETS.plitvice;
 
-function FakeHeader(props: PropsOf<'header'>) {
+function FakeAppBar(props: PropsOf<'appBar'>) {
   return (
     <header>
-      <h1>{props.title}</h1>
-      <p>You are {props.activeId ?? 'nobody'}</p>
+      <h1>{props.snapshot.title}</h1>
+      <p>You are {props.you?.id ?? 'nobody'}</p>
       <p>{props.editing ? 'Editing' : 'Not editing'}</p>
       <button onClick={props.onIdentity}>Who am I</button>
       <button onClick={props.onEdit}>Edit</button>
@@ -36,85 +35,44 @@ function FakeHeader(props: PropsOf<'header'>) {
   );
 }
 
-function FakeUnclaimedBanner(props: PropsOf<'unclaimedBanner'>) {
-  return (
-    <section aria-label="Banner">
-      <p>
-        Banner of {props.items.length} items, {props.total} {props.currency}
-      </p>
-      <button onClick={() => props.onFilter('unclaimed')}>Show unclaimed</button>
-    </section>
-  );
-}
-
-function FakeEditReceiptDrawer(props: PropsOf<'editReceiptDrawer'>) {
-  const { currency, displayCurrency, rate } = props.snapshot;
-  return (
-    <section aria-label="Edit receipt">
-      <p>
-        Receipt in {currency}, shown in{' '}
-        {displayCurrency !== '' ? displayCurrency : 'its own currency'} at {rate}
-      </p>
-      <button onClick={() => props.onMeta('title', 'Lunch')}>Rename to Lunch</button>
-      <button onClick={() => props.onAddItem('Bread', '', 3)}>Add bread</button>
-      <button onClick={() => props.onCurrency('GBP')}>Receipt in pounds</button>
-      <button onClick={() => props.onDisplayCurrency('USD')}>Show in dollars</button>
-      <button onClick={() => props.onRate(1.5)}>Rate 1.5</button>
-    </section>
-  );
-}
-
-function FakeItemList(props: PropsOf<'itemList'>) {
-  const [first] = props.items;
+function FakeItems(props: PropsOf<'items'>) {
   return (
     <section aria-label="Items">
-      <p>
-        Showing {props.filter} items {props.editing ? 'for editing' : 'to claim'}
-      </p>
-      <ul>
-        {props.items.map((item) => (
-          <li key={item.id}>
-            {item.name}, claimed by{' '}
-            {props.participants
-              .filter((person) => item.claims[person.id] === true)
-              .map((person) => person.id)
-              .join(' ')}
-          </li>
-        ))}
-      </ul>
-      {first !== undefined && (
-        <>
-          <button
-            onClick={() => {
-              if (props.activeId !== null) props.onClaim(first.id, props.activeId);
-            }}
-          >
-            Claim first
-          </button>
-          <button onClick={() => props.onClaimAll(first.id, props.participants, true)}>
-            Everyone claims first
-          </button>
-          <button onClick={() => props.onUpdate(first.id, 'name', 'Calzone')}>Rename first</button>
-          <button onClick={() => props.onDelete(first.id)}>Delete first</button>
-        </>
-      )}
+      Items for {props.you?.id ?? 'nobody'}, {props.editing ? 'editing' : 'not editing'}
     </section>
   );
 }
 
-function FakeReceiptSummary(props: PropsOf<'receiptSummary'>) {
+function FakeEditor(props: PropsOf<'editor'>) {
+  return (
+    <section aria-label="Edit receipt">
+      <button onClick={() => props.notify('Rate unavailable')}>Notify</button>
+    </section>
+  );
+}
+
+function FakeSummary(props: PropsOf<'summary'>) {
   return (
     <section aria-label="Summary">
-      <p>
-        Summary of {props.snapshot.title}, {props.math.itemsSubtotal} {props.math.currency}
-      </p>
+      <p>Summary of {props.snapshot.title}</p>
       <button onClick={props.onCopySummary}>Copy summary</button>
     </section>
   );
 }
 
-function FakeParticipantCards(props: PropsOf<'participantCards'>) {
+function FakePeople(props: PropsOf<'people'>) {
   return <p>Cards for {props.snapshot.participants.length} people</p>;
+}
+
+function FakeSeedCard(props: PropsOf<'seedCard'>) {
+  return (
+    <section aria-label="Seed card">
+      <p>
+        Seed for {props.snapshot.participants.length} people, {props.snapshot.items.length} items
+      </p>
+      <button onClick={props.onOpen}>Seed / presets</button>
+    </section>
+  );
 }
 
 function FakeIdentityModal(props: PropsOf<'identityModal'>) {
@@ -169,12 +127,12 @@ function FakeToast() {
 }
 
 const fakeSlots: RoomSlots = {
-  header: (props) => <FakeHeader {...props} />,
-  unclaimedBanner: (props) => <FakeUnclaimedBanner {...props} />,
-  editReceiptDrawer: (props) => <FakeEditReceiptDrawer {...props} />,
-  itemList: (props) => <FakeItemList {...props} />,
-  receiptSummary: (props) => <FakeReceiptSummary {...props} />,
-  participantCards: (props) => <FakeParticipantCards {...props} />,
+  appBar: (props) => <FakeAppBar {...props} />,
+  items: (props) => <FakeItems {...props} />,
+  editor: (props) => <FakeEditor {...props} />,
+  summary: (props) => <FakeSummary {...props} />,
+  people: (props) => <FakePeople {...props} />,
+  seedCard: (props) => <FakeSeedCard {...props} />,
   identityModal: (props) => <FakeIdentityModal {...props} />,
   restaurantModal: (props) => <FakeRestaurantModal {...props} />,
   shareModal: (props) => <FakeShareModal {...props} />,
@@ -182,12 +140,8 @@ const fakeSlots: RoomSlots = {
   toast: () => <FakeToast />,
 };
 
-async function renderRoom(
-  names: readonly string[] = ['Alex', 'Sam'],
-  cached: ReadonlyMap<string, ExchangeRate> = new Map(),
-) {
-  const doc = new Y.Doc();
-  const store = new ReceiptStore(doc);
+async function renderRoom(names: readonly string[] = ['Alex', 'Sam']) {
+  const store = new ReceiptStore(new Y.Doc());
   store.setMeta('title', 'Trattoria Da Enzo');
   store.setMeta('currency', 'EUR');
   store.addItem('Pizza', '', 10);
@@ -195,28 +149,8 @@ async function renderRoom(
   const provider = { store, setIdentity: vi.fn() };
   const navigate = vi.fn<(path: string) => void>();
   const clipboard = { writeText: vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()) };
-  // The real exchange-rate service runs, over a fake network and an in-memory cache.
-  const rates = new Map(cached);
-  const network = vi.fn<RateSources['fetch']>((url) => {
-    const quote = new URL(url).searchParams.get('symbols') ?? '';
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ date: '2026-11-20', rates: { [quote]: 1.08 } }),
-    });
-  });
-  const sources: RateSources = {
-    cache: {
-      read: (key) => Promise.resolve(rates.get(key) ?? null),
-      write: (key, rate) => Promise.resolve(void rates.set(key, rate)),
-    },
-    fetch: network,
-  };
-  function fetchRate(base: string, quote: string, options: { readonly force: boolean }) {
-    return getExchangeRate(base, quote, options, sources);
-  }
   // Long enough that no toast clears during a test.
-  const services = { clipboard, fetchRate, toastMs: 60_000 };
+  const services = { clipboard, toastMs: 60_000 };
   const screen = await render(
     <RoomViewRoot
       roomId={roomId}
@@ -232,7 +166,7 @@ async function renderRoom(
   function dialog(name: string) {
     return screen.getByRole('dialog', { name });
   }
-  return { screen, button, dialog, navigate, clipboard, network };
+  return { screen, button, dialog, navigate, clipboard };
 }
 
 beforeEach(() => {
@@ -241,14 +175,12 @@ beforeEach(() => {
 });
 
 describe('RoomViewRoot', () => {
-  it("gives each part the room's receipt and its totals", async () => {
+  it("gives each slot the room's receipt", async () => {
     const { screen } = await renderRoom();
     await expect.element(screen.getByRole('heading', { name: 'Trattoria Da Enzo' })).toBeVisible();
-    await expect.element(screen.getByText('Banner of 1 items, 10 EUR')).toBeVisible();
-    await expect.element(screen.getByText('Pizza, claimed by')).toBeVisible();
-    await expect.element(screen.getByText('Summary of Trattoria Da Enzo, 10 EUR')).toBeVisible();
+    await expect.element(screen.getByText('Summary of Trattoria Da Enzo')).toBeVisible();
     await expect.element(screen.getByText('Cards for 2 people')).toBeVisible();
-    await expect.element(screen.getByText('2 people · 1 items')).toBeVisible();
+    await expect.element(screen.getByText('Seed for 2 people, 1 items')).toBeVisible();
   });
 
   it('tells screen readers there are no participants while there are none', async () => {
@@ -257,19 +189,21 @@ describe('RoomViewRoot', () => {
     await expect.element(screen.getByText('You are nobody')).toBeVisible();
   });
 
-  it('gives the header who you are, and says nothing of participants once there are some', async () => {
+  it('gives the app bar and the items who you are, and says nothing of participants once there are some', async () => {
     const { screen } = await renderRoom();
     await expect.element(screen.getByText('You are p-alex')).toBeVisible();
+    await expect.element(screen.getByText('Items for p-alex, not editing')).toBeVisible();
     await expect.element(screen.getByText('No participants yet.')).not.toBeInTheDocument();
   });
 
-  it('opens the identity picker from the header, and gives the header who you pick', async () => {
+  it('opens the identity picker from the app bar, and gives the app bar and the items who you pick', async () => {
     const { screen, button, dialog } = await renderRoom();
     await button('Who am I');
     await expect.element(dialog('Identity').getByText('Picking among 2 people')).toBeVisible();
     await button('Pick Sam');
     await expect.element(dialog('Identity')).not.toBeInTheDocument();
     await expect.element(screen.getByText('You are p-sam')).toBeVisible();
+    await expect.element(screen.getByText('Items for p-sam, not editing')).toBeVisible();
   });
 
   it("saves the identity picker's joins and removals to the room, and closes it", async () => {
@@ -284,7 +218,7 @@ describe('RoomViewRoot', () => {
     await expect.element(dialog('Identity')).not.toBeInTheDocument();
   });
 
-  it("opens the restaurant's details from the header, and closes them", async () => {
+  it("opens the restaurant's details from the app bar, and closes them", async () => {
     const { button, dialog } = await renderRoom();
     await button('Details');
     await expect.element(dialog('Details').getByText('Details of Trattoria Da Enzo')).toBeVisible();
@@ -292,7 +226,7 @@ describe('RoomViewRoot', () => {
     await expect.element(dialog('Details')).not.toBeInTheDocument();
   });
 
-  it("opens the share dialog from the header with the room's link, copies it, and closes", async () => {
+  it("opens the share dialog from the app bar with the room's link, copies it, and closes", async () => {
     const { button, dialog, clipboard } = await renderRoom();
     const link = `${window.location.origin}/r/split-r1`;
     await button('Share');
@@ -311,88 +245,24 @@ describe('RoomViewRoot', () => {
     expect(clipboard.writeText.mock.calls[0]?.[0]).not.toContain('/r/split-r1');
   });
 
-  it('shows the edit drawer, and the items for editing, while editing from the header', async () => {
+  it('shows the editor, and gives the items editing, while editing from the app bar', async () => {
     const { screen, button } = await renderRoom();
-    const drawer = screen.getByRole('region', { name: 'Edit receipt' });
-    await expect.element(drawer).not.toBeInTheDocument();
+    const editor = screen.getByRole('region', { name: 'Edit receipt' });
+    await expect.element(editor).not.toBeInTheDocument();
     await button('Edit');
     await expect.element(screen.getByText('Editing', { exact: true })).toBeVisible();
-    await expect.element(screen.getByText('Showing all items for editing')).toBeVisible();
-    await expect
-      .element(drawer.getByText('Receipt in EUR, shown in its own currency at 0'))
-      .toBeVisible();
+    await expect.element(editor).toBeVisible();
+    await expect.element(screen.getByText('Items for p-alex, editing')).toBeVisible();
     await button('Edit');
     await expect.element(screen.getByText('Not editing')).toBeVisible();
-    await expect.element(drawer).not.toBeInTheDocument();
+    await expect.element(editor).not.toBeInTheDocument();
   });
 
-  it("saves the edit drawer's title and new items to the room", async () => {
+  it("shows the editor's notices as the room's toast", async () => {
     const { screen, button } = await renderRoom();
     await button('Edit');
-    await button('Rename to Lunch');
-    await button('Add bread');
-    await expect.element(screen.getByRole('heading', { name: 'Lunch' })).toBeVisible();
-    await expect.element(screen.getByText('Bread, claimed by')).toBeVisible();
-  });
-
-  it("fetches the rate for the edit drawer's display currency, and for its receipt currency", async () => {
-    const { screen, button, network } = await renderRoom();
-    await button('Edit');
-    await button('Show in dollars');
-    expect(network).toHaveBeenLastCalledWith(expect.stringContaining('?base=EUR&symbols=USD'));
-    await expect.element(screen.getByText('Receipt in EUR, shown in USD at 1.08')).toBeVisible();
-    await button('Receipt in pounds');
-    expect(network).toHaveBeenLastCalledWith(expect.stringContaining('?base=GBP&symbols=USD'));
-    await expect.element(screen.getByText('Receipt in GBP, shown in USD at 1.08')).toBeVisible();
-  });
-
-  it("uses a fresh cached rate for the edit drawer's display currency, without asking again", async () => {
-    const fresh: ExchangeRate = {
-      base: 'EUR',
-      quote: 'USD',
-      rate: 1.05,
-      date: '2026-11-19',
-      fetchedAt: Date.now(),
-    };
-    const { screen, button, network } = await renderRoom(
-      ['Alex', 'Sam'],
-      new Map([['EUR:USD', fresh]]),
-    );
-    await button('Edit');
-    await button('Show in dollars');
-    await expect.element(screen.getByText('Receipt in EUR, shown in USD at 1.05')).toBeVisible();
-    expect(network).not.toHaveBeenCalled();
-  });
-
-  it("saves the edit drawer's rate to the room", async () => {
-    const { screen, button } = await renderRoom();
-    await button('Edit');
-    await button('Show in dollars');
-    await expect.element(screen.getByText('Receipt in EUR, shown in USD at 1.08')).toBeVisible();
-    await button('Rate 1.5');
-    await expect.element(screen.getByText('Receipt in EUR, shown in USD at 1.5')).toBeVisible();
-  });
-
-  it("filters the item list by the banner's filter", async () => {
-    const { screen, button } = await renderRoom();
-    await button('Show unclaimed');
-    await expect.element(screen.getByText('Showing unclaimed items to claim')).toBeVisible();
-  });
-
-  it("saves the item list's claims for you and for everyone to the room", async () => {
-    const { screen, button } = await renderRoom();
-    await button('Claim first');
-    await expect.element(screen.getByText('Pizza, claimed by p-alex')).toBeVisible();
-    await button('Everyone claims first');
-    await expect.element(screen.getByText('Pizza, claimed by p-alex p-sam')).toBeVisible();
-  });
-
-  it("saves the item list's edits and deletions to the room", async () => {
-    const { screen, button } = await renderRoom();
-    await button('Rename first');
-    await expect.element(screen.getByText('Calzone, claimed by')).toBeVisible();
-    await button('Delete first');
-    await expect.element(screen.getByText(/^Calzone/)).not.toBeInTheDocument();
+    await button('Notify');
+    await expect.element(screen.getByRole('status')).toHaveTextContent('Rate unavailable');
   });
 
   it("opens the seed dialog from the seed card, imports into the room, and gives the toast the hook's message", async () => {

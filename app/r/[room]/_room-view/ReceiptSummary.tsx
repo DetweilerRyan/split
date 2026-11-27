@@ -1,18 +1,20 @@
 import { formatMoney } from '@/domain/money/currency';
-import type { ReceiptMath } from '@/domain/receipt/math';
+import { computeReceiptMath } from '@/domain/receipt/math';
 import type { RoomSnapshot } from '@/domain/receipt/roomSnapshot';
+import { mergeClasses } from '@/utils/mergeClasses';
 
 type ReceiptSummaryProps = {
   readonly snapshot: RoomSnapshot;
-  /** `computeReceiptMath(snapshot)`. */
-  readonly math: ReceiptMath;
   readonly onCopySummary: () => void;
+  /** Where the caller places it; merged with its own classes. */
+  readonly className?: string | undefined;
 };
 
 /** The receipt's totals, and the exchange rate while it's shown in another currency. */
-export function ReceiptSummary({ snapshot, math, onCopySummary }: ReceiptSummaryProps) {
+export function ReceiptSummary({ snapshot, onCopySummary, className }: ReceiptSummaryProps) {
+  const math = computeReceiptMath(snapshot);
   return (
-    <section className="card space-y-3 p-4">
+    <section className={mergeClasses('card space-y-3 p-4', className)}>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-extrabold text-slate-900">{snapshot.title}</h2>

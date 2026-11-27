@@ -55,5 +55,8 @@ export function useIdentity(
     if (id === activeId) setActiveId(null);
   }
 
-  return { activeId, pickerOpen, openPicker, closePicker, choose, add, remove } as const;
+  // Who you are, or `null` before you choose or once you're removed.
+  const you = participants.find((person) => person.id === activeId) ?? null;
+
+  return { activeId, you, pickerOpen, openPicker, closePicker, choose, add, remove } as const;
 }
