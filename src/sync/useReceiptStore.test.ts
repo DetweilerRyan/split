@@ -139,6 +139,31 @@ describe('adding a participant', () => {
   });
 });
 
+describe('removing a participant', () => {
+  it("deletes their claims from the room, and keeps everyone else's", () => {
+    const doc = new Y.Doc();
+    const store = new ReceiptStore(doc);
+    store.addItem('Pizza', '', 10);
+    store.addItem('Bread', '', 3);
+    const alex = store.addParticipant('Alex');
+    const sam = store.addParticipant('Sam');
+    const pizza = store.getSnapshot().items.find((item) => item.name === 'Pizza');
+    const bread = store.getSnapshot().items.find((item) => item.name === 'Bread');
+    assert(alex !== null && sam !== null && pizza !== undefined && bread !== undefined);
+    store.setClaims(pizza.id, [alex.id, sam.id], true);
+    store.toggleClaim(bread.id, sam.id);
+
+    store.removeParticipant(sam.id);
+
+    function claimsOf(name: string) {
+      return store.getSnapshot().items.find((item) => item.name === name)?.claims;
+    }
+    expect(claimsOf('Pizza')).toStrictEqual({ [alex.id]: true });
+    expect(claimsOf('Bread')).toStrictEqual({ [alex.id]: false });
+    expect([...doc.getMap<boolean>('claims').keys()]).toStrictEqual([claimKey(pizza.id, alex.id)]);
+  });
+});
+
 describe('ids stored in the document', () => {
   // A stored participant, item or claim whose id doesn't parse is left out of what the app
   // reads, with a warning, and the document is left as it is, as the owner chose on #124.
