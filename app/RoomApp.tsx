@@ -13,7 +13,7 @@ export const IngestEntry = dynamic(() => import('./ingest/_ingest-entry/IngestEn
   ssr: false,
   loading,
 });
-export const RoomView = dynamic(() => import('./r/[room]/_room-view/LoadedRoomView'), {
+export const RoomView = dynamic(() => import('./r/[room]/_room-view/RoomView'), {
   ssr: false,
   loading,
 });
