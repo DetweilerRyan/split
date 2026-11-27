@@ -1,4 +1,4 @@
-import { type ComponentType, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { ToastContext } from './Toast';
 import { type FetchRate, useExchangeRate } from './useExchangeRate';
 import { useIdentity } from './useIdentity';
@@ -20,11 +20,12 @@ import { useReceiptStore } from '@/sync/useReceiptStore';
 type ItemFilter = 'all' | 'unclaimed' | 'mine';
 
 /**
- * The components a room renders, in its own terms: each takes only the props the room passes. Its
- * composition root passes the real ones; a test passes fakes, to check only how the room wires them.
+ * What a room renders, in its own terms: each slot is a render function given only the props the
+ * room computes. Its composition root renders the real components from them, adding any props of
+ * its own; a test renders fakes, to check only how the room wires them.
  */
 export type RoomSlots = {
-  readonly Header: ComponentType<{
+  readonly header: (props: {
     readonly title: string;
     readonly purchasedAt: string;
     readonly mealType: string;
@@ -37,15 +38,15 @@ export type RoomSlots = {
     readonly onIdentity: () => void;
     readonly onEdit: () => void;
     readonly onShare: () => void;
-  }>;
-  readonly UnclaimedBanner: ComponentType<{
+  }) => ReactNode;
+  readonly unclaimedBanner: (props: {
     readonly items: readonly ReceiptItem[];
     readonly total: number;
     readonly currency: string;
     readonly filter: ItemFilter;
     readonly onFilter: (filter: ItemFilter) => void;
-  }>;
-  readonly EditReceiptDrawer: ComponentType<{
+  }) => ReactNode;
+  readonly editReceiptDrawer: (props: {
     readonly snapshot: RoomSnapshot;
     readonly onMeta: (
       key: 'title' | 'cardTipEur' | 'cashTipEur' | 'bankUsd',
@@ -55,8 +56,8 @@ export type RoomSlots = {
     readonly onDisplayCurrency: (code: string, force?: boolean) => void;
     readonly onRate: (rate: number) => void;
     readonly onAddItem: (name: string, en: string, eur: number) => void;
-  }>;
-  readonly ItemList: ComponentType<{
+  }) => ReactNode;
+  readonly itemList: (props: {
     readonly items: readonly ReceiptItem[];
     readonly participants: readonly Participant[];
     readonly activeId: ParticipantId | null;
@@ -75,14 +76,14 @@ export type RoomSlots = {
       value: string | number,
     ) => void;
     readonly onDelete: (itemId: ItemId) => void;
-  }>;
-  readonly ReceiptSummary: ComponentType<{
+  }) => ReactNode;
+  readonly receiptSummary: (props: {
     readonly snapshot: RoomSnapshot;
     readonly math: ReceiptMath;
     readonly onCopySummary: () => void;
-  }>;
-  readonly ParticipantCards: ComponentType<{ readonly snapshot: RoomSnapshot }>;
-  readonly IdentityModal: ComponentType<{
+  }) => ReactNode;
+  readonly participantCards: (props: { readonly snapshot: RoomSnapshot }) => ReactNode;
+  readonly identityModal: (props: {
     readonly open: boolean;
     readonly participants: readonly Participant[];
     readonly activeId: ParticipantId | null;
@@ -90,28 +91,27 @@ export type RoomSlots = {
     readonly onSelect: (id: ParticipantId) => void;
     readonly onAdd: (name: string) => void;
     readonly onRemove: (id: ParticipantId) => void;
-  }>;
-  readonly RestaurantModal: ComponentType<{
+  }) => ReactNode;
+  readonly restaurantModal: (props: {
     readonly open: boolean;
     readonly snapshot: RoomSnapshot;
-    readonly roomId: RoomId;
     readonly onClose: () => void;
-  }>;
-  readonly ShareModal: ComponentType<{
+  }) => ReactNode;
+  readonly shareModal: (props: {
     readonly open: boolean;
     readonly url: string;
     readonly onClose: () => void;
     readonly onCopy: () => void;
-  }>;
-  readonly SeedModal: ComponentType<{
+  }) => ReactNode;
+  readonly seedModal: (props: {
     readonly open: boolean;
     readonly onClose: () => void;
     readonly onImport: (seed: ReceiptSeed, forceReset: boolean) => void;
     readonly onPreset: (seed: ReceiptSeed) => void;
     readonly onBlankRoom: () => void;
-  }>;
+  }) => ReactNode;
   /** Shows the message in `ToastContext`, which the room provides. */
-  readonly Toast: ComponentType;
+  readonly toast: () => ReactNode;
 };
 
 /** The receipt store the room reads and changes, in its own terms, with what its hooks need of it. */
@@ -170,7 +170,6 @@ type RoomViewRootProps = {
 };
 
 /** A receipt room: its header, items and totals, and the dialogs they open. */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- `slots` are React's `ComponentType`, whose function and class forms both declare mutable static fields, such as `displayName`.
 export function RoomViewRoot({ roomId, provider, navigate, slots, services }: RoomViewRootProps) {
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<ItemFilter>('all');
@@ -184,66 +183,62 @@ export function RoomViewRoot({ roomId, provider, navigate, slots, services }: Ro
   const seed = useSeedImport(store, toast.showToast, navigate);
   const rates = useExchangeRate(store, snapshot, services.fetchRate, toast.showToast);
   const dialogOpen = [identity.pickerOpen, detailsOpen, sharing.open, seed.open].some(Boolean);
-  const { Header, UnclaimedBanner, EditReceiptDrawer, ItemList, ReceiptSummary } = slots;
-  const { ParticipantCards, IdentityModal, RestaurantModal, ShareModal, SeedModal, Toast } = slots;
 
   return (
     <div className="min-h-screen pb-12">
-      <Header
-        title={snapshot.title}
-        purchasedAt={snapshot.purchasedAt}
-        mealType={snapshot.mealType}
-        onDetails={() => setDetailsOpen(true)}
-        activeId={identity.activeId}
-        connection={snapshot.connection}
-        peers={snapshot.peers}
-        participants={snapshot.participants}
-        editing={editing}
-        onIdentity={identity.openPicker}
-        onEdit={() => setEditing((value) => !value)}
-        onShare={sharing.openDialog}
-      />
-      <UnclaimedBanner
-        items={snapshot.items}
-        total={math.itemsSubtotal}
-        currency={math.currency}
-        filter={filter}
-        onFilter={setFilter}
-      />
+      {slots.header({
+        title: snapshot.title,
+        purchasedAt: snapshot.purchasedAt,
+        mealType: snapshot.mealType,
+        onDetails: () => setDetailsOpen(true),
+        activeId: identity.activeId,
+        connection: snapshot.connection,
+        peers: snapshot.peers,
+        participants: snapshot.participants,
+        editing,
+        onIdentity: identity.openPicker,
+        onEdit: () => setEditing((value) => !value),
+        onShare: sharing.openDialog,
+      })}
+      {slots.unclaimedBanner({
+        items: snapshot.items,
+        total: math.itemsSubtotal,
+        currency: math.currency,
+        filter,
+        onFilter: setFilter,
+      })}
       <main className="mx-auto grid max-w-6xl gap-4 px-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
         <div className="space-y-4">
-          {editing && (
-            <EditReceiptDrawer
-              snapshot={snapshot}
-              onMeta={(key, value) => store.setMeta(key, value)}
-              onCurrency={rates.changeCurrency}
-              onDisplayCurrency={(code, force) => void rates.changeDisplayCurrency(code, force)}
-              onRate={rates.setRate}
-              onAddItem={(name, en, eur) => store.addItem(name, en, eur)}
-            />
-          )}
-          <ItemList
-            items={snapshot.items}
-            participants={snapshot.participants}
-            activeId={identity.activeId}
-            editing={editing}
-            currency={math.currency}
-            filter={filter}
-            onClaim={(itemId, participantId) => store.toggleClaim(itemId, participantId)}
-            onClaimAll={(itemId, participants, claimed) =>
+          {editing &&
+            slots.editReceiptDrawer({
+              snapshot,
+              onMeta: (key, value) => store.setMeta(key, value),
+              onCurrency: rates.changeCurrency,
+              onDisplayCurrency: (code, force) => void rates.changeDisplayCurrency(code, force),
+              onRate: rates.setRate,
+              onAddItem: (name, en, eur) => store.addItem(name, en, eur),
+            })}
+          {slots.itemList({
+            items: snapshot.items,
+            participants: snapshot.participants,
+            activeId: identity.activeId,
+            editing,
+            currency: math.currency,
+            filter,
+            onClaim: (itemId, participantId) => store.toggleClaim(itemId, participantId),
+            onClaimAll: (itemId, participants, claimed) =>
               store.setClaims(
                 itemId,
                 participants.map((person) => person.id),
                 claimed,
-              )
-            }
-            onUpdate={(itemId, field, value) => store.updateItem(itemId, field, value)}
-            onDelete={(itemId) => store.deleteItem(itemId)}
-          />
+              ),
+            onUpdate: (itemId, field, value) => store.updateItem(itemId, field, value),
+            onDelete: (itemId) => store.deleteItem(itemId),
+          })}
         </div>
         <aside className="space-y-4">
-          <ReceiptSummary snapshot={snapshot} math={math} onCopySummary={sharing.copySummary} />
-          <ParticipantCards snapshot={snapshot} />
+          {slots.receiptSummary({ snapshot, math, onCopySummary: sharing.copySummary })}
+          {slots.participantCards({ snapshot })}
           <section className="card p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-extrabold">Receipt seed</h2>
@@ -261,35 +256,34 @@ export function RoomViewRoot({ roomId, provider, navigate, slots, services }: Ro
         </aside>
       </main>
       <ToastContext value={toast.message}>
-        <IdentityModal
-          open={identity.pickerOpen}
-          participants={snapshot.participants}
-          activeId={identity.activeId}
-          onClose={identity.closePicker}
-          onSelect={identity.choose}
-          onAdd={identity.add}
-          onRemove={identity.remove}
-        />
-        <RestaurantModal
-          open={detailsOpen}
-          snapshot={snapshot}
-          roomId={roomId}
-          onClose={() => setDetailsOpen(false)}
-        />
-        <ShareModal
-          open={sharing.open}
-          url={sharing.url}
-          onClose={sharing.closeDialog}
-          onCopy={sharing.copyLink}
-        />
-        <SeedModal
-          open={seed.open}
-          onClose={seed.closeDialog}
-          onImport={seed.importSeed}
-          onPreset={seed.loadPreset}
-          onBlankRoom={seed.newBlankRoom}
-        />
-        {!dialogOpen && <Toast />}
+        {slots.identityModal({
+          open: identity.pickerOpen,
+          participants: snapshot.participants,
+          activeId: identity.activeId,
+          onClose: identity.closePicker,
+          onSelect: identity.choose,
+          onAdd: identity.add,
+          onRemove: identity.remove,
+        })}
+        {slots.restaurantModal({
+          open: detailsOpen,
+          snapshot,
+          onClose: () => setDetailsOpen(false),
+        })}
+        {slots.shareModal({
+          open: sharing.open,
+          url: sharing.url,
+          onClose: sharing.closeDialog,
+          onCopy: sharing.copyLink,
+        })}
+        {slots.seedModal({
+          open: seed.open,
+          onClose: seed.closeDialog,
+          onImport: seed.importSeed,
+          onPreset: seed.loadPreset,
+          onBlankRoom: seed.newBlankRoom,
+        })}
+        {!dialogOpen && slots.toast()}
       </ToastContext>
       {Object.keys(math.perPerson).length === 0 && (
         <div className="sr-only">No participants yet.</div>

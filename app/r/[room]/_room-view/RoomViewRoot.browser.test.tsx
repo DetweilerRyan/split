@@ -1,4 +1,4 @@
-import { type ComponentProps, use } from 'react';
+import { use } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -17,12 +17,12 @@ import { type ExchangeRate, type RateSources, getExchangeRate } from '@/services
 // these tests check only how RoomViewRoot wires its slots and hooks together. Each slot's component
 // and each hook has tests of its own, so what a hook does with a call is checked here only far
 // enough to tell which handler the call reached.
-type PropsOf<Slot extends keyof RoomSlots> = Readonly<ComponentProps<RoomSlots[Slot]>>;
+type PropsOf<Slot extends keyof RoomSlots> = Readonly<Parameters<RoomSlots[Slot]>[0]>;
 
 const roomId = roomIdSchema.parse('split-r1');
 const plitvice = PRESETS.plitvice;
 
-function FakeHeader(props: PropsOf<'Header'>) {
+function FakeHeader(props: PropsOf<'header'>) {
   return (
     <header>
       <h1>{props.title}</h1>
@@ -36,7 +36,7 @@ function FakeHeader(props: PropsOf<'Header'>) {
   );
 }
 
-function FakeUnclaimedBanner(props: PropsOf<'UnclaimedBanner'>) {
+function FakeUnclaimedBanner(props: PropsOf<'unclaimedBanner'>) {
   return (
     <section aria-label="Banner">
       <p>
@@ -47,7 +47,7 @@ function FakeUnclaimedBanner(props: PropsOf<'UnclaimedBanner'>) {
   );
 }
 
-function FakeEditReceiptDrawer(props: PropsOf<'EditReceiptDrawer'>) {
+function FakeEditReceiptDrawer(props: PropsOf<'editReceiptDrawer'>) {
   const { currency, displayCurrency, rate } = props.snapshot;
   return (
     <section aria-label="Edit receipt">
@@ -64,7 +64,7 @@ function FakeEditReceiptDrawer(props: PropsOf<'EditReceiptDrawer'>) {
   );
 }
 
-function FakeItemList(props: PropsOf<'ItemList'>) {
+function FakeItemList(props: PropsOf<'itemList'>) {
   const [first] = props.items;
   return (
     <section aria-label="Items">
@@ -102,7 +102,7 @@ function FakeItemList(props: PropsOf<'ItemList'>) {
   );
 }
 
-function FakeReceiptSummary(props: PropsOf<'ReceiptSummary'>) {
+function FakeReceiptSummary(props: PropsOf<'receiptSummary'>) {
   return (
     <section aria-label="Summary">
       <p>
@@ -113,11 +113,11 @@ function FakeReceiptSummary(props: PropsOf<'ReceiptSummary'>) {
   );
 }
 
-function FakeParticipantCards(props: PropsOf<'ParticipantCards'>) {
+function FakeParticipantCards(props: PropsOf<'participantCards'>) {
   return <p>Cards for {props.snapshot.participants.length} people</p>;
 }
 
-function FakeIdentityModal(props: PropsOf<'IdentityModal'>) {
+function FakeIdentityModal(props: PropsOf<'identityModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Identity">
@@ -130,19 +130,17 @@ function FakeIdentityModal(props: PropsOf<'IdentityModal'>) {
   );
 }
 
-function FakeRestaurantModal(props: PropsOf<'RestaurantModal'>) {
+function FakeRestaurantModal(props: PropsOf<'restaurantModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Details">
-      <p>
-        Details of {props.snapshot.title} in {props.roomId}
-      </p>
+      <p>Details of {props.snapshot.title}</p>
       <button onClick={props.onClose}>Close details</button>
     </dialog>
   );
 }
 
-function FakeShareModal(props: PropsOf<'ShareModal'>) {
+function FakeShareModal(props: PropsOf<'shareModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Share">
@@ -153,7 +151,7 @@ function FakeShareModal(props: PropsOf<'ShareModal'>) {
   );
 }
 
-function FakeSeedModal(props: PropsOf<'SeedModal'>) {
+function FakeSeedModal(props: PropsOf<'seedModal'>) {
   if (!props.open) return null;
   return (
     <dialog open aria-label="Seed">
@@ -171,17 +169,17 @@ function FakeToast() {
 }
 
 const fakeSlots: RoomSlots = {
-  Header: FakeHeader,
-  UnclaimedBanner: FakeUnclaimedBanner,
-  EditReceiptDrawer: FakeEditReceiptDrawer,
-  ItemList: FakeItemList,
-  ReceiptSummary: FakeReceiptSummary,
-  ParticipantCards: FakeParticipantCards,
-  IdentityModal: FakeIdentityModal,
-  RestaurantModal: FakeRestaurantModal,
-  ShareModal: FakeShareModal,
-  SeedModal: FakeSeedModal,
-  Toast: FakeToast,
+  header: (props) => <FakeHeader {...props} />,
+  unclaimedBanner: (props) => <FakeUnclaimedBanner {...props} />,
+  editReceiptDrawer: (props) => <FakeEditReceiptDrawer {...props} />,
+  itemList: (props) => <FakeItemList {...props} />,
+  receiptSummary: (props) => <FakeReceiptSummary {...props} />,
+  participantCards: (props) => <FakeParticipantCards {...props} />,
+  identityModal: (props) => <FakeIdentityModal {...props} />,
+  restaurantModal: (props) => <FakeRestaurantModal {...props} />,
+  shareModal: (props) => <FakeShareModal {...props} />,
+  seedModal: (props) => <FakeSeedModal {...props} />,
+  toast: () => <FakeToast />,
 };
 
 async function renderRoom(
@@ -286,12 +284,10 @@ describe('RoomViewRoot', () => {
     await expect.element(dialog('Identity')).not.toBeInTheDocument();
   });
 
-  it("opens the restaurant's details for this room from the header, and closes them", async () => {
+  it("opens the restaurant's details from the header, and closes them", async () => {
     const { button, dialog } = await renderRoom();
     await button('Details');
-    await expect
-      .element(dialog('Details').getByText('Details of Trattoria Da Enzo in split-r1'))
-      .toBeVisible();
+    await expect.element(dialog('Details').getByText('Details of Trattoria Da Enzo')).toBeVisible();
     await button('Close details');
     await expect.element(dialog('Details')).not.toBeInTheDocument();
   });

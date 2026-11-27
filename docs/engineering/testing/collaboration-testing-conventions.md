@@ -65,7 +65,7 @@ The interfaces, parameters, composition root and fakes in [Collaboration and con
 - **A store's or service's parameter isn't an injection point,** so earned complexity doesn't count it, as [code design principles](../code-design-principles.md#when-two-principles-pull-apart) say. It passes a dependency in rather than swapping a whole collaborator. Keep its interface as small as any other.
 - **Use the least powerful seam that works,** as _least power_ asks.
   - **Prefer an element slot:** `children`, or another prop typed `ReactNode`. It takes what the caller already rendered, so the test passes its own elements, and the code declares no other interface.
-  - **Use a component slot, typed `ComponentType<…>`,** only when the code renders the component with props it computes.
+  - **Use a render-function slot, typed `(props: …) => ReactNode`,** only when the code renders it with props it computes. Its composition root renders the real component from those props. It adds any props the code doesn't compute, so the code never sees them.
 - **Keep each interface small,** as _deep modules_ asks. List only what the code uses. When the code uses a little of a large collaborator, narrow its interface to that.
 - **Split the code when its fakes grow too many to read.** The code is too big; adding fakes won't fix that.
 - **Undo it when it stops paying.** When the code gains logic of its own, or its collaborators lose their tests, test it through the real collaborators and drop the parameters. Putting the duplication back costs less than keeping an abstraction no use needs.

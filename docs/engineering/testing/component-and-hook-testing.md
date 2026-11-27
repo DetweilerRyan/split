@@ -19,15 +19,16 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   ```
 
 - **A container component's slots are its collaborators,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) describes. That section says how to invert and test them. [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says when a component is worth making one.
-  - **What a container is:** a component whose job is to call hooks and render components a caller passes in. The caller passes them through a `slots` prop, as MUI names such a prop, and the container renders them with props it computes. Where it renders what the caller already rendered, it takes an element slot instead, as [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
-  - **Each slot's type** is a component of the props the container passes, such as `ComponentType<{ readonly title: string; readonly onShare: () => void }>`.
-  - **A nested container** has the composition root bind it to its dependencies. The root does it with a component, created once, at module level or with a `useState` initializer, that renders the nested container with them.
-  - **A React context a slot's component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it. The container may import that context to provide it, from the component's module or a module of its own: the context doesn't implement the slot.
+  - **What a container is:** a component whose job is to call hooks and render what a caller passes in. The caller passes render functions through a `slots` prop, as MUI names such a prop, and the container calls each with props it computes. Where it renders what the caller already rendered, it takes an element slot instead, as [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
+  - **Each slot's type** is a render function of only the props the container passes, such as `(props: { readonly title: string; readonly onShare: () => void }) => ReactNode`.
+  - **The composition root renders the real components** in the render functions it passes. It adds there any props the container doesn't compute, so the container's slot types needn't list them.
+  - **A nested container** has the composition root bind it to its dependencies, in the render function for its slot.
+  - **A React context a slot's real component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it. The container may import that context to provide it, from the component's module or a module of its own: the context doesn't fill the slot.
   - **A browser global a hook defaults,** such as `location`, isn't one of the container's services.
-  - **Its collaboration test** checks which props each slot's component gets and which handler its callback reaches.
-  - **`RoomViewRoot` is one,** with `RoomView` as its composition root. `RoomViewRoot` declares `RoomSlots`, and `RoomView` passes the real components in.
+  - **Its collaboration test** passes render functions of fakes, and checks which props each slot is called with and which handler its callback reaches.
+  - **`RoomViewRoot` is one,** with `RoomView` as its composition root. `RoomViewRoot` declares `RoomSlots`, and `RoomView` renders the real components in them. It adds `RestaurantModal`'s `roomId`, which `RoomViewRoot`'s slot doesn't pass.
 - **A container's hooks are collaborators it can't take as parameters.** React's rules forbid passing a hook around as a value. So a container calls its real hooks, and they run for real in its collaboration test. That test sees a hook's work only through:
-  - the props a fake slot's component gets;
+  - the props a slot is called with;
   - the calls a fake service, or the fakes under a real one, receive.
 
   So each custom hook the container calls from its folder gets a test of its own, with `renderHook`.
