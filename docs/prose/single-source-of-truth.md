@@ -67,3 +67,7 @@ This applies to the same **fact**, not to similar-looking **text**. Two passages
 - **Error text in troubleshooting notes** is quoted exactly so a search lands there.
 - **A skill or prompt used outside this repository,** such as one served by the MCP server, may carry a copy of a rule it can't link to. Mark the copy as derived from its owner.
 - **Pull request and issue descriptions** link to files rather than restating content that will keep changing.
+
+## Changing this document
+
+The reasons for these rules are in [single-source-of-truth.meta.md](single-source-of-truth.meta.md). Read it only when changing or questioning a rule here.
