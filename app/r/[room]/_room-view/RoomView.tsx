@@ -17,20 +17,26 @@ import { TOAST_MS } from './useToast';
 import type { RoomId } from '@/domain/room/roomId';
 import { getExchangeRate } from '@/services/exchangeRates';
 
-/** The real components the room renders. TypeScript checks each against `RoomViewRoot`'s slots here. */
-const roomSlots: RoomSlots = {
-  Header,
-  UnclaimedBanner,
-  EditReceiptDrawer,
-  ItemList,
-  ReceiptSummary,
-  ParticipantCards,
-  IdentityModal,
-  RestaurantModal,
-  ShareModal,
-  SeedModal,
-  Toast,
-};
+/**
+ * Renders the real components into `RoomViewRoot`'s slots. TypeScript checks each component's props
+ * against what its slot passes, here. A component's props that the room doesn't compute, such as the
+ * restaurant dialog's `roomId`, are added here, so `RoomViewRoot` never sees them.
+ */
+function roomSlots(roomId: RoomId): RoomSlots {
+  return {
+    header: (props) => <Header {...props} />,
+    unclaimedBanner: (props) => <UnclaimedBanner {...props} />,
+    editReceiptDrawer: (props) => <EditReceiptDrawer {...props} />,
+    itemList: (props) => <ItemList {...props} />,
+    receiptSummary: (props) => <ReceiptSummary {...props} />,
+    participantCards: (props) => <ParticipantCards {...props} />,
+    identityModal: (props) => <IdentityModal {...props} />,
+    restaurantModal: (props) => <RestaurantModal {...props} roomId={roomId} />,
+    shareModal: (props) => <ShareModal {...props} />,
+    seedModal: (props) => <SeedModal {...props} />,
+    toast: () => <Toast />,
+  };
+}
 
 function browserServices(): RoomServices {
   return { clipboard: navigator.clipboard, fetchRate: getExchangeRate, toastMs: TOAST_MS };
@@ -38,7 +44,7 @@ function browserServices(): RoomServices {
 
 /**
  * The room at `roomId`, once its provider has loaded; it suspends until then. It's
- * `RoomViewRoot`'s composition root: it passes in the real provider, components and services.
+ * `RoomViewRoot`'s composition root: it passes in the real provider, slots and services.
  */
 export default function RoomView({ roomId }: { readonly roomId: RoomId }) {
   const router = useRouter();
@@ -49,7 +55,7 @@ export default function RoomView({ roomId }: { readonly roomId: RoomId }) {
       roomId={roomId}
       provider={provider}
       navigate={(path) => router.push(path)}
-      slots={roomSlots}
+      slots={roomSlots(roomId)}
       services={services}
     />
   );
