@@ -77,10 +77,36 @@ describe('ReceiptEditor', () => {
       screen.getByRole('combobox', { name: 'Convert shares to (optional)' }),
       'USD',
     );
-    await vi.waitFor(() =>
-      expect(notify).toHaveBeenCalledExactlyOnceWith(
-        'Exchange rate unavailable offline; showing receipt currency only.',
-      ),
+    await expect
+      .poll(() => notify.mock.calls)
+      .toStrictEqual([['Exchange rate unavailable offline; showing receipt currency only.']]);
+  });
+
+  it('fetches the rate again for a new receipt currency, while converting', async () => {
+    const { screen, network } = await renderEditor();
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Convert shares to (optional)' }),
+      'USD',
     );
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Receipt currency' }),
+      'GBP',
+    );
+    await expect.poll(() => network.mock.calls.at(-1)?.[0]).toContain('?base=GBP&symbols=USD');
+    await expect
+      .element(screen.getByRole('spinbutton', { name: /^Rate \(1 GBP = \? USD\)/ }))
+      .toHaveValue(1.08);
+  });
+
+  it('keeps the rate you type', async () => {
+    const { screen, store } = await renderEditor();
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Convert shares to (optional)' }),
+      'USD',
+    );
+    const rate = screen.getByRole('spinbutton', { name: /^Rate \(1 EUR = \? USD\)/ });
+    await expect.element(rate).toHaveValue(1.08);
+    await userEvent.fill(rate, '1.5');
+    expect(store.getSnapshot().rate).toBe(1.5);
   });
 });

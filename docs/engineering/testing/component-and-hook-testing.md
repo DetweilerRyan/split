@@ -22,8 +22,8 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   - **What a container is:** a component whose job is to call hooks and render what a caller passes in. The caller passes render functions through a `slots` prop, as MUI names such a prop, and the container calls each with props it computes. Where it renders what the caller already rendered, it takes an element slot instead, as [When a collaboration test earns its cost](collaboration-testing-conventions.md#when-a-collaboration-test-earns-its-cost) says.
   - **Each slot's type** is a render function of only the props the container passes, such as `(props: { readonly title: string; readonly onShare: () => void }) => ReactNode`.
   - **A render function only returns elements of components defined outside it, and calls no hooks.** The container may call it conditionally, and the React Compiler may skip a call, so a hook inside it breaks React's rules of hooks. A component created inside it would remount on every render, losing its state.
-  - **The container lays out its slots.** It gives each slot in the page's flow a `className` for where it sits, such as its grid placement, margin or position.
-  - **A slot's component owns only what's inside its border:** its look and its padding. It puts no margin, position or width against its parent on its root. It merges the `className` it's given into its root with `mergeClasses`, from `src/utils/`.
+  - **The container lays out its slots in the page's flow.** It places each with its own wrapper's spacing, or with a `className` it passes, such as a position. Each such slot's type accepts one.
+  - **A slot's component owns only what's inside its border:** its look, its padding, and the display that arranges its own children. It puts no margin, position or width against its parent on its root. An overlay, such as a toast or a dialog, places itself. It merges the `className` it's given into its root with `mergeClasses`, from `src/utils/`.
   - **The composition root renders the real components** in the render functions it passes. It adds there any props the container doesn't compute, so the container's slot types needn't list them.
   - **A nested container** has the composition root bind it to its dependencies, in the render function for its slot.
   - **A React context a slot's real component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it. The container may import that context to provide it, from the component's module or a module of its own: the context doesn't fill the slot.
@@ -37,7 +37,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   So each custom hook the container calls from its folder gets a test of its own, with `renderHook`.
 
 - **A container's store and services are dependencies it inverts too,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) says. That holds whether it calls them or hands them to its hooks. The interface it declares for each must fit its hooks' own narrower ones.
-  - **`RoomViewRoot` declares `RoomConnection` and `RoomServices` for them.** Its test builds a real `ReceiptStore` over an in-memory Yjs document, and its provider fakes only presence, which can't run offline. The exchange-rate service runs for real, over a fake network and cache.
+  - **`RoomViewRoot` declares `RoomConnection` and `RoomServices` for them.** Its test builds a real `ReceiptStore` over an in-memory Yjs document, and its provider fakes only presence, which can't run offline.
 
 ## Rules of its own
 

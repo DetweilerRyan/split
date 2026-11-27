@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -67,7 +68,7 @@ const fakeSlots: ItemsSlots = {
   itemList: (props) => <FakeItemList {...props} />,
 };
 
-async function renderItems({ editing = false, signedIn = true } = {}) {
+async function renderItems({ editing = false, signedIn = true, editor = null as ReactNode } = {}) {
   const store = new ReceiptStore(new Y.Doc());
   store.setMeta('currency', 'EUR');
   store.addItem('Pizza', '', 10);
@@ -76,7 +77,7 @@ async function renderItems({ editing = false, signedIn = true } = {}) {
   store.addParticipant('Sam');
   const you: Participant | null = signedIn ? alex : null;
   const screen = await render(
-    <RoomItems store={store} you={you} editing={editing} slots={fakeSlots} />,
+    <RoomItems store={store} you={you} editing={editing} editor={editor} slots={fakeSlots} />,
   );
   function button(name: string) {
     return userEvent.click(screen.getByRole('button', { name, exact: true }));
@@ -104,6 +105,17 @@ describe('RoomItems', () => {
     await expect
       .element(screen.getByText('Showing all items for editing, for p-alex'))
       .toBeVisible();
+  });
+
+  it('shows the editor it is given between the progress and the items', async () => {
+    const { screen } = await renderItems({ editing: true, editor: <p>The editor</p> });
+    const progress = screen.getByRole('region', { name: 'Progress' }).element();
+    const editor = screen.getByText('The editor').element();
+    const items = screen.getByRole('region', { name: 'Items' }).element();
+    expect(
+      progress.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(editor.compareDocumentPosition(items) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('gives the items nobody before you choose who you are', async () => {

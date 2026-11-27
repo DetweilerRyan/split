@@ -31,10 +31,7 @@ export function UnclaimedBanner({
 
   return (
     <section
-      className={mergeClasses(
-        'flex flex-wrap items-center justify-between gap-3 px-4 py-3',
-        className,
-      )}
+      className={mergeClasses('flex flex-wrap items-center justify-between gap-3', className)}
     >
       <div className="flex min-w-56 flex-1 items-center gap-3">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
