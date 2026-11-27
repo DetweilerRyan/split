@@ -4,8 +4,6 @@
 
 A property test checks a rule that should hold for every input, against many inputs [fast-check](https://fast-check.dev/) generates. When one fails, fast-check shrinks the input to the smallest one that still breaks the rule.
 
-`scripts/oxcrap/complexity.property.test.ts` is an example.
-
 Its file is `<module>.property.test.ts`, beside the module it covers. Its project is the one that testing conventions' [bullet for property tests](testing-conventions.md#which-project-a-test-belongs-in), under the project table, gives it.
 
 ## How the conventions apply
@@ -31,7 +29,7 @@ Its file is `<module>.property.test.ts`, beside the module it covers. Its projec
 - **Write one when you can state a rule for all inputs, and check it without working out the answer the way the code does.** For example:
   - **a round trip:** decoding what was encoded gives back the original;
   - **an invariant:** the shares of a split add up to the total;
-  - **an answer the generator knows:** oxCrap's generated functions record how many branches they have;
+  - **an answer the generator knows:** a generator that builds each input also records its answer;
   - **agreement with a simpler version** of the same code.
 - **Don't write one** for components, or for code whose right answer you'd have to work out the same way the code does. Example tests say those more clearly.
 - **Keep the example tests too.** A property test adds inputs nobody thought of; it doesn't replace the cases a reader needs to see.
@@ -55,7 +53,7 @@ Its file is `<module>.property.test.ts`, beside the module it covers. Its projec
   - **Mutation testing breaks most of the rules a generator varies for you,** where it runs, as [mutation testing practices](mutation-testing-practices.md) says. A mutant on such a rule that survives means no dimension reaches it. Break by hand only the rules no mutant can undo, such as a call wrapped around a value, which no mutator removes.
 - **When a review or a mutation run finds a bug a property test missed,** add the dimension that would have caught it. Then confirm the property fails with the fix undone.
 - **Leave `numRuns` and `seed` out of a new property until it has been soaked.** A soak can't reach a property that sets its own.
-- **Keep it fast.** fast-check runs 100 inputs by default. After the soak, raise `numRuns` only for a check that's cheap to run, as oxCrap's complexity property is. This is the count CI runs.
+- **Keep it fast.** fast-check runs 100 inputs by default. After the soak, raise `numRuns` only for a check that's cheap to run. This is the count CI runs.
 
 ### Soaking a new property
 

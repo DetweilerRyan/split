@@ -6,7 +6,7 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
 
 ## What it runs
 
-- **The code:** `scripts/oxcrap/**/*.ts`, without its tests, `features/` and `oxcrap.ts`, as [`stryker.config.json`](../../../stryker.config.json) sets.
+- **The code:** oxCrap's, as [`stryker.config.json`](../../../stryker.config.json)'s `mutate` sets.
 - **The tests:** the tooling unit and property tests, from [`vitest.tooling.config.ts`](../../../vitest.tooling.config.ts); per mutant, Stryker runs only those that reach it. No `.real.test.ts` and no feature contract runs, so code only those reach shows as "no coverage", not as surviving.
 
 ## Running it
@@ -28,14 +28,14 @@ Mutation testing makes small changes to code, such as flipping `<` to `<=` or de
   Incremental mode only notices changes to mutated files and test files.
 
 - **A run scoring below `thresholds.break`** in [`stryker.config.json`](../../../stryker.config.json) exits non-zero. When a full run on `main`'s oxCrap scores higher, raise `break` to that score rounded down, in the pull request that raised it. Lower it only with the owner's approval.
-- **The report** is in `reports/mutation/mutation.html`, and Stryker's working copy is in `.stryker-tmp/`. Both are gitignored, and the Vitest configs leave the working copy out.
+- **The report** is in `reports/mutation/mutation.html`, and Stryker's working copy is in `.stryker-tmp/`. Both are gitignored. Leave `.stryker-tmp/` out of any Vitest config.
 
 ## When oxCrap's code changes
 
 1. **Run it once, after the [definition of done](../../../AGENTS.md#definition-of-done) passes.** It's expensive. Don't run it in the middle of a change, or to probe.
 2. **Take each survivor in turn:**
    - **Add a test with an assertion that fails on that mutant,** as [testing conventions](testing-conventions.md) and [tooling testing](tooling-testing.md) say. Make it a [property test](property-testing.md#when-to-write-one) where property testing says one is called for.
-   - **If it's in a guard for a case that can't happen, delete the guard:** restructure so the type proves the value is there. `NestedFn`'s `parents` in `scripts/oxcrap/functions.ts` shows how. Keep the guard only when a library's type forces it.
+   - **If it's in a guard for a case that can't happen, delete the guard:** restructure so the type proves the value is there. Keep the guard only when a library's type forces it.
    - **Or propose it as equivalent:** a change that can't alter what the code does. Mark it with `// Stryker disable next-line <mutator>: <reason>`, saying why no test could fail on it.
 
    Never weaken, edit away or delete an existing test to kill a mutant.

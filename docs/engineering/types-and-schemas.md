@@ -4,9 +4,9 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
 
 ## Where a type lives
 
-- **Define a domain type or schema in `src/domain/<subject>/`,** beside the rules about it, and export it from there. A domain type is the receipt's shape, or a value a business rule decides, such as which strings are room ids. The code that builds or holds its state, such as the sync layer in `src/sync/`, imports it. `RoomSnapshot` lives in `src/domain/receipt/roomSnapshot.ts`, and `src/sync/useReceiptStore.ts` builds it. `receiptSeedSchema` lives in `src/domain/receipt/receiptSeed.ts`, and `RoomId` in `src/domain/room/roomId.ts`.
-- **Define any other type or schema in the module that creates or holds the state it describes,** and export it from there, as `src/sync/yjsProvider.ts` does `RoomProvider`.
-- **Don't create a file only to hold types or schemas,** and don't add a shared folder for the app's types. A domain module holds its types with the rules about them, as `roomId.ts` holds `RoomId` with its parsing and creation. The exception is a generic type helper that knows nothing about receipts, money or rooms, such as `DeepReadonly`: it has no rules to live beside, so it goes in `src/utils/types/`, one per file, indexed in [its README](../../src/utils/types/README.md).
+- **Define a domain type or schema in `src/domain/<subject>/`,** beside the rules about it, and export it from there. A domain type is the receipt's shape, or a value a business rule decides, such as which strings are room ids. The code that builds or holds its state, such as the sync layer in `src/sync/`, imports it.
+- **Define any other type or schema in the module that creates or holds the state it describes,** and export it from there.
+- **Don't create a file only to hold types or schemas,** and don't add a shared folder for the app's types. A domain module holds its types with the rules about them. The exception is a generic type helper that knows nothing about receipts, money or rooms. It has no rules to live beside, so it goes in `src/utils/types/`, one per file, indexed in [its README](../../src/utils/types/README.md).
 - **A type that many modules use still has the one home above.** Import it with `import type`, so the importer doesn't load the module's runtime code.
 
 ## A schema owns its type
@@ -25,10 +25,17 @@ Where TypeScript types and zod schemas are defined, how ids and the strings buil
 
 ## Ids and the strings built from them
 
-- **Give an id that enters the app from a URL, storage or a link a zod brand,** as `RoomId` in `src/domain/room/roomId.ts`, and `ParticipantId` and `ItemId` in `src/domain/receipt/roomSnapshot.ts`, have. Parse it once where it enters, as `parseRoomId` and `decodeRoomId` do, and pass the branded type from there on. Code past that point takes the branded type, not `string`.
-  - **Where an id is minted, parse what the app builds,** as `createRoomId` and `participantId` do, so a new id has the brand without a cast.
+- **Give an id that enters the app from a URL, storage or a link a zod brand.** Parse it once where it enters, and pass the branded type from there on. Code past that point takes the branded type, not `string`.
+  - **Where an id is minted, parse what the app builds,** so a new id has the brand without a cast.
   - **A stored participant, item or saved identity whose id doesn't parse is left out** of what the app reads, with a `console.warn` naming it, and the stored data is left as it is. The warning is the shell's: it's logged in `src/sync/`, never in `src/domain/`.
-- **Type a string built from a branded id as a template literal,** and build it with one function that returns that type, as `pendingSeedKey` returns `PendingSeedKey`. `SavedIdentityKey`, `IndexedDbName`, `WebrtcRoomName` and `ClaimKey`, which `claimKey` builds from an `ItemId` and a `ParticipantId`, follow the same pattern. Define it beside the code that reads or writes the key.
+- **Type a string built from a branded id as a template literal,** and build it with one function that returns that type. Define it beside the code that reads or writes the key.
+
+  ```ts
+  type DraftKey = `draft:${RoomId}`;
+  function draftKey(room: RoomId): DraftKey {
+    return `draft:${room}`;
+  }
+  ```
 
 ## Readonly by default
 
@@ -41,13 +48,14 @@ To meet both:
 
 - **Write each type readonly, level by level, as `readonly/types` requires.** [Its README](../../scripts/lint/readonly.md) lists what it reports and what to write instead, and allows a mutable working value in a variable declared inside a function.
 - **Don't change a readonly value in place.** Build a new one with `map`, `filter`, spread or a sorted copy.
-- **Give a zod schema that owns a type `.readonly()`** on each object and array, so `z.infer` gives a readonly type. In `src/domain/receipt/receiptSeed.ts`, `immutable` does it for the seed, whose JSON Schema the MCP tool serves.
-- **Write a module-level constant built from literals `as const`.** When a library's parameter takes a mutable array, pass it a copy, as in `[...signalingUrls]`.
-- **Give a parameter only what the function reads,** such as `Pick<ReceiptStore, 'subscribe' | 'getSnapshot'>`, when the whole type isn't readonly.
+- **Give a zod schema that owns a type `.readonly()`** on each object and array, so `z.infer` gives a readonly type.
+- **Clear the `readOnly` that `.readonly()` adds where a schema's JSON Schema is served,** as an MCP tool's input is, with `.meta({ readOnly: undefined })`. A client told a field is `readOnly` leaves it out.
+- **Write a module-level constant built from literals `as const`.** When a library's parameter takes a mutable array, pass it a copy, as in `[...urls]`.
+- **Give a parameter only what the function reads,** such as `Pick<Store, 'subscribe' | 'getSnapshot'>`, when the whole type isn't readonly.
 - **When a type must stay mutable,** such as a library's type, a global cache or a list a recursive walk fills in place, disable the rule on that line with a reason, as [`AGENTS.md`](../../AGENTS.md#definition-of-done) requires. A parameter that takes the list needs its own disable:
 
   ```ts
-  // oxlint-disable-next-line readonly/types -- the list callsIn's walk adds to in place.
+  // oxlint-disable-next-line readonly/types -- the list a recursive walk adds to in place.
   type Calls = Call[];
   ```
 
@@ -57,11 +65,11 @@ To meet both:
 
 [`tsconfig.json`](../../tsconfig.json) turns on `noUncheckedIndexedAccess`, so `npm run typecheck` types a read by index or key, such as `items[i]` or `record[key]`, as possibly `undefined`. [`.oxlintrc.json`](../../.oxlintrc.json) turns on `typescript/no-non-null-assertion` outside tests.
 
-- **Restructure so the type proves the value is there,** where it always is: iterate instead of indexing, destructure (`const [first] = items;`) and check what you get, or carry the value along with what you'd have indexed by, as `allocate` in `src/domain/receipt/math.ts` pairs each part with its share.
+- **Restructure so the type proves the value is there,** where it always is. Iterate instead of indexing, or destructure (`const [first] = items;`) and check what you get. Or carry the value along with what you'd have indexed by, such as pairing each part of a split with its share.
 - **Otherwise handle the missing case** where you read it: skip it, return early, or throw an error that says what's missing.
 - **Don't silence a read with `!` or a cast,** tests included, though tests may use `!` elsewhere.
 - **In a test, read through `?.`** so the assertion fails when the value is missing, or narrow with Vitest's `assert(value !== undefined, message)` when the value is passed on. Write the comparison: `typescript/strict-boolean-expressions` refuses a bare value.
-- **Let a table with known keys keep them:** write `satisfies Readonly<Record<string, T>>` instead of the annotation `: Readonly<Record<string, T>>`, as `PRESETS` in `src/data/presets.ts` does, so a read of one of its keys isn't possibly `undefined`.
+- **Let a table with known keys keep them:** write `satisfies Readonly<Record<string, T>>` instead of the annotation `: Readonly<Record<string, T>>`. Then a read of one of its keys isn't possibly `undefined`.
 
 ## Checked, not asserted
 
@@ -70,7 +78,7 @@ To meet both:
 - **Parse a value from outside the program with a zod schema,** as _honest types_ says: JSON, storage, a peer's state or a library's `any`. Check only what the code reads, so the parse refuses no more than the code did.
 - **Narrow with a type guard,** a function returning `value is T` that checks what `T` claims, or a predicate passed to `every` or `filter`.
 - **Write `satisfies T`** where the cast only checked a shape, and **a type annotation**, `const x: T = value`, where `value` is already assignable to `T`.
-- **In oxCrap, read an oxc-parser AST field through `complexity.ts`'s parsers,** since oxCrap imports no zod: `parseNode`, `parseNodes`, `parseList` and `parseName` for a field the parser always fills, which throw if it doesn't, and `isNode` and `isNamed` for one it may not.
+- **In oxCrap, read an oxc-parser AST field through `complexity.ts`'s parsers,** since oxCrap imports no zod. Use one of its parsers, such as `parseNode`, for a field the parser always fills; it throws if the field is missing. Use a guard, such as `isNode`, for one it may not.
 - **When no check is possible,** such as a library's declared type that's wrong, disable the rule on that line with a reason, as [`AGENTS.md`](../../AGENTS.md#definition-of-done) requires.
 
 ## Changing this document
