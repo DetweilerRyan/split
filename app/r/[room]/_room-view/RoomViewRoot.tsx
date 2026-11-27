@@ -34,7 +34,12 @@ export type RoomSlots = {
   ) => ReactNode;
   /** The receipt's items: how much is unclaimed, and the items to claim, or to edit while editing. */
   readonly items: (
-    props: Placed & { readonly you: Participant | null; readonly editing: boolean },
+    props: Placed & {
+      readonly you: Participant | null;
+      readonly editing: boolean;
+      /** The editor, shown between the items' progress and their list while editing. */
+      readonly editor: ReactNode;
+    },
   ) => ReactNode;
   /** Editing the receipt's details, currencies and new items, shown while editing. */
   readonly editor: (props: Placed & { readonly notify: (message: string) => void }) => ReactNode;
@@ -146,11 +151,12 @@ export function RoomViewRoot({ roomId, provider, navigate, slots, services }: Ro
         onShare: sharing.openDialog,
         className: 'sticky top-0 z-20',
       })}
-      <main className="mx-auto mt-4 grid max-w-6xl gap-4 px-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
-        <div className="space-y-4">
-          {editing && slots.editor({ notify: toast.showToast })}
-          {slots.items({ you: identity.you, editing })}
-        </div>
+      <main className="mx-auto mt-3 grid max-w-6xl gap-4 px-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
+        {slots.items({
+          you: identity.you,
+          editing,
+          editor: editing && slots.editor({ notify: toast.showToast }),
+        })}
         <aside className="space-y-4">
           {slots.summary({ snapshot, onCopySummary: sharing.copySummary })}
           {slots.people({ snapshot })}

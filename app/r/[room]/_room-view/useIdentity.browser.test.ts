@@ -29,6 +29,12 @@ async function setup(names: readonly string[], doc = new Y.Doc()) {
 beforeEach(() => window.localStorage.clear());
 
 describe('useIdentity', () => {
+  it("has no you while there's nobody on the bill to be", async () => {
+    const hook = await setup([]);
+    expect(hook.current().activeId).toBeNull();
+    expect(hook.current().you).toBeNull();
+  });
+
   it('opens and closes the identity picker', async () => {
     const hook = await setup(['Alex']);
     expect(hook.current().pickerOpen).toBe(false);

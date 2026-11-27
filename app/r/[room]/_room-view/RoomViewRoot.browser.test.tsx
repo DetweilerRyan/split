@@ -38,7 +38,10 @@ function FakeAppBar(props: PropsOf<'appBar'>) {
 function FakeItems(props: PropsOf<'items'>) {
   return (
     <section aria-label="Items">
-      Items for {props.you?.id ?? 'nobody'}, {props.editing ? 'editing' : 'not editing'}
+      <p>
+        Items for {props.you?.id ?? 'nobody'}, {props.editing ? 'editing' : 'not editing'}
+      </p>
+      {props.editor}
     </section>
   );
 }
