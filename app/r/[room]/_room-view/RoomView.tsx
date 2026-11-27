@@ -18,9 +18,10 @@ import type { RoomId } from '@/domain/room/roomId';
 import { getExchangeRate } from '@/services/exchangeRates';
 
 /**
- * Renders the real components into `RoomViewRoot`'s slots. TypeScript checks each component's props
- * against what its slot passes, here. A component's props that the room doesn't compute, such as the
- * restaurant dialog's `roomId`, are added here, so `RoomViewRoot` never sees them.
+ * Renders the real components into `RoomViewRoot`'s slots. TypeScript checks here that each
+ * component accepts what its slot passes; contract tests check it uses them. A component's props
+ * that the room doesn't compute, such as the restaurant dialog's `roomId`, are added here, so
+ * `RoomViewRoot` never sees them.
  */
 function roomSlots(roomId: RoomId): RoomSlots {
   return {
