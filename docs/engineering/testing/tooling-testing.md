@@ -20,27 +20,27 @@ A root file's test is tooling when it tests tooling config.
 
 [Testing conventions](testing-conventions.md) apply as written, and so do [feature testing conventions](feature-testing-conventions.md) to a tool's feature contract, with these for tooling tests:
 
-- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a tool, everything its user gets back: the exit status and each message it prints. Here `oxcrap(args, files, times)` is `scripts/oxcrap/run.test.ts`'s helper, which runs the tool on files in memory:
+- **Make assertions specific,** as [testing conventions](testing-conventions.md#what-a-test-checks) says. For a tool, everything its user gets back: the exit status and each message it prints. Here `runTool(args, files)` is a test helper that runs the tool on files in memory:
 
   ```ts
   // ✅ Specific: the exit status and the whole message
-  expect(oxcrap(args, files, times)).toEqual({ status: 1, stdout: [], stderr: [message] });
+  expect(runTool(args, files)).toEqual({ status: 1, stdout: [], stderr: [message] });
 
   // ❌ Vague: it failed somehow
-  expect(oxcrap(args, files, times).status).not.toBe(0);
+  expect(runTool(args, files).status).not.toBe(0);
   ```
 
 - **Name and place them as [the app's tests](testing-conventions.md#which-project-a-test-belongs-in) are:**
-  - a sidecar beside its module, such as `scripts/prepare-sandbox.sh` → `scripts/prepare-sandbox.real.test.ts`;
+  - a sidecar beside its module, such as `scripts/<tool>.sh` → `scripts/<tool>.real.test.ts`;
   - `.real.` in its name when it runs programs or touches the file system.
 
 - **For the feature contract of [a deep module that's a program](#a-deep-module-thats-a-program),** feature testing conventions apply with these:
-  - **Its screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it. A [dependency-direction](../dependency-direction.md) rule can enforce that, as one does for oxCrap.
+  - **Its screenplay is the tool's own, inside its folder,** so the tool imports nothing from outside it. A [dependency-direction](../dependency-direction.md) rule can enforce that.
     - **The actor's abilities** are a throwaway project folder and running the program, not a browser or an MCP session.
     - **The fixtures take no `browser` or `page`,** so Playwright never starts one.
   - **Run the program as a process, by its path,** as a developer would, and assert its exit status and the exact text it prints. Put a message longer than a step allows, or one holding double quotes, in a DocString.
   - **A scenario covers what the program as a whole does with its arguments and files.**
-  - **Use the tool's own words:** for oxCrap, function, complexity, config, coverage report and `@crap-allow`. The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words.
+  - **Use the tool's own words.** The tool's `.gplintrc` bans its module and function names, and how the test runs the program, instead of the app's words.
 
 ## Rules of its own
 
@@ -56,7 +56,7 @@ A root file's test is tooling when it tests tooling config.
 
 ### A deep module that's a program
 
-This subsection holds the layout and wiring of a deep module whose interface is a program, the only kind set up so far. How its features apply feature testing conventions is under [How the conventions apply](#how-the-conventions-apply).
+This subsection holds the layout and wiring of a deep module whose interface is a program. How its features apply feature testing conventions is under [How the conventions apply](#how-the-conventions-apply).
 
 | Path                                            | Holds                                                 |
 | :---------------------------------------------- | :---------------------------------------------------- |

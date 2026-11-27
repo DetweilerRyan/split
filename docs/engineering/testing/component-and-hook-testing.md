@@ -22,7 +22,6 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   - **A container's composition root,** its `.root.tsx`, gets no browser test of its own: only the end-to-end tests run it.
   - **Its collaboration test** passes render functions of fakes. It checks which props each slot is called with, and which handler its callback reaches.
   - **A React context a slot's real component reads** is part of what the component relies on. The type checker can't see it, so the component's contract tests cover it.
-  - **`RoomView` is one,** with `RoomViewRoot` as its composition root. `RoomView` declares `RoomSlots`, and `RoomViewRoot` renders the real components in them, adding what `RoomView` doesn't compute.
 - **A container's hooks are collaborators it can't take as parameters,** as [Containers](../components.md#containers) says. So a container calls its real hooks, and they run for real in its collaboration test. That test sees a hook's work only through:
   - the props a slot is called with;
   - the calls a fake service, or the fakes under a real one, receive.
@@ -30,7 +29,6 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
   So each custom hook the container calls from its folder gets a test of its own, with `renderHook`.
 
 - **A container's store and services run for real in its test where they can,** as [Collaboration and contract tests](collaboration-testing-conventions.md#collaboration-and-contract-tests) says. [Containers](../components.md#containers) says how a container takes them.
-  - **`RoomView` declares `RoomConnection` and `RoomServices` for them.** Its test builds a real `ReceiptStore` over an in-memory Yjs document, and its provider fakes only presence, which can't run offline.
 
 ## Rules of its own
 
@@ -40,7 +38,7 @@ A test of a React component or hook, in Vitest's `browser` project, as [the proj
 
 ### Writing one
 
-Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`. Copy the pattern in `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`.
+Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-react) and Vitest's browser API, `vitest/browser`.
 
 - **Check what a user can see and do.** A component has two users: the person using the app, and the developer rendering it. So a component test works only through the component's props and its rendered output. Don't assert on state, internal functions, how many times something rendered, or CSS classes.
 - **A component's callback props are part of what it shows its developer user.** You may check that `onSelect` was called with the chosen id. Don't check which internal function ran.
@@ -55,8 +53,6 @@ Use [`vitest-browser-react`](https://github.com/vitest-community/vitest-browser-
   - the hook is complex enough that a component would obscure it;
   - several components share it;
   - it belongs to a container, as above.
-
-  `app/r/[room]/_room-view/useActiveIdentity.browser.test.ts` is an example.
 
 - **Tests run through the React Compiler,** as the app build does. Don't remove the compiler from `vitest.config.ts`; `vitest.config.browser.test.ts` fails if a component stops being compiled.
 

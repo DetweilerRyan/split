@@ -30,13 +30,11 @@ Some code's job is wiring collaborators that have tests of their own. For exampl
 - **A collaborator's own tests are its contract tests.** They check that it meets the interface the code declares, and does what the code relies on. That includes what the type checker can't see, such as something it's given but ignores.
   - **Fake only a collaborator that has contract tests.**
   - **Pass in a real one where it has none,** until it has tests of its own.
-- **Run a store or service for real when it takes its effects as parameters,** over fakes of those effects. For example:
-  - a store over an in-memory document, in place of its sync and persistence;
-  - a fetcher over a fake network.
+- **Run a store or service for real when it takes its effects as parameters,** over fakes of those effects. For example, run a store over an in-memory document, in place of its sync and persistence.
 
   Write new ones that way where it costs little, as [Prefer passing the dependency in](testing-conventions.md#replacing-external-dependencies) asks.
 
-- **Fake a store or service that opens its effects itself,** as `yjsProvider` opens `y-indexeddb`. The test passes a fake that implements the interface. The real one's contract tests check what the code relies on.
+- **Fake a store or service that opens its effects itself.** The test passes a fake that implements the interface. The real one's contract tests check what the code relies on.
 - **The edge is a browser or third-party API itself,** such as the clipboard. Fake it as [Replacing external dependencies](testing-conventions.md#replacing-external-dependencies) says. It needs no contract tests. Fake a third-party collaborator only at the edge too.
 - **Keep fakes and contract tests in step.** When what a dependency is given or gives back changes meaning, change its fakes and its contract tests together.
 - **Keep at least one test that runs the code with its real dependencies,** such as one that runs the whole app.

@@ -4,11 +4,11 @@
 
 An end-to-end test checks a journey that a person or an assistant takes through the running app. One example is an assistant creating a room through `/api/mcp`, and two people splitting it live. It's a feature test. [`playwright.config.ts`](../../../playwright.config.ts) sets it up, and `npm run test:e2e` runs them all. Its files are under `e2e/`:
 
-| Path                             | Holds                                                                                                                     |
-| :------------------------------- | :------------------------------------------------------------------------------------------------------------------------ |
-| `e2e/features/<journey>.feature` | Scenarios, in the words of the people at the table                                                                        |
-| `e2e/steps/<journey>.steps.ts`   | Step definitions                                                                                                          |
-| `e2e/screenplay/`                | The cast (`fixtures.ts`), actors and their abilities (`actor.ts`, `mcp.ts`), and the shared `tasks.ts` and `questions.ts` |
+| Path                             | Holds                                                                                              |
+| :------------------------------- | :------------------------------------------------------------------------------------------------- |
+| `e2e/features/<journey>.feature` | Scenarios, in the words of the people at the table                                                 |
+| `e2e/steps/<journey>.steps.ts`   | Step definitions                                                                                   |
+| `e2e/screenplay/`                | The cast (`fixtures.ts`), actors and their abilities, and the shared `tasks.ts` and `questions.ts` |
 
 ## How the conventions apply
 

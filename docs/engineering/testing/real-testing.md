@@ -2,7 +2,7 @@
 
 ## What this kind of test is
 
-A test in Vitest's `real` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it. It runs real programs or touches the file system, in Node. Its file is `<module>.real.test.ts`, beside the module it covers. No app test runs in it yet. The tooling's real tests, root tooling config's included, run in tooling's own `tooling-real` project.
+A test in Vitest's `real` project, as [the project table](testing-conventions.md#which-project-a-test-belongs-in) in testing conventions describes it. It runs real programs or touches the file system, in Node. Its file is `<module>.real.test.ts`, beside the module it covers. The tooling's real tests, root tooling config's included, run in tooling's own `tooling-real` project.
 
 ## How the conventions apply
 

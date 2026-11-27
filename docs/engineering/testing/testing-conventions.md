@@ -53,9 +53,7 @@ Two kinds of test sit outside these projects:
 | `unit`    | `<module>.test.ts`, `<module>.test.tsx`                 | jsdom                                 | everything else: logic with no React, such as math, seed codecs, stores and server code; its own rules are in [unit testing](unit-testing.md) |
 
 - **Name a [property test](property-testing.md) `<module>.property.test.ts`.** It runs in the project its module's other tests run in: `unit` for the app, `tooling-unit` for tooling.
-- **Make each test file a sidecar.** Put it beside the one module it covers, and name it after that module:
-  - `src/domain/receipt/math.ts` → `src/domain/receipt/math.test.ts`;
-  - `app/r/[room]/_room-view/IdentityModal.tsx` → `app/r/[room]/_room-view/IdentityModal.browser.test.tsx`.
+- **Make each test file a sidecar.** Put it beside the one module it covers, and name it after that module: `<folder>/<module>.ts` → `<folder>/<module>.test.ts`.
 
   When tests for a second module creep into a file, move them to that module's sidecar.
 
@@ -71,7 +69,7 @@ Two kinds of test sit outside these projects:
 
   The suite must pass with no network access. Setup downloads the browser; a test never does.
 
-- **Run only local programs and temporary files in a `.real.test.ts`,** whichever project runs it. Use a temporary directory, and clean it up. `scripts/prepare-sandbox.real.test.ts` runs the setup script there, with fakes of `npm`, Playwright's CLI, `ldd` and `sudo`.
+- **Run only local programs and temporary files in a `.real.test.ts`,** whichever project runs it. Use a temporary directory, and clean it up.
 - **Set up every piece of state the test reads inside the test.** Never rely on files in the home folder, or on IndexedDB left by an earlier run. Clear `localStorage` before a test that reads it.
 
 ## Replacing external dependencies
@@ -98,7 +96,7 @@ Two kinds of test sit outside these projects:
   A [collaboration test](collaboration-testing-conventions.md#collaboration-and-contract-tests) needs the dependency inverted.
 
 - **You may use `vi.fn()` when the test checks how something was called:** for a fake's methods, or for a callback the test passes in.
-- **Use `vi.mock` only for a third-party module the code imports directly,** and can't reasonably take as a parameter. `src/sync/yjsProvider.test.ts` does this for Liveblocks, `y-webrtc` and `y-indexeddb`.
+- **Use `vi.mock` only for a third-party module the code imports directly,** and can't reasonably take as a parameter.
 - **Never mock React or its hooks.**
 - **Never `vi.mock` the repository's own modules.** Test them for real. To fake a child component, store or service the code uses, follow [Collaboration testing conventions](collaboration-testing-conventions.md).
 
