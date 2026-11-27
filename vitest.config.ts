@@ -98,6 +98,8 @@ export default defineConfig({
           name: 'browser',
           include: [...browserTests],
           exclude: ignored,
+          // Loads the app's stylesheet once, for every test, so visibility reflects the real styles.
+          setupFiles: ['app/browser-tests.setup.ts'],
           browser: {
             enabled: true,
             headless: true,

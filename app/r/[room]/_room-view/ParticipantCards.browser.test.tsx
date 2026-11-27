@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { page, type Locator } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import '../../../index.css';
 import {
   type RoomSnapshot,
   itemIdSchema,

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import '../../../index.css';
 import { type RoomSnapshot, itemIdSchema } from '@/domain/receipt/roomSnapshot';
 import { EMPTY_SNAPSHOT } from '@/sync/useReceiptStore';
 import { ReceiptSummary } from './ReceiptSummary';

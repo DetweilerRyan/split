@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import * as Y from 'yjs';
-import '../../../index.css';
 import { type ItemsSlots, RoomItems } from './RoomItems';
 import type { Participant } from '@/domain/receipt/roomSnapshot';
 import { ReceiptStore } from '@/sync/useReceiptStore';
